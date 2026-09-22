@@ -163,6 +163,29 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Floodlights: roof-corner and mast banks aimed at the field. They carry the
+  // light at night and add to it in rain and snow; off at golden hour and
+  // overcast. (Milestone 3 replaces these with full light-tower banks.)
+  const flood = useMemo(() => {
+    const aims: [number, number, number][] = [
+      [-60, 46, -95], [60, 46, -95], [-62, 46, 20], [62, 46, 20], [-55, 61, 66], [55, 61, 66],
+    ];
+    return aims.map((p) => {
+      const l = new THREE.SpotLight(0xfff1dc, 0, 320, 0.62, 0.55, 2);
+      l.position.set(...p);
+      l.target.position.set(p[0] * 0.15, 0, p[2] * 0.2);
+      l.castShadow = false;
+      return l;
+    });
+  }, []);
+  useEffect(() => {
+    const factor = preset.stadiumLights * (preset.sunElevationDeg < 0 ? 1 : preset.id === 'rain' || preset.id === 'snow' ? 0.35 : 0);
+    for (const l of flood) {
+      l.intensity = 17000 * factor;
+      l.target.updateMatrixWorld();
+    }
+  }, [preset, flood]);
+
   const boardZ = STAND.northZ + 6;
   const roofFrontH = PROFILE.roof.hFront;
 
@@ -184,6 +207,12 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       <mesh geometry={bowl.glass} material={assets.glassMat} />
       <mesh geometry={bowl.roof} material={assets.roofMat} receiveShadow castShadow />
       <primitive object={lightBanks} />
+      {flood.map((l, i) => (
+        <group key={i}>
+          <primitive object={l} />
+          <primitive object={l.target} />
+        </group>
+      ))}
 
       {/* Playing surface and apron */}
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.02, -2]} material={assets.fieldMat} receiveShadow>

@@ -42,7 +42,9 @@ export const useApp = create<AppState>((set, get) => ({
     if (prev && prev !== 'intro' && prev !== 'title') set({ screen: prev, history: h });
     else set({ screen: 'main', history: [] });
   },
-  setShot: (shot) => get().shot !== shot && set({ shot }),
+  setShot: (shot) => {
+    if (get().shot !== shot) set({ shot });
+  },
   setSceneReady: () => set({ sceneReady: true, bootProgress: 1 }),
   setBootProgress: (p) => set({ bootProgress: Math.max(get().bootProgress, p) }),
   togglePerf: () => set({ perfOpen: !get().perfOpen }),

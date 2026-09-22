@@ -1,6 +1,6 @@
 # Beat the Beasts 3D: Technical Plan
 
-Status: **draft for review**. Nothing in `src/` exists yet. This document covers architecture, stack, asset plan, performance budgets and the milestone breakdown. Design decisions (rules, controls, modes, AI behavior, presentation) are in `docs/GDD.md`. Issues found in the brief, with proposed fixes, are in §17. Things only you can do are in §18.
+Status: **approved 2026-09-22**, with the user's notes folded in (animation condition in §17 T8, skin-tone storage in §15). This document covers architecture, stack, asset plan, performance budgets and the milestone breakdown. Design decisions (rules, controls, modes, AI behavior, presentation) are in `docs/GDD.md`. Issues found in the brief, with proposed fixes, are in §17. Things only you can do are in §18.
 
 ---
 
@@ -24,17 +24,14 @@ Status: **draft for review**. Nothing in `src/` exists yet. This document covers
 
 ---
 
-## 2. Environment facts discovered during planning
+## 2. Environment facts
 
-These shape the plan, so they come first.
-
-1. **Network egress is allowlisted.** From this environment, npm and PyPI work. These are blocked: `github.com` release downloads (so nflverse data), `dl.polyhaven.org`, `ambientcg.com`, `quaternius.com`, `download.blender.org`, `vercel.com` and `pro-football-reference.com`. `raw.githubusercontent.com` is reachable. The brief's planned sources for data (nflverse), HDRIs and textures (Poly Haven, ambientCG) and the character base (Quaternius) **can't be fetched until the environment's network policy is widened**. Mitigations are in §8 and §9, and the ask is in §18.
-2. **Blender works headless via PyPI.** `bpy` 5.0.1 wheels exist for Python 3.11, the version installed here. That gives the full Blender Python API (modeling, rigging, baking, glTF export) without downloading Blender itself. It is a large install (a few hundred MB). Disk is fine.
-3. **No `gh` or Vercel CLI.** GitHub operations go through the GitHub integration I have. Vercel deploys come from Vercel's Git integration once you connect the repo.
-4. **Branch restriction.** This session may only push to `claude/trusting-ptolemy-m2i78d`. The brief's "branch per milestone, merge to `main`" needs your permission (§17 T1).
-5. **The characterization (skin tone) data isn't in the repo.** The legacy editor saved it through `window.storage` (a Claude-artifact storage API) under `btb_characterization_v1`. The file itself only has the fallback mid-tone `#b07a4a`. If you have the saved data, I need an export (§18).
-
----
+1. **Network egress.** At planning time only npm and PyPI were reachable. **Since approval, the network policy was widened**: nflverse release downloads (via github.com redirects), Poly Haven (API and files), ambientCG, Quaternius, Freesound and vercel.com all respond. The workarounds in §8 and §9 (procedural sky and IBL, bpy-baked textures, a scripted base mesh) remain the default where they're simply better. Downloaded CC0 assets are now an option where they raise quality, logged in `CREDITS.md`.
+2. **Blender works headless via PyPI.** `bpy` 5.0.1 wheels exist for Python 3.11, the version installed here: the full Blender Python API (modeling, rigging, baking, glTF export) without downloading Blender itself.
+3. **No `gh` or Vercel CLI.** GitHub operations go through the GitHub integration. Vercel is connected to the repo through Git (production = `main`, previews on every branch).
+4. **Vercel limits (checked 2026-09-22 at vercel.com/docs/limits).** The 100 MB (Hobby) / 1 GB (Pro) source-upload cap and the 15,000-file cap apply to **CLI** deployments. Git deployments have no stated source-size limit, and output file count is unlimited apart from the 45-minute build cap. Large binaries still shouldn't bloat the Git repo, so anything over ~50 MB total per asset family goes to Vercel Blob (§11).
+5. **Branches.** One PR to `main` per milestone from `claude/trusting-ptolemy-m2i78d`; the user reviews and merges.
+6. **Skin-tone data.** No legacy assignments exist. Everyone starts at the legacy default tone (`#b07a4a`). The editor (Settings → Gameplay → Skin-tone editor) saves to `data/characterization.json` **in the repo**, not browser storage (§15).
 
 ## 3. Repository layout
 
@@ -399,7 +396,10 @@ Other rules: frustum culling everywhere, LODs for players and crowd, one texture
 
 ## 15. Persistence
 
-A `storage.ts` wrapper over `localStorage` with try/catch, versioned keys and schema migrations: settings, keybinds, quality tier, tutorial progress, history (games and dailies, capped), characterization overrides, Daily completion per date, and highlight thumbnails (stored small).
+- **Per-device preferences** go through a `storage.ts` wrapper over `localStorage` (try/catch, versioned keys): settings, keybinds, detected quality tier, tutorial progress, history (games and dailies, capped), Daily completion per date, and small highlight thumbnails.
+- **Skin tones are game data, not preferences.** They live in `data/characterization.json`, bundled into every build. The editor saves back to that file in two ways:
+  - Under `npm run dev`, a Vite dev-server endpoint (`tools/dev/characterization-api.ts`) writes the file directly.
+  - On a deployment, the Vercel Function `api/characterization.ts` commits the file through the GitHub contents API. That needs two environment variables set in Vercel: `EDITOR_KEY` (a passphrase the editor asks for once) and `GITHUB_TOKEN` (a fine-grained token with Contents read/write on this repo). It commits to the deployment's own branch unless `CHARACTERIZATION_BRANCH` says otherwise. Without them, the editor still works and offers Export/Import of the JSON.
 
 ## 16. Testing and verification
 
@@ -429,7 +429,7 @@ A `storage.ts` wrapper over `localStorage` with try/catch, versioned keys and sc
 - **T5. `Esc` to pause vs fullscreen.** Browsers reserve Esc to exit fullscreen, and the page never sees the keypress. Safari has no Keyboard Lock API. **Fix:** on Chromium, use Keyboard Lock in fullscreen, so Esc pauses and holding Esc exits (the browser's own behavior with lock). Everywhere, `fullscreenchange` auto-pauses the game. On Safari, Esc therefore still ends up paused, just out of fullscreen, and the pause menu's Resume re-enters fullscreen (Resume is a user gesture). `P`/`Backspace` stay on replay as the brief specifies.
 - **T6. Vercel CLI and limits.** The Vercel CLI and docs are unreachable from here. **Fix:** you connect the repo in the Vercel dashboard once (§18). Deploys then happen on push, and I check preview URLs through GitHub deployment statuses.
 - **T7. Asset and data hosts blocked** (nflverse, Poly Haven, ambientCG, Quaternius, Freesound). **Fix:** please widen the network policy (§18). Until then: procedural sky and IBL, bpy-baked procedural textures, a scripted base mesh, and `estimated` data at low confidence with the `verified` fields filled in once access exists.
-- **T8. "Every animation authored by you" at the brief's library size** is the biggest schedule risk in the project (well over 150 clips, with variants). **Fix, without lowering the bar:** (1) keyframe only what the broadcast camera reads as technique (stances, drops, throws, catches, cuts, blocks, tackles, celebrations); (2) generate variants procedurally from authored bases (mirroring, speed warping, additive layers for pressure, fatigue and lean) instead of hand-keying every left/right/speed variant; (3) let the runtime layer (IK, look-at, lean, springs) do what mocap would otherwise give for free. The clip list in `docs/ANIMATION.md` tracks each base clip and its derived variants.
+- **T8. "Every animation authored by you" at the brief's library size** is the biggest schedule risk in the project (well over 150 clips, with variants). **Approved with a condition:** nothing is downloaded or generated from third-party motion, and every base clip is keyed in-house. When cutting for quality, variants and celebration/official extras go first; position-specific technique clips (drops, route breaks, kick-slide, pass-rush moves, backpedal and hip flip, form tackles) are never cut. **Fix, without lowering the bar:** (1) keyframe only what the broadcast camera reads as technique (stances, drops, throws, catches, cuts, blocks, tackles, celebrations); (2) generate variants procedurally from authored bases (mirroring, speed warping, additive layers for pressure, fatigue and lean) instead of hand-keying every left/right/speed variant; (3) let the runtime layer (IK, look-at, lean, springs) do what mocap would otherwise give for free. The clip list in `docs/ANIMATION.md` tracks each base clip and its derived variants.
 - **T9. TAA** on WebGL with pmndrs has no production-ready option. **Fix:** SMAA everywhere, plus MSAA on High/Ultra. TAA would only come back with a later WebGPU move (TRAA node).
 
 ### Ratings
@@ -447,14 +447,10 @@ GDD §15 lists D1–D19 (Beasts' per-possession scoring, possession order, the D
 
 ## 18. What I need from you
 
-1. **Approve or amend these docs** (GDD + TECH_PLAN).
-2. **Branch policy (T1):** OK to keep working on `claude/trusting-ptolemy-m2i78d` with one PR to `main` per milestone?
-3. **Vercel:** in the Vercel dashboard, *Add New → Project → Import* `jackbloomfield22/BEATTHEBEASTS`, framework preset *Vite*, production branch `main`. Nothing else is needed. Preview deployments for other branches are on by default.
-4. **Network policy (T7):** allow these hosts for this environment, if you're willing: `github.com` + `objects.githubusercontent.com` (nflverse data releases), `dl.polyhaven.org` + `api.polyhaven.com`, `ambientcg.com`, `quaternius.com`, `freesound.org` (+ its CDN), and `vercel.com` (docs/limits). Everything can start without them, but data confidence and some asset quality depend on them.
-5. **Characterization data:** if you have the skin-tone assignments saved from the legacy editor, export the `btb_characterization_v1` JSON and add it to the repo (for example `data/characterization.json`). Otherwise players start at the neutral default tone and the editor is used to fill them in.
-6. **Real-hardware check:** at each visual milestone, open the preview on your M1/M2 Air and read out the FPS counter (the perf overlay is behind `?dev`). I can't measure GPU performance from a GPU-less container.
+Resolved at approval: branch policy (one PR per milestone), Vercel connected, network widened, no legacy skin-tone data (start at the default tone). Still open:
 
----
+1. **Skin-tone saving on the deployed site (optional).** To save from the live game, add `EDITOR_KEY` and `GITHUB_TOKEN` in Vercel → Project → Settings → Environment Variables (§15). Without them, save from `npm run dev` or use Export.
+2. **Real-hardware checks** at each visual milestone: turn on Settings → Display → FPS counter, or press ` for the perf screen, and send a screenshot.
 
 ## 19. Milestones
 

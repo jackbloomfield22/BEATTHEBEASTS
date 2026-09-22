@@ -175,7 +175,7 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
           ${NOISE_GLSL}
           vec3 terrAlbedo;
           float terrRough;
-          float terrDetail(vec3 w) { vec2 hn = normalize(normalize(vTerrNormal).xz + 1e-4); float along = dot(w.xz, vec2(-hn.y, hn.x)); return fbm(w.xz * 0.35, 4) * 0.4 + fbm(vec2(along * 0.35, w.y * 0.04), 5) * 0.9 + fbm(vec2(along * 1.5, w.y * 1.5), 3) * 0.25; }`,
+          float terrDetail(vec3 w) { vec3 n = normalize(vTerrNormal); vec3 tw = pow(abs(n), vec3(4.0)); tw /= (tw.x + tw.y + tw.z); float a = fbm(vec2(w.z, w.y) * vec2(0.16, 0.07), 5) + 0.35 * fbm(vec2(w.z, w.y) * 0.9, 3); float b = fbm(vec2(w.x, w.y) * vec2(0.16, 0.07), 5) + 0.35 * fbm(vec2(w.x, w.y) * 0.9, 3); float c = fbm(w.xz * 0.35, 4); return a * tw.x + b * tw.z + c * tw.y; }`,
         )
         .replace(
           '#include <color_fragment>',
@@ -186,20 +186,23 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
             float slope = 1.0 - nrm.y;
             float n1 = fbm(w.xz * 0.05, 5);
             float n2 = fbm(w.xz * 0.6, 3);
-            // Fractured cliff rock: vertical joints and horizontal bedding, projected
-            // along the face (triplanar blend of the two vertical planes).
-            vec2 hn = normalize(nrm.xz + 1e-4);
-            float along = dot(w.xz, vec2(-hn.y, hn.x));
-            float joints = fbm(vec2(along * 0.35, w.y * 0.04), 5);
-            float bedding = fbm(vec2(along * 0.02, w.y * 0.45), 4);
-            float crev = smoothstep(0.42, 0.3, joints) * 0.55 + smoothstep(0.55, 0.35, bedding) * 0.25;
-            vec3 rockA = vec3(0.30, 0.27, 0.23);
-            vec3 rockB = vec3(0.47, 0.42, 0.35);
-            vec3 rock = mix(rockA, rockB, smoothstep(0.3, 0.7, joints * 0.6 + bedding * 0.4 + n1 * 0.2));
-            rock = mix(rock, vec3(0.62, 0.57, 0.48), smoothstep(0.62, 0.8, bedding) * 0.5); // pale weathered bands
-            rock *= 1.0 - crev;
-            // Lichen and salt staining low on the face.
-            rock = mix(rock, vec3(0.36, 0.36, 0.22), smoothstep(0.6, 0.85, fbm(w.xz * 0.2 + w.y * 0.1, 3)) * 0.35);
+            // Fractured cliff rock, triplanar (the two vertical planes blended by
+            // the normal) so faces don't smear: joints, bedding, crevices, and
+            // pale weathered bands.
+            vec3 tw = pow(abs(nrm), vec3(4.0));
+            tw /= (tw.x + tw.y + tw.z);
+            vec2 pX = vec2(w.z, w.y);
+            vec2 pZ = vec2(w.x, w.y);
+            float joints = fbm(pX * vec2(0.16, 0.07), 5) * tw.x + fbm(pZ * vec2(0.16, 0.07), 5) * tw.z + fbm(w.xz * 0.12, 5) * tw.y;
+            float bedding = fbm(pX * vec2(0.03, 0.35), 4) * tw.x + fbm(pZ * vec2(0.03, 0.35), 4) * tw.z + fbm(w.xz * 0.05, 3) * tw.y;
+            float grain = fbm(pX * 0.9, 3) * tw.x + fbm(pZ * 0.9, 3) * tw.z + fbm(w.xz * 0.9, 3) * tw.y;
+            float crev = smoothstep(0.4, 0.27, joints) * 0.6 + smoothstep(0.5, 0.33, bedding) * 0.25;
+            vec3 rockA = vec3(0.19, 0.17, 0.15);
+            vec3 rockB = vec3(0.4, 0.35, 0.29);
+            vec3 rock = mix(rockA, rockB, smoothstep(0.28, 0.72, joints * 0.55 + bedding * 0.3 + grain * 0.25));
+            rock = mix(rock, vec3(0.55, 0.5, 0.42), smoothstep(0.63, 0.82, bedding) * 0.45);
+            rock *= (1.0 - crev) * (0.85 + 0.3 * grain);
+            rock = mix(rock, vec3(0.3, 0.32, 0.18), smoothstep(0.62, 0.85, fbm(w.xz * 0.2 + w.y * 0.1, 3)) * 0.3);
             // Dry coastal grass, greener in the hollows.
             vec3 grass = mix(vec3(0.2, 0.24, 0.08), vec3(0.34, 0.33, 0.13), n1);
             grass = mix(grass, vec3(0.12, 0.19, 0.07), smoothstep(0.55, 0.8, n2) * 0.6);
@@ -229,7 +232,7 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
             vec3 r2 = cross(normal, dpx);
             float det = dot(dpx, r1);
             vec3 grad = sign(det) * (dhx * r1 + dhy * r2);
-            normal = normalize(abs(det) * normal - grad * 2.2);
+            normal = normalize(abs(det) * normal - grad * 1.6);
           }`,
         );
     },
@@ -239,7 +242,7 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
 
 /** Instanced boulders along the cliff foot and on the talus. */
 export function buildBoulders(count = 700): { geometry: THREE.BufferGeometry; matrices: THREE.Matrix4[] } {
-  const geo = new THREE.IcosahedronGeometry(1, 3);
+  const geo = new THREE.IcosahedronGeometry(1, 4);
   const p = geo.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < p.count; i++) {
     const v = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i));
@@ -288,11 +291,27 @@ export function createBoulderMaterial(): THREE.MeshStandardMaterial {
           `#include <color_fragment>
           {
             float n = fbm(vBWorld.xz * 0.4 + vBWorld.y * 0.3, 4);
-            vec3 c = mix(vec3(0.24, 0.22, 0.19), vec3(0.42, 0.38, 0.32), n);
+            vec3 c = mix(vec3(0.16, 0.15, 0.13), vec3(0.36, 0.32, 0.27), n) * (0.8 + 0.4 * fbm(vBWorld.xz * 2.5 + vBWorld.y, 3));
             float wet = smoothstep(uSeaLevel + 2.5, uSeaLevel + 0.2, vBWorld.y);
             c = mix(c, c * 0.35, wet);
             c = mix(c, vec3(0.2, 0.26, 0.12), smoothstep(0.65, 0.8, fbm(vBWorld.xz * 1.3, 3)) * (1.0 - wet) * 0.5);
             diffuseColor.rgb = c;
+          }`,
+        )
+        .replace(
+          '#include <normal_fragment_maps>',
+          `#include <normal_fragment_maps>
+          {
+            float hgt = fbm(vBWorld.xz * 1.1 + vBWorld.y * 0.9, 5) + 0.4 * fbm(vBWorld.zy * 3.0, 3);
+            vec3 dpx = dFdx(vViewPosition);
+            vec3 dpy = dFdy(vViewPosition);
+            float dhx = dFdx(hgt);
+            float dhy = dFdy(hgt);
+            vec3 r1 = cross(dpy, normal);
+            vec3 r2 = cross(normal, dpx);
+            float det = dot(dpx, r1);
+            vec3 grad = sign(det) * (dhx * r1 + dhy * r2);
+            normal = normalize(abs(det) * normal - grad * 1.2);
           }`,
         );
     },

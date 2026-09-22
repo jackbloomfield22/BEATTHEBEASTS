@@ -7,6 +7,7 @@ import { CameraDirector } from './cameras/CameraDirector';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { useSettings, type QualityPreset } from '@/app/settings';
+import { guessQuality } from './quality';
 import { useApp } from '@/app/appStore';
 import { perfStats, recordFrame } from '@/dev/perfStats';
 import { urlFlags } from '@/app/platform';
@@ -126,6 +127,17 @@ export function Stage() {
       onCreated={({ gl }) => {
         gl.setClearColor(0x05040a);
         perfStats.quality = quality;
+        // First launch: pick a preset from the GPU name.
+        const st = useSettings.getState();
+        if (!st.settings.detectedPreset && !urlFlags.quality) {
+          const ext = gl.getContext().getExtension('WEBGL_debug_renderer_info');
+          const gpu = ext ? String(gl.getContext().getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+          const guess = guessQuality(gpu);
+          st.applyPreset(guess);
+          st.set((d) => {
+            d.detectedPreset = guess;
+          });
+        }
       }}
     >
       <FrameDriver cap={display.frameCap} />

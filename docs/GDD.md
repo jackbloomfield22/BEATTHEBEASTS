@@ -1,6 +1,6 @@
 # Beat the Beasts 3D: Game Design Document
 
-Status: **draft for review**. Architecture, stack, assets and milestones are in `docs/TECH_PLAN.md`. §15 lists every place I think the brief is wrong, ambiguous or unworkable, with a proposed fix. Please read that section even if you skim the rest.
+Status: **approved 2026-09-22** (all proposed changes in §15 accepted). Architecture, stack, assets and milestones are in `docs/TECH_PLAN.md`. §15 lists every place I think the brief is wrong, ambiguous or unworkable, with a proposed fix. Please read that section even if you skim the rest.
 
 ---
 
@@ -51,7 +51,7 @@ Transitions between states are camera moves in the same persistent 3D scene (tun
 - **Desktop gate:** on phones and tablets, a single styled screen: *"Beat the Beasts is built for keyboard and mouse or a controller. Open it on a desktop or laptop."* There's a small "continue anyway" link for touch laptops.
 
 ### 3.2 Main menu
-Full-screen and left-aligned, over a live cinematic camera that changes per focused item (focusing "Daily" swings to the video board, "Practice" to the practice end zone). Items: **Play**, **Daily Challenge** (with today's date and status: Not Played / Final Score), **Quick Play**, **Practice Field**, **How to Play**, **Settings**, **History**, and **Characterization** (the skin-tone editor; §12.6).
+Full-screen and left-aligned, over a live cinematic camera that changes per focused item (focusing "Daily" swings to the video board, "Practice" to the practice end zone). Items: **Play**, **Daily Challenge** (with today's date and status: Not Played / Final Score), **Quick Play**, **Practice Field**, **How to Play**, **Settings**, **History**. The skin-tone editor (§12.6) lives in Settings → Gameplay.
 
 ### 3.3 Navigation rules for every menu
 - Mouse hover and click, keyboard (arrows, Tab / Shift+Tab, Enter, Esc = back), and gamepad (D-pad or left stick, A = select, B = back, LB/RB = tabs).
@@ -480,6 +480,7 @@ Legacy's `ReactDOM` bug and its career-rating "QB RATING" are fixed: the card sh
 
 Per the brief's rule "trade scope before quality", in order. Nothing here is cut now; this is the order I'd propose if a milestone runs long.
 
+0. Animation variants and celebration/official extras (per the approval note: base technique clips are never cut).
 1. Snow preset (Rain covers the weather tech).
 2. Global leaderboard (already a stretch goal).
 3. Hot routes and motion. Audibles and flip stay.
@@ -489,7 +490,7 @@ Per the brief's rule "trade scope before quality", in order. Nothing here is cut
 7. The 3D hero render on the share card (fall back to the best highlight's framed screenshot).
 8. Sideline cast density.
 
-**Not negotiable:** the broadcast camera look, the lighting and atmosphere, player materials and silhouettes, core technique animations, Beasts AI quality, controls feel, determinism of the Daily.
+**Not negotiable:** position-specific technique animation (drops, route breaks, kick-slide, pass-rush moves, backpedal and hip flip, form tackles), the broadcast camera look, the lighting and atmosphere, player materials and silhouettes, core technique animations, Beasts AI quality, controls feel, determinism of the Daily.
 
 ---
 

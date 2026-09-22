@@ -29,7 +29,7 @@ const STATIC_SHOTS: Record<Exclude<CameraShot, 'title' | 'intro'>, { base: Pose;
 /** Title flyover: from the sea, along the cliff, around the open end, and back. */
 function titleCurves() {
   const pos = new THREE.CatmullRomCurve3(
-    [v(-300, -30, 250), v(-150, -18, 185), v(-40, 12, 175), v(30, 38, 150), v(60, 70, 40), v(10, 95, -60), v(-90, 60, 120), v(-140, 30, 330), v(-330, -5, 400)],
+    [v(-330, -20, 290), v(-200, -4, 250), v(-60, 16, 190), v(30, 38, 150), v(60, 70, 40), v(10, 95, -60), v(-90, 60, 120), v(-140, 30, 330), v(-330, -5, 400)],
     true,
     'centripetal',
   );
