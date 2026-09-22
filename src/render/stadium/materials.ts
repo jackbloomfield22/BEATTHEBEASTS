@@ -64,7 +64,7 @@ export function createSeatingMaterial(): THREE.MeshStandardMaterial {
             // distance (seat smaller than ~2 px) fade to the seat's average
             // color to avoid moire.
             float v = vSeatUv.y;
-            float lod = smoothstep(0.08, 0.3, fwidth(vSeatUv.x / seatW));
+            float lod = smoothstep(0.035, 0.16, fwidth(vSeatUv.x / seatW));
             float body = smoothstep(0.02, 0.1, fx) * smoothstep(0.98, 0.9, fx);
             float head = smoothstep(0.3, 0.16, abs(fx - 0.5 - (h - 0.5) * 0.2));
             float bob = sin(uTime * (1.5 + h * 2.0) + h * 40.0) * 0.5 + 0.5;

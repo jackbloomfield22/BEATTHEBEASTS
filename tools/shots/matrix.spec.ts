@@ -9,9 +9,13 @@ const STATES = [
   { name: 'flyover-sea', q: 'screen=intro&shot=title&t=100' },
 ];
 const LIGHTING = (process.env.BTB_LIGHTING ?? 'golden,night,overcast,rain,snow').split(',');
+// Software rendering is slow: by default every state at Golden Hour, and the
+// two most telling states for the other presets. BTB_FULL=1 runs everything.
+const OTHER_PRESET_STATES = ['menu', 'flyover-bowl'];
 
 for (const lighting of LIGHTING) {
   for (const s of STATES) {
+    if (!process.env.BTB_FULL && lighting !== 'golden' && !OTHER_PRESET_STATES.includes(s.name)) continue;
     test(`${s.name} · ${lighting}`, async ({ page }) => {
       await page.goto(`/?${s.q}&lighting=${lighting}&quality=${process.env.BTB_QUALITY ?? 'high'}`);
       await page.waitForFunction(() => (window as unknown as { __btbReady?: boolean }).__btbReady === true, null, { timeout: 180_000 });
