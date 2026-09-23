@@ -126,40 +126,26 @@ export function createFieldPaint(): THREE.CanvasTexture {
   return tex;
 }
 
-export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMaterial {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
-  mat.userData.porosity = 0.85; // natural grass over sand root zone
-  return patchMaterial(
-    mat,
-    (shader) => {
-      shader.uniforms.uPaint = { value: paint };
-      shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vFWorld;')
-        .replace('#include <project_vertex>', '#include <project_vertex>\nvFWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-      shader.fragmentShader = shader.fragmentShader
-        .replace(
-          '#include <common>',
-          `#include <common>
-          varying vec3 vFWorld;
-          uniform sampler2D uPaint;
-          ${NOISE_GLSL}
-          float fieldRough;
-          float aaBand(float d, float halfW) {
-            float fw = max(fwidth(d), 1e-4);
-            return 1.0 - smoothstep(halfW - fw, halfW + fw, d);
-          }`,
-        )
-        .replace(
-          '#include <color_fragment>',
-          `#include <color_fragment>
-          {
+/**
+ * The field's albedo, roughness and paint coverage at a world point: grass,
+ * mowing stripes, wear, analytic markings and painted decals. Shared by the
+ * field surface and the grass shells (grass.ts) so blades carry the paint.
+ * Needs NOISE_GLSL, uPaint and the atmosphere pars (for weatherSnowMask).
+ */
+export const FIELD_SAMPLE_GLSL = /* glsl */ `
+struct FieldSample { vec3 col; float rough; float white; };
+float aaBand(float d, float halfW) {
+  float fw = max(fwidth(d), 1e-4);
+  return 1.0 - smoothstep(halfW - fw, halfW + fw, d);
+}
+FieldSample fieldSample(vec3 w) {
             const float YD = ${YARD.toFixed(4)};
-            vec2 f = vec2(vFWorld.x, vFWorld.z) / YD; // yards: x across, y along
-            vec3 V = normalize(cameraPosition - vFWorld);
+            vec2 f = vec2(w.x, w.z) / YD; // yards: x across, y along
+            vec3 V = normalize(cameraPosition - w);
 
             // Grass base with multi-scale variation.
-            float n1 = fbm(vFWorld.xz * 0.08, 4);
-            float n2 = fbm(vFWorld.xz * 1.7, 3);
+            float n1 = fbm(w.xz * 0.08, 4);
+            float n2 = fbm(w.xz * 1.7, 3);
             vec3 grass = mix(vec3(0.045, 0.2, 0.03), vec3(0.085, 0.29, 0.04), n1);
             grass *= 0.88 + 0.24 * n2;
 
@@ -202,8 +188,10 @@ export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMat
             col = mix(col, vec3(0.42, 0.02, 0.035), paint.g * chalk);
             float whiteAmt = max(line, paint.r) * chalk;
             col = mix(col, vec3(0.86, 0.86, 0.83), whiteAmt);
-            diffuseColor.rgb = col;
-            fieldRough = mix(0.92, 0.7, whiteAmt);
+            FieldSample o;
+            o.col = col;
+            o.rough = mix(0.92, 0.7, whiteAmt);
+            o.white = whiteAmt;
             // Snow games: the crew sweeps the yard lines, goal lines and
             // borders clear (about a foot either side), so they read as
             // green-edged white lines through the snow; play scuffs the rest.
@@ -214,6 +202,38 @@ export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMat
             // shows through where play has churned it.
             float painted = max(max(paint.r, paint.g), max(paint.b, line));
             weatherSnowMask = (1.0 - swept) * mix(0.42, 0.72, n1) * (1.0 - 0.55 * painted);
+  return o;
+}
+`;
+
+export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMaterial {
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
+  mat.userData.porosity = 0.85; // natural grass over sand root zone
+  return patchMaterial(
+    mat,
+    (shader) => {
+      shader.uniforms.uPaint = { value: paint };
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vFWorld;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvFWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          '#include <common>',
+          `#include <common>
+          varying vec3 vFWorld;
+          uniform sampler2D uPaint;
+          ${NOISE_GLSL}
+          float fieldRough;`,
+        )
+        // After the atmosphere pars (patchMaterial puts them right after <common>).
+        .replace('#include <color_pars_fragment>', `#include <color_pars_fragment>\n${FIELD_SAMPLE_GLSL}`)
+        .replace(
+          '#include <color_fragment>',
+          `#include <color_fragment>
+          {
+            FieldSample fs = fieldSample(vFWorld);
+            diffuseColor.rgb = fs.col;
+            fieldRough = fs.rough;
           }`,
         )
         .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = fieldRough;')

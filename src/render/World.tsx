@@ -14,12 +14,14 @@ import { crowdEnergy } from './crowd/reactions';
 import { createPrecipitation } from './weather/precip';
 import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, createRoofMaterial, createSeatingMaterial, stadiumUniforms } from './stadium/materials';
 import { createFieldMaterial, createFieldPaint } from './field/field';
+import { createGrassShells, GRASS_SHELLS } from './field/grass';
 import { buildPlazaGeometry, plazaLampPositions, createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { createShadowRig, type ShadowRig } from './lighting/shadows';
 import { STAND } from './world/constants';
 
 export interface WorldQuality {
+  grassDetail: 'low' | 'medium' | 'high' | 'ultra';
   shadowMapSize: number; // 0 = shadows off
   terrainSegments: number;
   /** Graphics settings that scale instance counts without rebuilding. */
@@ -61,6 +63,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       glassMat: createGlassMaterial(),
       roofMat: createRoofMaterial(),
       lightBankMat: createLightBankMaterial(),
+      paint,
       fieldMat: createFieldMaterial(paint),
       pavingMat: createPavingMaterial(),
       metalMat: createMetalMaterial(),
@@ -86,6 +89,8 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     g.instanceCount = Math.round(total * CROWD_DRAWN[quality.crowdDensity]);
   }, [crowd, quality.crowdDensity]);
   const plaza = useMemo(() => buildPlazaGeometry(), []);
+  const grass = useMemo(() => createGrassShells(assets.paint), [assets.paint]);
+  useEffect(() => grass.setShells(GRASS_SHELLS[quality.grassDetail]), [grass, quality.grassDetail]);
   // Plaza lamp posts: 6 m poles with a luminaire head (pools painted by the paving shader).
   const lamps = useMemo(() => {
     const at = plazaLampPositions();
@@ -211,6 +216,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       sunRef.current.intensity = key.intensity;
     }
     stadiumUniforms.uCrowdEnergy.value = crowdEnergy.value(clock.elapsedTime);
+    grass.update(camera);
     assets.sky.mesh.position.copy(camera.position);
   });
 
@@ -324,6 +330,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
         </group>
       ))}
 
+      <primitive object={grass.mesh} />
       {/* Playing surface and apron */}
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.02, -2]} material={assets.fieldMat} receiveShadow>
         <planeGeometry args={[STAND.halfWidth * 2, 138, 1, 1]} />
