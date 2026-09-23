@@ -40,7 +40,7 @@ export function createGrassShells(paint: THREE.Texture, maxShells = GRASS_SHELLS
   g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 1e5);
 
   const center = new THREE.Vector3();
-  const uniforms = { uPaint: { value: paint }, uCenter: { value: center }, uCount: { value: maxShells } };
+  const uniforms = { uPaint: { value: paint }, uCenter: { value: center }, uCount: { value: maxShells as number } };
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
   mat.userData.porosity = 0.85;
   // Alpha-to-coverage turns the blade cutout into MSAA coverage (soft edges
