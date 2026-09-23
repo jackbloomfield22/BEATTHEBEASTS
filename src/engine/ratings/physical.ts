@@ -78,6 +78,8 @@ const shuttleToAgility = (t: number): number => 99 - (t - 3.9) * 32;
 // Vertical 42" / broad 136" ≈ the top of the combine distribution.
 const verticalToJump = (v: number): number => 99 - (42 - v) * 2.2;
 const broadToJump = (b: number): number => 99 - (136 - b) * 0.9;
+/** 10-yard split: 1.45 s (elite) → 99, 1.55 → 90, 1.70 → 76.5, 1.85 → 63 (0.1 s = 9 points). */
+const splitToAccel = (t: number): number => 99 - (t - 1.45) * 90;
 /** Strength from mass: 180 lb → 45, 250 lb → 66, 315 lb → 85.5, 345 lb → 94.5 (bench reps move it from there). */
 const weightToStrength = (w: number): number => 45 + 0.3 * (w - 180);
 /** Typical combine bench reps (225 lb) at a body weight. */
@@ -291,13 +293,25 @@ function physicalFor(s: RatingInputs, group: readonly RatingInputs[], pos: Rated
   const agPeak = agParts.reduce((a, p) => a + p.delta, 0);
   const agility = composeDirect(aged('agility', agParts), conf3(agConf));
 
-  // ---- Acceleration: mostly speed, some agility, lighter frames get going faster.
-  const accParts: Contribution[] = [
-    { label: 'From speed (70%)', delta: 0.7 * speedPeak, kind: 'physical', conf: speedConf },
-    { label: 'From agility (30%)', delta: 0.3 * agPeak, kind: 'physical', conf: agConf },
-    { label: frame, delta: -0.06 * heavier, kind: 'body', conf: bodyConf, src: wSrc?.src },
-  ];
-  const acceleration = composeDirect(aged('acceleration', accParts), (conf3(speedConf) * 0.7 + conf3(agConf) * 0.3));
+  // ---- Acceleration: the 10-yard split where measured, else mostly speed,
+  // some agility, and lighter frames get going faster.
+  let accParts: Contribution[];
+  let accConfScore: number;
+  if (m.tenSplit) {
+    accParts = [
+      { label: `10-yard split ${m.tenSplit.v.toFixed(2)}`, delta: 0.7 * splitToAccel(m.tenSplit.v), kind: 'physical', input: `${m.tenSplit.v.toFixed(2)} s`, conf: m.tenSplit.conf, src: m.tenSplit.src },
+      { label: 'From agility (30%)', delta: 0.3 * agPeak, kind: 'physical', conf: agConf },
+    ];
+    accConfScore = conf3(m.tenSplit.conf) * 0.7 + conf3(agConf) * 0.3;
+  } else {
+    accParts = [
+      { label: 'From speed (70%)', delta: 0.7 * speedPeak, kind: 'physical', conf: speedConf },
+      { label: 'From agility (30%)', delta: 0.3 * agPeak, kind: 'physical', conf: agConf },
+      { label: frame, delta: -0.06 * heavier, kind: 'body', conf: bodyConf, src: wSrc?.src },
+    ];
+    accConfScore = conf3(speedConf) * 0.7 + conf3(agConf) * 0.3;
+  }
+  const acceleration = composeDirect(aged('acceleration', accParts), accConfScore);
 
   // ---- Strength
   const strParts: Contribution[] = [{ label: `Mass: ${frame.slice(7)}`, delta: weightToStrength(personWEq), kind: 'body', input: `${Math.round(personW)} lb`, conf: bodyConf, src: wSrc?.src }];

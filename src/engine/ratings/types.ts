@@ -150,6 +150,8 @@ export interface Measurables {
   broad?: Sourced;
   cone?: Sourced;
   shuttle?: Sourced;
+  /** 10-yard split of the 40. */
+  tenSplit?: Sourced;
 }
 
 /** Everything the formulas may read for one stint. Built by inputs.ts. */

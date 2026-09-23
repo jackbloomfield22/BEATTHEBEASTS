@@ -115,7 +115,13 @@ export interface AccoladeRecord {
 export interface PhysicalRecord {
   name: string;
   entries: string[];
-  forty: number;
+  forty?: number;
+  vertical?: number;
+  broad?: number;
+  shuttle?: number;
+  cone?: number;
+  bench?: number;
+  tenSplit?: number;
   src: string;
   conf: Conf;
   note?: string;
@@ -546,7 +552,15 @@ function measurablesFor(nv: NflverseEntry | undefined, phys: PhysicalRecord | un
       if (typeof c[k] === 'number') m[k] = src(c[k]!, `${c.src}${c.year ? ` ${c.year}` : ''}`, c.conf);
     }
   }
-  if (!m.forty && phys && typeof phys.forty === 'number') m.forty = src(phys.forty, `${phys.src}${phys.note ? ` (${phys.note})` : ''}`, phys.conf);
+  // Wikipedia pre-draft tables (and commonly cited 40s) fill what the
+  // nflverse combine file lacks: pre-2000 players, pro-day-only players.
+  if (phys) {
+    const s = `${phys.src}${phys.note ? ` (${phys.note})` : ''}`;
+    for (const k of ['forty', 'bench', 'vertical', 'broad', 'cone', 'shuttle', 'tenSplit'] as const) {
+      const v = phys[k];
+      if (!m[k] && typeof v === 'number') m[k] = src(v, s, phys.conf);
+    }
+  }
   return m;
 }
 
