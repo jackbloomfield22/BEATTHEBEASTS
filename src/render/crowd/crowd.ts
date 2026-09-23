@@ -208,6 +208,44 @@ varying vec3 vToCam;
 varying vec3 vFlash;
 `;
 
+// Card coverage: the atlas alpha, scaled up with the mip level (alpha-tested
+// cards lose coverage in the mips, so distant spectators would shrink), plus
+// phone flashes. The depth prepass and the colour pass must agree on it.
+const COVERAGE_GLSL = /* glsl */ `
+  vec2 cdx = dFdx(vAtlasUv * uAtlasSize);
+  vec2 cdy = dFdy(vAtlasUv * uAtlasSize);
+  float clod = 0.5 * log2(max(max(dot(cdx, cdx), dot(cdy, cdy)), 1e-8));
+  float coverA = texture2D(uCrowdMask, vAtlasUv).a * (1.0 + max(clod, 0.0) * 0.3);
+  float flash = vFlash.z * (1.0 - smoothstep(0.035, 0.075, length(vLocal - vFlash.xy)));
+`;
+
+/**
+ * Depth prepass (M4.5, broadcast camera). The crowd is ~20k alpha-tested
+ * cards packed eight rows deep; with a discard in the full lit shader every
+ * overlapping card got shaded (and a discard also turns off hidden-surface
+ * removal on tile GPUs like Apple's). The prepass lays down the cards' depth
+ * with a cheap alpha test, then the lit pass runs with an EQUAL depth test
+ * and no discard, so each crowd pixel is shaded once. Both passes declare
+ * gl_Position invariant so their depths match exactly.
+ */
+export const CROWD_PREPASS = !(import.meta.env.DEV && typeof location !== 'undefined' && location.search.includes('noprepass'));
+
+function createCrowdPrepassMaterial(atlas: SpectatorAtlas): THREE.MeshBasicMaterial {
+  const mat = new THREE.MeshBasicMaterial({ colorWrite: false });
+  const size = new THREE.Vector2(CELL_W * DIRS, CELL_H * POSES);
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, stadiumUniforms, { uTime: atmosphereUniforms.uTime, uCrowdMask: { value: atlas.mask }, uAtlasSize: { value: size }, uCellRect: { value: cellRects() } });
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\ninvariant gl_Position;\n${VERT_PARS}`)
+      .replace('#include <begin_vertex>', VERT_BODY);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uCrowdMask;\nuniform vec2 uAtlasSize;\nvarying vec2 vAtlasUv;\nvarying vec2 vLocal;\nvarying vec3 vFlash;')
+      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>\n${COVERAGE_GLSL}\nif (coverA < 0.5 && flash < 0.5) discard;`);
+  };
+  mat.customProgramCacheKey = () => 'crowd-prepass';
+  return mat;
+}
+
 export function createCrowdMaterial(atlas: SpectatorAtlas): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
   mat.userData.noWeather = true; // the crowd dresses for the weather instead
@@ -223,7 +261,7 @@ export function createCrowdMaterial(atlas: SpectatorAtlas): THREE.MeshStandardMa
         uCellRect: { value: cellRects() },
       });
       shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', `#include <common>\n${VERT_PARS}`)
+        .replace('#include <common>', `#include <common>\n${CROWD_PREPASS ? 'invariant gl_Position;' : ''}\n${VERT_PARS}`)
         .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = normalize(vec3(cameraPosition.x - aSeat.x, 0.0, cameraPosition.z - aSeat.z) + 1e-5);')
         .replace('#include <begin_vertex>', VERT_BODY);
       shader.fragmentShader = shader.fragmentShader
@@ -232,14 +270,10 @@ export function createCrowdMaterial(atlas: SpectatorAtlas): THREE.MeshStandardMa
           '#include <map_fragment>',
           `{
             vec4 mk = texture2D(uCrowdMask, vAtlasUv);
-            // Alpha-tested cards lose coverage in the mips; scale alpha up
-            // with the mip level so distant spectators keep their size.
-            vec2 dx = dFdx(vAtlasUv * uAtlasSize);
-            vec2 dy = dFdy(vAtlasUv * uAtlasSize);
-            float lod = 0.5 * log2(max(max(dot(dx, dx), dot(dy, dy)), 1e-8));
-            float a = mk.a * (1.0 + max(lod, 0.0) * 0.3);
-            float flash = vFlash.z * (1.0 - smoothstep(0.035, 0.075, length(vLocal - vFlash.xy)));
-            if (a < 0.5 && flash < 0.5) discard;
+            ${COVERAGE_GLSL}
+            // With the prepass the EQUAL depth test already keeps only the
+            // covered pixels; without it, cut the card here.
+            ${CROWD_PREPASS ? '' : 'if (coverA < 0.5 && flash < 0.5) discard;'}
             vec3 m = mk.rgb / max(mk.a, 1e-3);
             float pants = clamp(1.0 - m.r - m.g - m.b, 0.0, 1.0);
             diffuseColor.rgb = m.r * vShirt + m.g * vSkin + m.b * vHair + pants * vPants;
@@ -303,8 +337,20 @@ export function createCrowd(atlas: SpectatorAtlas, seats: Seats = buildSeats()):
   // Cards move in the vertex shader, so bound the whole bowl.
   g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 20, -5), 130);
   g.boundingBox = new THREE.Box3(new THREE.Vector3(-100, 0, -130), new THREE.Vector3(100, 45, 100));
-  const mesh = new THREE.Mesh(g, createCrowdMaterial(atlas));
+  const mat = createCrowdMaterial(atlas);
+  const mesh = new THREE.Mesh(g, mat);
   mesh.name = 'crowd';
+  if (CROWD_PREPASS) {
+    mat.depthFunc = THREE.EqualDepth;
+    mat.depthWrite = false;
+    // A child, so it follows the crowd's visibility; drawn before every
+    // other opaque object (renderOrder), which also makes it an early occluder.
+    const pre = new THREE.Mesh(g, createCrowdPrepassMaterial(atlas));
+    pre.name = 'crowd-prepass';
+    pre.renderOrder = -2;
+    pre.frustumCulled = mesh.frustumCulled;
+    mesh.add(pre);
+  }
   mesh.receiveShadow = true;
   // The crowd doesn't cast: at a packed ~8 cards deep it was the costliest
   // caster in every cascade, and the seating steps already cast the row

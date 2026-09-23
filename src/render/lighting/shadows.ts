@@ -32,6 +32,45 @@ export interface ShadowRig {
 
 let rigCount = 0;
 
+/**
+ * The far cascades redraw every FAR_EVERY frames (staggered), or at once when
+ * the camera has moved or turned since their last draw. They hold the
+ * stands, the cliff and the terrain, which don't move, and players far from
+ * the camera, for whom a shadow a frame or two old doesn't show; the near
+ * cascade (where players are big) redraws every frame. From the broadcast
+ * camera the far cascade takes in the whole bowl and the cliff, the costliest
+ * shadow pass (M4.5). A skipped cascade keeps the matrix it was drawn with,
+ * so its shadows lag but never misalign.
+ */
+const FAR_EVERY = 3;
+const MOVE_M = 0.5;
+const TURN_COS = Math.cos(THREE.MathUtils.degToRad(0.5));
+interface FarCascadeState {
+  frame: number;
+  last: { pos: THREE.Vector3; dir: THREE.Vector3 }[];
+}
+const _camPos = new THREE.Vector3();
+const _camDir = new THREE.Vector3();
+function throttleFarCascades(csm: CSM, camera: THREE.Camera, st: FarCascadeState): void {
+  st.frame++;
+  camera.getWorldPosition(_camPos);
+  camera.getWorldDirection(_camDir);
+  csm.lights.forEach((l, i) => {
+    if (i === 0) {
+      l.shadow.autoUpdate = true;
+      return;
+    }
+    const last = st.last[i]!;
+    const moved = last.pos.distanceTo(_camPos) > MOVE_M || last.dir.dot(_camDir) < TURN_COS;
+    l.shadow.autoUpdate = false;
+    if (moved || st.frame % FAR_EVERY === i % FAR_EVERY) {
+      l.shadow.needsUpdate = true;
+      last.pos.copy(_camPos);
+      last.dir.copy(_camDir);
+    }
+  });
+}
+
 export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent: THREE.Object3D; mapSize: number; cascades: number; maxFar?: number; fade?: boolean }): ShadowRig {
   const csm = new CSM({
     camera: opts.camera,
@@ -65,6 +104,7 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
   // uniforms wired to the old rig's (disposed) objects or missing. A per-rig
   // key makes every rig compile, and wire, its own.
   const rigId = ++rigCount;
+  const farState: FarCascadeState = { frame: 0, last: csm.lights.map(() => ({ pos: new THREE.Vector3(Infinity, 0, 0), dir: new THREE.Vector3() })) };
   const attach = (mat: THREE.Material) => {
     if (attached.has(mat) || !(mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) return;
     const mine = mat.onBeforeCompile;
@@ -100,6 +140,7 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
     update() {
       csm.updateFrustums();
       csm.update();
+      throttleFarCascades(csm, opts.camera, farState);
     },
     dispose() {
       // CSM's own dispose() deletes onBeforeCompile from every material it
