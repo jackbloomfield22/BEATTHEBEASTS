@@ -131,17 +131,17 @@ const VERT_BODY = /* glsl */ `
   float r1 = fract(aRand.y * 7.13 + aRand.z * 3.1);
   float r2 = fract(aRand.x * 11.7 + aRand.y * 5.3);
   float r3 = fract(aRand.z * 13.1 + aRand.x * 2.9);
-  float pick = r1 - step(0.8, block) * 0.2;
-  vec3 crimson = mix(vec3(0.3, 0.018, 0.028), vec3(0.5, 0.04, 0.052), r2);
-  if (pick < 0.36) vShirt = crimson;
-  else if (pick < 0.62) vShirt = vec3(0.016 + 0.025 * r2);
-  else if (pick < 0.74) vShirt = vec3(0.5 + 0.25 * r2);
+  float pick = r1 - step(0.8, block) * 0.16;
+  vec3 crimson = mix(vec3(0.17, 0.012, 0.018), vec3(0.32, 0.028, 0.036), r2);
+  if (pick < 0.28) vShirt = crimson;
+  else if (pick < 0.58) vShirt = vec3(0.014 + 0.022 * r2);
+  else if (pick < 0.68) vShirt = vec3(0.34 + 0.2 * r2);
   else if (pick < 0.88) vShirt = vec3(0.09 + 0.07 * r2, 0.09 + 0.06 * r2, 0.1 + 0.05 * r2);
   else if (pick < 0.94) vShirt = mix(vec3(0.03, 0.06, 0.16), vec3(0.12, 0.2, 0.36), r2);
   else vShirt = mix(vec3(0.35, 0.24, 0.05), vec3(0.2, 0.3, 0.12), r2);
   vSkin = mix(vec3(0.09, 0.045, 0.025), vec3(0.62, 0.42, 0.31), pow(r3, 0.8));
   float hp = fract(r1 * 5.7 + r3 * 1.9);
-  if (hp < 0.14) vHair = pick < 0.36 ? crimson : vec3(0.015); // caps and beanies
+  if (hp < 0.14) vHair = pick < 0.28 ? crimson : vec3(0.015); // caps and beanies
   else if (hp < 0.72) vHair = vec3(0.02, 0.014, 0.01);
   else if (hp < 0.86) vHair = vec3(0.1, 0.06, 0.03);
   else if (hp < 0.94) vHair = vec3(0.42, 0.3, 0.14);
@@ -206,7 +206,8 @@ export function createCrowdMaterial(atlas: SpectatorAtlas): THREE.MeshStandardMa
             diffuseColor.rgb = m.r * vShirt + m.g * vSkin + m.b * vHair + pants * vPants;
             // Packed crowd: bodies below the shoulders sit in each other's and
             // the row in front's occlusion.
-            diffuseColor.rgb *= mix(0.4, 1.0, smoothstep(0.25, 1.35, vLocal.y));
+            // Packed shoulder to shoulder, each spectator also sees less sky.
+            diffuseColor.rgb *= 0.8 * mix(0.4, 1.0, smoothstep(0.25, 1.35, vLocal.y));
           }`,
         )
         .replace(
