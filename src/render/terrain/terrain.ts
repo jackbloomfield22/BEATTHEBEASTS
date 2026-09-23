@@ -305,7 +305,9 @@ export function buildBoulders(count = 700): { geometry: THREE.BufferGeometry; ma
   // Fractured basalt blocks: a sphere cut by a dozen random planes (each
   // vertex pulled in to the nearest cut), then faceted, so the rocks read
   // as broken angular blocks instead of smooth pebbles.
-  const geo = new THREE.IcosahedronGeometry(1, 3);
+  // Detail 2 (320 faces) is enough: the plane cuts make the silhouette, and
+  // 700 boulders × 5 passes (main + 4 shadow cascades) add up fast.
+  const geo = new THREE.IcosahedronGeometry(1, 2);
   const p = geo.attributes.position as THREE.BufferAttribute;
   const cuts: { n: THREE.Vector3; d: number }[] = [];
   let cs = 77;

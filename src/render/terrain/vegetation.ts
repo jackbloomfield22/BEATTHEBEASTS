@@ -58,7 +58,7 @@ function tagPart(g: THREE.BufferGeometry, id: number): THREE.BufferGeometry {
 /** Scrub clump ~1 m tall, ~2 m wide at scale 1. */
 export function buildShrub(seed: number): THREE.BufferGeometry {
   const rand = mulberry32(seed);
-  const g = leafCluster(rand, 14, 0.95, 0.6, 0.42);
+  const g = leafCluster(rand, 11, 0.95, 0.6, 0.46);
   canopyNormals(g, new THREE.Vector3(0, -0.2, 0));
   g.translate(0, 0.25, 0);
   return tagPart(g, 0);
@@ -184,7 +184,7 @@ function slopeAt(x: number, z: number): number {
 }
 
 /** Seeded placement on the headland: denser in hollows and along the cliff edge, never on the plaza. */
-export function scatterVegetation(shrubCount = 4200, cypressCount = 140): Scatter {
+export function scatterVegetation(shrubCount = 3000, cypressCount = 140): Scatter {
   const rand = mulberry32(90210);
   const shrubs: THREE.Matrix4[] = [];
   const cypress: THREE.Matrix4[] = [];
@@ -231,7 +231,7 @@ export function scatterVegetation(shrubCount = 4200, cypressCount = 140): Scatte
 }
 
 /** Plants on the cliff face's ledges: upward-facing spots on the cliff mesh. */
-export function ledgePlants(cliff: THREE.BufferGeometry, count = 1400): { matrices: THREE.Matrix4[]; tints: THREE.Color[] } {
+export function ledgePlants(cliff: THREE.BufferGeometry, count = 1000): { matrices: THREE.Matrix4[]; tints: THREE.Color[] } {
   const p = cliff.attributes.position as THREE.BufferAttribute;
   const n = cliff.attributes.normal as THREE.BufferAttribute;
   const rand = mulberry32(31337);

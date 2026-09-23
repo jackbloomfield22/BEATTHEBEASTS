@@ -259,14 +259,18 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     const scatter = scatterVegetation();
     const ledges = ledgePlants(assets.cliff.geometry);
     const group = new THREE.Group();
-    const add = (geo: THREE.BufferGeometry, mats: THREE.Matrix4[], tints: THREE.Color[]) => {
+    // Only the cypress cast shadows: an instanced mesh has one bounding
+    // sphere for all its plants, so casters render in full into every
+    // cascade (4 × 1.6 M triangles for the scrub), while scrub shadows are a
+    // few pixels at broadcast distances. The scrub still receives shadows.
+    const add = (geo: THREE.BufferGeometry, mats: THREE.Matrix4[], tints: THREE.Color[], cast = false) => {
       const mesh = new THREE.InstancedMesh(geo, mat, mats.length);
       mats.forEach((m, i) => {
         mesh.setMatrixAt(i, m);
         mesh.setColorAt(i, tints[i]!);
       });
       mesh.instanceMatrix.needsUpdate = true;
-      mesh.castShadow = true;
+      mesh.castShadow = cast;
       mesh.receiveShadow = true;
       mesh.computeBoundingSphere();
       mesh.userData.fullCount = mats.length;
@@ -278,7 +282,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       add(buildShrub(11 + v), deal(scatter.shrubs, 3, v), deal(scatter.tints[0]!, 3, v));
       add(buildShrub(21 + v), deal(ledges.matrices, 3, v), deal(ledges.tints, 3, v));
     }
-    for (let v = 0; v < 2; v++) add(buildCypress(31 + v), deal(scatter.cypress, 2, v), deal(scatter.tints[1]!, 2, v));
+    for (let v = 0; v < 2; v++) add(buildCypress(31 + v), deal(scatter.cypress, 2, v), deal(scatter.tints[1]!, 2, v), true);
     return group;
   }, [assets.cliff]);
   // Scatter order is random, so drawing a prefix thins plants evenly.
@@ -333,7 +337,9 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       </directionalLight>
 
       <primitive object={assets.sky.mesh} />
-      <mesh geometry={assets.terrain.geometry} material={assets.terrainMat} receiveShadow castShadow />
+      {/* The heightfield receives but doesn't cast: 320 k triangles × 4 cascades,
+          and the cliff face (its own mesh) casts the shadows that matter. */}
+      <mesh geometry={assets.terrain.geometry} material={assets.terrainMat} receiveShadow />
       <mesh geometry={assets.cliff.geometry} material={assets.terrainMat} receiveShadow castShadow />
       <mesh geometry={assets.headlands} material={assets.headlandMat} />
       <primitive object={assets.ocean.mesh} />
