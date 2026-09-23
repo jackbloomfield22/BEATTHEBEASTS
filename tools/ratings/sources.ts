@@ -5,7 +5,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { DEFENSE, OL_UNITS, PLAYERS } from '../../data/legacy/index.ts';
-import { applyAddedStints, type AddedStintRecord, type AddedStintsFile } from '../../src/engine/data/addedStints.ts';
+import type { Defender, Player } from '../../data/legacy/types.ts';
+import { applyAddedStints, FIRST_NFLVERSE_STATS_SEASON, type AddedStintRecord, type AddedStintsFile } from '../../src/engine/data/addedStints.ts';
 import { applyCorrections, validateCorrectionsFile, type AppliedCorrection } from '../../src/engine/data/corrections.ts';
 import type { AccoladeRecord, AirYardsRecord, FortyRecord, BigArmRecord, EstimatedDefStint, EstimatedStats, InputSources, NflverseEntry, PhysicalRecord } from '../../src/engine/ratings/inputs.ts';
 
@@ -81,32 +82,51 @@ export function loadSources(opts: { forty?: boolean } = {}): LoadedSources {
 
 /**
  * Added stints (data/augment/added_stints.json, validated by
- * src/engine/data/addedStints.ts): the new entry joins the defensive pool and
- * borrows what belongs to the person, not the stint, from his existing entry
- * (`personOf`): person id, body and birth date, cited honors, measurables. The
- * stint's own seasons, games and stats come from the record, at its source's
- * confidence.
+ * src/engine/data/addedStints.ts): the new entry joins the defensive or
+ * offensive pool and borrows what belongs to the person, not the stint, from
+ * his existing entry (`personOf`): person id, body and birth date, combine,
+ * cited honors, measurables. The stint's own seasons, games and stats come
+ * from the record: pre-1999 seasons from the cited table (at its source's
+ * confidence), 1999+ seasons from nflverse (verified), exactly as a legacy
+ * stint reads them.
  */
 function addStints(S: LoadedSources, file: AddedStintsFile): void {
   if (!file?.stints?.length) return;
-  const { entries, records } = applyAddedStints(file, S.defense);
+  const { entries, offense, records } = applyAddedStints(file, S.defense, S.players);
+  const made = new Map<string, Defender | Player>([...entries, ...offense].map((e) => [e.id, e]));
   const people = S.people as Record<string, { personId: string; method: string; conf: 'verified' }>;
   const nflverse = S.nflverse as Record<string, NflverseEntry>;
-  for (const [i, e] of entries.entries()) {
-    const r = records[i]!;
+  for (const r of records) {
+    const e = made.get(r.id)!;
     const src = `${r.source.title} (${r.source.permalink})`;
-    (S.defense as typeof entries).push(e);
+    if ('ea' in e) (S.players as Player[]).push(e);
+    else (S.defense as Defender[]).push(e);
     if (people[r.personOf]) people[e.id] = people[r.personOf]!;
     const nv = nflverse[r.personOf];
+    const pre = r.seasons.filter((y) => y < FIRST_NFLVERSE_STATS_SEASON);
+    // Games per season: cited before 1999, nflverse (games with a recorded stat, as for legacy stints) from 1999.
+    const games = Object.fromEntries(r.seasons.map((y) => [String(y), y < FIRST_NFLVERSE_STATS_SEASON ? r.bySeason[String(y)]!.games! : r.nflverse!.games[String(y)]!]));
     nflverse[e.id] = {
       personId: nv?.personId ?? people[e.id]?.personId ?? `added:${e.id}`,
       ...(nv?.physical ? { physical: nv.physical } : {}),
-      seasons: { list: [...r.seasons], games: Object.fromEntries(r.seasons.map((y) => [String(y), r.bySeason[String(y)]!.games])), src, conf: r.conf },
+      ...(nv?.combine ? { combine: nv.combine } : {}),
+      seasons: { list: [...r.seasons], games, src: r.nflverse ? `${src} + nflverse:rosters+nflverse:stats_player_week` : src, conf: r.conf },
+      ...(r.nflverse ? { stats: r.nflverse.stats } : {}),
     } as NflverseEntry;
-    const [a, b] = [r.seasons[0]!, r.seasons[r.seasons.length - 1]!];
-    // Games for pre-1999 seasons are read from the estimated-stats slot; here they are the cited games.
-    (S.estStats as Record<string, EstimatedStats>)[e.id] = { name: e.n, seasons: [a, b], games: r.totals.games, src, conf: r.conf };
-    (S.estDef as Record<string, EstimatedDefStint>)[e.id] = { name: e.n, seasons: [a, b], sk: r.totals.sk, int: r.totals.int, fr: r.totals.fr, td: r.totals.td, src, conf: r.conf, file: 'data/augment/added_stints.json' };
+    if (pre.length) {
+      // The pre-1999 part: games and stats from the cited lines (for a stint
+      // spanning 1999 these are the pre-1999 seasons only; nflverse has the rest).
+      const [a, b] = [pre[0]!, pre[pre.length - 1]!];
+      const tot = (f: string) => pre.reduce((s, y) => s + (r.bySeason[String(y)]![f] ?? 0), 0);
+      if ('ea' in e) {
+        const rec = tot('rec');
+        (S.estStats as Record<string, EstimatedStats>)[e.id] = { name: e.n, seasons: [a, b], games: tot('games'), recPerGame: rec / Math.max(1, tot('games')), ...(rec > 0 ? { yardsPerRec: tot('yds') / rec } : {}), src, conf: r.conf };
+      } else {
+        // Games for pre-1999 seasons are read from the estimated-stats slot; here they are the cited games.
+        (S.estStats as Record<string, EstimatedStats>)[e.id] = { name: e.n, seasons: [a, b], games: tot('games'), src, conf: r.conf };
+        (S.estDef as Record<string, EstimatedDefStint>)[e.id] = { name: e.n, seasons: [a, b], sk: tot('sk'), int: tot('int'), fr: tot('fr'), td: tot('td'), src, conf: r.conf, file: 'data/augment/added_stints.json' };
+      }
+    }
     for (const rec of Object.values(S.accolades as Record<string, AccoladeRecord>)) if (rec?.entries?.includes(r.personOf)) rec.entries = [...rec.entries, e.id];
     for (const rec of Object.values(S.physical as Record<string, PhysicalRecord>)) if (rec?.entries?.includes(r.personOf)) rec.entries = [...rec.entries, e.id];
   }

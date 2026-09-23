@@ -102,7 +102,7 @@ const OL_MAX_OTHERS = 15;
  */
 const LA_FRANCHISES: ReadonlySet<string> = new Set(['LAR', 'LV', 'LAC']);
 
-const SRC = {
+export const SRC = {
   rosters: 'nflverse:rosters',
   players: 'nflverse:players',
   combine: 'nflverse:combine',
@@ -117,7 +117,7 @@ type Method = 'name+team+season' | 'alias' | 'name-only' | 'unmatched';
 // Entries to match
 // ---------------------------------------------------------------------------
 
-type Kind = 'offense' | 'defense' | 'ol-key';
+export type Kind = 'offense' | 'defense' | 'ol-key';
 
 interface Entry {
   readonly id: string;
@@ -148,17 +148,17 @@ function legacyEntries(): Entry[] {
 // Franchise + decade index
 // ---------------------------------------------------------------------------
 
-interface Stint {
+export interface Stint {
   readonly person: Person;
   readonly rows: RosterRow[];
   /** season → REG stats with this franchise. */
   readonly stats: Map<number, StatLine>;
 }
 
-type FdIndex = Map<string, Map<string, Stint>>;
-const fdKey = (f: string, d: string): string => `${f}|${d}`;
+export type FdIndex = Map<string, Map<string, Stint>>;
+export const fdKey = (f: string, d: string): string => `${f}|${d}`;
 
-function buildFdIndex(data: NflData): FdIndex {
+export function buildFdIndex(data: NflData): FdIndex {
   const idx: FdIndex = new Map();
   const stint = (f: string, d: string, person: Person): Stint => {
     const k = fdKey(f, d);
@@ -186,7 +186,7 @@ function buildFdIndex(data: NflData): FdIndex {
 }
 
 /** Seasons that count for a stint: non-cut roster seasons plus any season with REG games for the franchise. */
-function stintSeasons(st: Stint): number[] {
+export function stintSeasons(st: Stint): number[] {
   const s = new Set<number>();
   for (const r of st.rows) if (!NON_ROSTER_STATUSES.has(r.status)) s.add(r.season);
   for (const [season, line] of st.stats) if (line.games > 0) s.add(season);
@@ -505,7 +505,7 @@ const OFFENSE_FIELDS = [
   'receptions', 'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles', 'receiving_fumbles_lost',
 ] as const;
 
-function statsOut(kind: Kind, line: StatLine, seasons: number[], stintSeasonsList: number[], perSeason: Map<number, StatLine>, avail: Availability): Record<string, unknown> {
+export function statsOut(kind: Kind, line: StatLine, seasons: number[], stintSeasonsList: number[], perSeason: Map<number, StatLine>, avail: Availability): Record<string, unknown> {
   const out: Record<string, unknown> = {
     seasons,
     complete: stintSeasonsList.every((s) => s >= FIRST_STATS_SEASON) && seasons.length > 0,
@@ -595,9 +595,9 @@ type PartialField = (typeof PARTIAL_FIELDS)[number];
 /** A season "has" a field when its league total is at least this share of the median season's total. */
 const AVAILABLE_SHARE = 0.25;
 
-type Availability = Record<PartialField, Set<number>>;
+export type Availability = Record<PartialField, Set<number>>;
 
-function fieldAvailability(data: NflData): Availability {
+export function fieldAvailability(data: NflData): Availability {
   const out = {} as Availability;
   for (const f of PARTIAL_FIELDS) {
     const totals = [...data.league].map(([y, l]) => [y, l[f]] as const);
