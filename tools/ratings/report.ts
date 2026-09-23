@@ -3,7 +3,8 @@
 //   node tools/run-ts.mjs tools/ratings/report.ts
 //
 // BRIEF "Tools for reviewing ratings": anchor pass/fail (with the Throw
-// Power before/after and the consensus check), era parity,
+// Power before/after, the approved fixes' before/after, the consensus check
+// and the diagnosis for review), era parity,
 // distribution charts per attribute, top 25 per attribute and per OVR, the
 // biggest movers against legacy, the traits (and docs/TRAITS.md), every
 // correction applied, and every low-confidence rating among the top 200
@@ -18,6 +19,8 @@ import { TRAIT_LABELS } from '../../src/engine/ratings/traits/index.ts';
 import type { RatedEntry, RatedPos } from '../../src/engine/ratings/types.ts';
 import { consensusCheck, consensusSection, loadConsensus } from './consensus.ts';
 import { loadSources, ROOT } from './sources.ts';
+import { approvedFixesSection } from './approvedFixesReport.ts';
+import { diagnosisSection } from './diagnosisReport.ts';
 import { throwPowerSection } from './throwPowerReport.ts';
 import { traitsDoc, traitsSection } from './traitsReport.ts';
 import { byPosition, capPileups, crossStintViolations, eraParity, evaluateAnchors, legacyCorrelation, movers } from './validate.ts';
@@ -57,11 +60,11 @@ out(
   '- **Signals.** Every stat is compared to the league average over the seasons the player actually played (`data/era_baselines.json`, weighted by his games per season), as a log ratio (rates, volumes) or a difference (completion %, passer rating). Honors count per season in the stint (AP First-Team 1.0, Second-Team 0.5, Pro Bowl 0.35, MVP 1.2, OPOY/DPOY 0.8); the signal is half the stint average and half the average of its best three seasons, so a rookie year or an injury season doesn\'t bury a peak.',
   '- **Samples.** Each signal becomes a z-score within the position pool (all decades together; the signals are already era-relative) and is shrunk toward 0 by n / (n + k). n is games for per-game stats and plays for rate stats (attempts / 30, carries / 15, targets / 7, receptions / 4), so a backup\'s 150 attempts don\'t make an elite decision-maker. A verified slice covering under 40% of a stint (for example only the 1999 season of a 1990s stint) doesn\'t speak for the whole stint.',
   '- **Attributes.** Each skill attribute is a weighted sum of signals (`src/engine/ratings/attributes/*.ts`, one declarative formula per attribute). Missing evidence contributes 0 (the position average) and moves part of its weight to the player\'s other evidence (stats, honors; never body or reputation), so data-poor eras aren\'t dragged to the middle. The sum is standardized, rescaled for pool size, blended with the player\'s rank in the pool (60% rank-based normal score, 40% distance from the mean; skewed honors would otherwise pile players up at 99), and mapped through one curve: median 72, top 25% → 80+, top 5% → 90+, the expected best of the pool → 98.',
-  '- **Reputation cap.** Legacy `imp` is at most 20% of an attribute\'s formula weight and, for every player, at most 20% of the attribute\'s movement: it can amplify what the evidence says by a quarter at most, and can\'t move an attribute on its own (tested for every player and attribute).',
+  '- **Reputation cap.** Legacy `imp`, and the legacy hand-set TE block grade, are each at most 20% of an attribute\'s formula weight and, for every player, at most 20% of the attribute\'s movement: each can amplify what the evidence says by a quarter at most, and can\'t move an attribute on its own (tested for every player and attribute).',
   '- **Occasional skills** (a linebacker\'s pass rush, a back\'s catching) have a position average below 72 and their own ceiling for the best at that position, so the best pass-rushing linebacker rates with the elite ends while the best cover linebacker stays below the elite corners.',
   '- **Pool calibration.** The defensive pools are the curated Beasts candidates: about 90% have honors, a median of 0.5–0.75 per season. The offensive pools show what rating that honors level earns (median OVR by honors band), so those pools are re-centered on it while the best stays at the top. It shows as its own line in every contribution breakdown.',
   '- **Physical attributes** are absolute (they feed physics): measured combine data first (40, bench, vertical, broad, cone, shuttle), with partial hand-timing corrections for older and pro-day times, else a position prior adjusted by body (weight relative to the era, translated to the modern game) and production signatures, flagged `estimated`. They are computed once per person and aged per stint with a position-specific curve (`src/engine/ratings/physical.ts`).',
-  '- **OVR** is a weighted blend of the position\'s attributes (`src/engine/ratings/ovrWeights.ts`), standardized within the position, mapped through the same curve and calibrated the same way.',
+  '- **OVR** is a weighted blend of the position\'s attributes (`src/engine/ratings/ovrWeights.ts`), standardized within the position, mapped through the same curve and calibrated the same way. For WR and TE, raw physical attributes (directly or through the skills that read them) carry at most 8% of OVR (user-approved cap, see "Approved fixes").',
   '- **Confidence** is the weight-averaged provenance of the inputs: verified 1.0, reference 0.9, legacy 0.55, estimated 0.4, prior 0. High ≥ 0.7, medium ≥ 0.4.',
   '- **99** is kept for true outliers (no pileups), so an anchor band of 99 passes at ≥ 98.5 or at rank 1–3 in the position pool.',
   '',
@@ -71,25 +74,39 @@ out(
 
 const anchors = evaluateAnchors(run);
 const nPass = anchors.filter((a) => a.pass).length;
-out('## Anchor tests', '', `**${nPass} of ${anchors.length} anchors pass.** Each check shows the value and the band. Flags are anchors I think are wrong or can't be met honestly by the data; they are listed for your review rather than bent into the formulas.`, '');
+const nApproved = anchors.filter((a) => a.anchor.approved).length;
+out(
+  '## Anchor tests',
+  '',
+  `**${nPass} of ${anchors.length} anchors pass.** Each check shows the value and the band. Flags are anchors I think are wrong or can't be met honestly by the data; they are listed for your review rather than bent into the formulas. ${nApproved} anchors carry a band you approved changing in the ratings follow-up (marked "new band"; the old band and the reason are listed below).`,
+  '',
+);
 out('| Anchor | Result | Checks |', '|---|---|---|');
 for (const a of anchors) {
-  out(`| ${a.label} | ${a.pass ? 'PASS' : a.anchor.review ? '**FLAG**' : 'FAIL'} | ${a.results.map((r) => `${r.pass ? '✓' : '✗'} ${esc(r.text)}`).join('<br>')} |`);
+  const tag = a.anchor.approved ? ' (new band)' : '';
+  out(`| ${a.label} | ${a.pass ? 'PASS' : a.anchor.review ? '**FLAG**' : 'FAIL'}${tag} | ${a.results.map((r) => `${r.pass ? '✓' : '✗'} ${esc(r.text)}`).join('<br>')} |`);
+}
+const changed = anchors.filter((a) => a.anchor.approved);
+if (changed.length) {
+  out('', '### Band changes (user-approved)', '');
+  for (const a of changed) out(`- **${a.label}** (${a.pass ? 'passes' : '**still flagged**'}): ${a.anchor.approved}`);
 }
 const flagged = anchors.filter((a) => a.anchor.review);
 if (flagged.length) {
   out('', '### Flagged anchors', '');
-  for (const a of flagged) out(`- **${a.label}**: ${a.anchor.review}`);
+  for (const a of flagged) out(`- **${a.label}**${a.pass ? '' : ' (fails)'}: ${a.anchor.review}`);
 }
 out('');
 
 out(...throwPowerSection(run));
+out(...approvedFixesSection(run));
 
 // ------------------------------------------------------------------ consensus
 
 // Reads the finished run only; never changes a rating (tools/ratings/consensus.ts).
 const consensus = loadConsensus();
 out(...consensusSection(consensusCheck(run, consensus), consensus));
+out(...diagnosisSection(run));
 
 // ------------------------------------------------------------------ parity
 
