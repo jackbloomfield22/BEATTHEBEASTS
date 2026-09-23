@@ -1,0 +1,6673 @@
+{
+ "_meta": {
+  "what": "40-yard times for players with no measured time in the base data, keyed by person id: nflverse combine for OL starters (verified), Wikipedia pre-draft tables (reference) and quoted, cited times (estimated) for the top 50 per position without one.",
+  "generatedBy": "tools/augment/forty.ts",
+  "targets": "top 50 by OVR per position (distinct people, best stint) with no measured 40, rated without this file",
+  "coverage": {
+   "QB": {
+    "measured": [],
+    "cited": [
+     "Lamar Jackson"
+    ],
+    "uncited": [],
+    "bodyPrior": [
+     "Joe Montana",
+     "Dan Marino",
+     "Boomer Esiason",
+     "Fran Tarkenton",
+     "Roger Staubach",
+     "Brett Favre",
+     "Bert Jones",
+     "Bob Griese",
+     "Warren Moon",
+     "Ken Stabler",
+     "Ken Anderson",
+     "Joe Theismann",
+     "John Elway",
+     "Randall Cunningham",
+     "Jeff Garcia",
+     "Jim Kelly",
+     "Brian Sipe",
+     "Drake Maye",
+     "Troy Aikman",
+     "Phil Simms",
+     "Terry Bradshaw",
+     "Joe Burrow",
+     "Dan Fouts",
+     "Neil Lomax",
+     "Dave Krieg",
+     "Danny White",
+     "Bernie Kosar",
+     "Jim Everett",
+     "John Hadl",
+     "Jim McMahon",
+     "Ken O'Brien",
+     "Roman Gabriel",
+     "James Harris",
+     "Jim Harbaugh",
+     "Doug Flutie",
+     "Greg Landry",
+     "Malik Willis",
+     "Jim Hart",
+     "Ron Jaworski",
+     "Mark Rypien",
+     "Steve Bartkowski",
+     "Brian Griese",
+     "Jeff George",
+     "Matt Hasselbeck",
+     "Lynn Dickey",
+     "C.J. Stroud",
+     "Steve Bono",
+     "Kyler Murray",
+     "Jayden Daniels"
+    ],
+    "noPage": []
+   },
+   "RB": {
+    "measured": [
+     "Phillip Lindsay"
+    ],
+    "cited": [
+     "Bo Jackson",
+     "Curtis Martin",
+     "Tony Dorsett",
+     "Mike Pruitt"
+    ],
+    "uncited": [
+     "O.J. Simpson",
+     "Eric Dickerson",
+     "Herschel Walker",
+     "Emmitt Smith"
+    ],
+    "bodyPrior": [
+     "Marcus Allen",
+     "Roger Craig",
+     "Walter Payton",
+     "Larry Brown",
+     "William Andrews",
+     "Billy Sims",
+     "Chuck Foreman",
+     "Freeman McNeil",
+     "Earl Campbell",
+     "Curt Warner",
+     "Ottis Anderson",
+     "Lydell Mitchell",
+     "James Brooks",
+     "Wilbert Montgomery",
+     "Larry Csonka",
+     "Lawrence McCutcheon",
+     "Greg Pruitt",
+     "Otis Armstrong",
+     "Franco Harris",
+     "Gerald Riggs",
+     "Neal Anderson",
+     "James Wilder",
+     "Terry Metcalf",
+     "Mercury Morris",
+     "Charlie Garner",
+     "Barry Foster",
+     "Calvin Hill",
+     "Dorsey Levens",
+     "Rodney Hampton",
+     "John Brockington",
+     "Joe Morris",
+     "Terry Allen",
+     "Chuck Muncie",
+     "Earnest Byner",
+     "Wendell Tyler",
+     "J.K. Dobbins",
+     "Greg Bell",
+     "Corey Dillon",
+     "Joe Cribbs",
+     "Eddie George",
+     "Stephen Davis"
+    ],
+    "noPage": []
+   },
+   "WR": {
+    "measured": [],
+    "cited": [
+     "Jerry Rice",
+     "Charlie Joiner"
+    ],
+    "uncited": [
+     "Cliff Branch"
+    ],
+    "bodyPrior": [
+     "James Lofton",
+     "Paul Warfield",
+     "Marvin Harrison",
+     "Herman Moore",
+     "Mike Quick",
+     "John Jefferson",
+     "Steve Largent",
+     "Sterling Sharpe",
+     "Cris Carter",
+     "Drew Pearson",
+     "Michael Irvin",
+     "Lynn Swann",
+     "Gene Washington",
+     "Otis Taylor",
+     "Harold Jackson",
+     "Isaac Curtis",
+     "Art Monk",
+     "Henry Ellard",
+     "Harold Carmichael",
+     "Roy Green",
+     "Cris Collinsworth",
+     "Wes Chandler",
+     "Gary Clark",
+     "Al Toon",
+     "Louis Lipps",
+     "John Gilliam",
+     "Wesley Walker",
+     "Antonio Freeman",
+     "Mel Gray",
+     "Stanley Morgan",
+     "Hines Ward",
+     "Andre Reed",
+     "Rob Moore",
+     "Mark Duper",
+     "Carl Pickens",
+     "Mark Clayton",
+     "Irving Fryar",
+     "Yancey Thigpen",
+     "Fred Biletnikoff",
+     "John Stallworth",
+     "Keyshawn Johnson",
+     "Ahmad Rashad",
+     "Anthony Carter",
+     "Rod Smith",
+     "Charley Taylor",
+     "Ken Burrough",
+     "Webster Slaughter"
+    ],
+    "noPage": []
+   },
+   "TE": {
+    "measured": [
+     "Ken Dilger",
+     "Jack Doyle",
+     "Kyle Brady",
+     "Howard Cross",
+     "Mark Bruener",
+     "Robert Awalt",
+     "Jim Kleinsasser"
+    ],
+    "cited": [
+     "Jackie Smith"
+    ],
+    "uncited": [],
+    "bodyPrior": [
+     "Dave Casper",
+     "Kellen Winslow",
+     "Mark Bavaro",
+     "Charle Young",
+     "Antonio Gates",
+     "Riley Odoms",
+     "Charlie Sanders",
+     "Russ Francis",
+     "Todd Christensen",
+     "Ozzie Newsome",
+     "Raymond Chester",
+     "Ferrell Edmunds",
+     "Bob Trumpy",
+     "Rich Caster",
+     "Billy Joe DuPree",
+     "Rodney Holman",
+     "Bob Tucker",
+     "Mickey Shuler",
+     "Doug Cosbie",
+     "Jimmie Giles",
+     "Tyler Warren",
+     "Brock Bowers",
+     "Brent Jones",
+     "Steve Jordan",
+     "Jay Novacek",
+     "Dan Ross",
+     "Pat Freiermuth",
+     "Bennie Cunningham",
+     "Marcus Pollard",
+     "Pete Holohan",
+     "Hoby Brenner",
+     "Vern Den Herder",
+     "Freddie Jones",
+     "Pat Beach",
+     "Clint Didier",
+     "Roland Williams",
+     "Don Hasselbeck",
+     "Bob Klein",
+     "Jermaine Wiggins",
+     "John Spagnola",
+     "Troy Drayton",
+     "Paul Seymour"
+    ],
+    "noPage": []
+   },
+   "OL": {
+    "measured": [
+     "Larry Allen",
+     "Zack Martin",
+     "Erik Williams",
+     "Penei Sewell",
+     "Tyron Smith",
+     "Jonathan Ogden",
+     "Jason Kelce",
+     "Willie Roaf",
+     "Trent Williams",
+     "Lane Johnson",
+     "Will Shields",
+     "Jahri Evans",
+     "Travis Frederick",
+     "Joe Thomas",
+     "Jason Peters",
+     "Tony Boselli",
+     "Walter Jones",
+     "Alan Faneca",
+     "Randall McDaniel",
+     "Dermontti Dawson",
+     "Joel Bitonio",
+     "Frank Ragnow",
+     "Steve Hutchinson",
+     "Tristan Wirfs",
+     "David DeCastro",
+     "Brian Waters",
+     "Joe Thuney",
+     "Maurkice Pouncey",
+     "Creed Humphrey",
+     "Logan Mankins",
+     "Jeff Saturday"
+    ],
+    "cited": [],
+    "uncited": [],
+    "bodyPrior": [
+     "Joe Jacoby",
+     "Russ Grimm",
+     "Anthony Munoz",
+     "Nate Newton",
+     "Quenton Nelson",
+     "Larry Little",
+     "Lomas Brown",
+     "John Hannah",
+     "Dwight Stephenson",
+     "Randy Cross",
+     "Jim Langer",
+     "Gary Zimmerman",
+     "Gene Upshaw",
+     "Jim Lachey",
+     "Art Shell",
+     "Dan Dierdorf",
+     "Richmond Webb",
+     "Ed Newman",
+     "Bill Fralic"
+    ],
+    "noPage": [
+     "Joe Thomas"
+    ]
+   },
+   "DE": {
+    "measured": [],
+    "cited": [
+     "Neil Smith",
+     "Cedrick Hardman",
+     "Charles Haley",
+     "Tommy Hart"
+    ],
+    "uncited": [],
+    "bodyPrior": [
+     "Deacon Jones",
+     "Reggie White",
+     "Bruce Smith",
+     "Jack Youngblood",
+     "Mark Gastineau",
+     "Claude Humphrey",
+     "Harvey Martin",
+     "Willie Davis",
+     "Gino Marchetti",
+     "Chris Doleman",
+     "Lee Roy Selmon",
+     "Leslie O'Neal",
+     "Carl Eller",
+     "Clyde Simmons",
+     "Howie Long",
+     "Richard Dent",
+     "Kevin Greene",
+     "Coy Bacon",
+     "Doug Atkins",
+     "George Andrie",
+     "L.C. Greenwood",
+     "Elvin Bethea",
+     "Osi Umenyiora",
+     "Lyle Alzado",
+     "Dexter Manley",
+     "Fred Dean",
+     "Ed Jones",
+     "Robert Mathis",
+     "Jim Marshall",
+     "Rulon Jones",
+     "Trevor Pryce",
+     "Jacob Green",
+     "Sean Jones",
+     "Charles Mann",
+     "Doug Betters",
+     "Hugh Douglas",
+     "Fred Dryer",
+     "Wayne Martin",
+     "Dwight White",
+     "Greg Townsend",
+     "Ordell Braase",
+     "Trace Armstrong",
+     "Lamar Lundy",
+     "Verlon Biggs",
+     "Carl Hairston",
+     "Ron McDole"
+    ],
+    "noPage": []
+   },
+   "DT": {
+    "measured": [],
+    "cited": [
+     "Warren Sapp",
+     "Buck Buchanan"
+    ],
+    "uncited": [],
+    "bodyPrior": [
+     "Alan Page",
+     "Joe Greene",
+     "John Randle",
+     "Randy White",
+     "Merlin Olsen",
+     "Alex Karras",
+     "Curley Culp",
+     "Keith Millard",
+     "Bob Lilly",
+     "Gary Johnson",
+     "Roger Brown",
+     "Wally Chambers",
+     "Jeffery Simmons",
+     "Henry Jordan",
+     "Dan Hampton",
+     "Mike Reid",
+     "Larry Brooks",
+     "Steve McMichael",
+     "Ernie Holmes",
+     "Rosey Grier",
+     "Ted Washington",
+     "Ernie Ladd",
+     "William Perry",
+     "Bob Brown"
+    ],
+    "noPage": []
+   },
+   "LB": {
+    "measured": [],
+    "cited": [
+     "Isiah Robertson",
+     "London Fletcher",
+     "Mike Curtis",
+     "Bobby Bell"
+    ],
+    "uncited": [],
+    "bodyPrior": [
+     "Lawrence Taylor",
+     "Pat Swilling",
+     "Mike Singletary",
+     "Jack Ham",
+     "Dick Butkus",
+     "Jack Lambert",
+     "Junior Seau",
+     "Greg Lloyd",
+     "Bryce Paup",
+     "Robert Brazile",
+     "Randy Gradishar",
+     "Chuck Howley",
+     "Karl Mecklenburg",
+     "Bill Bergey",
+     "Andre Tippett",
+     "Chris Hanburger",
+     "Hardy Nickerson",
+     "Cornelius Bennett",
+     "Dave Robinson",
+     "Joe Fortunato",
+     "Ray Nitschke",
+     "Wilber Marshall",
+     "Andy Russell",
+     "Seth Joyner",
+     "Sam Mills",
+     "Rickey Jackson",
+     "Hugh Green",
+     "Tom Jackson",
+     "Wayne Walker",
+     "Tommy Nobis",
+     "Harry Carson",
+     "Mike Merriweather",
+     "Maxie Baughan",
+     "Willie Lanier",
+     "Clay Matthews Jr.",
+     "Brad Van Pelt",
+     "Ted Hendricks",
+     "Lee Roy Jordan",
+     "E.J. Junior",
+     "Jim Collins",
+     "Bryan Cox",
+     "Dave Wilcox",
+     "Carl Banks",
+     "Jeff Siemon",
+     "Larry Morris",
+     "Nick Buoniconti"
+    ],
+    "noPage": []
+   },
+   "CB": {
+    "measured": [],
+    "cited": [
+     "Roger Wehrli",
+     "Everson Walls",
+     "Mel Renfro",
+     "Albert Lewis"
+    ],
+    "uncited": [
+     "Darrell Green"
+    ],
+    "bodyPrior": [
+     "Lem Barney",
+     "Lester Hayes",
+     "Herb Adderley",
+     "Mel Blount",
+     "Bobby Boyd",
+     "Emmitt Thomas",
+     "Lemar Parrish",
+     "Jimmy Johnson",
+     "Cornell Green",
+     "Louis Wright",
+     "LeRoy Irvin",
+     "Willie Brown",
+     "Trevon Diggs",
+     "Mike Haynes",
+     "Dick LeBeau",
+     "Hanford Dixon",
+     "Ty Law",
+     "Dale Carter",
+     "Mark Haynes",
+     "Frank Minnifield",
+     "Dave Whitsell",
+     "Ken Riley",
+     "Kermit Alexander",
+     "Butch Byrd",
+     "Terrell Buckley",
+     "Eddie Lewis"
+    ],
+    "noPage": []
+   },
+   "S": {
+    "measured": [],
+    "cited": [],
+    "uncited": [],
+    "bodyPrior": [
+     "Kenny Easley",
+     "Larry Wilson",
+     "Ronnie Lott",
+     "Ken Houston",
+     "Willie Wood",
+     "Jake Scott",
+     "Dick Anderson",
+     "Paul Krause",
+     "Joey Browner",
+     "Cliff Harris",
+     "Donnie Shell",
+     "John Lynch",
+     "Mike Wagner",
+     "Dennis Smith",
+     "Yale Lary",
+     "Vann McElroy",
+     "Gary Fencik",
+     "Kerby Joseph",
+     "Jack Tatum",
+     "Eugene Robinson",
+     "Wes Hopkins",
+     "Dave Grayson",
+     "Johnny Robinson",
+     "Nolan Cromwell"
+    ],
+    "noPage": []
+   }
+  }
+ },
+ "people": {
+  "00-0000217": {
+   "name": "Larry Allen",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "predraft",
+   "src": "wikipedia:Larry Allen#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Larry_Allen",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Larry_Allen&oldid=1363533470",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0000548": {
+   "name": "Robert Awalt",
+   "pos": "TE",
+   "forty": 4.86,
+   "kind": "predraft",
+   "src": "wikipedia:Rob Awalt#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Rob_Awalt",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Rob_Awalt&oldid=1373981505",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0001519": {
+   "name": "Tony Boselli",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "predraft",
+   "src": "wikipedia:Tony Boselli#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Tony_Boselli",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Tony_Boselli&oldid=1372180347",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0001661": {
+   "name": "Kyle Brady",
+   "pos": "TE",
+   "forty": 4.84,
+   "kind": "predraft",
+   "src": "wikipedia:Kyle Brady#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Kyle_Brady",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Kyle_Brady&oldid=1362861164",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0002102": {
+   "name": "Mark Bruener",
+   "pos": "TE",
+   "forty": 4.89,
+   "kind": "predraft",
+   "src": "wikipedia:Mark Bruener#Pre-draft measurables",
+   "url": "https://en.wikipedia.org/wiki/Mark_Bruener",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Mark_Bruener&oldid=1362874620",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0003681": {
+   "name": "Howard Cross",
+   "pos": "TE",
+   "forty": 5.17,
+   "kind": "predraft",
+   "src": "wikipedia:Howard Cross#Pre-draft measurables",
+   "url": "https://en.wikipedia.org/wiki/Howard_Cross",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Howard_Cross&oldid=1375492885",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0004085": {
+   "name": "Dermontti Dawson",
+   "pos": "OL",
+   "forty": 4.94,
+   "kind": "predraft",
+   "src": "wikipedia:Dermontti Dawson#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Dermontti_Dawson",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Dermontti_Dawson&oldid=1368991287",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0004294": {
+   "name": "Ken Dilger",
+   "pos": "TE",
+   "forty": 4.8,
+   "kind": "predraft",
+   "src": "wikipedia:Ken Dilger#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Ken_Dilger",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Ken_Dilger&oldid=1365665001",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0005058": {
+   "name": "Alan Faneca",
+   "pos": "OL",
+   "forty": 5.47,
+   "kind": "predraft",
+   "src": "wikipedia:Alan Faneca#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Alan_Faneca",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Alan_Faneca&oldid=1370876655",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0005322": {
+   "name": "London Fletcher",
+   "pos": "LB",
+   "forty": 4.38,
+   "kind": "cited",
+   "timing": "combine",
+   "quote": "Fletcher attended the NFL Scouting Combine and ran a 4.38 in the 40-yard dash.",
+   "basis": "1998 Scouting Combine (before the nflverse combine file, which starts in 2000).",
+   "src": "cited40:wikipedia:London Fletcher",
+   "url": "https://en.wikipedia.org/wiki/London_Fletcher",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=London_Fletcher&oldid=1376210626",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "00-0006633": {
+   "name": "Charles Haley",
+   "pos": "DE",
+   "forty": 4.675,
+   "times": [
+    4.8,
+    4.55
+   ],
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "initially timed at 4.8 seconds in the 40-yard dash, although he was later clocked by a 49ers scout at 4.55 seconds.",
+   "basis": "Pre-draft (1986): two timings, the mean is used.",
+   "src": "cited40:wikipedia:Charles Haley",
+   "url": "https://en.wikipedia.org/wiki/Charles_Haley",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Charles_Haley&oldid=1369397527",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "00-0008894": {
+   "name": "Walter Jones",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "predraft",
+   "src": "wikipedia:Walter Jones (American football)#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Walter_Jones_(American_football)",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Walter_Jones_(American_football)&oldid=1354125574",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0009323": {
+   "name": "Jim Kleinsasser",
+   "pos": "TE",
+   "forty": 4.78,
+   "kind": "predraft",
+   "src": "wikipedia:Jim Kleinsasser#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Jim_Kleinsasser",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Jim_Kleinsasser&oldid=1368260165",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0009836": {
+   "name": "Albert Lewis",
+   "pos": "CB",
+   "forty": 4.38,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "at one point running a 4.38 in the 40-yard dash.",
+   "basis": "Reported, no date given.",
+   "src": "cited40:wikipedia:Albert Lewis (American football)",
+   "url": "https://en.wikipedia.org/wiki/Albert_Lewis_(American_football)",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Albert_Lewis_(American_football)&oldid=1373986095",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "00-0010442": {
+   "name": "Curtis Martin",
+   "pos": "RB",
+   "forty": 4.4,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "Martin was highly touted for his speed-he ran a 4.4 in the 40-yard dash-and his slashing running style.",
+   "basis": "Pre-draft (1995).",
+   "src": "cited40:wikipedia:Curtis Martin",
+   "url": "https://en.wikipedia.org/wiki/Curtis_Martin",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Curtis_Martin&oldid=1374481219",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "00-0010790": {
+   "name": "Randall McDaniel",
+   "pos": "OL",
+   "forty": 4.6,
+   "kind": "predraft",
+   "src": "wikipedia:Randall McDaniel#Pre-draft measurables",
+   "url": "https://en.wikipedia.org/wiki/Randall_McDaniel",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Randall_McDaniel&oldid=1375680912",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0012322": {
+   "name": "Jonathan Ogden",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "predraft",
+   "src": "wikipedia:Jonathan Ogden#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Jonathan_Ogden",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Jonathan_Ogden&oldid=1370846776",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0013639": {
+   "name": "Jerry Rice",
+   "pos": "WR",
+   "forty": 4.58,
+   "times": [
+    4.45,
+    4.71
+   ],
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "Sources vary on his 40-yard dash time, which was measured between 4.45 and 4.71 seconds.",
+   "basis": "1985 pre-draft; the source gives the range, the mean is used.",
+   "src": "cited40:wikipedia:Jerry Rice",
+   "url": "https://en.wikipedia.org/wiki/Jerry_Rice",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Jerry_Rice&oldid=1373742471",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "00-0013791": {
+   "name": "Willie Roaf",
+   "pos": "OL",
+   "forty": 5.03,
+   "kind": "predraft",
+   "src": "wikipedia:Willie Roaf#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Willie_Roaf",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Willie_Roaf&oldid=1366938298",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0014358": {
+   "name": "Warren Sapp",
+   "pos": "DT",
+   "forty": 4.69,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "Sapp ran the fastest time in the 40-yard dash for a defensive tackle (4.69 sec).",
+   "basis": "Pre-draft (1995).",
+   "src": "cited40:wikipedia:Warren Sapp",
+   "url": "https://en.wikipedia.org/wiki/Warren_Sapp",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Warren_Sapp&oldid=1374299428",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "00-0014375": {
+   "name": "Jeff Saturday",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "predraft",
+   "src": "wikipedia:Jeff Saturday#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Jeff_Saturday",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Jeff_Saturday&oldid=1357259682",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0014811": {
+   "name": "Will Shields",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "predraft",
+   "src": "wikipedia:Will Shields#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Will_Shields",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Will_Shields&oldid=1354127386",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0015267": {
+   "name": "Neil Smith",
+   "pos": "DE",
+   "forty": 4.55,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "had a 7-foot-1½-inch arm span, and ran a 4.55 forty-yard dash.",
+   "basis": "Pre-draft measurables (1988).",
+   "src": "cited40:wikipedia:Neil Smith (American football)",
+   "url": "https://en.wikipedia.org/wiki/Neil_Smith_(American_football)",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Neil_Smith_(American_football)&oldid=1347913381",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "00-0017104": {
+   "name": "Everson Walls",
+   "pos": "CB",
+   "forty": 4.72,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "he ran the 40-yard dash in a disappointing 4.72 seconds during workouts.",
+   "basis": "Pre-draft workouts (1981).",
+   "src": "cited40:wikipedia:Everson Walls",
+   "url": "https://en.wikipedia.org/wiki/Everson_Walls",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Everson_Walls&oldid=1353753515",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "00-0017792": {
+   "name": "Erik Williams",
+   "pos": "OL",
+   "forty": 5.5,
+   "kind": "predraft",
+   "src": "wikipedia:Erik Williams#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Erik_Williams",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Erik_Williams&oldid=1375675760",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0018584": {
+   "name": "Brian Waters",
+   "pos": "OL",
+   "forty": 4.97,
+   "kind": "predraft",
+   "src": "wikipedia:Brian Waters#Pre-draft measurables (All values from NFL Combine)",
+   "url": "https://en.wikipedia.org/wiki/Brian_Waters",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Brian_Waters&oldid=1350143705",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0018955": {
+   "name": "Travis Claridge",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0018956": {
+   "name": "Brad Meester",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0018960": {
+   "name": "Michael Thompson",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019248": {
+   "name": "Steve Herndon",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019462": {
+   "name": "Leander Jordan",
+   "pos": "OL",
+   "forty": 5.46,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019493": {
+   "name": "Jeno James",
+   "pos": "OL",
+   "forty": 5.62,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019502": {
+   "name": "Mark Tauscher",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019554": {
+   "name": "Brad Bedell",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019566": {
+   "name": "Greg Randall",
+   "pos": "OL",
+   "forty": 5.59,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019584": {
+   "name": "Adrian Klemm",
+   "pos": "OL",
+   "forty": 4.98,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019597": {
+   "name": "Tutan Reyes",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019601": {
+   "name": "Stockar McDougle",
+   "pos": "OL",
+   "forty": 5.5,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019628": {
+   "name": "Marvel Smith",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019629": {
+   "name": "Bobbie Williams",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019632": {
+   "name": "Cooper Carlisle",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019640": {
+   "name": "Chris Samuels",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019664": {
+   "name": "Damion McIntosh",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019677": {
+   "name": "Darnell Alford",
+   "pos": "OL",
+   "forty": 5.56,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019702": {
+   "name": "Chad Clifton",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019704": {
+   "name": "Cosey Coleman",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019705": {
+   "name": "Todd Wade",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019727": {
+   "name": "Chris McIntosh",
+   "pos": "OL",
+   "forty": 5.39,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019739": {
+   "name": "Blaine Saipaia",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2000",
+   "conf": "verified"
+  },
+  "00-0019954": {
+   "name": "Keydrick Vincent",
+   "pos": "OL",
+   "forty": 5.61,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0019995": {
+   "name": "Tom Ashworth",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020029": {
+   "name": "Michael Keathley",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020255": {
+   "name": "Chukky Okobi",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020260": {
+   "name": "Roberto Garza",
+   "pos": "OL",
+   "forty": 5,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020261": {
+   "name": "Mathias Nkwenti",
+   "pos": "OL",
+   "forty": 5.57,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020262": {
+   "name": "Kynan Forney",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020318": {
+   "name": "Marques Sullivan",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020333": {
+   "name": "Rick DeMulling",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020347": {
+   "name": "Jonas Jennings",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020349": {
+   "name": "Tupe Peko",
+   "pos": "OL",
+   "forty": 5.36,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020353": {
+   "name": "Bill Ferrario",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020368": {
+   "name": "Ben Hamilton",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020369": {
+   "name": "Dennis Norman",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020374": {
+   "name": "Victor Leyva",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020378": {
+   "name": "Adam Haayer",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020386": {
+   "name": "Kenyatta Jones",
+   "pos": "OL",
+   "forty": 5.01,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020389": {
+   "name": "Russ Hochstein",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020399": {
+   "name": "Ryan Diem",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020406": {
+   "name": "Mike Gandy",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020420": {
+   "name": "Matt Lehr",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020437": {
+   "name": "Paul Zukauskas",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020444": {
+   "name": "Jeff Backus",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020445": {
+   "name": "Dominic Raiola",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020450": {
+   "name": "Casey Rabach",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020453": {
+   "name": "Alex Sulfsted",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020461": {
+   "name": "Maurice Williams",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020463": {
+   "name": "Kareem McKenzie",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020466": {
+   "name": "Steve Hutchinson",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020493": {
+   "name": "Kenyatta Walker",
+   "pos": "OL",
+   "forty": 5.17,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020533": {
+   "name": "Leonard Davis",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020543": {
+   "name": "Matt Light",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2001",
+   "conf": "verified"
+  },
+  "00-0020728": {
+   "name": "P.J. Alexander",
+   "pos": "OL",
+   "forty": 5.38,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0020771": {
+   "name": "Kurt Vollers",
+   "pos": "OL",
+   "forty": 5.36,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0020799": {
+   "name": "Steve Edwards",
+   "pos": "OL",
+   "forty": 5.5,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0020801": {
+   "name": "Artis Hicks",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0020952": {
+   "name": "Kevin Barry",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0020963": {
+   "name": "Qasim Mitchell",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0020969": {
+   "name": "Brandon Moore",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021089": {
+   "name": "Martin Bibla",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021142": {
+   "name": "Mike Williams",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021145": {
+   "name": "Levi Jones",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021160": {
+   "name": "Marc Colombo",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021161": {
+   "name": "Kendall Simmons",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021168": {
+   "name": "Toniu Fonoti",
+   "pos": "OL",
+   "forty": 5.49,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021172": {
+   "name": "LeCharles Bentley",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021178": {
+   "name": "Chester Pitts",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021181": {
+   "name": "Langston Walker",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021193": {
+   "name": "Fred Weary",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021201": {
+   "name": "Melvin Fowler",
+   "pos": "OL",
+   "forty": 5.46,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021215": {
+   "name": "Seth McKinney",
+   "pos": "OL",
+   "forty": 4.97,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021218": {
+   "name": "Terrence Metcalf",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021267": {
+   "name": "Jonathan Goodwin",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021321": {
+   "name": "Mike Pucillo",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021324": {
+   "name": "Chad Beasley",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021341": {
+   "name": "Eric Heitmann",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021348": {
+   "name": "Kyle Kosier",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021358": {
+   "name": "Victor Rogers",
+   "pos": "OL",
+   "forty": 5.57,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021383": {
+   "name": "Bryant McKinnie",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021385": {
+   "name": "Andre Gurode",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2002",
+   "conf": "verified"
+  },
+  "00-0021464": {
+   "name": "Brett Romberg",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0021681": {
+   "name": "Torrin Tucker",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0021763": {
+   "name": "Anthony Davis",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0021875": {
+   "name": "Gene Mruczkowski",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0021902": {
+   "name": "Scott Kooistra",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0021911": {
+   "name": "Reggie Wells",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0021922": {
+   "name": "David Diehl",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0021952": {
+   "name": "T.J. Johnson",
+   "pos": "OL",
+   "forty": 4.56,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0021959": {
+   "name": "Jordan Black",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0021974": {
+   "name": "Jeremy Bridges",
+   "pos": "OL",
+   "forty": 5.38,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0021978": {
+   "name": "Seth Wand",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022000": {
+   "name": "Wayne Hunter",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022014": {
+   "name": "Austin King",
+   "pos": "OL",
+   "forty": 5.42,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022019": {
+   "name": "Dan Koppen",
+   "pos": "OL",
+   "forty": 5.43,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022021": {
+   "name": "Sean Mahan",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022074": {
+   "name": "George Foster",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022075": {
+   "name": "Kwame Harris",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022089": {
+   "name": "Vincent Manuwai",
+   "pos": "OL",
+   "forty": 5.06,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022094": {
+   "name": "Montrae Holland",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022117": {
+   "name": "Jordan Gross",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022122": {
+   "name": "Eric Steinbach",
+   "pos": "OL",
+   "forty": 4.96,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022131": {
+   "name": "Wade Smith",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022132": {
+   "name": "Derrick Dockery",
+   "pos": "OL",
+   "forty": 5.58,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022149": {
+   "name": "Tony Pashos",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022157": {
+   "name": "Jeff Faine",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2003",
+   "conf": "verified"
+  },
+  "00-0022214": {
+   "name": "Travelle Wharton",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022245": {
+   "name": "Tyson Clabo",
+   "pos": "OL",
+   "forty": 5.51,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022266": {
+   "name": "Anthony Herrera",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022531": {
+   "name": "Jason Peters",
+   "pos": "OL",
+   "forty": 4.93,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022685": {
+   "name": "Jim Molinaro",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022694": {
+   "name": "Shane Olivea",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022728": {
+   "name": "Kirk Chambers",
+   "pos": "OL",
+   "forty": 5.44,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022755": {
+   "name": "Jake Scott",
+   "pos": "OL",
+   "forty": 5.06,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022779": {
+   "name": "Shawn Andrews",
+   "pos": "OL",
+   "forty": 5.49,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022785": {
+   "name": "Max Starks",
+   "pos": "OL",
+   "forty": 5.56,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022788": {
+   "name": "Alex Stepanovich",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022804": {
+   "name": "Nick Hardwick",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022808": {
+   "name": "Stephen Peterman",
+   "pos": "OL",
+   "forty": 5.46,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022813": {
+   "name": "Adrian Jones",
+   "pos": "OL",
+   "forty": 4.97,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022831": {
+   "name": "Brian Rimpf",
+   "pos": "OL",
+   "forty": 5.41,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022832": {
+   "name": "Scott Wells",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022836": {
+   "name": "Robert Gallery",
+   "pos": "OL",
+   "forty": 4.98,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022838": {
+   "name": "Chris Snee",
+   "pos": "OL",
+   "forty": 5.1,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022841": {
+   "name": "Jake Grove",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022855": {
+   "name": "Sean Locklear",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022866": {
+   "name": "Nat Dorsey",
+   "pos": "OL",
+   "forty": 5.46,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022870": {
+   "name": "Stacy Andrews",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022875": {
+   "name": "Jacob Bell",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022890": {
+   "name": "Vernon Carey",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022895": {
+   "name": "Justin Smiley",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022902": {
+   "name": "Jeb Terry",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022904": {
+   "name": "Nick Leckey",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022905": {
+   "name": "Rex Hadnot",
+   "pos": "OL",
+   "forty": 5.5,
+   "kind": "combine",
+   "src": "nflverse:combine 2004",
+   "conf": "verified"
+  },
+  "00-0022979": {
+   "name": "Dan Connolly",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023016": {
+   "name": "Erik Pears",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023107": {
+   "name": "Ben Wilkerson",
+   "pos": "OL",
+   "forty": 5.46,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023180": {
+   "name": "Harvey Dahl",
+   "pos": "OL",
+   "forty": 5.42,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023361": {
+   "name": "Junius Coston",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023362": {
+   "name": "Chris Kemoeatu",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023447": {
+   "name": "Jammal Brown",
+   "pos": "OL",
+   "forty": 5.06,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023454": {
+   "name": "Alex Barron",
+   "pos": "OL",
+   "forty": 4.87,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023461": {
+   "name": "Chris Spencer",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023467": {
+   "name": "Logan Mankins",
+   "pos": "OL",
+   "forty": 5.06,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023468": {
+   "name": "David Baas",
+   "pos": "OL",
+   "forty": 5.06,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023476": {
+   "name": "Michael Roos",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023484": {
+   "name": "Marcus Johnson",
+   "pos": "OL",
+   "forty": 5.45,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023487": {
+   "name": "Khalif Barnes",
+   "pos": "OL",
+   "forty": 4.92,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023499": {
+   "name": "Adam Terry",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023514": {
+   "name": "Evan Mathis",
+   "pos": "OL",
+   "forty": 4.92,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023516": {
+   "name": "Richie Incognito",
+   "pos": "OL",
+   "forty": 4.84,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023528": {
+   "name": "Trai Essex",
+   "pos": "OL",
+   "forty": 5.61,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023529": {
+   "name": "Adam Snyder",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023535": {
+   "name": "Nick Kaczur",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023540": {
+   "name": "Ray Willis",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023542": {
+   "name": "Dan Buenning",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023546": {
+   "name": "Elton Brown",
+   "pos": "OL",
+   "forty": 4.93,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023548": {
+   "name": "David Stewart",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023553": {
+   "name": "Eric Ghiaciuc",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023558": {
+   "name": "Jason Brown",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023563": {
+   "name": "Dylan Gandy",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023583": {
+   "name": "Daniel Loper",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023584": {
+   "name": "Drew Hodgdon",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023595": {
+   "name": "Anthony Alabi",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023596": {
+   "name": "Frank Omiyale",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023597": {
+   "name": "Wesley Britt",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023602": {
+   "name": "Geoff Hangartner",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023605": {
+   "name": "Scott Young",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023633": {
+   "name": "Chris Myers",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023639": {
+   "name": "Joe Berger",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023674": {
+   "name": "Scott Mruczkowski",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2005",
+   "conf": "verified"
+  },
+  "00-0023894": {
+   "name": "Donald Penn",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0023920": {
+   "name": "Dennis Roland",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024219": {
+   "name": "D'Brickashaw Ferguson",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024238": {
+   "name": "Davin Joseph",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024244": {
+   "name": "Nick Mangold",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024254": {
+   "name": "Winston Justice",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024256": {
+   "name": "Deuce Lutui",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024262": {
+   "name": "Daryn Colledge",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024265": {
+   "name": "Marcus McNeill",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024266": {
+   "name": "Ryan Cook",
+   "pos": "OL",
+   "forty": 5.47,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024270": {
+   "name": "Andrew Whitworth",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024271": {
+   "name": "Chris Chester",
+   "pos": "OL",
+   "forty": 4.83,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024274": {
+   "name": "Jeremy Trueblood",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024281": {
+   "name": "Eric Winston",
+   "pos": "OL",
+   "forty": 4.94,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024284": {
+   "name": "Paul McQuistan",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024290": {
+   "name": "Jason Spitz",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024304": {
+   "name": "Rashad Butler",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024314": {
+   "name": "Max Jean-Gilles",
+   "pos": "OL",
+   "forty": 5.48,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024323": {
+   "name": "Jahri Evans",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024327": {
+   "name": "Isaac Sowells",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024343": {
+   "name": "Rob Sims",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024344": {
+   "name": "Guy Whimper",
+   "pos": "OL",
+   "forty": 4.96,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024353": {
+   "name": "Quinn Ojinnaka",
+   "pos": "OL",
+   "forty": 5.44,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024355": {
+   "name": "Jonathan Scott",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024357": {
+   "name": "Brad Butler",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024375": {
+   "name": "Chris Kuper",
+   "pos": "OL",
+   "forty": 5.1,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024376": {
+   "name": "Michael Toudouze",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024390": {
+   "name": "Kevin Boothe",
+   "pos": "OL",
+   "forty": 5.41,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024401": {
+   "name": "Jeromey Clary",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024424": {
+   "name": "Zach Strief",
+   "pos": "OL",
+   "forty": 5.38,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024448": {
+   "name": "Will Montgomery",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024456": {
+   "name": "Mark Setterstrom",
+   "pos": "OL",
+   "forty": 5.38,
+   "kind": "combine",
+   "src": "nflverse:combine 2006",
+   "conf": "verified"
+  },
+  "00-0024583": {
+   "name": "Stephon Heyer",
+   "pos": "OL",
+   "forty": 5.59,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025390": {
+   "name": "Joe Thomas",
+   "pos": "OL",
+   "forty": 4.92,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025392": {
+   "name": "Levi Brown",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025415": {
+   "name": "Joe Staley",
+   "pos": "OL",
+   "forty": 4.79,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025416": {
+   "name": "Ben Grubbs",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025422": {
+   "name": "Arron Sears",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025426": {
+   "name": "Justin Blalock",
+   "pos": "OL",
+   "forty": 5.1,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025429": {
+   "name": "Tony Ugoh",
+   "pos": "OL",
+   "forty": 5.06,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025446": {
+   "name": "Ryan Kalil",
+   "pos": "OL",
+   "forty": 4.96,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025457": {
+   "name": "Ryan Harris",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025473": {
+   "name": "Marshal Yanda",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025478": {
+   "name": "Mario Henderson",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025502": {
+   "name": "Leroy Harris",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025504": {
+   "name": "Manuel Ramirez",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025506": {
+   "name": "Allen Barbre",
+   "pos": "OL",
+   "forty": 4.84,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025509": {
+   "name": "Doug Free",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025511": {
+   "name": "Mansfield Wrotto",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025517": {
+   "name": "Josh Beekman",
+   "pos": "OL",
+   "forty": 5.36,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025536": {
+   "name": "Uche Nwaneri",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025570": {
+   "name": "Kasey Studdard",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025576": {
+   "name": "Adam Koets",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025596": {
+   "name": "Corey Hilliard",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2007",
+   "conf": "verified"
+  },
+  "00-0025820": {
+   "name": "Jake Long",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0025826": {
+   "name": "Tyler Polumbus",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026152": {
+   "name": "Ryan Clady",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026154": {
+   "name": "Chris Williams",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026155": {
+   "name": "Branden Albert",
+   "pos": "OL",
+   "forty": 5.17,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026157": {
+   "name": "Gosder Cherilus",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026161": {
+   "name": "Sam Baker",
+   "pos": "OL",
+   "forty": 5.5,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026166": {
+   "name": "Duane Brown",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026179": {
+   "name": "Chilo Rachal",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026205": {
+   "name": "John Greco",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026223": {
+   "name": "Jeremy Zuttah",
+   "pos": "OL",
+   "forty": 4.99,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026236": {
+   "name": "Chad Rinehart",
+   "pos": "OL",
+   "forty": 5.42,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026239": {
+   "name": "Oniel Cousins",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026247": {
+   "name": "Cody Wallace",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026248": {
+   "name": "Kory Lichtensteiger",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026249": {
+   "name": "Mike McGlynn",
+   "pos": "OL",
+   "forty": 5.38,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026252": {
+   "name": "Anthony Collins",
+   "pos": "OL",
+   "forty": 5.54,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026273": {
+   "name": "David Hale",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026290": {
+   "name": "Breno Giacomini",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026304": {
+   "name": "Carl Nicks",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026310": {
+   "name": "Barry Richardson",
+   "pos": "OL",
+   "forty": 5.45,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026327": {
+   "name": "John Sullivan",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026335": {
+   "name": "Donald Thomas",
+   "pos": "OL",
+   "forty": 5,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026359": {
+   "name": "Demetrius Bell",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026365": {
+   "name": "Brandon Keith",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026370": {
+   "name": "King Dunlap",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026376": {
+   "name": "Jamey Richard",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2008",
+   "conf": "verified"
+  },
+  "00-0026500": {
+   "name": "Matt Slauson",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0026537": {
+   "name": "Edwin Williams",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0026561": {
+   "name": "Ramon Foster",
+   "pos": "OL",
+   "forty": 5.57,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0026762": {
+   "name": "Alex Boone",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0026929": {
+   "name": "Andrew Gardner",
+   "pos": "OL",
+   "forty": 4.96,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0026950": {
+   "name": "A.Q. Shipley",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0026982": {
+   "name": "Andre Smith",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0026984": {
+   "name": "Eugene Monroe",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0026997": {
+   "name": "Alex Mack",
+   "pos": "OL",
+   "forty": 5.17,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0026999": {
+   "name": "Michael Oher",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027004": {
+   "name": "Eric Wood",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027015": {
+   "name": "Eben Britton",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027025": {
+   "name": "Max Unger",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027027": {
+   "name": "Andy Levitre",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027030": {
+   "name": "Phil Loadholt",
+   "pos": "OL",
+   "forty": 5.45,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027036": {
+   "name": "Will Beatty",
+   "pos": "OL",
+   "forty": 5.06,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027051": {
+   "name": "Antoine Caldwell",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027052": {
+   "name": "Louis Vasquez",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027053": {
+   "name": "Kraig Urbik",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027097": {
+   "name": "Tyronne Green",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027110": {
+   "name": "Garrett Reynolds",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027112": {
+   "name": "Jamon Meredith",
+   "pos": "OL",
+   "forty": 4.99,
+   "kind": "combine",
+   "src": "nflverse:combine 2009",
+   "conf": "verified"
+  },
+  "00-0027485": {
+   "name": "Jeff Byers",
+   "pos": "OL",
+   "forty": 5.04,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027607": {
+   "name": "Ted Larsen",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027648": {
+   "name": "Rodger Saffold",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027658": {
+   "name": "Zane Beadles",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027667": {
+   "name": "Vladimir Ducasse",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027669": {
+   "name": "Charles Brown",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027673": {
+   "name": "Jon Asamoah",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027674": {
+   "name": "Jared Veldheer",
+   "pos": "OL",
+   "forty": 5.06,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027678": {
+   "name": "John Jerry",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027683": {
+   "name": "J.D. Walton",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027694": {
+   "name": "Shawn Lauvao",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027699": {
+   "name": "Mike Johnson",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027707": {
+   "name": "Bruce Campbell",
+   "pos": "OL",
+   "forty": 4.75,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027717": {
+   "name": "Joe Hawley",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027728": {
+   "name": "Jason Fox",
+   "pos": "OL",
+   "forty": 5.45,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027746": {
+   "name": "Mitch Petrus",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027750": {
+   "name": "Chris Scott",
+   "pos": "OL",
+   "forty": 5.52,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027768": {
+   "name": "Marshall Newhouse",
+   "pos": "OL",
+   "forty": 4.99,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027778": {
+   "name": "Sam Young",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027781": {
+   "name": "Eric Olsen",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027821": {
+   "name": "Erik Cook",
+   "pos": "OL",
+   "forty": 5.55,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027857": {
+   "name": "Trent Williams",
+   "pos": "OL",
+   "forty": 4.81,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027859": {
+   "name": "Russell Okung",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027863": {
+   "name": "Anthony Davis",
+   "pos": "OL",
+   "forty": 5.36,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027869": {
+   "name": "Mike Iupati",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027870": {
+   "name": "Maurkice Pouncey",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027875": {
+   "name": "Bryan Bulaga",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2010",
+   "conf": "verified"
+  },
+  "00-0027947": {
+   "name": "Tyron Smith",
+   "pos": "OL",
+   "forty": 4.93,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027953": {
+   "name": "Mike Pouncey",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027955": {
+   "name": "Nate Solder",
+   "pos": "OL",
+   "forty": 4.96,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027960": {
+   "name": "Anthony Castonzo",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027961": {
+   "name": "Danny Watkins",
+   "pos": "OL",
+   "forty": 5.36,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027963": {
+   "name": "James Carpenter",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027967": {
+   "name": "Gabe Carimi",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027970": {
+   "name": "Derek Sherrod",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027984": {
+   "name": "Orlando Franklin",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027986": {
+   "name": "Stefen Wisniewski",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027987": {
+   "name": "Ben Ijalana",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0027993": {
+   "name": "Rodney Hudson",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028001": {
+   "name": "Marcus Gilbert",
+   "pos": "OL",
+   "forty": 5.41,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028023": {
+   "name": "Jah Reid",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028030": {
+   "name": "Joe Barksdale",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028039": {
+   "name": "Clint Boling",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028048": {
+   "name": "David Arkin",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028055": {
+   "name": "James Brewer",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028060": {
+   "name": "Chris Hairston",
+   "pos": "OL",
+   "forty": 5.38,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028076": {
+   "name": "Marcus Cannon",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028088": {
+   "name": "Jason Pinkston",
+   "pos": "OL",
+   "forty": 5.39,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028099": {
+   "name": "Julian Vandervelde",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028101": {
+   "name": "Daniel Kilgore",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028110": {
+   "name": "Brandon Fusco",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028117": {
+   "name": "Caleb Schlauderaff",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028129": {
+   "name": "Jason Kelce",
+   "pos": "OL",
+   "forty": 4.89,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028139": {
+   "name": "Stephen Schilling",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028152": {
+   "name": "Derek Newton",
+   "pos": "OL",
+   "forty": 5,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0028177": {
+   "name": "Mike Person",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2011",
+   "conf": "verified"
+  },
+  "00-0029010": {
+   "name": "Ronald Leary",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029139": {
+   "name": "Adam Gettis",
+   "pos": "OL",
+   "forty": 4.9,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029144": {
+   "name": "Tom Compton",
+   "pos": "OL",
+   "forty": 5.01,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029146": {
+   "name": "J.R. Sweezy",
+   "pos": "OL",
+   "forty": 4.97,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029202": {
+   "name": "Mike Adams",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029203": {
+   "name": "David Molk",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029253": {
+   "name": "Mitchell Schwartz",
+   "pos": "OL",
+   "forty": 5.38,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029254": {
+   "name": "Amini Silatolu",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029259": {
+   "name": "Kelechi Osemele",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029278": {
+   "name": "Joe Looney",
+   "pos": "OL",
+   "forty": 5.02,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029283": {
+   "name": "Brandon Mosley",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029288": {
+   "name": "Johnnie Troutman",
+   "pos": "OL",
+   "forty": 5.52,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029302": {
+   "name": "Matt McCants",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029316": {
+   "name": "Kelvin Beachum",
+   "pos": "OL",
+   "forty": 5.38,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029411": {
+   "name": "Peter Konz",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029413": {
+   "name": "Ben Jones",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029426": {
+   "name": "Brandon Washington",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029524": {
+   "name": "Jeff Allen",
+   "pos": "OL",
+   "forty": 5.17,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029527": {
+   "name": "Lamar Holmes",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029528": {
+   "name": "Bobby Massie",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029543": {
+   "name": "Donald Stephenson",
+   "pos": "OL",
+   "forty": 4.94,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029546": {
+   "name": "Senio Kelemete",
+   "pos": "OL",
+   "forty": 5.39,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029561": {
+   "name": "Cordy Glenn",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029592": {
+   "name": "Kevin Zeitler",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029661": {
+   "name": "Andrew Tiller",
+   "pos": "OL",
+   "forty": 5.44,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029666": {
+   "name": "Josh LeRibeus",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029672": {
+   "name": "Riley Reiff",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029678": {
+   "name": "David DeCastro",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029687": {
+   "name": "Matt Kalil",
+   "pos": "OL",
+   "forty": 4.96,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029699": {
+   "name": "Tony Bergstrom",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2012",
+   "conf": "verified"
+  },
+  "00-0029762": {
+   "name": "John Wetzel",
+   "pos": "OL",
+   "forty": 5.46,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0029893": {
+   "name": "Rick Wagner",
+   "pos": "OL",
+   "forty": 5.17,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030046": {
+   "name": "Jordan Mills",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030065": {
+   "name": "Larry Warford",
+   "pos": "OL",
+   "forty": 5.58,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030066": {
+   "name": "Brian Winters",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030067": {
+   "name": "Terron Armstead",
+   "pos": "OL",
+   "forty": 4.71,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030071": {
+   "name": "Hugh Thornton",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030074": {
+   "name": "David Bakhtiari",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030075": {
+   "name": "Khaled Holmes",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030076": {
+   "name": "J.C. Tretter",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030097": {
+   "name": "David Quessenberry",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030181": {
+   "name": "Jack Doyle",
+   "pos": "TE",
+   "forty": 4.9,
+   "kind": "predraft",
+   "src": "wikipedia:Jack Doyle (American football)#Pre-draft measurables (All values from Pro Day)",
+   "url": "https://en.wikipedia.org/wiki/Jack_Doyle_(American_football)",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Jack_Doyle_(American_football)&oldid=1374640570",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0030207": {
+   "name": "Alvin Bailey",
+   "pos": "OL",
+   "forty": 4.95,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030441": {
+   "name": "Kyle Long",
+   "pos": "OL",
+   "forty": 4.91,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030476": {
+   "name": "Garrett Gilkey",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030486": {
+   "name": "Brian Schwenke",
+   "pos": "OL",
+   "forty": 4.99,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030504": {
+   "name": "Earl Watford",
+   "pos": "OL",
+   "forty": 5.06,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030505": {
+   "name": "D.J. Fluker",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030531": {
+   "name": "Dallas Thomas",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030534": {
+   "name": "Barrett Jones",
+   "pos": "OL",
+   "forty": 5.43,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030545": {
+   "name": "Luke Joeckel",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030546": {
+   "name": "Travis Frederick",
+   "pos": "OL",
+   "forty": 5.58,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030561": {
+   "name": "Lane Johnson",
+   "pos": "OL",
+   "forty": 4.72,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030579": {
+   "name": "Menelik Watson",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030584": {
+   "name": "Eric Fisher",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030585": {
+   "name": "Justin Pugh",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030590": {
+   "name": "Jonathan Cooper",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030593": {
+   "name": "Chance Warmack",
+   "pos": "OL",
+   "forty": 5.49,
+   "kind": "combine",
+   "src": "nflverse:combine 2013",
+   "conf": "verified"
+  },
+  "00-0030649": {
+   "name": "Jonotthan Harrison",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0030694": {
+   "name": "James Hurst",
+   "pos": "OL",
+   "forty": 5.59,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0030725": {
+   "name": "Cornelius Lucas",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0030791": {
+   "name": "Gabe Ikard",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0030869": {
+   "name": "Tyler Larsen",
+   "pos": "OL",
+   "forty": 5.17,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0030887": {
+   "name": "Anthony Steen",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0030991": {
+   "name": "Chris Watt",
+   "pos": "OL",
+   "forty": 5.5,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0030996": {
+   "name": "John Urschel",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0030997": {
+   "name": "Zach Fulton",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031017": {
+   "name": "Dakota Dozier",
+   "pos": "OL",
+   "forty": 5.42,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031019": {
+   "name": "Corey Linsley",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031029": {
+   "name": "Seantrel Henderson",
+   "pos": "OL",
+   "forty": 5.04,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031046": {
+   "name": "Jack Mewhort",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031047": {
+   "name": "Spencer Long",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031067": {
+   "name": "Cameron Fleming",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031095": {
+   "name": "Charles Leno Jr.",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031128": {
+   "name": "Ryan Groy",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031142": {
+   "name": "Matt Feiler",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031174": {
+   "name": "Bryan Stork",
+   "pos": "OL",
+   "forty": 5.44,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031185": {
+   "name": "Jon Halapio",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031238": {
+   "name": "Weston Richburg",
+   "pos": "OL",
+   "forty": 5.1,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031279": {
+   "name": "Jake Matthews",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031282": {
+   "name": "Justin Britt",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031284": {
+   "name": "Travis Swanson",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031306": {
+   "name": "Russell Bodine",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031311": {
+   "name": "Cyril Richardson",
+   "pos": "OL",
+   "forty": 5.36,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031314": {
+   "name": "Wesley Johnson",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031330": {
+   "name": "Morgan Moses",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031335": {
+   "name": "Cyrus Kouandjio",
+   "pos": "OL",
+   "forty": 5.59,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031337": {
+   "name": "Marcus Martin",
+   "pos": "OL",
+   "forty": 5.38,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031349": {
+   "name": "Matt Paradis",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031353": {
+   "name": "Michael Schofield",
+   "pos": "OL",
+   "forty": 5.01,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031362": {
+   "name": "Trai Turner",
+   "pos": "OL",
+   "forty": 4.93,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031367": {
+   "name": "Gabe Jackson",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031369": {
+   "name": "Brandon Linder",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031386": {
+   "name": "Greg Robinson",
+   "pos": "OL",
+   "forty": 4.92,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031402": {
+   "name": "Zack Martin",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031410": {
+   "name": "Xavier Su'a-Filo",
+   "pos": "OL",
+   "forty": 5.04,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031417": {
+   "name": "Ja'Wuan James",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031426": {
+   "name": "Joel Bitonio",
+   "pos": "OL",
+   "forty": 4.92,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031433": {
+   "name": "Billy Turner",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031442": {
+   "name": "Taylor Lewan",
+   "pos": "OL",
+   "forty": 4.87,
+   "kind": "combine",
+   "src": "nflverse:combine 2014",
+   "conf": "verified"
+  },
+  "00-0031534": {
+   "name": "La'el Collins",
+   "pos": "OL",
+   "forty": 5.1,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0031536": {
+   "name": "Darrian Miller",
+   "pos": "OL",
+   "forty": 5.51,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0031561": {
+   "name": "Hroniss Grasu",
+   "pos": "OL",
+   "forty": 5.03,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0031567": {
+   "name": "Daryl Williams",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0031581": {
+   "name": "Mark Glowinski",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0031622": {
+   "name": "Bobby Hart",
+   "pos": "OL",
+   "forty": 5.61,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0031627": {
+   "name": "Corey Robinson",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0031779": {
+   "name": "B.J. Finney",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0031923": {
+   "name": "Greg Mancz",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0031936": {
+   "name": "Mitch Morse",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0031942": {
+   "name": "Arie Kouandjio",
+   "pos": "OL",
+   "forty": 5.48,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032053": {
+   "name": "Brandon Scherff",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032071": {
+   "name": "Trenton Brown",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032118": {
+   "name": "Andy Gallik",
+   "pos": "OL",
+   "forty": 5.5,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032132": {
+   "name": "Max Garcia",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032145": {
+   "name": "Cameron Erving",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032147": {
+   "name": "Ty Sambrailo",
+   "pos": "OL",
+   "forty": 5.36,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032149": {
+   "name": "John Miller",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032151": {
+   "name": "Jon Feliciano",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032196": {
+   "name": "Jake Fisher",
+   "pos": "OL",
+   "forty": 5.01,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032203": {
+   "name": "Andrus Peat",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032204": {
+   "name": "Chaz Green",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032217": {
+   "name": "Donovan Smith",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032222": {
+   "name": "D.J. Humphries",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032233": {
+   "name": "Cedric Ogbuehi",
+   "pos": "OL",
+   "forty": 4.98,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032234": {
+   "name": "Laken Tomlinson",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032242": {
+   "name": "Rob Havenstein",
+   "pos": "OL",
+   "forty": 5.46,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032243": {
+   "name": "Ali Marpet",
+   "pos": "OL",
+   "forty": 4.98,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032244": {
+   "name": "Jamon Brown",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032246": {
+   "name": "Andrew Donnal",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032255": {
+   "name": "A.J. Cann",
+   "pos": "OL",
+   "forty": 5.47,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032259": {
+   "name": "Ereck Flowers",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2015",
+   "conf": "verified"
+  },
+  "00-0032380": {
+   "name": "Laremy Tunsil",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032381": {
+   "name": "Taylor Decker",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032383": {
+   "name": "Ryan Kelly",
+   "pos": "OL",
+   "forty": 5.03,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032384": {
+   "name": "Germain Ifedi",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032391": {
+   "name": "Joe Thuney",
+   "pos": "OL",
+   "forty": 4.95,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032395": {
+   "name": "Graham Glasgow",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032407": {
+   "name": "Alex Lewis",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032418": {
+   "name": "Joe Dahl",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032419": {
+   "name": "Joe Haeg",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032420": {
+   "name": "Brandon Shell",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032455": {
+   "name": "Austin Blythe",
+   "pos": "OL",
+   "forty": 5.36,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032549": {
+   "name": "Alex Redmond",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032575": {
+   "name": "Matt Skura",
+   "pos": "OL",
+   "forty": 5.39,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032701": {
+   "name": "Jake Brendel",
+   "pos": "OL",
+   "forty": 5.01,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032766": {
+   "name": "Jason Spriggs",
+   "pos": "OL",
+   "forty": 4.94,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032768": {
+   "name": "Cody Whitehair",
+   "pos": "OL",
+   "forty": 5.02,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032777": {
+   "name": "Evan Boehm",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032779": {
+   "name": "Caleb Benenoch",
+   "pos": "OL",
+   "forty": 4.98,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032785": {
+   "name": "Halapoulivaati Vaitai",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032872": {
+   "name": "Jack Allen",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032954": {
+   "name": "Isaac Seumalo",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032965": {
+   "name": "Ronnie Stanley",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0032969": {
+   "name": "Nick Martin",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0033005": {
+   "name": "Denver Kirkland",
+   "pos": "OL",
+   "forty": 5.55,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0033011": {
+   "name": "Connor McGovern",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0033039": {
+   "name": "Christian Westerman",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0033057": {
+   "name": "Jack Conklin",
+   "pos": "OL",
+   "forty": 5,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0033065": {
+   "name": "Le'Raven Clark",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0033085": {
+   "name": "Jerald Hawkins",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0033151": {
+   "name": "Joshua Garnett",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2016",
+   "conf": "verified"
+  },
+  "00-0033284": {
+   "name": "Taylor Moton",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033290": {
+   "name": "Jermaine Eluemunor",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033300": {
+   "name": "Conor McDermott",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033326": {
+   "name": "Aviante Collins",
+   "pos": "OL",
+   "forty": 4.81,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033465": {
+   "name": "Isaac Asiata",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033529": {
+   "name": "Chase Roullier",
+   "pos": "OL",
+   "forty": 5.54,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033538": {
+   "name": "Garett Bolles",
+   "pos": "OL",
+   "forty": 4.95,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033542": {
+   "name": "Forrest Lamp",
+   "pos": "OL",
+   "forty": 5,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033578": {
+   "name": "Sam Tevi",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033592": {
+   "name": "Kyle Fuller",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033793": {
+   "name": "Corey Levin",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033863": {
+   "name": "Dan Skipper",
+   "pos": "OL",
+   "forty": 5.42,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033889": {
+   "name": "Cam Robinson",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033901": {
+   "name": "Ethan Pocic",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033904": {
+   "name": "Dion Dawkins",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033909": {
+   "name": "Pat Elflein",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033910": {
+   "name": "Dan Feeney",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033946": {
+   "name": "David Sharpe",
+   "pos": "OL",
+   "forty": 5.44,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0033960": {
+   "name": "Danny Isidora",
+   "pos": "OL",
+   "forty": 5.03,
+   "kind": "combine",
+   "src": "nflverse:combine 2017",
+   "conf": "verified"
+  },
+  "00-0034109": {
+   "name": "Phillip Lindsay",
+   "pos": "RB",
+   "forty": 4.39,
+   "kind": "predraft",
+   "src": "wikipedia:Phillip Lindsay#Pre-draft measurables (All values from Pro Day)",
+   "url": "https://en.wikipedia.org/wiki/Phillip_Lindsay",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Phillip_Lindsay&oldid=1344433341",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0034114": {
+   "name": "Coleman Shelton",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034158": {
+   "name": "Brian O'Neill",
+   "pos": "OL",
+   "forty": 4.82,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034165": {
+   "name": "Colby Gossett",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034261": {
+   "name": "Austin Corbett",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034269": {
+   "name": "Cole Madison",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034280": {
+   "name": "Greg Senat",
+   "pos": "OL",
+   "forty": 5.38,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034345": {
+   "name": "Frank Ragnow",
+   "pos": "OL",
+   "forty": 4.99,
+   "kind": "predraft",
+   "src": "wikipedia:Frank Ragnow#Pre-draft measurables (All values from NFL Combine /Arkansas' Pro Day)",
+   "url": "https://en.wikipedia.org/wiki/Frank_Ragnow",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Frank_Ragnow&oldid=1370082947",
+   "retrieved": "2026-09-23",
+   "conf": "reference"
+  },
+  "00-0034346": {
+   "name": "Will Hernandez",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034352": {
+   "name": "Connor Williams",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034380": {
+   "name": "Will Richardson",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034390": {
+   "name": "Tyrell Crosby",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034392": {
+   "name": "Scott Quessenberry",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034399": {
+   "name": "Wyatt Teller",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034436": {
+   "name": "Will Clapp",
+   "pos": "OL",
+   "forty": 5.39,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034445": {
+   "name": "Nick Gates",
+   "pos": "OL",
+   "forty": 5.46,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034522": {
+   "name": "KC McDermott",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034678": {
+   "name": "Alex Cappa",
+   "pos": "OL",
+   "forty": 5.39,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034729": {
+   "name": "Jamarco Jones",
+   "pos": "OL",
+   "forty": 5.5,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034752": {
+   "name": "Orlando Brown",
+   "pos": "OL",
+   "forty": 5.85,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034759": {
+   "name": "Kolton Miller",
+   "pos": "OL",
+   "forty": 4.95,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034763": {
+   "name": "Brandon Parker",
+   "pos": "OL",
+   "forty": 5.4,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034768": {
+   "name": "Chukwuma Okorafor",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034785": {
+   "name": "Mason Cole",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034796": {
+   "name": "Lamar Jackson",
+   "pos": "QB",
+   "forty": 4.34,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "Jackson reportedly clocked in a 4.34 40 yard dash time in 2017 at Louisville.",
+   "basis": "College (2017), reported; he did not run at the 2018 Combine.",
+   "src": "cited40:wikipedia:Lamar Jackson",
+   "url": "https://en.wikipedia.org/wiki/Lamar_Jackson",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Lamar_Jackson&oldid=1376039907",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "00-0034803": {
+   "name": "Joseph Noteboom",
+   "pos": "OL",
+   "forty": 4.96,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034804": {
+   "name": "Brian Allen",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034817": {
+   "name": "Geron Christian",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0034836": {
+   "name": "Braden Smith",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2018",
+   "conf": "verified"
+  },
+  "00-0035003": {
+   "name": "Jackson Barton",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035127": {
+   "name": "Andre James",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035141": {
+   "name": "Phil Haynes",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035233": {
+   "name": "Andre Dillard",
+   "pos": "OL",
+   "forty": 4.96,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035234": {
+   "name": "Tytus Howard",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035235": {
+   "name": "Kaleb McGary",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035238": {
+   "name": "Cody Ford",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035242": {
+   "name": "Erik McCoy",
+   "pos": "OL",
+   "forty": 4.89,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035258": {
+   "name": "Hjalte Froholdt",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035266": {
+   "name": "Michael Jordan",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035295": {
+   "name": "Isaiah Prince",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035300": {
+   "name": "Dennis Daley",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035317": {
+   "name": "Joshua Miles",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035382": {
+   "name": "Ryan Bates",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035383": {
+   "name": "Nate Herbig",
+   "pos": "OL",
+   "forty": 5.41,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035384": {
+   "name": "Iosua Opeta",
+   "pos": "OL",
+   "forty": 5.02,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035588": {
+   "name": "Garrett Bradbury",
+   "pos": "OL",
+   "forty": 4.92,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035629": {
+   "name": "Jonah Williams",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035630": {
+   "name": "Chris Lindstrom",
+   "pos": "OL",
+   "forty": 4.91,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035649": {
+   "name": "Nate Davis",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035666": {
+   "name": "Bobby Evans",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035668": {
+   "name": "David Edwards",
+   "pos": "OL",
+   "forty": 5.28,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035686": {
+   "name": "Michael Deiter",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035688": {
+   "name": "Trey Pipkins",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035694": {
+   "name": "Greg Little",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035698": {
+   "name": "Chuma Edoga",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035702": {
+   "name": "Dalton Risner",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2019",
+   "conf": "verified"
+  },
+  "00-0035764": {
+   "name": "Calvin Throckmorton",
+   "pos": "OL",
+   "forty": 5.57,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0035870": {
+   "name": "Kyle Murphy",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0035881": {
+   "name": "Yasir Durant",
+   "pos": "OL",
+   "forty": 5.52,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036036": {
+   "name": "Terence Steele",
+   "pos": "OL",
+   "forty": 5.03,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036163": {
+   "name": "Justin Herron",
+   "pos": "OL",
+   "forty": 5.26,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036195": {
+   "name": "Charlie Heck",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036214": {
+   "name": "Tyre Phillips",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036215": {
+   "name": "Danny Pinter",
+   "pos": "OL",
+   "forty": 4.91,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036234": {
+   "name": "Logan Stenberg",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036236": {
+   "name": "Nick Harris",
+   "pos": "OL",
+   "forty": 5.1,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036246": {
+   "name": "Jon Runyan",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036248": {
+   "name": "Austin Jackson",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036256": {
+   "name": "Colton McKivitz",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036258": {
+   "name": "Jonah Jackson",
+   "pos": "OL",
+   "forty": 5.23,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036263": {
+   "name": "Cameron Clark",
+   "pos": "OL",
+   "forty": 5.29,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036267": {
+   "name": "Jedrick Wills",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036273": {
+   "name": "Jake Hanson",
+   "pos": "OL",
+   "forty": 5.5,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036284": {
+   "name": "Mekhi Becton",
+   "pos": "OL",
+   "forty": 5.1,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036295": {
+   "name": "Matt Hennessy",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036310": {
+   "name": "Hakeem Adeniji",
+   "pos": "OL",
+   "forty": 5.17,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036327": {
+   "name": "Ezra Cleveland",
+   "pos": "OL",
+   "forty": 4.93,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036334": {
+   "name": "Saahdiq Charles",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036342": {
+   "name": "Keith Ismael",
+   "pos": "OL",
+   "forty": 5.34,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036363": {
+   "name": "Josh Jones",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036369": {
+   "name": "John Simpson",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036386": {
+   "name": "Andrew Thomas",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036391": {
+   "name": "Lloyd Cushenberry III",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036392": {
+   "name": "Matt Peart",
+   "pos": "OL",
+   "forty": 5.06,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036396": {
+   "name": "Jack Driscoll",
+   "pos": "OL",
+   "forty": 5.02,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036397": {
+   "name": "Shane Lemieux",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036406": {
+   "name": "Tristan Wirfs",
+   "pos": "OL",
+   "forty": 4.85,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036408": {
+   "name": "Cesar Ruiz",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036417": {
+   "name": "Damien Lewis",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036437": {
+   "name": "Tremayne Anchrum",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2020",
+   "conf": "verified"
+  },
+  "00-0036483": {
+   "name": "Will Fries",
+   "pos": "OL",
+   "forty": 5.37,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036551": {
+   "name": "Aaron Banks",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036596": {
+   "name": "Robert Jones",
+   "pos": "OL",
+   "forty": 5.36,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036603": {
+   "name": "Alaric Jackson",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036618": {
+   "name": "Samuel Cosmi",
+   "pos": "OL",
+   "forty": 4.87,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036619": {
+   "name": "Dillon Radunz",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036623": {
+   "name": "Creed Humphrey",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036653": {
+   "name": "Stone Forsythe",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036655": {
+   "name": "Cole Van Lanen",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036736": {
+   "name": "Kayode Awosika",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036856": {
+   "name": "Trey Hill",
+   "pos": "OL",
+   "forty": 5.5,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036859": {
+   "name": "Jimmy Morrissey",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036866": {
+   "name": "James Hudson",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036880": {
+   "name": "Penei Sewell",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036886": {
+   "name": "Josh Ball",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036892": {
+   "name": "Alex Leatherwood",
+   "pos": "OL",
+   "forty": 4.96,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036905": {
+   "name": "Larry Borom",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036930": {
+   "name": "Landon Young",
+   "pos": "OL",
+   "forty": 5,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036953": {
+   "name": "Teven Jenkins",
+   "pos": "OL",
+   "forty": 5.01,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036957": {
+   "name": "Drew Dalman",
+   "pos": "OL",
+   "forty": 5.11,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036975": {
+   "name": "Walker Little",
+   "pos": "OL",
+   "forty": 5.3,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036977": {
+   "name": "Ben Cleveland",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036979": {
+   "name": "Alijah Vera-Tucker",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036983": {
+   "name": "Kendrick Green",
+   "pos": "OL",
+   "forty": 4.89,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0036985": {
+   "name": "Robert Hainsey",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0037001": {
+   "name": "Quinn Meinerz",
+   "pos": "OL",
+   "forty": 4.99,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0037009": {
+   "name": "Rashawn Slater",
+   "pos": "OL",
+   "forty": 4.91,
+   "kind": "combine",
+   "src": "nflverse:combine 2021",
+   "conf": "verified"
+  },
+  "00-0037076": {
+   "name": "Sean Rhyan",
+   "pos": "OL",
+   "forty": 5.25,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037081": {
+   "name": "Braxton Jones",
+   "pos": "OL",
+   "forty": 4.97,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037089": {
+   "name": "Ja'Tyre Carter",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037092": {
+   "name": "Chris Paul",
+   "pos": "OL",
+   "forty": 4.89,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037194": {
+   "name": "Darian Kinnard",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037229": {
+   "name": "Ikem Ekwonu",
+   "pos": "OL",
+   "forty": 4.93,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037241": {
+   "name": "Trevor Penning",
+   "pos": "OL",
+   "forty": 4.89,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037243": {
+   "name": "Tyler Smith",
+   "pos": "OL",
+   "forty": 5.02,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037255": {
+   "name": "Dylan Parham",
+   "pos": "OL",
+   "forty": 4.93,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037266": {
+   "name": "Matt Waletzko",
+   "pos": "OL",
+   "forty": 5.03,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037278": {
+   "name": "Luke Wattenberg",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037279": {
+   "name": "Marcus McKethan",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037287": {
+   "name": "Vederian Lowe",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037297": {
+   "name": "Cade Mays",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037302": {
+   "name": "Austin Deculus",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037305": {
+   "name": "Luke Tenuta",
+   "pos": "OL",
+   "forty": 5.41,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037322": {
+   "name": "Thayer Munford",
+   "pos": "OL",
+   "forty": 5.39,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037326": {
+   "name": "Dawson Deaton",
+   "pos": "OL",
+   "forty": 5.12,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037613": {
+   "name": "Kenyon Green",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037754": {
+   "name": "Nicholas Petit-Frere",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037757": {
+   "name": "Bernhard Raimann",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037807": {
+   "name": "Joshua Ezeudu",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037812": {
+   "name": "Abraham Lucas",
+   "pos": "OL",
+   "forty": 4.92,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037814": {
+   "name": "Luke Fortner",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037817": {
+   "name": "Zach Tom",
+   "pos": "OL",
+   "forty": 4.94,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037818": {
+   "name": "Zion Johnson",
+   "pos": "OL",
+   "forty": 5.18,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037821": {
+   "name": "Charles Cross",
+   "pos": "OL",
+   "forty": 4.95,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037829": {
+   "name": "Spencer Burford",
+   "pos": "OL",
+   "forty": 5.19,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0037831": {
+   "name": "Nick Zakelj",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0038095": {
+   "name": "Cordell Volson",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0038103": {
+   "name": "Cole Strange",
+   "pos": "OL",
+   "forty": 5.03,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0038112": {
+   "name": "Cam Jurgens",
+   "pos": "OL",
+   "forty": 4.92,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0038114": {
+   "name": "Max Mitchell",
+   "pos": "OL",
+   "forty": 5.32,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0038131": {
+   "name": "Ed Ingram",
+   "pos": "OL",
+   "forty": 5.02,
+   "kind": "combine",
+   "src": "nflverse:combine 2022",
+   "conf": "verified"
+  },
+  "00-0038548": {
+   "name": "O'Cyrus Torrence",
+   "pos": "OL",
+   "forty": 5.31,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0038609": {
+   "name": "Luke Wypler",
+   "pos": "OL",
+   "forty": 5.14,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0038615": {
+   "name": "Jarrett Patterson",
+   "pos": "OL",
+   "forty": 5.33,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0038633": {
+   "name": "Nick Broeker",
+   "pos": "OL",
+   "forty": 5.27,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0038852": {
+   "name": "John Ojukwu",
+   "pos": "OL",
+   "forty": 5.24,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0038932": {
+   "name": "Darnell Wright",
+   "pos": "OL",
+   "forty": 5.01,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0038934": {
+   "name": "Anton Harrison",
+   "pos": "OL",
+   "forty": 4.98,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0038936": {
+   "name": "Juice Scruggs",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0038981": {
+   "name": "Wanya Morris",
+   "pos": "OL",
+   "forty": 5.1,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0039014": {
+   "name": "Dawand Jones",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0039020": {
+   "name": "Anthony Bradford",
+   "pos": "OL",
+   "forty": 5.08,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0039030": {
+   "name": "Jake Andrews",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0039034": {
+   "name": "Peter Skoronski",
+   "pos": "OL",
+   "forty": 5.16,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0039109": {
+   "name": "Broderick Jones",
+   "pos": "OL",
+   "forty": 4.97,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0039158": {
+   "name": "Blake Freeland",
+   "pos": "OL",
+   "forty": 4.98,
+   "kind": "combine",
+   "src": "nflverse:combine 2023",
+   "conf": "verified"
+  },
+  "00-0039233": {
+   "name": "Roger Rosengarten",
+   "pos": "OL",
+   "forty": 4.92,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039339": {
+   "name": "Taliese Fuaga",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039348": {
+   "name": "Cooper Beebe",
+   "pos": "OL",
+   "forty": 5.03,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039349": {
+   "name": "DJ Glaze",
+   "pos": "OL",
+   "forty": 5.21,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039351": {
+   "name": "Dominick Puni",
+   "pos": "OL",
+   "forty": 5.35,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039382": {
+   "name": "Christian Jones",
+   "pos": "OL",
+   "forty": 5.04,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039408": {
+   "name": "Christian Mahogany",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039568": {
+   "name": "Frank Crum",
+   "pos": "OL",
+   "forty": 4.94,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039753": {
+   "name": "Beaux Limmer",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039808": {
+   "name": "Isaiah Adams",
+   "pos": "OL",
+   "forty": 5.22,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039817": {
+   "name": "Jacob Monk",
+   "pos": "OL",
+   "forty": 5.09,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039839": {
+   "name": "Christian Haynes",
+   "pos": "OL",
+   "forty": 5.03,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039844": {
+   "name": "Kingsley Suamataia",
+   "pos": "OL",
+   "forty": 5.04,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039857": {
+   "name": "Blake Fisher",
+   "pos": "OL",
+   "forty": 5.2,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039863": {
+   "name": "Caedan Wallace",
+   "pos": "OL",
+   "forty": 5.15,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039882": {
+   "name": "Tylan Grable",
+   "pos": "OL",
+   "forty": 4.95,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039897": {
+   "name": "Joe Alt",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039899": {
+   "name": "Patrick Paul",
+   "pos": "OL",
+   "forty": 5.13,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039904": {
+   "name": "Jordan Morgan",
+   "pos": "OL",
+   "forty": 5.04,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039913": {
+   "name": "Brandon Coleman",
+   "pos": "OL",
+   "forty": 4.99,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0039925": {
+   "name": "Amarius Mims",
+   "pos": "OL",
+   "forty": 5.07,
+   "kind": "combine",
+   "src": "nflverse:combine 2024",
+   "conf": "verified"
+  },
+  "00-0040587": {
+   "name": "Drew Kendall",
+   "pos": "OL",
+   "forty": 5.05,
+   "kind": "combine",
+   "src": "nflverse:combine 2025",
+   "conf": "verified"
+  },
+  "00-0040745": {
+   "name": "Aireontae Ersery",
+   "pos": "OL",
+   "forty": 5.01,
+   "kind": "combine",
+   "src": "nflverse:combine 2025",
+   "conf": "verified"
+  },
+  "BellBo00": {
+   "name": "Bobby Bell",
+   "pos": "LB",
+   "forty": 4.45,
+   "times": [
+    4.4,
+    4.5
+   ],
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "he was also reported to have run a 4.4 or 4.5 40-yard dash.",
+   "basis": "Reported; two figures, the mean is used.",
+   "src": "cited40:wikipedia:Bobby Bell",
+   "url": "https://en.wikipedia.org/wiki/Bobby_Bell",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Bobby_Bell&oldid=1371697871",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "BuchBu00": {
+   "name": "Buck Buchanan",
+   "pos": "DT",
+   "forty": 4.9,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "He also reportedly ran 4.9 in the 40-yard dash and 10.2 in the 100-yard dash at Grambling.",
+   "basis": "College (Grambling).",
+   "src": "cited40:wikipedia:Buck Buchanan",
+   "url": "https://en.wikipedia.org/wiki/Buck_Buchanan",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Buck_Buchanan&oldid=1368106919",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "CurtMi00": {
+   "name": "Mike Curtis",
+   "pos": "LB",
+   "forty": 4.3,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "Curtis once ran the forty-yard dash in 4.3 seconds.",
+   "basis": "Reported, no date or timing given.",
+   "src": "cited40:wikipedia:Mike Curtis (American football)",
+   "url": "https://en.wikipedia.org/wiki/Mike_Curtis_(American_football)",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Mike_Curtis_(American_football)&oldid=1367554089",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "DorsTo00": {
+   "name": "Tony Dorsett",
+   "pos": "RB",
+   "forty": 4.3,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "at the age of 34, he reportedly could still run 40 yards in 4.3 seconds.",
+   "basis": "Reported at 34 (1988 Denver camp); his peak time was no slower.",
+   "src": "cited40:wikipedia:Tony Dorsett",
+   "url": "https://en.wikipedia.org/wiki/Tony_Dorsett",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Tony_Dorsett&oldid=1370365411",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "HardCe00": {
+   "name": "Cedrick Hardman",
+   "pos": "DE",
+   "forty": 4.6,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "He is reported to have run the 40-yard dash in 4.6 seconds while being scouted at the Senior Bowl.",
+   "basis": "Senior Bowl scouting (1970).",
+   "src": "cited40:wikipedia:Cedrick Hardman",
+   "url": "https://en.wikipedia.org/wiki/Cedrick_Hardman",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Cedrick_Hardman&oldid=1367205720",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "HartTo00": {
+   "name": "Tommy Hart",
+   "pos": "DE",
+   "forty": 4.5,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "Hart had run the 40-yard dash in 4.5 seconds.",
+   "basis": "1968 training camp, repeated in the 1970 preseason.",
+   "src": "cited40:wikipedia:Tommy Hart",
+   "url": "https://en.wikipedia.org/wiki/Tommy_Hart",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Tommy_Hart&oldid=1367360423",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "JackBo00": {
+   "name": "Bo Jackson",
+   "pos": "RB",
+   "forty": 4.13,
+   "kind": "cited",
+   "timing": "pro day",
+   "quote": "he actually ran a 4.13 electronic-timed 40-yard dash at a pro day at Auburn University",
+   "basis": "1986 Auburn pro day, electronic, his own account.",
+   "src": "cited40:wikipedia:Bo Jackson",
+   "url": "https://en.wikipedia.org/wiki/Bo_Jackson",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Bo_Jackson&oldid=1374847768",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "JoinCh00": {
+   "name": "Charlie Joiner",
+   "pos": "WR",
+   "forty": 4.5,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "great speed (4.5 seconds in the 40-yard dash) and excellent hands.",
+   "basis": "1969 draft review (Corpus Christi Times), quoted by the article.",
+   "src": "cited40:wikipedia:Charlie Joiner",
+   "url": "https://en.wikipedia.org/wiki/Charlie_Joiner",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Charlie_Joiner&oldid=1367279309",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "PruiMi00": {
+   "name": "Mike Pruitt",
+   "pos": "RB",
+   "forty": 4.4,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "having been clocked at 4.4 seconds over 40 yards and bench pressing 425 pounds.",
+   "basis": "College (Purdue).",
+   "src": "cited40:wikipedia:Mike Pruitt",
+   "url": "https://en.wikipedia.org/wiki/Mike_Pruitt",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Mike_Pruitt&oldid=1366613682",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "RenfMe00": {
+   "name": "Mel Renfro",
+   "pos": "CB",
+   "forty": 4.65,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "The speedy Renfro (4.65 40-yd dash) became an exceptional threat to wide receivers",
+   "basis": "Reported, no date given.",
+   "src": "cited40:wikipedia:Mel Renfro",
+   "url": "https://en.wikipedia.org/wiki/Mel_Renfro",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Mel_Renfro&oldid=1369227180",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "RobeIs00": {
+   "name": "Isiah Robertson",
+   "pos": "LB",
+   "forty": 4.6,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "having been timed at 4.6 seconds in the 40-yard dash.",
+   "basis": "Pro career, timed.",
+   "src": "cited40:wikipedia:Isiah Robertson",
+   "url": "https://en.wikipedia.org/wiki/Isiah_Robertson",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Isiah_Robertson&oldid=1367126162",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "SmitJa00": {
+   "name": "Jackie Smith",
+   "pos": "TE",
+   "forty": 4.6,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "he could reportedly still run the 40-yard dash in 4.6 seconds.",
+   "basis": "Reported at 38 (1978 Dallas); his peak time was no slower.",
+   "src": "cited40:wikipedia:Jackie Smith",
+   "url": "https://en.wikipedia.org/wiki/Jackie_Smith",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Jackie_Smith&oldid=1371800286",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  },
+  "WehrRo00": {
+   "name": "Roger Wehrli",
+   "pos": "CB",
+   "forty": 4.5,
+   "kind": "cited",
+   "timing": "hand",
+   "quote": "he ran a 4.5 40-yard dash and vaulted into the first round.",
+   "basis": "Pre-draft (1969).",
+   "src": "cited40:wikipedia:Roger Wehrli",
+   "url": "https://en.wikipedia.org/wiki/Roger_Wehrli",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Roger_Wehrli&oldid=1367274332",
+   "retrieved": "2026-09-23",
+   "conf": "estimated"
+  }
+ }
+}

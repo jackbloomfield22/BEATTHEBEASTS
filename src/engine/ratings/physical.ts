@@ -93,13 +93,28 @@ const expectedBench = (w: number): number => 12 + 0.12 * (w - 180);
  *   Wikipedia measurables table, pro day or unstated  0.05
  *   commonly cited time (estimated; usually hand)     0.06
  *   inferred estimate (already a typical electronic)  0
+ *   cited 40 (data/augment/forty_times.json, quoted): by its stated timing,
+ *     hand or unstated 0.06, electronic pro day 0.05, Scouting Combine 0.03
  */
 export function fortyCorrection(f: { conf: Conf; src: string }): number {
   if (f.conf === 'verified') return 0;
   const s = f.src.toLowerCase();
   if (f.conf === 'reference') return s.includes('combine') && !s.includes('pro day') ? 0.03 : 0.05;
+  if (isCitedForty(f)) return s.includes('[cited, combine]') ? 0.03 : s.includes('[cited, pro day]') ? 0.05 : 0.06;
   return s.includes('commonly cited') ? 0.06 : 0;
 }
+
+/** A quoted, cited 40 from data/augment/forty_times.json (inputs.ts marks its source "[cited, <timing>]"). */
+export const isCitedForty = (f: { conf: Conf; src: string }): boolean => f.conf === 'estimated' && f.src.includes('[cited');
+
+/**
+ * Speed confidence of a cited 40 (PR #3 round 2: "lower confidence than a
+ * measured combine time and higher than the body prior"): between the body
+ * prior with a production signature (estimated, 0.4) and a Wikipedia-table
+ * time (reference, 0.9); set at the legacy level (0.55), the confidence the
+ * system already gives a hand-set but specific figure.
+ */
+export const CITED_FORTY_CONF = 0.55;
 
 /**
  * Soft top for measured and prior-based physicals: identity up to 94, then
@@ -254,11 +269,13 @@ function physicalFor(s: RatingInputs, group: readonly RatingInputs[], pos: Rated
   // ---- Speed
   let speedParts: Contribution[];
   let speedConf: Conf;
+  let speedScore: number | undefined;
   if (m.forty) {
     const corr = fortyCorrection(m.forty);
     const t = m.forty.v + corr;
     speedParts = [{ label: `40-yard dash ${m.forty.v.toFixed(2)}${corr ? ` (+${corr.toFixed(2)} hand-time correction)` : ''}`, delta: fortyToSpeed(t), kind: 'physical', input: `${m.forty.v.toFixed(2)} s`, conf: m.forty.conf, src: m.forty.src }];
     speedConf = m.forty.conf;
+    if (isCitedForty(m.forty)) speedScore = CITED_FORTY_CONF;
   } else {
     const sig = signature(group, SPEED_SIG[pos], zOf);
     speedParts = [
@@ -269,7 +286,8 @@ function physicalFor(s: RatingInputs, group: readonly RatingInputs[], pos: Rated
     speedConf = sig.parts.length ? 'estimated' : 'prior';
   }
   const speedPeak = speedParts.reduce((a, p) => a + p.delta, 0);
-  const speed = composeDirect(aged('speed', speedParts), conf3(speedConf));
+  const speedCs = speedScore ?? conf3(speedConf);
+  const speed = composeDirect(aged('speed', speedParts), speedCs);
 
   // ---- Agility
   let agParts: Contribution[];
@@ -309,7 +327,7 @@ function physicalFor(s: RatingInputs, group: readonly RatingInputs[], pos: Rated
       { label: 'From agility (30%)', delta: 0.3 * agPeak, kind: 'physical', conf: agConf },
       { label: frame, delta: -0.06 * heavier, kind: 'body', conf: bodyConf, src: wSrc?.src },
     ];
-    accConfScore = conf3(speedConf) * 0.7 + conf3(agConf) * 0.3;
+    accConfScore = speedCs * 0.7 + conf3(agConf) * 0.3;
   }
   const acceleration = composeDirect(aged('acceleration', accParts), accConfScore);
 

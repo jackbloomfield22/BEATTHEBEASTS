@@ -42,6 +42,8 @@ export interface SeasonBaseline {
   yardsPerReception: number;
   yardsPerTarget?: number;
   catchRate?: number;
+  /** League RB fumbles per touch (data/augment/league_fumbles.json via merge-baselines.ts). */
+  rbFumblesPerTouch?: number;
   src: string;
   conf: Conf;
   afl?: Omit<SeasonBaseline, 'season' | 'afl'>;
@@ -98,6 +100,8 @@ export interface EstimatedDefStint {
   verdict?: string;
   src: string;
   conf: Conf;
+  /** Data file the record came from (default data/augment/estimated_def_stints_pre1999.json). */
+  file?: string;
 }
 
 export interface AccoladeRecord {
@@ -143,6 +147,17 @@ export interface OlRosterLineman {
   inKeyList: number[] | false;
 }
 
+/** data/augment/forty_times.json record (tools/augment/forty.ts), keyed by person id. */
+export interface FortyRecord {
+  name: string;
+  forty: number;
+  /** 'combine' (nflverse, verified), 'predraft' (Wikipedia table, reference), 'cited' (quoted prose, estimated). */
+  kind: 'combine' | 'predraft' | 'cited';
+  timing?: string;
+  src: string;
+  conf: Conf;
+}
+
 /** data/augment/arm_strength.json `airYards` record (tools/augment/arm.ts). */
 export interface AirYardsRecord {
   name: string;
@@ -182,6 +197,8 @@ export interface InputSources {
   accolades: Record<string, AccoladeRecord>;
   physical: Record<string, PhysicalRecord>;
   baselines: Record<string, SeasonBaseline>;
+  /** 40 times by person id for players with no measured time elsewhere (data/augment/forty_times.json). */
+  forty?: Record<string, FortyRecord>;
   /** Arm-strength inputs for QB Throw Power (absent: Throw Power uses its other inputs). */
   arm?: { airYards: Record<string, AirYardsRecord>; bigArm: readonly BigArmRecord[] };
 }
@@ -281,6 +298,8 @@ export function stintBaseline(
   const conf = rows.every((x) => x.r.conf === 'verified') ? 'verified' : 'estimated';
   const years = `${seasons[0]}–${seasons[seasons.length - 1]}`;
   const base: Baseline = { ...(out as unknown as Omit<Baseline, 'src' | 'conf'>), src: `era_baselines:${years}`, conf };
+  // Ball Security baseline: the league RB fumble rate over the same seasons and weights.
+  if (rows.every((x) => typeof x.r.rbFumblesPerTouch === 'number')) base.fumblesPerTouch = avg('rbFumblesPerTouch');
   if (tgt.length) {
     const tw = tgt.reduce((a, x) => a + (x.w || 1), 0);
     base.catchRate = tgt.reduce((a, x) => a + (x.w || 1) * x.r.catchRate!, 0) / tw;
@@ -425,7 +444,7 @@ function estimatedDefPart(d: EstimatedDefStint, games: number): Part {
   if (d.ff !== undefined) vals.ffPerGame = d.ff / g;
   if (d.fr !== undefined) vals.frPerGame = d.fr / g;
   if (d.td !== undefined) vals.defTdPerGame = d.td / g;
-  return { games: g, conf: 'estimated', src: `${d.src} (data/augment/estimated_def_stints_pre1999.json)`, vals };
+  return { games: g, conf: d.conf ?? 'estimated', src: `${d.src} (${d.file ?? 'data/augment/estimated_def_stints_pre1999.json'})`, vals };
 }
 
 /** Legacy per-game values (whole stint), with sample sizes estimated from the legacy volume. */
@@ -574,7 +593,7 @@ function accoladesFor(rec: AccoladeRecord | undefined, seasons: readonly number[
 
 // ------------------------------------------------------------ main
 
-function measurablesFor(nv: NflverseEntry | undefined, phys: PhysicalRecord | undefined): Measurables {
+function measurablesFor(nv: NflverseEntry | undefined, phys: PhysicalRecord | undefined, ft?: FortyRecord): Measurables {
   const m: Measurables = {};
   const c = nv?.combine;
   if (c) {
@@ -591,6 +610,11 @@ function measurablesFor(nv: NflverseEntry | undefined, phys: PhysicalRecord | un
       if (!m[k] && typeof v === 'number') m[k] = src(v, s, phys.conf);
     }
   }
+  // data/augment/forty_times.json (PR #3 round 2): a measured time (combine,
+  // Wikipedia table) or a quoted, cited time fills a missing 40 and replaces
+  // an uncited estimate from estimated_physical.json; it never replaces a
+  // measured one.
+  if (ft && (!m.forty || m.forty.conf === 'estimated' || m.forty.conf === 'prior')) m.forty = src(ft.forty, `${ft.src}${ft.timing ? ` [${ft.kind}, ${ft.timing}]` : ` [${ft.kind}]`}`, ft.conf);
   return m;
 }
 
@@ -602,7 +626,7 @@ interface Stint {
   age?: Sourced;
 }
 
-function stintOf(decade: Decade, nv: NflverseEntry | undefined, est: { seasons: [number, number]; games: number } | undefined): Stint {
+function stintOf(decade: Decade, nv: NflverseEntry | undefined, est: { seasons: [number, number]; games: number; src?: string; conf?: Conf } | undefined): Stint {
   const all = decadeSeasons(decade);
   let seasons: number[];
   let seasonsSrc: Sourced<number[]>;
@@ -638,8 +662,10 @@ function stintOf(decade: Decade, nv: NflverseEntry | undefined, est: { seasons: 
   if (pre.length) {
     if (est) {
       games += est.games;
-      conf = worse(conf, 'estimated');
-      srcs.push('estimated games');
+      // Added stints (data/augment/added_stints.json) carry cited games at their source's confidence.
+      const cited = est.conf !== undefined && est.conf !== 'estimated';
+      conf = worse(conf, cited ? est.conf! : 'estimated');
+      srcs.push(cited ? `games: ${est.src}` : 'estimated games');
     } else {
       games += pre.reduce((a, y) => a + gamesPerSeason(y) * PARTICIPATION, 0);
       conf = worse(conf, seasonsSrc.conf === 'prior' ? 'prior' : 'estimated');
@@ -702,7 +728,7 @@ export function buildInputs(S: InputSources): { inputs: RatingInputs[]; notes: s
       age: stint.age,
       heightIn: p?.heightIn ? src(p.heightIn, p.src, p.conf) : undefined,
       weightLb: p?.weightLb ? src(p.weightLb, p.src, p.conf) : undefined,
-      measurables: measurablesFor(nv, physByEntry.get(e.id)),
+      measurables: measurablesFor(nv, physByEntry.get(e.id), S.forty?.[personId]),
       stats,
       accolades,
       baseline,
@@ -753,7 +779,7 @@ export function buildInputs(S: InputSources): { inputs: RatingInputs[]; notes: s
       age: stint.age,
       heightIn: p?.heightIn ? src(p.heightIn, p.src, p.conf) : undefined,
       weightLb: p?.weightLb ? src(p.weightLb, p.src, p.conf) : undefined,
-      measurables: measurablesFor(nv, physByEntry.get(e.id)),
+      measurables: measurablesFor(nv, physByEntry.get(e.id), S.forty?.[personId]),
       stats,
       accolades: accoladesFor(acc.byEntry.get(e.id), stint.seasons, legacyAcc, null),
       baseline,
@@ -794,7 +820,7 @@ export function buildInputs(S: InputSources): { inputs: RatingInputs[]; notes: s
         age,
         heightIn: l?.heightIn ? src(l.heightIn, 'nflverse:rosters', 'verified') : undefined,
         weightLb: l?.weightLb ? src(l.weightLb, 'nflverse:rosters', 'verified') : undefined,
-        measurables: {},
+        measurables: l ? measurablesFor(undefined, undefined, S.forty?.[l.personId]) : {},
         stats: {},
         accolades: accoladesFor(accRec, stint, () => undefined, l ? `assumed none: not in the unit's key list (${u.key})` : null),
         baseline,
