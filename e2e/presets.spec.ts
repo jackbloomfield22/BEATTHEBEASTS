@@ -16,6 +16,8 @@ interface SceneState {
   sunVisible: boolean;
   csmMaterials: number;
   staleMaterials: number;
+  /** Materials built with the atmosphere patch whose live program lost it. */
+  unpatched: number;
   thumb: number[];
 }
 
@@ -24,8 +26,8 @@ async function sceneState(page: Page): Promise<SceneState> {
   await waitFrames(page, 4);
   return page.evaluate(() => {
     type O = { isDirectionalLight?: boolean; castShadow: boolean; visible: boolean; name: string; material?: unknown; traverse(f: (o: O) => void): void };
-    type M = { defines?: Record<string, unknown> };
-    const w = window as unknown as { __btbScene: O; __btbGl: { domElement: HTMLCanvasElement } };
+    type M = { defines?: Record<string, unknown>; customProgramCacheKey(): string };
+    const w = window as unknown as { __btbScene: O; __btbGl: { domElement: HTMLCanvasElement; properties: { get(m: M): { uniforms?: Record<string, unknown> } } } };
     let csmLights = 0;
     let sunVisible = false;
     const mats = new Set<M>();
@@ -38,6 +40,10 @@ async function sceneState(page: Page): Promise<SceneState> {
     const csm = [...mats].filter((m) => m.defines && 'USE_CSM' in m.defines);
     const cascades = csmLights;
     const stale = csm.filter((m) => Number(m.defines!.CSM_CASCADES) !== cascades).length;
+    const unpatched = [...mats].filter((m) => {
+      const u = w.__btbGl.properties.get(m).uniforms;
+      return m.customProgramCacheKey().startsWith('atmo:') && u !== undefined && !('uSnow' in u);
+    }).length;
     const c = document.createElement('canvas');
     c.width = 32;
     c.height = 18;
@@ -46,7 +52,7 @@ async function sceneState(page: Page): Promise<SceneState> {
     const d = ctx.getImageData(0, 0, 32, 18).data;
     const thumb: number[] = [];
     for (let i = 0; i < d.length; i += 4) thumb.push(d[i]!, d[i + 1]!, d[i + 2]!);
-    return { csmLights, sunVisible, csmMaterials: csm.length, staleMaterials: stale, thumb };
+    return { csmLights, sunVisible, csmMaterials: csm.length, staleMaterials: stale, unpatched, thumb };
   });
 }
 
@@ -57,6 +63,7 @@ function expectShadowRig(s: SceneState, q: Q) {
   expect(s.sunVisible, `${q}: plain sun hidden while the rig is active`).toBe(false);
   expect(s.csmMaterials, `${q}: patched materials`).toBeGreaterThan(5);
   expect(s.staleMaterials, `${q}: materials with another rig's cascade count`).toBe(0);
+  expect(s.unpatched, `${q}: materials that lost their own shader patch`).toBe(0);
 }
 
 // Fixed camera and clock (?shot, ?t) so fresh loads and switched scenes compare.

@@ -102,6 +102,10 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
       csm.update();
     },
     dispose() {
+      // CSM's own dispose() deletes onBeforeCompile from every material it
+      // touched, so let it run first and then put each material back.
+      csm.remove();
+      csm.dispose();
       for (const [mat, { hook, key }] of attached) {
         mat.onBeforeCompile = hook;
         mat.customProgramCacheKey = key;
@@ -113,8 +117,6 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
         mat.needsUpdate = true;
       }
       attached.clear();
-      csm.remove();
-      csm.dispose();
     },
   };
 }
