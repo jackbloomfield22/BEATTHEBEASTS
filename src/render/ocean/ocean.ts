@@ -141,7 +141,10 @@ void main() {
 
   // Water depth from the terrain height texture (seabed below the surface).
   vec2 huv = (vWorld.xz - vec2(0.0, 300.0)) / (2.0 * uHeightExtent) + 0.5;
-  float bed = (huv.x > 0.0 && huv.x < 1.0 && huv.y > 0.0 && huv.y < 1.0) ? texture2D(uHeight, huv).r : uSeaLevel - 80.0;
+  bool inTex = huv.x > 0.0 && huv.x < 1.0 && huv.y > 0.0 && huv.y < 1.0;
+  vec2 seabed = inTex ? texture2D(uHeight, huv).rg : vec2(uSeaLevel - 80.0, 1e4);
+  float bed = seabed.r;
+  float shore = seabed.g; // meters to the nearest rock
   float depth = max(uSeaLevel - bed, 0.0);
 
   // Reflection
@@ -154,7 +157,8 @@ void main() {
   // Body color: deep blue-green offshore, luminous turquoise over the shallows.
   vec3 skyAmb = skyRadiance(vec3(0.0, 1.0, 0.0));
   float sunUp = clamp(uSunDir.y * 4.0 + 0.2, 0.0, 1.0);
-  vec3 deep = vec3(0.004, 0.022, 0.032);
+  // Rain darkens the sea (overcast sky, stirred surface) - GDD §12.3.
+  vec3 deep = vec3(0.004, 0.022, 0.032) * (1.0 - 0.35 * uWet);
   vec3 shallow = vec3(0.03, 0.2, 0.19);
   float shallowAmt = exp(-depth / 5.5);
   vec3 body = mix(deep, shallow, shallowAmt);
@@ -165,20 +169,38 @@ void main() {
 
   // Sun glint: sharp near, widening with distance into the glitter path.
   vec3 H = normalize(uSunDir + V);
-  float rough = mix(0.035, 0.16, smoothstep(50.0, 4000.0, dist));
+  float rough = mix(0.035, 0.16, smoothstep(50.0, 4000.0, dist)) + 0.08 * uWet;
   float spec = D_GGX(max(dot(N, H), 0.0), rough) * fres;
   vec3 sun = uSunColor * spec * 0.9 * step(0.0, uSunDir.y);
 
   // Stadium light reflections at night (a soft warm sheen near the cliff).
   vec3 col = mix(scatter, refl, fres) + sun;
-  col += vec3(1.0, 0.85, 0.6) * uStadiumLights * 0.015 * exp(-length(vWorld.xz - vec2(0.0, 40.0)) / 180.0) * fres * 4.0;
+  // The floodlit bowl on the cliff: its glow reflects in the water below and
+  // around the promontory (a broad warm sheen, strongest at grazing angles),
+  // plus scattered light in the water body near the cliff foot.
+  float dBowl = length(vWorld.xz - vec2(0.0, 40.0));
+  vec3 warm = vec3(1.0, 0.8, 0.58);
+  col += warm * uStadiumGlow * (0.22 * exp(-dBowl / 260.0) + 0.05 * exp(-dBowl / 900.0)) * fres;
+  col += warm * shallow * uStadiumGlow * 0.12 * exp(-dBowl / 200.0);
+  col += warm * uStadiumLights * 0.015 * exp(-dBowl / 180.0) * fres * 4.0 * (1.0 - uStadiumGlow);
 
-  // Shoreline foam where the swell meets rock.
-  float foamBand = smoothstep(2.2, 0.0, depth) * step(0.001, depth + 0.5);
+  // Shoreline surf where the swell meets rock: a churned white band at the
+  // rocks, and wash lines that surge shoreward over the shallows (depth
+  // contours advect with the swell period, ~9 s) and break up as they go.
   float foamN = fbm(vWorld.xz * 0.35 + vec2(uTime * 0.2, -uTime * 0.3), 4);
-  float foam = foamBand * smoothstep(0.35, 0.75, foamN + foamBand * 0.4);
-  vec3 foamCol = (skyAmb * 1.2 + uSunColor * 0.08 * sunUp) * 0.9;
-  col = mix(col, foamCol, foam * 0.85);
+  float foamF = fbm(vWorld.xz * 1.6 - vec2(uTime * 0.5, uTime * 0.35), 3);
+  // The shore distance comes from a 3.5 m grid: the surf band starts a few
+  // meters out so the rock line itself always sits inside white water.
+  float core = max(smoothstep(2.4, 0.2, depth), smoothstep(12.0, 3.0, shore));
+  float surge = sin(shore * 0.55 + uTime * 0.9 + foamN * 4.0) * 0.5 + 0.5;
+  float wash = max(smoothstep(7.0, 1.0, depth), smoothstep(30.0, 6.0, shore)) * smoothstep(0.72, 0.95, surge) * smoothstep(0.35, 0.6, foamF);
+  float foam = max(core * smoothstep(0.3, 0.7, foamN + core * 0.45), wash * 0.7);
+  // Lacy residue: foam thins to streaks, not a flat sheet.
+  foam *= mix(0.55, 1.0, smoothstep(0.3, 0.7, foamF));
+  // Foam is a bright diffuse surface (albedo ~0.8): lit by the sun (E/π)
+  // as well as the sky, so it reads white at golden hour, not gray.
+  vec3 foamCol = 0.8 * (uSunColor * sunUp * max(uSunDir.y + 0.25, 0.1) / 3.14159 * 1.5 + skyAmb * 1.2);
+  col = mix(col, foamCol, min(foam, 1.0) * 0.95);
 
   gl_FragColor = vec4(applyAtmosphere(col, vWorld), 1.0);
 }

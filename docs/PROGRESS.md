@@ -2,9 +2,10 @@
 
 ## Current status
 
-- **M1 Foundation:** merged (PR #1), live on production.
-- **M2 Ratings:** built and **stopped for your review** (PR to `main`). Review with `docs/RATINGS_REPORT.md` and the Ratings Explorer at `/#/dev/ratings` on the preview. No balance or attribute-to-gameplay calibration until you sign off.
-- **M3 The look:** starting while you review (it doesn't depend on ratings).
+- **M1 Foundation:** merged (PR #1).
+- **M2 Ratings:** merged (PR #2). The follow-up is PR #3: traits overhaul, Throw Power, consensus check and anchor bands, plus the four approved fixes (WR/TE physicals cap, TE block-grade cap, Munoz row excluded, sack-rate split). Rice is now WR #1 (97.7). It waits on two calls from you: TE blocking under the grade cap, and Marino's Release anchor.
+- **M3 The look:** merged (PR #4). Perf re-test passed on your M1 Pro: Medium at 100% resolution, 80–113 fps in the three menu views.
+- **M4 Characters and animation:** in progress on `claude/m4-characters`.
 
 ## Known legacy issues (do not rebuild)
 
@@ -27,6 +28,82 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 | L13 | `todayKey` uses the player's local date | 4606 | Kept on purpose (Wordle-style: the daily flips at local midnight) |
 
 ## Milestone log
+
+### M3 The look (merged, PR #4)
+
+**What's in**
+- **Night** (your M1 request): the moon is the key light (a dim, cool physical sky with the same shape as day), stars, floodlights carrying the field, and the lit bowl glowing in the haze and on the sea.
+- **Crowd:** a procedural person (built here: head, hair, torso, arms, legs; seated, standing, arms-up and clapping poses) rendered at startup into mask and normal atlases from 8 directions; every one of ~40,000 seats gets a camera-facing card with its own palette (weighted to Beasts crimson and black), pose, and real lighting and shadows. One draw call. Reactions (touchdown, turnover, big play, stop, kickoff, groan) drive the crowd's energy through a pure, tested envelope; `__btbCrowd.trigger('touchdown', t)` in dev. Night phone flashes; ponchos and hoods in rain, coats and beanies in snow.
+- **Coastline:** a swept cliff-face mesh (the heightfield can't hold a near-vertical wall) with buttresses, columnar joints, bedding ledges and fractured blocks; dark basalt with lichen, algae, seepage streaks and a wet band; faceted boulders; procedural scrub, wind-sculpted cypress groves and ledge plants; surf keyed to distance from the rock (a new shore-distance channel in the seabed texture) with wash lines surging shoreward.
+- **Stadium kit:** banded exterior (basalt plinth with lit gates, glazed concourse ribbon, charcoal aluminum fins with a night uplight wash, crimson band with an LED line, the same cladding on the stands' south ends); plaza paving trimmed back from the cliff; plaza lamps with light pools; BEASTS in both end zones and on the video board (GDD §12.4; Blackcliff is only the venue name on the intro title card).
+- **Field:** grass shells near low cameras on High and Ultra (turf depth, blades carry the paint, lean with the mowing bands), the field color shared between the surface and the shells.
+- **Sky:** a self-shadowed stratus deck under overcast; the sun hides behind cloud.
+- **Weather** (all five presets now complete): wet surfaces darken and gloss with puddles on flat ground, snow settles on upward faces (none under the roofs), the field's lines and paint are swept clear in snow, rain streaks and snowflakes around the camera, a darker, rougher sea in rain.
+- **Shadows:** cascaded shadow maps (High: 4 × 2048² to 700 m with cascade blending; Medium: 2 × 2048² to 350 m; Low: 2 × 1024² to 250 m), fixed-pattern PCF (the default per-pixel noise needs TAA we don't run).
+- **VFX base:** one GPU particle pool (ring buffer, closed-form motion in the vertex shader) with turf kick-up, hit dust, confetti, pyro and breath; bursts are pure and seeded (tested). Dev preview `?vfx=<id>&vfxAge=<s>`.
+- **Quality:** tiers now drive crowd density, vegetation, grass shells, weather particles and shadow cascades; dynamic resolution steps the render scale by frame time (probe up, back off; pure, tested); the first launch times the menu scene and moves the GPU-name guess one tier when the evidence is clear.
+- **Tools:** `?fly` free camera (P logs a `?cam=` pose), `?cam=`, `?crowd=`, `?noshadow`; the screenshot harness now advances shader time a fixed 1/60 s per frame, so captures are reproducible. The matrix gained field, crowd, cliff and exterior shots.
+
+**Critique against the references** (honest; `docs/screenshots/m3/`)
+- **ref-01 (golden-hour ocean):** the closest match. The flyover-sea frame has the warm gradient, the glitter path and headlands layering into haze. Gap: the swell is short-period chop; ref-01's long, slow swell lines aren't there. Next pass on the ocean.
+- **ref-02 (broadcast football):** the bowl now reads as a packed, noisy crowd from every broadcast angle, the turf has stripes and depth at field level, and the lighting presets hold together. Gaps: no players yet (M4); up close the spectators are clearly low-poly (faceted limbs, flat shirts, no faces), fine at broadcast distance but not in a tight crowd shot; the roof underside and light banks are still simple boxes; no depth-of-field softness on the stands.
+- **ref-03 (open-world coast):** the cliffs finally read as rock with structure, the rim has scrub and cypress, and the surf hugs the rock. Gaps, biggest first: (1) the rock reads warm brown under the golden sun instead of dark basalt, and it's smooth and painterly up close where ref-03 is crisp; (2) no turquoise shallows, because Blackcliff's walls plunge into deep water (a design choice, but a cove or reef shelf somewhere in the flyover would buy that color); (3) the vegetation is blobby at close range; (4) the headland grass has no blade detail (only the field does).
+- **Presets:** Night is the strongest frame after Golden; Overcast reads as a real stratus day; Rain reads (streaks, darker pitch and sea) but the wet sheen on the turf is subtle; Snow reads well (swept lines, patchy cover, flurries). Night's moon disc is a little too large and bright.
+
+**Performance pass** (your M1 Pro report: Medium, Golden Hour, 28-60 fps with dynamic resolution at 60%)
+
+What made it slow, biggest first:
+1. **Render size.** "100%" meant the display's own pixel density. A 1920×1080 window at DPR 2 renders 3840×2160: four times the pixels of 1080p. Every per-pixel cost (lighting, shadows, AO, bloom, the crowd) scaled with it, and 60% of that is still 1.4× 1080p. Each tier now has a pixel budget: Medium renders at most 1920×1080 worth of pixels, High 2560×1440, Ultra the display's own density (DPR capped at 2). The HTML menus stay at full density. The perf screen's "Canvas / internal res" line shows the actual render size.
+2. **Why the field-level views (Practice Field, How to Play) cost about twice the bowl view:** they look straight into the stands at close range. Crowd cards were full 1.1 × 2.2 m quads, alpha-tested, overlapping many rows deep, and every covered pixel ran the full lit shader (the alpha test turns off early depth rejection). Grass shells added 8 more alpha-tested layers over the turf in the bottom half of the frame. The bowl view sees both from far away and small. Fixes: each card now shrinks to its atlas cell's person (bounds computed from the same geometry the atlas is baked from; a seated fan fills about a third of the old card), and grass shells are High/Ultra only.
+3. **Lights.** Every light in the scene is a pass through the per-pixel light loop, even at zero intensity. The six floodlights now exist only when lit (every other bank at double power on Low/Medium), and the plain sun is hidden while the cascade rig carries it.
+4. **Shadows.** Medium drops from 3 cascades to 2 (2048², out to 350 m, no blend band), and the crowd no longer casts (it was the costliest caster in every cascade; the seating steps already cast the row shadows).
+5. **Geometry.** Vegetation and boulders are split into 180 m chunks, so the camera and each cascade draw only what they can see. Scrub switches to an 80-triangle LOD (from 220) past 50 m, and boulders cast only on High. Crowd density on Medium went from 80% to 60% of seats (High 100% → 85%), and precipitation and vegetation are budgeted per tier.
+6. **Startup spike (1.8 s).** It was almost certainly a first-use shader compile: anything hidden at the first frame, such as effects that appear later or the far vegetation LOD, compiled mid-frame on first sight. The whole scene, hidden meshes included, now compiles with `compileAsync` before the menu shows.
+7. **Dynamic resolution never made the effects cheaper.** The post-processing chain (AO, bloom, color, SMAA) resized its buffers only when the window size changed, not the pixel ratio. When dynamic resolution stepped down, every effect pass kept running at the old resolution. After a preset switch they ran at the wrong size (a soft image). The chain now resizes whenever the pixel ratio changes.
+8. **Dynamic resolution** no longer goes below 75% (it was 60%, which you saw as blurry and washed out). With the budget, Medium should rarely need it.
+
+Measured here (SwiftShader, 1080p; this measures geometry, not GPU time):
+
+| Medium, Golden Hour | Draw calls | Triangles (before → now) |
+|---|---|---|
+| Menu (bowl) | 90 | 4.55 M (your report) → 1.22 M |
+| Practice Field | 118 | → 1.39 M |
+| How to Play | 134 | → 1.51 M |
+
+Frame times can't be measured here (software rendering), so the 60 fps at 100% target on your M1 Pro is still unconfirmed. **Re-test:** open the PR #4 preview with `?perf`, and set Medium (or reset to auto). For each of the three menu views, send fps / average / p99, the dynamic resolution %, and the "Canvas / internal res" line.
+
+**Preview fixes** (your M3 feedback)
+- **How to Play → The Draft went black and dead.** Root cause (found after your re-test still showed the error screen):
+  - `HowToScreen` reset the page's scroll with `useEffect(() => scroller.current?.scrollTo({ top: 0 }), [page])`. That arrow returns whatever `scrollTo` returns.
+  - Current Chrome implements the updated CSSOM View spec, where `scrollTo` returns a Promise. React kept that Promise as the effect's cleanup and called it on the first page change, and it isn't a function. So the click on The Draft threw.
+  - My tests passed because the test browser's older Chromium returns `undefined` from `scrollTo`.
+  - Fixed with a block body. An ESLint rule now rejects any concise-arrow effect in the codebase; it found four more, all harmless.
+  - `e2e/howto.spec.ts` now emulates current Chrome's Promise-returning scroll methods. It checks that each page's own content is visible and that no error screen is up. It fails on the old code.
+  - The crash-recovery work from the first report stays:
+    - the 3D stage remounts after an error or a lost WebGL context;
+    - repeated failures step the preset down one tier;
+    - anything else shows an error screen with the message and a Reload button, never a black page.
+- **Preset switch glitches.** Root cause found: the shadow rig's `dispose()` left each material flagged as attached, so the next rig (after the switch) skipped every material. They rendered with the old rig's cascade defines and no working shadows. The rig now records the materials it patched and restores them exactly. Browser tests (`e2e/presets.spec.ts`):
+  - walk all 12 directed transitions between Low, Medium, High and Ultra;
+  - after each switch, check the cascade count, that no material carries another rig's cascades, and that the plain sun is hidden;
+  - compare a thumbnail of the frame to a fresh load at that preset;
+  - repeat your exact path (Settings → Graphics → Quality preset, High → Medium → High).
+  With the old `shadows.ts` restored, the Settings test fails exactly as you saw it. The walk also found four more switch bugs, now fixed:
+  - three reused a rebuilt rig's cached program with the old rig's uniforms, because the program cache key didn't change;
+  - CSM's own `dispose()` deleted every material's shader hook, so switched materials lost their look;
+  - the post-processing buffers stayed at the old resolution (item 7 above);
+  - boulder count and terrain resolution were fixed at load, so a switch didn't apply them.
+- **Fullscreen** is a Display setting, off by default (existing saves are migrated to off), toggled with F11 or Alt+Enter. The title keypress enters fullscreen only if the setting is on. Shortcut capture (Tab, F1-F3, arrows, Backspace) works the same in a window.
+- **Branding:** BEASTS in both end zones and on the video board; the studio is Comfortable Cave Interactive on the intro, in the page metadata, `package.json` and `CREDITS.md`.
+- **CLAUDE.md rule 9:** stability and frame rate beat visual fidelity.
+
+**Known issues**
+- Rock color and close-up crispness (above). Moon size. Scrub and cypress up close. Ocean swell period.
+- Soft-particle depth fades wait for a depth prepass (M5); hit dust stays small until then.
+- The crowd atlas bakes at startup (~30 ms on a real GPU).
+- Medium is now plainer at field level (no grass shells, 60% crowd, 2 cascades). If your re-test shows headroom, grass shells are the first thing to bring back.
+
+**Next:** M4 Characters and animation.
 
 ### Ratings follow-up (after the M2 review)
 
@@ -62,7 +139,7 @@ The curve and calibration are unchanged. Formula changes, all user-approved: QB 
 
 **Honest notes:** why lines for combinations are long (both parts' numbers). Traits inherit the ratings' data limits: e.g. Ed Reed (2000s BAL) shows Arm Tackler because his 3.9 tackles per game are the lowest of the modern safeties and he was 200 lb; that is the Tackle formula reading real data, not a trait bug. Synergies read the traits a player shows, so a trait dropped by the four-trait cap (Barry Sanders' Patient Runner) doesn't trigger one.
 
-### M2 Ratings (built, stopped for review)
+### M2 Ratings (merged)
 
 **How to review**
 - `docs/RATINGS_REPORT.md`: method, anchor pass/fail with my flags, era parity, legacy comparison with the 50 biggest risers and fallers and why, distribution charts, top 25 per attribute and OVR, every correction, low-confidence ratings among the top 200, and the legacy-sim adapter fit.

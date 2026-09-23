@@ -1,5 +1,7 @@
 # Credits and licenses
 
+Beat the Beasts 3D is made by **Comfortable Cave Interactive**.
+
 Every third-party asset, dataset, font and bundled resource used by the game, with its license. Code libraries are listed separately in `package.json`; notable ones that ship runtime assets are listed here too.
 
 ## Fonts

@@ -182,6 +182,8 @@ export function Hints({ items }: { items: { kb: string; pad: string; label: stri
 
 export function useDevice(): Device {
   const [d, setD] = useState<Device>(Input.lastDevice);
-  useEffect(() => Input.onDevice(setD), []);
+  useEffect(() => {
+    return Input.onDevice(setD);
+  }, []);
   return d;
 }

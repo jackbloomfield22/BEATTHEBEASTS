@@ -88,8 +88,59 @@ uniform float uFogDensity;
 uniform float uFogFalloff;
 uniform float uFogBrightness;
 uniform float uSeaLevel;
+uniform float uStadiumGlow;
 ${SKY_UV_GLSL}
+// Warm light from the floodlights scattered in the haze around the bowl
+// (night and storm presets). Radiance added to the fog color near the stadium.
+vec3 stadiumHaze(vec3 wp) {
+  float d = length(wp.xz - vec2(0.0, -10.0));
+  float h = max(wp.y - uSeaLevel, 0.0);
+  return vec3(1.0, 0.8, 0.58) * uStadiumGlow * 0.05 * exp(-d / 420.0) * exp(-h / 260.0);
+}
 vec3 skyRadiance(vec3 d) { return texture2D(uSkyLUT, skyUV(d)).rgb; }
+
+// ---- Weather on surfaces (every patched material; see weatherSurface) ----
+uniform float uWet;  // 0 dry .. 1 soaked
+uniform float uSnow; // 0 none .. 1 full cover
+// Materials can lower this before the lighting (the field clears its lines).
+float weatherSnowMask = 1.0;
+float wHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float wNoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(wHash(i), wHash(i + vec2(1, 0)), u.x), mix(wHash(i + vec2(0, 1)), wHash(i + vec2(1, 1)), u.x), u.y);
+}
+// 1 under the stand roofs (dry, no snow): the canopy covers d = 14..51.5 m
+// behind the U's front edge (bowl.ts PROFILE.roof) below its lip.
+float roofCover(vec3 wp) {
+  vec2 c = vec2(0.0, -5.0);
+  vec2 b = vec2(39.0, 65.0);
+  vec2 p = wp.xz - c;
+  float r = p.y < 0.0 ? 30.0 : 0.0; // rounded north corners, square south ends
+  vec2 q = abs(p) - (b - r);
+  float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+  return step(14.0, d) * step(d, 52.0) * step(wp.z, 60.0) * step(wp.y, 45.0);
+}
+// Wet surfaces darken (water fills the pores and cuts diffuse scattering)
+// and gloss up; standing water collects on flat ground. After Lagarde,
+// "Water drop 2b: Dynamic rain and its effects" (2013): porous albedo down
+// to ~0.3-0.5x at saturation, roughness toward the water film's ~0.1.
+// Snow settles on upward-facing surfaces, broken up by drift noise.
+void weatherSurface(inout vec3 albedo, inout float rough, vec3 nW, vec3 wp, float porosity) {
+  float open = 1.0 - roofCover(wp);
+  float wet = uWet * open;
+  float flatUp = smoothstep(0.92, 0.99, nW.y);
+  float pud = flatUp * smoothstep(0.58, 0.72, wNoise(wp.xz * 0.21) * 0.7 + wNoise(wp.xz * 1.3) * 0.3) * wet * (1.0 - porosity * 0.8);
+  albedo *= mix(1.0, mix(0.8, 0.4, porosity), wet);
+  rough = mix(rough, mix(0.18, 0.42, porosity), wet);
+  albedo *= 1.0 - 0.3 * pud;
+  rough = mix(rough, 0.04, pud);
+  float up = smoothstep(0.3, 0.85, nW.y);
+  float n = wNoise(wp.xz * 0.6) * 0.6 + wNoise(wp.xz * 3.7) * 0.4;
+  float sn = clamp(uSnow * open * weatherSnowMask * up * 1.7 - (1.0 - n) * 0.7, 0.0, 1.0);
+  albedo = mix(albedo, vec3(0.8, 0.82, 0.86), sn);
+  rough = mix(rough, 0.72, sn);
+}
 
 // Aerial perspective: exponential height fog, analytically integrated along
 // the view ray, colored by the sky just above the horizon in the view
@@ -109,7 +160,7 @@ vec3 applyAtmosphere(vec3 col, vec3 wp) {
   vec3 sky = skyRadiance(dh3);
   float mu = max(dot(dir, uSunDir), 0.0);
   vec3 glow = uSunColor * (pow(mu, 12.0) * 0.06 + pow(mu, 3.0) * 0.015);
-  return mix(col, (sky + glow) * uFogBrightness, f);
+  return mix(col, (sky + glow + stadiumHaze(mix(cameraPosition, wp, 0.5))) * uFogBrightness, f);
 }
 `;
 
@@ -121,6 +172,9 @@ export const atmosphereUniforms = {
   uFogFalloff: { value: 0.004 },
   uFogBrightness: { value: 1 },
   uSeaLevel: { value: SEA_LEVEL },
+  uStadiumGlow: { value: 0 },
+  uWet: { value: 0 },
+  uSnow: { value: 0 },
   uTime: { value: 0 },
 };
 
@@ -149,8 +203,22 @@ export function patchMaterial<T extends THREE.Material>(mat: T, extra?: (shader:
       .replace('#include <common>', `#include <common>\nvarying vec3 vAtmoWorldPos;\n${ATMOSPHERE_PARS_GLSL}`)
       .replace('#include <fog_fragment>', 'gl_FragColor.rgb = applyAtmosphere(gl_FragColor.rgb, vAtmoWorldPos);');
     extra?.(shader);
+    // Weather after the material's own albedo and roughness, before lighting.
+    // userData.porosity: 0 sealed (metal, glass, paint) .. 1 open (soil, grass);
+    // userData.noWeather opts out (the crowd dresses for the weather instead).
+    if (!mat.userData.noWeather) {
+      const porosity = (mat.userData.porosity as number | undefined) ?? 0.5;
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <normal_fragment_begin>',
+        `{
+          vec3 wN = normalize(inverseTransformDirection(normalize(vNormal), viewMatrix));
+          weatherSurface(diffuseColor.rgb, roughnessFactor, wN, vAtmoWorldPos, ${porosity.toFixed(2)});
+        }
+        #include <normal_fragment_begin>`,
+      );
+    }
   };
-  mat.customProgramCacheKey = () => 'atmo:' + cacheKey;
+  mat.customProgramCacheKey = () => `atmo:${cacheKey}:${mat.userData.noWeather ? 'dry' : String(mat.userData.porosity ?? 0.5)}`;
   return mat;
 }
 
@@ -165,6 +233,7 @@ uniform vec3 uSunDir;
 uniform float uMieScale;
 uniform float uSunIlluminance;
 uniform float uViewAlt;
+uniform vec3 uTint;
 const float Rg = ${EARTH_RADIUS.toFixed(1)};
 const float Rt = ${ATMOSPHERE_RADIUS.toFixed(1)};
 const vec3 betaR = vec3(${BETA_R.map((b) => b.toExponential(4)).join(',')});
@@ -238,7 +307,7 @@ void main() {
     L += T * (inS - inS * stepT) / max(ext, vec3(1e-9));
     T *= stepT;
   }
-  gl_FragColor = vec4(L * uSunIlluminance, 1.0);
+  gl_FragColor = vec4(L * uSunIlluminance * uTint, 1.0);
 }
 `;
 
@@ -268,6 +337,7 @@ export class SkyLUT {
         uMieScale: { value: 1 },
         uSunIlluminance: { value: 20 },
         uViewAlt: { value: VIEW_ALTITUDE },
+        uTint: { value: new THREE.Vector3(1, 1, 1) },
       },
       depthTest: false,
       depthWrite: false,
@@ -282,6 +352,7 @@ export class SkyLUT {
     u.uSunDir!.value.copy(sunDirection(p));
     u.uMieScale!.value = p.mieScale;
     u.uSunIlluminance!.value = p.sunIlluminance;
+    u.uTint!.value.set(...(p.keyTint ?? [1, 1, 1]));
     const prev = gl.getRenderTarget();
     gl.setRenderTarget(this.target);
     gl.render(this.scene, this.cam);

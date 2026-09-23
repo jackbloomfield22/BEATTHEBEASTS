@@ -19,7 +19,7 @@ const PURE_RESTRICTED_SYNTAX = [
 ];
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'legacy', 'data/legacy/**', 'public', 'tools/shots/out', 'test-results'] },
+  { ignores: ['dist', 'node_modules', 'legacy', 'data/legacy/**', 'public', 'tools/shots/out', 'test-results', '.claude'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -35,6 +35,16 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'react-hooks/immutability': 'off',
       'react-hooks/refs': 'off',
+      // An effect's return value is its cleanup. A concise arrow returns
+      // whatever its expression returns (scrollTo now returns a Promise in
+      // Chrome), so every effect body must be a block.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.name=/^use(Layout|Insertion)?Effect$/] > ArrowFunctionExpression[body.type!='BlockStatement'][body.type!='ArrowFunctionExpression']",
+          message: 'Give effects a block body (or return a cleanup arrow): a concise arrow returns its value, and React calls it as the cleanup.',
+        },
+      ],
     },
   },
   {

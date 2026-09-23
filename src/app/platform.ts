@@ -61,10 +61,17 @@ export const urlFlags = (() => {
     dev: p.has('dev'),
     perf: p.has('perf'),
     seed: p.get('seed'),
+    vfx: p.get('vfx'), // dev: loop an effect preview (render/vfx/effects.ts ids)
+    vfxAge: p.has('vfxAge') ? Number(p.get('vfxAge')) : 0, // backdate preview bursts (s)
+    fly: p.has('fly'), // free flythrough camera (render/cameras/FlyCamera.tsx)
     shot: p.get('shot'), // screenshot harness: jump straight to a named state
     lighting: p.get('lighting'),
     quality: p.get('quality'),
     noIntro: p.has('nointro'),
+    // Fixed camera for screenshots and dev: x,y,z,lookX,lookY,lookZ[,fov].
+    cam: p.get('cam')?.split(',').map(Number) ?? null,
+    // Ambient crowd energy 0..1 (screenshots of a quiet or a rocking bowl).
+    crowd: p.has('crowd') ? Number(p.get('crowd')) : null,
     shotTime: p.has('t') ? Number(p.get('t')) : null, // freeze the cinematic clock (screenshots)
   };
 })();
