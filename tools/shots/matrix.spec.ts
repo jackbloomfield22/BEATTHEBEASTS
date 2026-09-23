@@ -13,11 +13,15 @@ const STATES = [
   { name: 'crowd', q: 'screen=main&shot=daily&t=0&cam=-30,3.5,5,-45,9,-5,35' },
   { name: 'cliff', q: 'screen=main&shot=menu&t=0&cam=70,-25,200,25,-44,125,50' },
   { name: 'exterior', q: 'screen=main&shot=menu&t=0&cam=-230,70,-230,0,0,-20,40' },
+  // M4 exit check: 22 players at the line (render/players/Lineup.tsx), from
+  // the broadcast camera (high on the west sideline) and at field level.
+  { name: 'lineup-broadcast', q: 'screen=main&shot=menu&t=0&lineup&noui&cam=-50,14,-13.7,0,0,-11.5,18' },
+  { name: 'lineup-field', q: 'screen=main&shot=menu&t=0&lineup&noui&cam=-7,1.2,-13.7,0,0.6,-13.7,40' },
 ];
 const LIGHTING = (process.env.BTB_LIGHTING ?? 'golden,night,overcast,rain,snow').split(',');
 // Software rendering is slow: by default every state at Golden Hour, and the
 // two most telling states for the other presets. BTB_FULL=1 runs everything.
-const OTHER_PRESET_STATES = ['menu', 'flyover-bowl', 'field'];
+const OTHER_PRESET_STATES = ['menu', 'flyover-bowl', 'field', 'lineup-broadcast', 'lineup-field'];
 
 for (const lighting of LIGHTING) {
   for (const s of STATES) {
@@ -27,6 +31,11 @@ for (const lighting of LIGHTING) {
       await page.waitForFunction(() => (window as unknown as { __btbReady?: boolean }).__btbReady === true, null, { timeout: 180_000 });
       // The intro overlay would cover flyover frames; hide it for scene-only captures.
       if (s.q.startsWith('screen=intro')) await page.addStyleTag({ content: '.studio-intro{display:none!important}' });
+      // Scene-only subjects: no menu over them.
+      if (s.q.includes('&noui')) await page.addStyleTag({ content: '.ui-root{display:none!important}' });
+      if (s.q.includes('&lineup')) {
+        await page.waitForFunction(() => (window as unknown as { __btbLineupReady?: boolean }).__btbLineupReady === true, null, { timeout: 180_000 });
+      }
       await page.waitForTimeout(2500);
       await page.screenshot({ path: `tools/shots/out/matrix/${lighting}-${s.name}.png` });
     });

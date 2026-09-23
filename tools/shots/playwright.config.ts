@@ -3,10 +3,11 @@ import { chromiumLaunch } from '../../playwright.config';
 
 // Screenshot matrix: every front-end state × every lighting preset, into
 // tools/shots/out/matrix. Look at them, compare to docs/reference, and write
-// the critique in docs/PROGRESS.md.
+// the critique in docs/PROGRESS.md. BTB_CONTACT=1 runs the Animation Lab
+// contact sheets (contact.spec.ts) instead.
 export default defineConfig({
   testDir: '.',
-  testMatch: 'matrix.spec.ts',
+  testMatch: process.env.BTB_CONTACT ? 'contact.spec.ts' : 'matrix.spec.ts',
   timeout: 600_000,
   workers: 1,
   reporter: [['list']],

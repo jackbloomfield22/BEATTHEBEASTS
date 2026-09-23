@@ -14,12 +14,16 @@ import './anim.css';
 //   Lineup: one clip on every roster body type (tall/short, lean/heavy).
 //   Single: one player; any clip raw, or "blend" (locomotion driven by a
 //   speed through the runtime animator: stride matching + foot lock).
+//   Compare: two clips side by side (clip, clip2), in step.
+//   Onion: the clip with ghosts a few frames either side of now.
+//   Sheet: a contact sheet, eight evenly spaced moments of one cycle in a
+//   row (Playwright captures these: tools/shots/contact.spec.ts).
 // The floor is a treadmill: it scrolls at the clip's ground speed, so a
 // planted foot visibly sticks to the grid (or slides). Contact markers turn
 // green on planted frames.
 //
 // Hash query: mode=lineup|single, clip, speed, t (freeze at time, s), rate
-// (playback rate), lock=0|1, kit, skin, lod, num, name, cam=x,y,z,tx,ty,tz.
+// (playback rate), lock=0|1, kit, skin, lod, num, name, clip2, cam=x,y,z,tx,ty,tz.
 
 // Numbers and names exercise the lettering: one and two digits, short,
 // long (squeezed) and accented names.
@@ -36,8 +40,9 @@ const LINEUP: { label: string; h: number; w: number; num: number; name: string }
 const params = () => new URLSearchParams(location.hash.split('?')[1] ?? '');
 
 interface LabState {
-  mode: 'lineup' | 'single';
+  mode: 'lineup' | 'single' | 'compare' | 'onion' | 'sheet';
   clip: string; // clip name or 'blend'
+  clip2: string; // compare mode's second clip
   speed: number;
   rate: number;
   paused: boolean;
@@ -89,6 +94,55 @@ function lettering(s: LabState, b: (typeof LINEUP)[number]): { number: number; n
   return s.mode === 'lineup' ? { number: b.num, name: b.name } : { number: s.num, name: s.name };
 }
 
+/** One figure on the lab floor. */
+interface Actor {
+  body: (typeof LINEUP)[number];
+  x: number;
+  /** Along the travel direction (the sheet lays its frames out this way, for a side view). */
+  z?: number;
+  /** Which of the lab's clips it plays (compare mode's second figure plays clip2). */
+  second?: boolean;
+  /** Time offset from the lab clock, s (onion ghosts), or share of the cycle (sheet). */
+  offset: number;
+  offsetIsPhase?: boolean;
+  /** Ghost opacity (onion skin); undefined for a solid figure. */
+  ghost?: number;
+}
+
+const SHEET_FRAMES = 8;
+const ONION_STEP = 0.1; // s between ghosts
+const ONION_GHOSTS = 2; // each side
+
+function actorsFor(mode: LabState['mode']): Actor[] {
+  const qb = LINEUP[2]!;
+  switch (mode) {
+    case 'lineup':
+      return LINEUP.map((body, i) => ({ body, x: (i - (LINEUP.length - 1) / 2) * 1.2, offset: 0 }));
+    case 'compare':
+      return [
+        { body: qb, x: 0.75, offset: 0 },
+        { body: qb, x: -0.75, offset: 0, second: true },
+      ];
+    case 'onion': {
+      const ghosts: Actor[] = [];
+      for (let k = -ONION_GHOSTS; k <= ONION_GHOSTS; k++) {
+        if (k !== 0) ghosts.push({ body: qb, x: 0, offset: k * ONION_STEP, ghost: 0.22 });
+      }
+      return [{ body: qb, x: 0, offset: 0 }, ...ghosts];
+    }
+    case 'sheet':
+      return Array.from({ length: SHEET_FRAMES }, (_, k) => ({ body: qb, x: 0, z: (k - (SHEET_FRAMES - 1) / 2) * 1.1, offset: k / SHEET_FRAMES, offsetIsPhase: true }));
+    default:
+      return [{ body: qb, x: 0, offset: 0 }];
+  }
+}
+
+/** The clip a figure plays; the runtime blend only runs in single and lineup views. */
+function clipOf(s: LabState, a: Actor): string {
+  const c = a.second ? s.clip2 : s.clip;
+  return c === 'blend' && (s.mode === 'single' || s.mode === 'lineup') ? 'blend' : c === 'blend' ? 'loco_run' : c;
+}
+
 /** Ground speed and direction (character frame: +z forward) for a clip. */
 function travel(lib: AnimLibrary, s: LabState): { speed: number; dir: [number, number] } {
   if (s.clip === 'blend') return { speed: s.speed, dir: [0, 1] };
@@ -98,12 +152,19 @@ function travel(lib: AnimLibrary, s: LabState): { speed: number; dir: [number, n
 
 function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibrary; s: LabState; onReadout: (r: Readout) => void }) {
   const camera = useThree((st) => st.camera);
-  const bodies = s.mode === 'lineup' ? LINEUP : [LINEUP[2]!];
+  const actors = useMemo(() => actorsFor(s.mode), [s.mode]);
+  const bodies = actors.map((a) => a.body);
   const players = useMemo(
     () =>
-      bodies.map((b, i) => {
-        const p = new Player(asset, { kit: KITS[s.kit]!, skin: SKIN_TONES[s.skin]!.hex, ...lettering(s, b), ...bodyFromImperial(b.h, b.w) });
-        p.root.position.set((i - (bodies.length - 1) / 2) * 1.2, 0, 0);
+      actors.map((a) => {
+        const p = new Player(asset, { kit: KITS[s.kit]!, skin: SKIN_TONES[s.skin]!.hex, ...lettering(s, a.body), ...bodyFromImperial(a.body.h, a.body.w) });
+        p.root.position.set(a.x, 0, a.z ?? 0);
+        if (a.ghost !== undefined) {
+          p.material.transparent = true;
+          p.material.opacity = a.ghost;
+          p.material.depthWrite = false;
+          p.root.traverse((o) => (o.castShadow = false));
+        }
         return p;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -125,12 +186,13 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
 
   // Raw clip playback (everything except "blend").
   useEffect(() => {
-    raw.forEach((m) => m.stopAllAction());
-    if (s.clip === 'blend') return;
-    const clip = lib.clips.get(s.clip);
-    if (!clip) return;
-    raw.forEach((m) => m.clipAction(clip).reset().play());
-  }, [raw, lib, s.clip]);
+    raw.forEach((m, i) => {
+      m.stopAllAction();
+      const clip = lib.clips.get(clipOf(s, actors[i]!));
+      if (clip) m.clipAction(clip).reset().play();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raw, lib, actors, s.clip, s.clip2]);
 
   const floor = useMemo(() => gridTexture(), []);
   const markers = useRef<THREE.Mesh[]>([]);
@@ -147,7 +209,9 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
     ground.set(-dir[0] * speed, 0, -dir[1] * speed);
     let readout: Readout | null = null;
     players.forEach((p, i) => {
-      if (s.clip === 'blend') {
+      const actor = actors[i]!;
+      const clipName = clipOf(s, actor);
+      if (clipName === 'blend') {
         const an = animators[i]!;
         an.footLock = s.lock;
         an.setStance('stance_idle');
@@ -163,9 +227,9 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
         if (i === 0) readout = { phase: an.phase, time: clock.current, planted: { l: false, r: false }, correction: { ...an.correction } };
       } else {
         const m = raw[i]!;
-        if (s.freezeT !== null) m.setTime(s.freezeT);
-        else m.update(dt);
-        const meta = lib.meta[s.clip];
+        const meta = lib.meta[clipName];
+        const offset = actor.offsetIsPhase ? actor.offset * (meta?.duration ?? 1) : actor.offset;
+        m.setTime(Math.max(0, clock.current + offset));
         if (i === 0 && meta) {
           const ph = ((clock.current / meta.duration) % 1 + 1) % 1;
           readout = { phase: ph, time: clock.current, planted: { l: planted(meta, 'l', ph), r: planted(meta, 'r', ph) }, correction: { l: 0, r: 0 } };
@@ -215,6 +279,7 @@ export function AnimLab() {
   const [s, setS] = useState<LabState>({
     mode: (q.get('mode') as LabState['mode']) ?? 'single',
     clip: q.get('clip') ?? 'blend',
+    clip2: q.get('clip2') ?? 'loco_jog',
     speed: Number(q.get('speed') ?? 3.5),
     rate: Number(q.get('rate') ?? 1),
     paused: false,
@@ -256,6 +321,9 @@ export function AnimLab() {
           <select value={s.mode} onChange={(e) => set({ mode: e.target.value as LabState['mode'] })}>
             <option value="single">Single player</option>
             <option value="lineup">Lineup (every body type)</option>
+            <option value="compare">Compare two clips</option>
+            <option value="onion">Onion skin</option>
+            <option value="sheet">Contact sheet</option>
           </select>
         </label>
         <label>
@@ -269,6 +337,18 @@ export function AnimLab() {
             ))}
           </select>
         </label>
+        {s.mode === 'compare' ? (
+          <label>
+            Compare with
+            <select value={s.clip2} onChange={(e) => set({ clip2: e.target.value })}>
+              {clipNames.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         {s.clip === 'blend' ? (
           <label>
             Speed {s.speed.toFixed(1)} m/s

@@ -21,7 +21,7 @@ import { createFieldMaterial, createFieldPaint } from './field/field';
 import { createGrassShells, GRASS_SHELLS } from './field/grass';
 import { buildPlazaGeometry, plazaLampPositions, createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
-import { createShadowRig, type ShadowRig } from './lighting/shadows';
+import { createShadowRig, shadowAttach, type ShadowRig } from './lighting/shadows';
 import { STAND } from './world/constants';
 
 export interface WorldQuality {
@@ -269,7 +269,10 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       sunRef.current.intensity = 0;
       rig.setKey(key.color, key.intensity, key.dir);
       // Objects mounted later (players, props) pick up the cascades too.
-      if (frameRef.current++ % 120 === 0) rig.attachTree(scene);
+      if (frameRef.current++ % 120 === 0 || shadowAttach.requested) {
+        rig.attachTree(scene);
+        shadowAttach.requested = false;
+      }
       rig.update();
     } else {
       sunRef.current.intensity = key.intensity;

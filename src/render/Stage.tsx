@@ -4,6 +4,7 @@ import { EffectComposer, Bloom, N8AO, SMAA } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import type { EffectComposer as EffectComposerImpl } from 'postprocessing';
 import { World, type WorldQuality } from './World';
+import { Lineup } from './players/Lineup';
 import { CameraDirector } from './cameras/CameraDirector';
 import { FlyCamera } from './cameras/FlyCamera';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
@@ -179,6 +180,7 @@ export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasEl
       <DynamicResolution baseDpr={dpr} enabled={display.dynamicResolution} targetFps={display.frameCap || 60} />
       <FirstLaunchBenchmark targetFps={display.frameCap || 60} />
       <World preset={preset} quality={worldQuality} onReady={setSceneReady} />
+      {urlFlags.lineup ? <Lineup /> : null}
       {urlFlags.fly ? <FlyCamera /> : <CameraDirector shot={shot} fovOffset={display.fov} />}
       <Post preset={preset} quality={quality} />
       <PerfProbe preset={preset.id} />

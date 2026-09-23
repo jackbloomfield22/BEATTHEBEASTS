@@ -120,3 +120,9 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
     },
   };
 }
+
+/**
+ * Ask the live rig to set up materials mounted since its last sweep (it
+ * sweeps the scene every 120 frames anyway; this makes it the next frame).
+ */
+export const shadowAttach = { requested: false };
