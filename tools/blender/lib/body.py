@@ -22,29 +22,34 @@ def _lerp(a, b, t):
     return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
 
 
-def torso(name="torso"):
-    # (z, half-width, half-depth, y offset: + is back, back-flattening)
-    # An athlete's V-taper: hips ~0.33 m across, waist ~0.29, lats and chest ~0.41.
-    table = [
-        (0.84, 0.110, 0.080, 0.012, 0.0),
-        (0.90, 0.155, 0.108, 0.018, 0.0),
-        (0.96, 0.168, 0.118, 0.022, 0.1),  # hips and glutes
-        (1.03, 0.160, 0.110, 0.012, 0.15),
-        (1.10, 0.146, 0.102, 0.002, 0.2),  # waist
-        (1.19, 0.154, 0.108, -0.008, 0.25),
-        (1.29, 0.176, 0.120, -0.014, 0.3),  # lower chest
-        (1.39, 0.200, 0.126, -0.012, 0.3),  # chest, lats
-        (1.47, 0.204, 0.116, -0.002, 0.25),
-        (1.52, 0.182, 0.098, 0.008, 0.2),  # shoulder line
-        (1.555, 0.13, 0.080, 0.014, 0.1),  # trapezius slope
-        (1.585, 0.068, 0.062, 0.018, 0.0),
-    ]
-    rings = [Ring((0, y, z), w, d, squash=s) for z, w, d, y, s in table]
+# (z, half-width, half-depth, y offset: + is back, back-flattening)
+# An athlete's V-taper: hips ~0.33 m across, waist ~0.29, lats and chest ~0.41.
+TORSO = [
+    (0.84, 0.110, 0.080, 0.012, 0.0),
+    (0.90, 0.155, 0.108, 0.018, 0.0),
+    (0.96, 0.168, 0.118, 0.022, 0.1),  # hips and glutes
+    (1.03, 0.160, 0.110, 0.012, 0.15),
+    (1.10, 0.146, 0.102, 0.002, 0.2),  # waist
+    (1.19, 0.154, 0.108, -0.008, 0.25),
+    (1.29, 0.176, 0.120, -0.014, 0.3),  # lower chest
+    (1.39, 0.200, 0.126, -0.012, 0.3),  # chest, lats
+    (1.47, 0.204, 0.116, -0.002, 0.25),
+    (1.52, 0.182, 0.098, 0.008, 0.2),  # shoulder line
+    (1.555, 0.13, 0.080, 0.014, 0.1),  # trapezius slope
+    (1.585, 0.068, 0.062, 0.018, 0.0),
+]
+
+
+def torso(name="torso", z0: float = 0.0, z1: float = 9.0, grow: float = 0.0, base: Ring | None = None):
+    """The torso loft, optionally only the rings between z0 and z1, inflated by
+    `grow` (gear shells), and started from a `base` ring (tapers a shell's end)."""
+    rows = [r for r in TORSO if z0 <= r[0] <= z1]
+    rings = ([base] if base else []) + [Ring((0, y, z), w + grow, d + grow, squash=s) for z, w, d, y, s in rows]
     return loft(name, rings, side_hint=(1, 0, 0), segs=40)
 
 
 def neck():
-    return loft("neck", [Ring((0, 0.022, 1.50), 0.062), Ring((0, 0.018, 1.60), 0.060), Ring((0, 0.008, 1.70), 0.055)], segs=20)
+    return loft("neck", [Ring((0, 0.022, 1.50), 0.070), Ring((0, 0.018, 1.60), 0.066), Ring((0, 0.008, 1.70), 0.058)], segs=20)
 
 
 def head():

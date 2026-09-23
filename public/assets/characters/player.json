@@ -1,0 +1,75 @@
+{
+  "file": "player.glb",
+  "lods": [
+    {
+      "lod": 0,
+      "triangles": 19848,
+      "vertices": 10688
+    },
+    {
+      "lod": 1,
+      "triangles": 8970,
+      "vertices": 5073
+    },
+    {
+      "lod": 2,
+      "triangles": 3459,
+      "vertices": 2064
+    }
+  ],
+  "bones": 52,
+  "runtimeBones": [
+    "root",
+    "pelvis",
+    "spine_01",
+    "spine_02",
+    "spine_03",
+    "spine_04",
+    "neck_01",
+    "neck_02",
+    "head",
+    "clavicle_l",
+    "upperarm_l",
+    "upperarm_twist_l",
+    "forearm_l",
+    "forearm_twist_l",
+    "hand_l",
+    "thigh_l",
+    "thigh_twist_l",
+    "calf_l",
+    "calf_twist_l",
+    "foot_l",
+    "toe_l",
+    "pad_l",
+    "clavicle_r",
+    "upperarm_r",
+    "upperarm_twist_r",
+    "forearm_r",
+    "forearm_twist_r",
+    "hand_r",
+    "thigh_r",
+    "thigh_twist_r",
+    "calf_r",
+    "calf_twist_r",
+    "foot_r",
+    "toe_r",
+    "pad_r"
+  ],
+  "parts": {
+    "skin": 0,
+    "glove": 1,
+    "sock": 2,
+    "cleat": 3,
+    "jersey": 4,
+    "pants": 5,
+    "helmet": 6,
+    "facemask": 7
+  },
+  "partScale": 16.0,
+  "shapes": [
+    "heavy",
+    "lean",
+    "belly"
+  ],
+  "bytes": 1548784
+}

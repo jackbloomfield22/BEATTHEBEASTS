@@ -15,7 +15,7 @@ import math
 from mathutils import Vector
 
 from .body import torso
-from .geo import Ring, delete_verts, ellipsoid, loft, smoothstep, tube_path, union_remesh
+from .geo import Ring, cut, delete_verts, ellipsoid, loft, smoothstep, tube_path, union_remesh
 from .skeleton import J
 
 # Part ids, written to TEXCOORD_0.x as id / PART_SCALE (the runtime shader
@@ -42,96 +42,107 @@ PANTS_TOP_Z = 1.13
 
 
 def jersey(voxel=0.006):
-    # The torso shell: the body's rings, inflated for fabric over pads.
+    """Closed jersey-over-pads shape; open it with cut_jersey() after decimation."""
+    # The torso shell: the body's rings, inflated for fabric, and more over the
+    # chest and back plates so the pad caps blend in instead of bulging.
     body_torso = torso("jersey_torso")
     parts = [body_torso]
-    # Scale that shell outward about the torso axis (fabric + chest/back plates).
     for v in body_torso.data.vertices:
-        z = v.co.z
-        grow = 0.018 + 0.03 * smoothstep(1.2, 1.45, z)  # plates bulk up the chest and back
-        r = Vector((v.co.x, v.co.y - 0.0, 0))
+        grow = 0.012 + 0.036 * smoothstep(1.22, 1.50, v.co.z)
+        r = Vector((v.co.x, v.co.y, 0))
         if r.length > 1e-4:
             v.co += r.normalized() * grow
-    # Shoulder pads: arched caps over each shoulder, joined across the back and chest.
+    # Shoulder pads: a broad, flat plateau over each shoulder (not a dome).
     for sx in (1, -1):
-        parts.append(ellipsoid("pad_cap", (0.165 * sx, 0.002, 1.54), (0.135, 0.158, 0.066), segs=28))
-        parts.append(ellipsoid("pad_flap", (0.21 * sx, 0.0, 1.49), (0.075, 0.12, 0.06), segs=20))
-        # Sleeve: from under the pad to half the upper arm.
-        sh, el = _v(f"shoulder_{sx > 0 and 'l' or 'r'}"), _v(f"elbow_{sx > 0 and 'l' or 'r'}")
-        parts.append(loft("sleeve", [Ring(sh - (el - sh).normalized() * 0.04, 0.085), Ring(sh.lerp(el, 0.2), 0.082, 0.078), Ring(sh.lerp(el, SLEEVE_END + 0.06), 0.071, 0.066)], side_hint=(0, 1, 0), segs=20))
-    parts.append(loft("pad_arch", [Ring((0, 0.008, 1.50), 0.24, 0.155), Ring((0, 0.010, 1.555), 0.235, 0.150), Ring((0, 0.014, 1.595), 0.14, 0.10)], segs=40))
-    ob = union_remesh(parts, "jersey", voxel=voxel, smooth_iters=10)
-    neck_r = 0.082
+        parts.append(ellipsoid("pad_cap", (0.165 * sx, 0.012, 1.548), (0.13, 0.150, 0.056), segs=32))
+        s = "l" if sx > 0 else "r"
+        sh, el = _v(f"shoulder_{s}"), _v(f"elbow_{s}")
+        parts.append(loft("sleeve", [Ring(sh - (el - sh).normalized() * 0.04, 0.085), Ring(sh.lerp(el, 0.2), 0.082, 0.078), Ring(sh.lerp(el, SLEEVE_END + 0.1), 0.071, 0.066)], side_hint=(0, 1, 0), segs=20))
+    # The arch over the back and chest that ties the caps together, narrowing to the collar.
+    parts.append(loft("pad_arch", [Ring((0, 0.010, 1.50), 0.235, 0.150), Ring((0, 0.012, 1.555), 0.225, 0.145), Ring((0, 0.016, 1.60), 0.105, 0.088)], segs=40))
+    return union_remesh(parts, "jersey", voxel=voxel, smooth_iters=24)
 
-    def cut(co):
-        if co.z < 0.99:
-            return True  # tucked into the pants
-        if co.z > 1.555 and math.hypot(co.x, co.y - 0.015) < neck_r:
-            return True  # collar opening
+
+COLLAR_Z = 1.585
+JERSEY_HEM_Z = 1.035  # tucked 10 cm into the pants (top at 1.13)
+
+
+def cut_jersey(ob):
+    planes = [((0, 0, JERSEY_HEM_Z), (0, 0, 1)), ((0, 0, COLLAR_Z), (0, 0, 1))]
+    for s in ("l", "r"):
+        sh, el = _v(f"shoulder_{s}"), _v(f"elbow_{s}")
+        planes.append((tuple(sh.lerp(el, SLEEVE_END + 0.05)), tuple((el - sh).normalized())))
+
+    def inside(co):
+        if co.z < JERSEY_HEM_Z or co.z > COLLAR_Z:
+            return True
         for s in ("l", "r"):
-            t, _ = along_upper_arm(co, s)
-            if t > SLEEVE_END + 0.05 and (co.x > 0) == (s == "l") and abs(co.x) > 0.2:
-                return True  # sleeve opening
-        return co.z > 1.62
+            if (co.x > 0) == (s == "l") and abs(co.x) > 0.2:
+                t, _ = along_upper_arm(co, s)
+                if t > SLEEVE_END + 0.05:
+                    return True
+        return False
 
-    delete_verts(ob, cut)
-    return ob
+    cut(ob, planes, inside)
 
 
 def pants(voxel=0.006):
-    t = torso("pants_hips")
-    for v in t.data.vertices:
-        r = Vector((v.co.x, v.co.y, 0))
-        if r.length > 1e-4:
-            v.co += r.normalized() * 0.028
+    """Closed pants shape; open it with cut_pants() after decimation."""
+    # The seat and waist: the torso's hip rings, inflated well outside the
+    # tucked jersey hem (+0.012), closed so the voxel union keeps it; it
+    # starts at 0.90 so there's no skirt between the legs.
+    t = torso("pants_hips", 0.90, 1.19, grow=0.034, base=Ring((0, 0.02, 0.855), 0.125, 0.085))
     parts = [t]
     for s in ("l", "r"):
         hp, kn = _v(f"hip_{s}"), _v(f"knee_{s}")
-        top = hp + (hp - kn).normalized() * 0.08 + Vector((-0.035 if s == "l" else 0.035, 0, 0))
+        # The legs start at the hip joint, inside the hip shell, so the shell
+        # alone makes the waist and seat (no leg tops poking through it).
+        top = hp + Vector((-0.02 if s == "l" else 0.02, 0, -0.01))
         parts.append(
             loft(
                 "pant_leg",
                 [
-                    Ring(top, 0.09, 0.10),
-                    Ring(hp, 0.112, 0.118),
-                    Ring(hp.lerp(kn, 0.35), 0.110, 0.108),  # thigh pad
-                    Ring(hp.lerp(kn, 0.75), 0.092, 0.090),
-                    Ring(kn, 0.078, 0.084),  # knee pad
-                    Ring(kn + (kn - hp).normalized() * 0.10, 0.070, 0.072),
+                    Ring(top, 0.090, 0.098),
+                    Ring(hp.lerp(kn, 0.12), 0.102, 0.104),
+                    Ring(hp.lerp(kn, 0.35), 0.102, 0.100),  # thigh pad
+                    Ring(hp.lerp(kn, 0.75), 0.084, 0.082),
+                    Ring(kn, 0.070, 0.076),  # knee pad
+                    Ring(kn + (kn - hp).normalized() * 0.10, 0.064, 0.066),
                 ],
                 side_hint=(1, 0, 0),
                 segs=24,
             )
         )
-    ob = union_remesh(parts, "pants", voxel=voxel, smooth_iters=10)
-    delete_verts(ob, lambda co: co.z > PANTS_TOP_Z or co.z < PANTS_HEM_Z)
-    return ob
+    return union_remesh(parts, "pants", voxel=voxel, smooth_iters=30)
+
+
+def cut_pants(ob):
+    cut(ob, [((0, 0, PANTS_TOP_Z), (0, 0, 1)), ((0, 0, PANTS_HEM_Z), (0, 0, 1))], lambda co: co.z > PANTS_TOP_Z or co.z < PANTS_HEM_Z)
+
+
+HELMET_CENTER = Vector((0, 0.014, 1.772))
 
 
 def helmet(voxel=0.005):
-    center = Vector((0, 0.012, 1.785))
-    shell = ellipsoid("shell", tuple(center), (0.126, 0.150, 0.138), segs=40)
-    inner = union_remesh([shell], "helmet", voxel=voxel, smooth_iters=2)
+    """Closed helmet shell; open it with cut_helmet() after decimation."""
+    shell = ellipsoid("shell", tuple(HELMET_CENTER), (0.128, 0.152, 0.142), segs=40)
+    return union_remesh([shell], "helmet", voxel=voxel, smooth_iters=2)
 
-    def cut(co):
-        rel = co - center
-        if rel.z < -0.125:
-            return True
-        # Face opening: front, below the brow line; the jaw guards wrap forward on the sides.
-        if rel.y < -0.02 and rel.z < 0.025 and abs(rel.x) < 0.085:
-            return True
-        # Ear/jaw line: the shell's lower edge rises toward the back of the neck.
-        if rel.z < -0.08 + 0.10 * smoothstep(0.0, 0.14, rel.y):
-            return True
-        return False
 
-    delete_verts(inner, cut)
-    return inner
+def cut_helmet(ob):
+    c = HELMET_CENTER
+    bottom, brow, side, front = c.z - 0.118, c.z + 0.03, 0.086, c.y - 0.02
+
+    def face_opening(co):
+        return co.y < front and co.z < brow and abs(co.x) < side
+
+    planes = [((0, 0, bottom), (0, 0, 1)), ((0, 0, brow), (0, 0, 1)), ((side, 0, 0), (1, 0, 0)), ((-side, 0, 0), (1, 0, 0))]
+    cut(ob, planes, lambda co: co.z < bottom or face_opening(co), region=lambda co: co.z < brow + 0.02)
 
 
 def facemask(segs=8, bars=3):
     """Tubes around the face opening: `bars` horizontal bars plus a center bar."""
-    c = Vector((0, 0.012, 1.785))
+    c = HELMET_CENTER
     parts = []
     r = 0.0055
     zs = [0.0, -0.045, -0.085][:bars]

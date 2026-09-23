@@ -185,3 +185,23 @@ def delete_verts(ob: bpy.types.Object, pred) -> None:
 def smoothstep(e0: float, e1: float, x: float) -> float:
     t = min(1.0, max(0.0, (x - e0) / (e1 - e0)))
     return t * t * (3 - 2 * t)
+
+
+def cut(ob: bpy.types.Object, planes, inside, region=None) -> None:
+    """Open a mesh cleanly: split it along each plane (co, normal), optionally
+    only where `region(point)` holds, then delete every face whose center is
+    `inside(point)`. Cutting after decimation keeps hems and openings straight
+    at every LOD (deleting remeshed vertices leaves stair-steps)."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    for co, no in planes:
+        geom = [f for f in bm.faces if region is None or region(f.calc_center_median())]
+        edges = {e for f in geom for e in f.edges}
+        verts = {v for f in geom for v in f.verts}
+        bmesh.ops.bisect_plane(bm, geom=list(verts) + list(edges) + geom, plane_co=Vector(co), plane_no=Vector(no))
+    dead = [f for f in bm.faces if inside(f.calc_center_median())]
+    bmesh.ops.delete(bm, geom=dead, context="FACES")
+    loose = [v for v in bm.verts if not v.link_faces]
+    bmesh.ops.delete(bm, geom=loose, context="VERTS")
+    bm.to_mesh(ob.data)
+    bm.free()
