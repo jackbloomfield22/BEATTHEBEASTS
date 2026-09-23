@@ -3,9 +3,9 @@
 ## Current status
 
 - **M1 Foundation:** merged (PR #1).
-- **M2 Ratings:** merged (PR #2). The follow-up is PR #3: traits overhaul, Throw Power, consensus check and anchor bands, the four approved fixes (WR/TE physicals cap, TE block-grade cap, Munoz row excluded, sack-rate split) and round 2 (your two calls applied: TE block grade weight-capped only, Marino Release 97+; plus era-adjusted Ball Security, cited 40 times for legends, and the added Reggie White PHI 1990s stint). 37 of 42 anchors pass. Ready for your review.
+- **M2 Ratings:** merged (PR #2 and the follow-up PR #3: traits overhaul, Throw Power, consensus check, anchor bands, the approved fixes and round 2).
 - **M3 The look:** merged (PR #4). Perf re-test passed on your M1 Pro: Medium at 100% resolution, 80–113 fps in the three menu views.
-- **M4 Characters and animation:** in progress on `claude/m4-characters`.
+- **M4 Characters and animation:** built, PR #5 (branch `claude/m4-characters`). Screenshots in `docs/screenshots/m4/`, critique below.
 
 ## Known legacy issues (do not rebuild)
 
@@ -28,6 +28,83 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 | L13 | `todayKey` uses the player's local date | 4606 | Kept on purpose (Wordle-style: the daily flips at local midnight) |
 
 ## Milestone log
+
+### M4 Characters and animation (built, PR #5)
+
+**What's in**
+- **Rig and body, built in code** (`tools/blender`, headless Blender 5.0 via the `bpy` module; no downloaded meshes or motion). One skeleton: 52 deform bones in an A-pose at 1.88 m. The body is lofted from measured cross-sections, fused with a voxel remesh, decimated to three LODs (about 20k / 9k / 3.5k triangles) and cut with clean planar hems. Heat-map weights (limited to 4 influences, no bare vertices; the build asserts it), plus hand-fixed seams at the crotch and collar. Covered skin is culled.
+- **Gear:** helmet and facemask, shoulder pads under the jersey, jersey, pants, socks, cleats and gloves, all skinned to the same rig, in one mesh and one draw call per player. A part id in the vertex data selects each part's color and finish.
+- **Body variety from the roster:** `heavy`, `lean` and `belly` morph targets plus overall scale, all driven by listed height and weight. A 5'10" 185 lb corner and a 6'3" 335 lb tackle come from the same asset.
+- **Uniforms:** the six GDD §12.5 kits come from uniforms. Collar, sleeve bands, pants stripe and helmet stripe are drawn procedurally from the rest pose, so they follow the cloth through every animation. The Beasts' crimson helmet stripe is emissive.
+- **Numbers and names:** one SDF atlas for every player. Bungee digits and capitals are rasterized at startup and turned into an exact signed distance field. The shader places back and front numbers (outlined in the kit's outline color) and a nameplate: long names are squeezed, accents dropped, and the name takes whichever number color contrasts more with the jersey. They are sharp at any distance.
+- **Skin tone** comes from `data/characterization.json` through `skinHexFor`, the same path as the editor. The file is still empty, so every player has the default tone until you assign tones in the editor.
+- **Clips** (`docs/ANIMATION.md`): ten stances (idle, OL 3-point, DL 4-point, WR, LB, DB, RB, QB under center, QB gun, huddle) and five locomotion cycles (walk, jog, run, sprint, backpedal). They are keyed with IK controls, placed by the ball of the foot, and baked to FK. The gait keyer rides planted feet at exactly the clip speed. **All 15 clips pass their gates:**
+  - foot slide ≤ 0.5 cm;
+  - loops ≤ 1°;
+  - ankles and knees ≥ 7 cm apart;
+  - every stance keeps its centre of mass over the support polygon of its feet and hands.
+- **Runtime** (`src/anim`):
+  - Locomotion blends the two clips that bracket the speed on one stride-matched phase. Each clip's phase is warped so both plant and lift each foot on the same frame.
+  - Foot lock holds the ball of the foot through stance, with analytic two-bone IK.
+  - The body leans into turns and pitches with acceleration.
+  - The head and neck track a target, within neck limits.
+  - The shoulder pads ride a spring.
+- **Animation Lab** (`/#/dev/anim`): single, lineup (every body type), compare two clips, onion skin, and contact sheet. The speed blend has foot lock, turn-rate (lean) and look-at controls, plus kit, skin, number, name and LOD pickers. A readout shows phase, planted feet and the foot-lock correction. `npm run shots` with `BTB_CONTACT=1` writes a contact sheet for every clip.
+- **Lineup check** (`?lineup`): 22 players at the line of scrimmage in their stances, the Beasts on defense against an offense in the Royal kit, placed by the front of the helmet or hands so the neutral zone is right. Added to the screenshot matrix from the broadcast camera and at field level, in all five presets.
+- **Hands:** walking uses relaxed open hands; jog, run, sprint and backpedal use a loose fist. Open, flat hands at speed read as palms held up in the first contact sheets.
+
+**Bugs found and fixed along the way**
+- **Lean compounding.** three's mixer only writes a bone when its mixed value changes. The root's clip value never changes, so the lean was re-applied on top of last frame's lean until the player lay on the ground. The animator now restores the pure clip pose before every mixer update. This also protects look-at, IK and the pads on any held pose.
+- **Blend foot lock.** Planted feet were being dragged up to 22 cm in walk/jog and jog/run blends. Two causes:
+  - the lock followed the dominant clip's contact windows, and the other clip disagreed;
+  - it locked the ankle, which rises with the heel.
+  Both clips' phases are now warped so they plant and lift together, and the lock holds the ball of the foot. The worst case in the sweep is 6 cm (see known issues).
+- **Late objects missed the shadow cascades.** The cascade rig set up new materials only every 120 frames, about a minute under software GL. Players mounted after startup rendered with wrong shadows and orange rims. New objects are now attached on the next frame.
+
+**Performance** (SwiftShader, 1080p, Medium, Golden Hour; geometry counts, not GPU time)
+
+| View | Draw calls | Triangles |
+|---|---|---|
+| Broadcast camera, empty field | 81 | 1.27 M |
+| Broadcast camera, 22 players | 169 | 1.67 M |
+| Field level, empty field | 90 | 1.26 M |
+| Field level, 22 players | 178 | 1.93 M |
+
+- Players cast shadows from their Low LOD (a proxy that draws nothing on screen). That halved the field-level cost: it was +1.31 M triangles with full-detail casters.
+- Each player is one draw call per pass: the camera, the proxy, and each cascade.
+- LODs switch at 22 m and 55 m.
+- The animator costs a few dozen bone operations per player per frame on the CPU. A 22-player field hasn't been profiled on real hardware.
+- **Please re-test on the M1 Pro** with `?lineup&perf` (broadcast camera: `&cam=-50,14,-13.7,0,0,-11.5,18`).
+
+**Critique** (`docs/screenshots/m4/`: `<preset>-lineup-broadcast`, `<preset>-lineup-field`, `contact-*`)
+- **Against ref-02 (broadcast football):**
+  - The line reads as football in every preset: two teams, a clean neutral zone, and stances you can name at a glance.
+  - Numbers and nameplates are sharp at field level and legible from the broadcast camera. The Beasts' black-and-crimson and the Royal kit separate clearly, even at night and in snow.
+  - Gaps, biggest first:
+    1. **Silhouette.** The pants are baggy at the hips and seat, which reads as padding in the 3-point stance. ref-02's pants are fitted, with a tight knee and a high sock line. The fix is a slimmer hip shell and a tighter knee in `gear.py`.
+    2. **Surface detail.** No fabric normal detail, mesh texture or wrinkles, and the skin is a flat, slightly orange plastic under golden light. ref-02 has sheen on the shells, mesh jerseys and specular skin.
+    3. **Proportions:** shoulders and pads are a touch narrow for linemen.
+    4. **No ball** yet, so the center's hand rests on nothing (M5).
+- **Contact sheets:**
+  - The gaits read correctly side on: contact, loading, toe-off and flight get longer from jog to sprint. The arm swing counters the legs, and the backpedal stays low with a flat back.
+  - Stances are recognizable on every body type, from the 5'10" corner to the 335 lb tackle. The 4-point stance puts weight on the hands, and the QB gun stance is upright.
+  - Weaker spots:
+    - Idle arms hang stiffly.
+    - In run and sprint at peak knee lift, you can see into the pants hem, which is dark.
+    - A small hump at the back of the collar (the pad arch) reads like a hood in profile.
+    - Hands are mitten-like up close.
+- **Skin tone:** everyone has the default tone because `data/characterization.json` is still empty. Assigning tones in the editor will show up here directly.
+
+**Known issues**
+- **Foot-lock residual.**
+  - Mid-blend the lock still corrects up to about 6 cm (jog/run at 4.6 m/s). That's the second-order stride mismatch between two clips.
+  - A hard lean (20° at 5.8 m/s) needs about 10 cm, because the lean pivots at the feet rather than over the stance foot.
+  - Both are hidden by IK, but a knee can straighten.
+- Numbers are front and back only; no sleeve (TV) numbers yet.
+- The dev-only `?lineup` view is the only in-stadium use until M5 puts players in plays.
+
+**Next:** M5 Core play.
+
 
 ### M3 The look (merged, PR #4)
 

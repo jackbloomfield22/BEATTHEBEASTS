@@ -68,6 +68,7 @@ export const urlFlags = (() => {
     lighting: p.get('lighting'),
     quality: p.get('quality'),
     noIntro: p.has('nointro'),
+    lineup: p.has('lineup'), // dev: 22 players at the line of scrimmage (render/players/Lineup.tsx)
     // Fixed camera for screenshots and dev: x,y,z,lookX,lookY,lookZ[,fov].
     cam: p.get('cam')?.split(',').map(Number) ?? null,
     // Ambient crowd energy 0..1 (screenshots of a quiet or a rocking bowl).

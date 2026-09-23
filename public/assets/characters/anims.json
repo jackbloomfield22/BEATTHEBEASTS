@@ -1,0 +1,501 @@
+{
+  "fps": 30,
+  "clips": {
+    "stance_idle": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 21.8,
+        "com_cm": 11.1,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "stance_ol_3pt": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 42.5,
+        "com_cm": 5.9,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "stance_dl_4pt": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 44.7,
+        "com_cm": 20.7,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "stance_wr_2pt": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 35.3,
+        "com_cm": 1.1,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "stance_lb_ready": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 36.5,
+        "com_cm": 1.1,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "stance_db_ready": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 33.4,
+        "com_cm": 1.5,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "stance_rb_2pt": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 30.9,
+        "com_cm": 1.2,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "stance_qb_center": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 31.1,
+        "com_cm": 1.3,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "stance_qb_gun": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 28.8,
+        "com_cm": 5.8,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "stance_huddle": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 29.6,
+        "com_cm": 1.2,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "loco_walk": {
+      "kind": "locomotion",
+      "frames": 32,
+      "duration": 1.0666666666666667,
+      "loop": true,
+      "speed": 1.3,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            20
+          ]
+        ],
+        "r": [
+          [
+            16,
+            4
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.17,
+        "loop_deg": 0.0,
+        "clear_cm": 21.2,
+        "com_cm": null,
+        "reach_cm": 0.18,
+        "pass": true
+      }
+    },
+    "loco_jog": {
+      "kind": "locomotion",
+      "frames": 22,
+      "duration": 0.7333333333333333,
+      "loop": true,
+      "speed": 3.5,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            8
+          ]
+        ],
+        "r": [
+          [
+            11,
+            19
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.21,
+        "loop_deg": 0.0,
+        "clear_cm": 22.5,
+        "com_cm": null,
+        "reach_cm": 2.29,
+        "pass": true
+      }
+    },
+    "loco_run": {
+      "kind": "locomotion",
+      "frames": 20,
+      "duration": 0.6666666666666666,
+      "loop": true,
+      "speed": 5.8,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            5
+          ]
+        ],
+        "r": [
+          [
+            10,
+            15
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.3,
+        "com_cm": null,
+        "reach_cm": 1.76,
+        "pass": true
+      }
+    },
+    "loco_sprint": {
+      "kind": "locomotion",
+      "frames": 14,
+      "duration": 0.4666666666666667,
+      "loop": true,
+      "speed": 8.5,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            4
+          ]
+        ],
+        "r": [
+          [
+            7,
+            11
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 21.9,
+        "com_cm": null,
+        "reach_cm": 0.54,
+        "pass": true
+      }
+    },
+    "loco_backpedal": {
+      "kind": "locomotion",
+      "frames": 16,
+      "duration": 0.5333333333333333,
+      "loop": true,
+      "speed": 3.2,
+      "dir": [
+        0.0,
+        -1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            8
+          ]
+        ],
+        "r": [
+          [
+            8,
+            16
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 26.0,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    }
+  },
+  "bytes": 640908
+}
