@@ -2,7 +2,8 @@
 //
 //   node tools/run-ts.mjs tools/ratings/report.ts
 //
-// BRIEF "Tools for reviewing ratings": anchor pass/fail, era parity,
+// BRIEF "Tools for reviewing ratings": anchor pass/fail (with the Throw
+// Power before/after and the consensus check), era parity,
 // distribution charts per attribute, top 25 per attribute and per OVR, the
 // biggest movers against legacy, the traits (and docs/TRAITS.md), every
 // correction applied, and every low-confidence rating among the top 200
@@ -15,7 +16,9 @@ import { buildInputs } from '../../src/engine/ratings/inputs.ts';
 import { OVR_WEIGHTS } from '../../src/engine/ratings/ovrWeights.ts';
 import { TRAIT_LABELS } from '../../src/engine/ratings/traits/index.ts';
 import type { RatedEntry, RatedPos } from '../../src/engine/ratings/types.ts';
+import { consensusCheck, consensusSection, loadConsensus } from './consensus.ts';
 import { loadSources, ROOT } from './sources.ts';
+import { throwPowerSection } from './throwPowerReport.ts';
 import { traitsDoc, traitsSection } from './traitsReport.ts';
 import { byPosition, capPileups, crossStintViolations, eraParity, evaluateAnchors, legacyCorrelation, movers } from './validate.ts';
 
@@ -79,6 +82,14 @@ if (flagged.length) {
   for (const a of flagged) out(`- **${a.label}**: ${a.anchor.review}`);
 }
 out('');
+
+out(...throwPowerSection(run));
+
+// ------------------------------------------------------------------ consensus
+
+// Reads the finished run only; never changes a rating (tools/ratings/consensus.ts).
+const consensus = loadConsensus();
+out(...consensusSection(consensusCheck(run, consensus), consensus));
 
 // ------------------------------------------------------------------ parity
 
