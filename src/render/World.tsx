@@ -6,6 +6,8 @@ import { createSkyDome } from './sky/SkyDome';
 import { buildBoulders, buildHeadlands, buildTerrain, createBoulderMaterial, createTerrainMaterial } from './terrain/terrain';
 import { createOcean } from './ocean/ocean';
 import { buildBowl, PROFILE } from './stadium/bowl';
+import { bakeSpectatorAtlas } from './crowd/spectator';
+import { createCrowd } from './crowd/crowd';
 import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, createRoofMaterial, createSeatingMaterial, stadiumUniforms } from './stadium/materials';
 import { createFieldMaterial, createFieldPaint } from './field/field';
 import { createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
@@ -55,6 +57,13 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     // Built once; quality changes that need a rebuild remount the World.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The crowd atlas is rendered with the renderer, once.
+  const crowd = useMemo(() => {
+    const atlas = bakeSpectatorAtlas(gl);
+    return { atlas, mesh: createCrowd(atlas) };
+  }, [gl]);
+  useEffect(() => () => crowd.atlas.dispose(), [crowd]);
 
   // Sky LUT + IBL, regenerated whenever the lighting preset changes.
   const lut = useMemo(() => new SkyLUT(512, 256), []);
@@ -212,6 +221,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
 
       {/* Stadium bowl */}
       <mesh geometry={bowl.seating} material={assets.seatingMat} receiveShadow castShadow />
+      <primitive object={crowd.mesh} />
       <mesh geometry={bowl.concrete} material={assets.concreteMat} receiveShadow castShadow />
       <mesh geometry={bowl.glass} material={assets.glassMat} />
       <mesh geometry={bowl.roof} material={assets.roofMat} receiveShadow castShadow />

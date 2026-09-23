@@ -2,10 +2,8 @@ import * as THREE from 'three';
 import { patchMaterial, atmosphereUniforms } from '../sky/atmosphere';
 import { NOISE_GLSL } from '../sky/SkyDome';
 
-// Milestone 1 stadium materials. The seating shader fakes a packed crowd per
-// seat (shirt palette weighted to Beasts crimson and black, heads, small
-// movements) so the bowl reads full from flyover distances; milestone 3
-// replaces it with the instanced VAT crowd.
+// Stadium materials. The seating shader draws the seats and aisle steps; the
+// people in them are the instanced crowd (crowd/crowd.ts).
 
 export const stadiumUniforms = {
   uLights: { value: 0.5 }, // stadium light level 0..1
@@ -30,64 +28,32 @@ export function createSeatingMaterial(): THREE.MeshStandardMaterial {
           uniform float uTime;
           uniform float uLights;
           uniform float uCrowdEnergy;
-          ${NOISE_GLSL}
-          vec3 crowdEmissive;`,
+          ${NOISE_GLSL}`,
         )
         .replace(
           '#include <color_fragment>',
           `#include <color_fragment>
           {
+            // Seats and aisle steps under the crowd (crowd/crowd.ts puts the
+            // people in them; the aisles match its AISLE_EVERY / AISLE_W).
             float row = vAux.x + vAux.y * 40.0;
             float isRiser = vAux.z;
-            float seatW = 0.52;
-            float seat = floor(vSeatUv.x / seatW);
-            float fx = fract(vSeatUv.x / seatW);
-            vec2 id = vec2(seat, row);
-            float h = hash12(id);
-            float h2 = hash12(id + 17.3);
-            float h3 = hash12(id + 91.7);
-            // Section-level variation (blocks of fans, supporters' ends).
-            float section = floor(vSeatUv.x / 22.0);
-            float secH = hash12(vec2(section, floor(row / 12.0)));
-            float occupied = step(0.035 + 0.05 * step(0.8, secH), h);
-            // Shirt palette: crimson, black, white, charcoal, occasional color.
-            vec3 shirt;
-            float pick = h2 + (secH - 0.5) * 0.25;
-            if (pick < 0.30) shirt = mix(vec3(0.3, 0.018, 0.028), vec3(0.48, 0.04, 0.05), h3);
-            else if (pick < 0.62) shirt = vec3(0.018 + 0.03 * h3);
-            else if (pick < 0.74) shirt = vec3(0.55 + 0.2 * h3);
-            else if (pick < 0.90) shirt = vec3(0.1 + 0.08 * h3, 0.1 + 0.06 * h3, 0.11 + 0.05 * h3);
-            else shirt = hsv2rgb(vec3(h3, 0.55, 0.35 + 0.3 * h2));
-            vec3 skin = mix(vec3(0.16, 0.09, 0.05), vec3(0.62, 0.43, 0.32), hash12(id + 5.1));
-            vec3 seatCol = vec3(0.05, 0.01, 0.014); // empty seat: dark crimson
-            // Figure silhouette: shoulders across the seat, head above. At a
-            // distance (seat smaller than ~2 px) fade to the seat's average
-            // color to avoid moire.
             float v = vSeatUv.y;
-            float lod = smoothstep(0.035, 0.16, fwidth(vSeatUv.x / seatW));
-            float body = smoothstep(0.02, 0.1, fx) * smoothstep(0.98, 0.9, fx);
-            float head = smoothstep(0.3, 0.16, abs(fx - 0.5 - (h - 0.5) * 0.2));
-            float bob = sin(uTime * (1.5 + h * 2.0) + h * 40.0) * 0.5 + 0.5;
-            float headMask = isRiser > 0.5 ? step(0.66 - bob * 0.1 * uCrowdEnergy, v / 0.43) * head : head * step(0.62, v / 0.86);
-            vec3 person = mix(shirt, skin, headMask);
-            float cover = isRiser > 0.5 ? body : body * step(v / 0.86, 0.9);
-            vec3 detailed = mix(seatCol, person, occupied * cover);
-            vec3 average = mix(seatCol, mix(shirt, skin, 0.18), occupied * 0.9);
-            vec3 c = mix(detailed, average, lod);
+            float aisle = step(mod(vSeatUv.x, 14.5), 1.1);
+            float seatW = 0.55;
+            float fx = fract(vSeatUv.x / seatW);
+            float h = hash12(vec2(floor(vSeatUv.x / seatW), row));
+            vec3 seatCol = vec3(0.06, 0.012, 0.016) * (0.8 + 0.4 * h);
+            // Seat backs: a darker gap between seats; the riser face is the back.
+            float gap = smoothstep(0.02, 0.08, fx) * smoothstep(0.98, 0.92, fx);
+            vec3 c = mix(seatCol * 0.45, seatCol, gap);
+            c = mix(c, vec3(0.2, 0.2, 0.19), aisle);
             // Row shadowing: the back of each tread and the base of each riser are darker.
-            c *= mix(mix(0.55, 1.0, isRiser > 0.5 ? smoothstep(0.0, 0.2, v) : smoothstep(0.86, 0.3, v)), 0.85, lod);
+            float lod = smoothstep(0.035, 0.16, fwidth(vSeatUv.x / seatW));
+            c *= mix(mix(0.55, 1.0, isRiser > 0.5 ? smoothstep(0.0, 0.2, v) : smoothstep(0.86, 0.3, v)), 0.8, lod);
             diffuseColor.rgb = c;
-            // Phone lights and flashes at night.
-            float flash = step(0.9993, hash12(id + floor(uTime * 1.3))) * uLights;
-            crowdEmissive = vec3(1.0, 0.95, 0.85) * flash * 3.0;
           }`,
-        )
-        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += crowdEmissive;');
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <common>',
-        `#include <common>
-        vec3 hsv2rgb(vec3 c) { vec3 p = abs(fract(c.xxx + vec3(0.0, 2.0/3.0, 1.0/3.0)) * 6.0 - 3.0); return c.z * mix(vec3(1.0), clamp(p - 1.0, 0.0, 1.0), c.y); }`,
-      );
+        );
     },
     'seating',
   );

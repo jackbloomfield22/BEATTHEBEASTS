@@ -19,7 +19,7 @@ const PURE_RESTRICTED_SYNTAX = [
 ];
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'legacy', 'data/legacy/**', 'public', 'tools/shots/out', 'test-results'] },
+  { ignores: ['dist', 'node_modules', 'legacy', 'data/legacy/**', 'public', 'tools/shots/out', 'test-results', '.claude'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
