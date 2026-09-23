@@ -2,13 +2,15 @@
  "_meta": {
   "what": "Stints the legacy data never had, added as an augmentation layer (legacy data untouched). Loaded and validated by src/engine/data/addedStints.ts.",
   "generatedBy": "tools/augment/added-stints.ts",
-  "rule": "Only notable players whose missing stint changes a top-25 list (user decision, PR #3 round 2). Season lines from the cited table, checked against the stated totals; imp from the same player's adjacent legacy stint (impFrom)."
+  "rule": "Only stints the user named (PR #3 round 2: Reggie White; M4.5: Deion Sanders ATL/SF 1990–94, Randy Moss MIN 2000–04, Terrell Owens SF 2000–03, Charles Woodson LV). Season lines from the cited table, checked against the stated values, the table's Career row, nflverse rosters and (1999+) nflverse stats; 1999+ stats are nflverse's (verified); imp from the same player's legacy stint (impFrom: same franchise in the adjacent decade, else the nearest in time).",
+  "fields": "bySeason/totals, defense: games, sk, int, fr, td (interception + fumble return TDs; forced fumbles left out, not tracked before 1993). Offense: games, rec, yds, td (receiving), rushYds, rushTd, fum. nflverse (1999+ seasons): games per season and stats in the nflverse_entries.json shape."
  },
  "stints": [
   {
    "id": "defense:reggie-white:PHI:1990s",
    "personOf": "defense:reggie-white:PHI:1980s",
    "impFrom": "defense:reggie-white:PHI:1980s",
+   "impWhy": "same franchise, adjacent decade",
    "entry": {
     "n": "Reggie White",
     "p": "DE",
@@ -57,7 +59,581 @@
     "retrieved": "2026-09-23"
    },
    "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, sk, int, fr, td",
+    "sk per season 14, 15, 14 as stated",
+    "nflverse rosters: PHI 1990–1992, the whole 1990s stint"
+   ],
    "why": "His 1990–92 Eagles seasons (43 sacks; first-team All-Pro 1990 and 1991, second-team 1992) belong to no stint: the legacy list has PHI 1980s and GB 1990s only. A stint at that level is a DE top-25 stint."
+  },
+  {
+   "id": "defense:deion-sanders:ATL:1990s",
+   "personOf": "defense:deion-sanders:ATL:1980s",
+   "impFrom": "defense:deion-sanders:ATL:1980s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "Deion Sanders",
+    "p": "CB",
+    "t": "ATL",
+    "d": "1990s"
+   },
+   "seasons": [
+    1990,
+    1991,
+    1992,
+    1993
+   ],
+   "bySeason": {
+    "1990": {
+     "games": 16,
+     "sk": 0,
+     "int": 3,
+     "fr": 2,
+     "td": 2
+    },
+    "1991": {
+     "games": 15,
+     "sk": 1,
+     "int": 6,
+     "fr": 1,
+     "td": 1
+    },
+    "1992": {
+     "games": 13,
+     "sk": 0,
+     "int": 3,
+     "fr": 2,
+     "td": 0
+    },
+    "1993": {
+     "games": 11,
+     "sk": 0,
+     "int": 7,
+     "fr": 0,
+     "td": 0
+    }
+   },
+   "totals": {
+    "games": 55,
+    "sk": 1,
+    "int": 19,
+    "fr": 5,
+    "td": 3
+   },
+   "source": {
+    "title": "Wikipedia: Deion Sanders, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Deion_Sanders",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Deion_Sanders&oldid=1375794568",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, sk, int, fr, td",
+    "int per season 3, 6, 3, 7 as stated",
+    "prose: \"During his time in Atlanta, he intercepted 24 passes (including a career-high seven in 1993), three of which he returned for touchdowns.\"",
+    "nflverse rosters: ATL 1990–1993, the whole 1990s stint"
+   ],
+   "why": "His 1990–93 Falcons seasons (19 interceptions; first-team All-Pro 1992 and 1993, second-team 1991, three Pro Bowls) belong to no stint: the legacy list has ATL 1980s (1989 only) and DAL 1990s only."
+  },
+  {
+   "id": "defense:deion-sanders:SF:1990s",
+   "personOf": "defense:deion-sanders:DAL:1990s",
+   "impFrom": "defense:deion-sanders:DAL:1990s",
+   "impWhy": "no SF legacy stint; DAL 1990s (1995–99) is the legacy stint nearest in time and in the same decade",
+   "entry": {
+    "n": "Deion Sanders",
+    "p": "CB",
+    "t": "SF",
+    "d": "1990s"
+   },
+   "seasons": [
+    1994
+   ],
+   "bySeason": {
+    "1994": {
+     "games": 14,
+     "sk": 0,
+     "int": 6,
+     "fr": 1,
+     "td": 3
+    }
+   },
+   "totals": {
+    "games": 14,
+    "sk": 0,
+    "int": 6,
+    "fr": 1,
+    "td": 3
+   },
+   "source": {
+    "title": "Wikipedia: Deion Sanders, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Deion_Sanders",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Deion_Sanders&oldid=1375794568",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, sk, int, fr, td",
+    "int per season 6 as stated",
+    "prose: \"recording six interceptions and returning them for an NFL-best 303 yards and three touchdowns\"",
+    "nflverse rosters: SF 1994, the whole 1990s stint"
+   ],
+   "why": "His 1994 49ers season (6 interceptions, 3 returned for TDs; Defensive Player of the Year, first-team All-Pro) belongs to no stint."
+  },
+  {
+   "id": "players:randy-moss:MIN:2000s",
+   "personOf": "players:randy-moss:MIN:1990s",
+   "impFrom": "players:randy-moss:MIN:1990s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "Randy Moss",
+    "p": "WR",
+    "t": "MIN",
+    "d": "2000s"
+   },
+   "seasons": [
+    2000,
+    2001,
+    2002,
+    2003,
+    2004
+   ],
+   "bySeason": {
+    "2000": {
+     "games": 16,
+     "rec": 77,
+     "yds": 1437,
+     "td": 15,
+     "rushYds": 5,
+     "rushTd": 0,
+     "fum": 2
+    },
+    "2001": {
+     "games": 16,
+     "rec": 82,
+     "yds": 1233,
+     "td": 10,
+     "rushYds": 38,
+     "rushTd": 0,
+     "fum": 0
+    },
+    "2002": {
+     "games": 16,
+     "rec": 106,
+     "yds": 1347,
+     "td": 7,
+     "rushYds": 51,
+     "rushTd": 0,
+     "fum": 1
+    },
+    "2003": {
+     "games": 16,
+     "rec": 111,
+     "yds": 1632,
+     "td": 17,
+     "rushYds": 18,
+     "rushTd": 0,
+     "fum": 1
+    },
+    "2004": {
+     "games": 13,
+     "rec": 49,
+     "yds": 767,
+     "td": 13,
+     "rushYds": 0,
+     "rushTd": 0,
+     "fum": 1
+    }
+   },
+   "totals": {
+    "games": 77,
+    "rec": 425,
+    "yds": 6416,
+    "td": 62,
+    "rushYds": 112,
+    "rushTd": 0,
+    "fum": 5
+   },
+   "nflverse": {
+    "games": {
+     "2000": 16,
+     "2001": 16,
+     "2002": 16,
+     "2003": 16,
+     "2004": 11
+    },
+    "stats": {
+     "seasons": [
+      2000,
+      2001,
+      2002,
+      2003,
+      2004
+     ],
+     "complete": true,
+     "games": 75,
+     "completions": 3,
+     "attempts": 7,
+     "passing_yards": 79,
+     "passing_tds": 1,
+     "interceptions": 1,
+     "carries": 18,
+     "rushing_yards": 112,
+     "receptions": 425,
+     "targets": 465,
+     "receiving_yards": 6416,
+     "receiving_tds": 62,
+     "receiving_fumbles": 5,
+     "receiving_fumbles_lost": 3,
+     "targetsSeasons": [
+      2000,
+      2001,
+      2002
+     ],
+     "targetedReceptions": 265,
+     "targetedReceivingYards": 4017,
+     "src": "nflverse:stats_player_week",
+     "conf": "verified"
+    }
+   },
+   "source": {
+    "title": "Wikipedia: Randy Moss, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Randy_Moss",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Randy_Moss&oldid=1371178685",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, rec, yds, td, rushYds, rushTd, fum",
+    "nflverse rosters: MIN 2000–2004, the whole 2000s stint",
+    "table = nflverse per season on receptions, receiving yards, receiving TDs: 2000 rec 77 yds 1437 td 15; 2001 rec 82 yds 1233 td 10; 2002 rec 106 yds 1347 td 7; 2003 rec 111 yds 1632 td 17; 2004 rec 49 yds 767 td 13 (GP 13; nflverse games with a stat 11)"
+   ],
+   "why": "His 2000–04 Vikings seasons (425 catches, 6,416 yards, 62 TDs; first-team All-Pro 2000 and 2003) belong to no stint: the legacy list has MIN 1990s (1998–99) and LV/NE 2000s."
+  },
+  {
+   "id": "players:terrell-owens:SF:2000s",
+   "personOf": "players:terrell-owens:SF:1990s",
+   "impFrom": "players:terrell-owens:SF:1990s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "Terrell Owens",
+    "p": "WR",
+    "t": "SF",
+    "d": "2000s"
+   },
+   "seasons": [
+    2000,
+    2001,
+    2002,
+    2003
+   ],
+   "bySeason": {
+    "2000": {
+     "games": 14,
+     "rec": 97,
+     "yds": 1451,
+     "td": 13,
+     "rushYds": 11,
+     "rushTd": 0,
+     "fum": 3
+    },
+    "2001": {
+     "games": 16,
+     "rec": 93,
+     "yds": 1412,
+     "td": 16,
+     "rushYds": 21,
+     "rushTd": 0,
+     "fum": 0
+    },
+    "2002": {
+     "games": 14,
+     "rec": 100,
+     "yds": 1300,
+     "td": 13,
+     "rushYds": 79,
+     "rushTd": 1,
+     "fum": 0
+    },
+    "2003": {
+     "games": 15,
+     "rec": 80,
+     "yds": 1102,
+     "td": 9,
+     "rushYds": -2,
+     "rushTd": 0,
+     "fum": 0
+    }
+   },
+   "totals": {
+    "games": 59,
+    "rec": 370,
+    "yds": 5265,
+    "td": 51,
+    "rushYds": 109,
+    "rushTd": 1,
+    "fum": 3
+   },
+   "nflverse": {
+    "games": {
+     "2000": 14,
+     "2001": 16,
+     "2002": 14,
+     "2003": 15
+    },
+    "stats": {
+     "seasons": [
+      2000,
+      2001,
+      2002,
+      2003
+     ],
+     "complete": true,
+     "games": 59,
+     "carries": 17,
+     "rushing_yards": 109,
+     "rushing_tds": 1,
+     "rushing_fumbles": 1,
+     "rushing_fumbles_lost": 1,
+     "receptions": 370,
+     "targets": 460,
+     "receiving_yards": 5265,
+     "receiving_tds": 51,
+     "receiving_fumbles": 2,
+     "receiving_fumbles_lost": 1,
+     "targetsSeasons": [
+      2000,
+      2001,
+      2002
+     ],
+     "targetedReceptions": 290,
+     "targetedReceivingYards": 4163,
+     "src": "nflverse:stats_player_week",
+     "conf": "verified"
+    }
+   },
+   "source": {
+    "title": "Wikipedia: Terrell Owens, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Terrell_Owens",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Terrell_Owens&oldid=1375306790",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, rec, yds, td, rushYds, rushTd, fum",
+    "nflverse rosters: SF 2000–2003, the whole 2000s stint",
+    "table = nflverse per season on receptions, receiving yards, receiving TDs: 2000 rec 97 yds 1451 td 13; 2001 rec 93 yds 1412 td 16; 2002 rec 100 yds 1300 td 13; 2003 rec 80 yds 1102 td 9"
+   ],
+   "why": "His 2000–03 49ers seasons (370 catches, 5,265 yards, 51 TDs; first-team All-Pro 2000–02) belong to no stint: the legacy list has SF 1990s (1996–99) and PHI/DAL/BUF 2000s."
+  },
+  {
+   "id": "defense:charles-woodson:LV:1990s",
+   "personOf": "defense:charles-woodson:GB:2000s",
+   "impFrom": "defense:charles-woodson:GB:2000s",
+   "impWhy": "his only legacy stint",
+   "entry": {
+    "n": "Charles Woodson",
+    "p": "CB",
+    "t": "LV",
+    "d": "1990s"
+   },
+   "seasons": [
+    1998,
+    1999
+   ],
+   "bySeason": {
+    "1998": {
+     "games": 16,
+     "sk": 0,
+     "int": 5,
+     "fr": 0,
+     "td": 1
+    },
+    "1999": {
+     "games": 16,
+     "sk": 0,
+     "int": 1,
+     "fr": 1,
+     "td": 1
+    }
+   },
+   "totals": {
+    "games": 32,
+    "sk": 0,
+    "int": 6,
+    "fr": 1,
+    "td": 2
+   },
+   "nflverse": {
+    "games": {
+     "1999": 15
+    },
+    "stats": {
+     "seasons": [
+      1999
+     ],
+     "complete": false,
+     "games": 15,
+     "tackles_solo": 43,
+     "tackles_assist": 18,
+     "tackles_combined": 61,
+     "tflSeasons": [
+      1999
+     ],
+     "tfl": 3,
+     "qbHitsSeasons": [
+      1999
+     ],
+     "interceptions": 1,
+     "pass_defended": 15,
+     "forced_fumbles": 1,
+     "fumble_recoveries": 1,
+     "def_tds": 1,
+     "src": "nflverse:stats_player_week",
+     "conf": "verified"
+    }
+   },
+   "source": {
+    "title": "Wikipedia: Charles Woodson, \"NFL career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Charles_Woodson",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Charles_Woodson&oldid=1375763657",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, sk, int, fr, td",
+    "nflverse rosters: LV 1998–1999, the whole 1990s stint",
+    "table = nflverse per season on interceptions, sacks: 1999 int 1 sk 0 (GP 16; nflverse games with a stat 15)"
+   ],
+   "why": "His 1998–99 Raiders seasons (Defensive Rookie of the Year 1998; Pro Bowl both years, first-team All-Pro 1999) belong to no stint: the legacy list has GB 2000s only."
+  },
+  {
+   "id": "defense:charles-woodson:LV:2000s",
+   "personOf": "defense:charles-woodson:GB:2000s",
+   "impFrom": "defense:charles-woodson:GB:2000s",
+   "impWhy": "his only legacy stint",
+   "entry": {
+    "n": "Charles Woodson",
+    "p": "CB",
+    "t": "LV",
+    "d": "2000s"
+   },
+   "seasons": [
+    2000,
+    2001,
+    2002,
+    2003,
+    2004,
+    2005
+   ],
+   "bySeason": {
+    "2000": {
+     "games": 16,
+     "sk": 0,
+     "int": 4,
+     "fr": 1,
+     "td": 0
+    },
+    "2001": {
+     "games": 16,
+     "sk": 2,
+     "int": 1,
+     "fr": 0,
+     "td": 0
+    },
+    "2002": {
+     "games": 8,
+     "sk": 0,
+     "int": 1,
+     "fr": 1,
+     "td": 0
+    },
+    "2003": {
+     "games": 15,
+     "sk": 1,
+     "int": 3,
+     "fr": 1,
+     "td": 0
+    },
+    "2004": {
+     "games": 13,
+     "sk": 2.5,
+     "int": 1,
+     "fr": 1,
+     "td": 0
+    },
+    "2005": {
+     "games": 6,
+     "sk": 0,
+     "int": 1,
+     "fr": 0,
+     "td": 0
+    }
+   },
+   "totals": {
+    "games": 74,
+    "sk": 5.5,
+    "int": 11,
+    "fr": 4,
+    "td": 0
+   },
+   "nflverse": {
+    "games": {
+     "2000": 16,
+     "2001": 16,
+     "2002": 7,
+     "2003": 15,
+     "2004": 12,
+     "2005": 6
+    },
+    "stats": {
+     "seasons": [
+      2000,
+      2001,
+      2002,
+      2003,
+      2004,
+      2005
+     ],
+     "complete": true,
+     "games": 72,
+     "tackles_solo": 240,
+     "tackles_assist": 104,
+     "tackles_combined": 344,
+     "tflSeasons": [
+      2000,
+      2001,
+      2002
+     ],
+     "tfl": 4,
+     "sacks": 5.5,
+     "qbHitsSeasons": [
+      2000,
+      2001,
+      2002
+     ],
+     "qb_hits": 2,
+     "interceptions": 11,
+     "pass_defended": 49,
+     "forced_fumbles": 12,
+     "fumble_recoveries": 4,
+     "src": "nflverse:stats_player_week",
+     "conf": "verified"
+    }
+   },
+   "source": {
+    "title": "Wikipedia: Charles Woodson, \"NFL career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Charles_Woodson",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Charles_Woodson&oldid=1375763657",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, sk, int, fr, td",
+    "nflverse rosters: LV 2000–2005, the whole 2000s stint",
+    "table = nflverse per season on interceptions, sacks: 2000 int 4 sk 0; 2001 int 1 sk 2; 2002 int 1 sk 0 (GP 8; nflverse games with a stat 7); 2003 int 3 sk 1; 2004 int 1 sk 2.5 (GP 13; nflverse games with a stat 12); 2005 int 1 sk 0"
+   ],
+   "why": "His 2000–05 Raiders seasons (first-team All-Pro 2001, second-team 2000, Pro Bowl 2000 and 2001) belong to no stint: the legacy list has GB 2000s only."
   }
  ]
 }
