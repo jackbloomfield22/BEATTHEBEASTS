@@ -65,6 +65,19 @@ export function buildShrub(seed: number): THREE.BufferGeometry {
 }
 
 /**
+ * The scrub's far LOD: four larger leaf masses in the same envelope (80
+ * triangles against 220). Past ~50 m a clump is a few dozen pixels wide and
+ * the lumpy silhouette still reads.
+ */
+export function buildShrubLod(seed: number): THREE.BufferGeometry {
+  const rand = mulberry32(seed);
+  const g = leafCluster(rand, 4, 0.8, 0.6, 0.66);
+  canopyNormals(g, new THREE.Vector3(0, -0.2, 0));
+  g.translate(0, 0.25, 0);
+  return tagPart(g, 0);
+}
+
+/**
  * Wind-sculpted cypress ~9 m tall at scale 1: a short leaning trunk that
  * splits into limbs, each carrying a flat-topped canopy pad, all swept away
  * from the prevailing sea wind (−z, inland).

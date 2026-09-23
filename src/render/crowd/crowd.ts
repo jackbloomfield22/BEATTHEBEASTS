@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { atmosphereUniforms, patchMaterial } from '../sky/atmosphere';
 import { PROFILE, standPath } from '../stadium/bowl';
 import { stadiumUniforms } from '../stadium/materials';
-import { CARD_H, CARD_W, CELL_H, CELL_W, DIRS, POSES, type SpectatorAtlas } from './spectator';
+import { CARD_H, CARD_W, CELL_H, CELL_W, DIRS, PHONE_AT, POSES, cellRects, type SpectatorAtlas } from './spectator';
 
 // The crowd: one card per seat (two triangles), drawn as a single instanced
 // mesh. Each card turns about its vertical axis to face the camera and shows
@@ -98,6 +98,7 @@ export const CROWD_DRAWN = { low: 0.4, medium: 0.6, high: 0.85, ultra: 1 } as co
 const VERT_PARS = /* glsl */ `
 attribute vec4 aSeat;
 attribute vec4 aRand;
+uniform vec4 uCellRect[${POSES * DIRS}];
 uniform float uTime;
 uniform float uCrowdEnergy;
 uniform float uLights;
@@ -140,8 +141,12 @@ const VERT_BODY = /* glsl */ `
     pose = hh < 0.45 * e ? 2.0 : hh < 0.45 * e + 0.35 ? 3.0 : 1.0;
   }
   float bob = pose >= 2.0 ? abs(sin(uTime * (3.2 + aRand.z * 2.5) + aRand.y * 40.0)) * 0.05 * (0.5 + e) : 0.0;
-  vAtlasUv = vec2((cell + uv.x) / ${DIRS.toFixed(1)}, (${(POSES - 1).toFixed(1)} - pose + uv.y) / ${POSES.toFixed(1)});
-  vLocal = vec2(position.x, position.y);
+  // Shrink the card to its cell's person (spectator.ts cellRects).
+  vec4 rc = uCellRect[int(pose) * ${DIRS} + int(cell)];
+  vec2 q = vec2(mix(rc.x, rc.z, uv.x), mix(rc.y, rc.w, uv.y));
+  vec2 cuv = vec2(q.x / ${CARD_W.toFixed(3)} + 0.5, q.y / ${CARD_H.toFixed(3)});
+  vAtlasUv = vec2((cell + cuv.x) / ${DIRS.toFixed(1)}, (${(POSES - 1).toFixed(1)} - pose + cuv.y) / ${POSES.toFixed(1)});
+  vLocal = q;
   vRight = R;
   vToCam = C;
 
@@ -183,10 +188,10 @@ const VERT_BODY = /* glsl */ `
 
   // Phone flashes after dark, held at the hands for the pose.
   float flashOn = step(0.9985, h11(floor(uTime * 1.3) + aRand.x * 1000.0)) * step(0.5, uLights);
-  vec2 phone = pose == 2.0 ? vec2(0.34, 1.96) : pose == 3.0 ? vec2(0.0, 1.32) : pose == 1.0 ? vec2(0.22, 1.45) : vec2(0.18, 1.1);
+  vec2 phone = pose == 2.0 ? vec2(${PHONE_AT[2]!.join(', ')}) : pose == 3.0 ? vec2(${PHONE_AT[3]!.map((n) => n.toFixed(2)).join(', ')}) : pose == 1.0 ? vec2(${PHONE_AT[1]!.join(', ')}) : vec2(${PHONE_AT[0]!.join(', ')});
   vFlash = vec3(phone, flashOn);
 
-  vec3 transformed = base + R * position.x + vec3(0.0, position.y + bob, 0.0);
+  vec3 transformed = base + R * q.x + vec3(0.0, q.y + bob, 0.0);
 `;
 
 const FRAG_PARS = /* glsl */ `
@@ -215,6 +220,7 @@ export function createCrowdMaterial(atlas: SpectatorAtlas): THREE.MeshStandardMa
         uCrowdMask: { value: atlas.mask },
         uCrowdNormal: { value: atlas.normal },
         uAtlasSize: { value: size },
+        uCellRect: { value: cellRects() },
       });
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>\n${VERT_PARS}`)
@@ -270,7 +276,7 @@ export function createCrowdMaterial(atlas: SpectatorAtlas): THREE.MeshStandardMa
 export function createCrowdDepthMaterial(atlas: SpectatorAtlas): THREE.MeshDepthMaterial {
   const mat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   mat.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, stadiumUniforms, { uTime: atmosphereUniforms.uTime, uWet: atmosphereUniforms.uWet, uSnow: atmosphereUniforms.uSnow, uCrowdMask: { value: atlas.mask } });
+    Object.assign(shader.uniforms, stadiumUniforms, { uTime: atmosphereUniforms.uTime, uWet: atmosphereUniforms.uWet, uSnow: atmosphereUniforms.uSnow, uCrowdMask: { value: atlas.mask }, uCellRect: { value: cellRects() } });
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>\n${VERT_PARS}`)
       .replace('#include <begin_vertex>', VERT_BODY);

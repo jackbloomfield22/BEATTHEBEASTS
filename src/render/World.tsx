@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { atmosphereUniforms, SkyLUT, sunDirection, sunTransmittance } from './sky/atmosphere';
 import { createSkyDome } from './sky/SkyDome';
 import { buildCliff } from './terrain/cliff';
-import { buildCypress, buildShrub, createVegetationMaterial, ledgePlants, scatterVegetation } from './terrain/vegetation';
+import { buildCypress, buildShrub, buildShrubLod, createVegetationMaterial, ledgePlants, scatterVegetation } from './terrain/vegetation';
+import { buildChunkedScatter } from './terrain/scatterChunks';
 import { buildBoulders, buildHeadlands, buildTerrain, createBoulderMaterial, createTerrainMaterial } from './terrain/terrain';
 import { createOcean } from './ocean/ocean';
 import { buildBowl, PROFILE } from './stadium/bowl';
@@ -287,54 +288,47 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   }, [bowl, lightBankGeo, assets.lightBankMat]);
 
   const vegetation = useMemo(() => {
-    const mat = createVegetationMaterial();
     const scatter = scatterVegetation();
     const ledges = ledgePlants(assets.cliff.geometry);
-    const group = new THREE.Group();
-    group.name = 'vegetation';
-    // Only the cypress cast shadows: an instanced mesh has one bounding
-    // sphere for all its plants, so casters render in full into every
-    // cascade (4 × 1.6 M triangles for the scrub), while scrub shadows are a
-    // few pixels at broadcast distances. The scrub still receives shadows.
-    const add = (geo: THREE.BufferGeometry, mats: THREE.Matrix4[], tints: THREE.Color[], cast = false) => {
-      const mesh = new THREE.InstancedMesh(geo, mat, mats.length);
-      mats.forEach((m, i) => {
-        mesh.setMatrixAt(i, m);
-        mesh.setColorAt(i, tints[i]!);
-      });
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.castShadow = cast;
-      mesh.receiveShadow = true;
-      mesh.computeBoundingSphere();
-      mesh.userData.fullCount = mats.length;
-      group.add(mesh);
-    };
-    // Three shrub and two cypress variants, instances dealt round-robin.
-    const deal = <T,>(list: T[], k: number, i: number) => list.filter((_, j) => j % k === i);
-    for (let v = 0; v < 3; v++) {
-      add(buildShrub(11 + v), deal(scatter.shrubs, 3, v), deal(scatter.tints[0]!, 3, v));
-      add(buildShrub(21 + v), deal(ledges.matrices, 3, v), deal(ledges.tints, 3, v));
-    }
-    for (let v = 0; v < 2; v++) add(buildCypress(31 + v), deal(scatter.cypress, 2, v), deal(scatter.tints[1]!, 2, v), true);
-    return group;
+    // Spatial chunks (terrain/scatterChunks.ts) so the camera and each shadow
+    // cascade draw only the plants they can see; scrub drops to a lighter
+    // LOD for chunks more than 50 m away. Only the cypress cast shadows:
+    // scrub shadows are a few pixels at broadcast distances, and the scrub
+    // still receives them.
+    const chunked = buildChunkedScatter(
+      createVegetationMaterial(),
+      [
+        {
+          name: 'scrub',
+          variants: [0, 1, 2].map((v) => buildShrub(11 + v)),
+          far: buildShrubLod(17),
+          lodDistance: 50,
+          matrices: [...scatter.shrubs, ...ledges.matrices],
+          tints: [...scatter.tints[0]!, ...ledges.tints],
+          castShadow: false,
+        },
+        { name: 'cypress', variants: [0, 1].map((v) => buildCypress(31 + v)), matrices: scatter.cypress, tints: scatter.tints[1]!, castShadow: true },
+      ],
+      180,
+    );
+    chunked.group.name = 'vegetation';
+    return chunked;
   }, [assets.cliff]);
-  // Scatter order is random, so drawing a prefix thins plants evenly.
-  useEffect(() => {
-    for (const m of vegetation.children as THREE.InstancedMesh[]) m.count = Math.round((m.userData.fullCount as number) * quality.vegetationDensity);
-  }, [vegetation, quality.vegetationDensity]);
+  useEffect(() => vegetation.setDensity(quality.vegetationDensity), [vegetation, quality.vegetationDensity]);
+  useFrame(({ camera }) => vegetation.update(camera.position));
 
   const boulders = useMemo(() => {
     const b = buildBoulders(quality.terrainSegments >= 320 ? 700 : 350);
-    const mesh = new THREE.InstancedMesh(b.geometry, createBoulderMaterial(), b.matrices.length);
-    b.matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.computeBoundingSphere();
-    mesh.name = 'boulders';
-    return mesh;
+    const white = new THREE.Color(1, 1, 1);
+    const chunked = buildChunkedScatter(createBoulderMaterial(), [{ name: 'boulders', variants: [b.geometry], matrices: b.matrices, tints: b.matrices.map(() => white), castShadow: true }], 180);
+    chunked.group.name = 'boulders';
+    return chunked;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Boulder shadows are a few pixels at broadcast distance: High only.
+  useEffect(() => {
+    boulders.group.traverse((o) => void (o.castShadow = quality.shadows === 'high'));
+  }, [boulders, quality.shadows]);
 
   // Floodlights: roof-corner and mast banks aimed at the field. They carry the
   // light at night and add to it in rain and snow; off at golden hour and
@@ -382,8 +376,8 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       <mesh name="cliff" geometry={assets.cliff.geometry} material={assets.terrainMat} receiveShadow castShadow />
       <mesh name="headlands" geometry={assets.headlands} material={assets.headlandMat} />
       <primitive object={assets.ocean.mesh} />
-      <primitive object={boulders} />
-      <primitive object={vegetation} />
+      <primitive object={boulders.group} />
+      <primitive object={vegetation.group} />
 
       {/* Stadium bowl */}
       <mesh name="seating" geometry={bowl.seating} material={assets.seatingMat} receiveShadow castShadow />

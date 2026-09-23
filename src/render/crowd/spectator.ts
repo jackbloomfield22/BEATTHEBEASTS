@@ -114,6 +114,62 @@ export function buildPerson(pose: number): THREE.BufferGeometry {
   return g;
 }
 
+/** Where the phone flash sits on the card for each pose (m, card space); crowd.ts draws it. */
+export const PHONE_AT: readonly [number, number][] = [
+  [0.18, 1.1],
+  [0.22, 1.45],
+  [0.34, 1.96],
+  [0, 1.32],
+];
+
+let rectsCache: THREE.Vector4[] | null = null;
+
+/**
+ * The tight bounds of each atlas cell's person (pose-major: index pose·DIRS +
+ * dir) in card space: x from the card's center, y up from the feet, meters,
+ * as (x0, y0, x1, y1). The crowd shrinks every card to its cell's bounds, so
+ * the GPU only rasterizes around the person: a seated fan fills about a third
+ * of the full 1.1 × 2.2 m card, and at field level, where rows overlap many
+ * cards deep, the empty corners were most of the crowd's fragment cost.
+ * Computed from the same geometry the atlas is baked from, padded by four
+ * atlas texels for filtering and the mip-coverage boost, and grown to cover
+ * the phone flash.
+ */
+export function cellRects(): THREE.Vector4[] {
+  if (rectsCache) return rectsCache;
+  const pad = (4 * CARD_W) / CELL_W;
+  const out: THREE.Vector4[] = [];
+  const v = new THREE.Vector3();
+  for (let pose = 0; pose < POSES; pose++) {
+    const geo = buildPerson(pose);
+    const pos = geo.attributes.position!;
+    const [px, py] = PHONE_AT[pose]!;
+    for (let d = 0; d < DIRS; d++) {
+      // Same turn as the bake: column d is the person rotated by −d·45°.
+      const m = new THREE.Matrix4().makeRotationY(-(d / DIRS) * Math.PI * 2);
+      let x0 = px - 0.08, x1 = px + 0.08, y0 = py - 0.08, y1 = py + 0.08;
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(m);
+        x0 = Math.min(x0, v.x);
+        x1 = Math.max(x1, v.x);
+        y0 = Math.min(y0, v.y);
+        y1 = Math.max(y1, v.y);
+      }
+      out.push(
+        new THREE.Vector4(
+          Math.max(-CARD_W / 2, x0 - pad),
+          Math.max(0, y0 - pad),
+          Math.min(CARD_W / 2, x1 + pad),
+          Math.min(CARD_H, y1 + pad),
+        ),
+      );
+    }
+    geo.dispose();
+  }
+  rectsCache = out;
+  return out;
+}
+
 const bakeVert = /* glsl */ `
 attribute vec4 mask;
 varying vec4 vMask;

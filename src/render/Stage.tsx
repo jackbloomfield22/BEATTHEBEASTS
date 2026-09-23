@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, N8AO, SMAA } from '@react-three/postprocessing';
 import * as THREE from 'three';
@@ -7,7 +7,7 @@ import { CameraDirector } from './cameras/CameraDirector';
 import { FlyCamera } from './cameras/FlyCamera';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
-import { useSettings, type QualityPreset } from '@/app/settings';
+import { renderDpr, useSettings, type QualityPreset } from '@/app/settings';
 import { guessQuality } from './quality';
 import { useApp } from '@/app/appStore';
 import { perfStats, recordFrame } from '@/dev/perfStats';
@@ -20,6 +20,16 @@ function useLightingPreset(): LightingPreset {
   const lighting = useSettings((s) => s.settings.gameplay.lighting);
   const id = (urlFlags.lighting as LightingPreset['id'] | null) ?? (lighting === 'random' ? 'golden' : lighting);
   return LIGHTING_PRESETS[id] ?? LIGHTING_PRESETS.golden;
+}
+
+function useWindowSize(): { w: number; h: number } {
+  const [s, setS] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  useEffect(() => {
+    const on = () => setS({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return s;
 }
 
 function PerfProbe({ preset }: { preset: string }) {
@@ -122,7 +132,9 @@ export function Stage() {
     vegetationDensity: { low: 0.35, medium: 0.6, high: 1, ultra: 1 }[graphics.grassDetail],
     weatherParticles: graphics.weatherParticles,
   };
-  const dpr = Math.min(window.devicePixelRatio || 1, 2) * display.resolutionScale;
+  const win = useWindowSize();
+  // The tier's pixel budget caps the render size (settings.ts RENDER_PIXEL_BUDGET).
+  const dpr = +renderDpr(win.w, win.h, window.devicePixelRatio, quality, display.resolutionScale).toFixed(3);
 
   return (
     <Canvas

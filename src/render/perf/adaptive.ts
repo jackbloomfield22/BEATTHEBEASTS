@@ -7,13 +7,13 @@
 import type { QualityPreset } from '@/app/settings';
 
 export interface DynResState {
-  scale: number; // 0.6 .. 1 of the user's base resolution
+  scale: number; // DYNRES.min .. 1 of the user's base resolution
   goodWindows: number; // consecutive windows at or under target
   cooldown: number; // windows to wait before probing up again
 }
 
 export const DYNRES = {
-  min: 0.6, // below this the image turns soft enough to hurt readability
+  min: 0.75, // below this the image turns visibly soft (owner's M3 feedback: 60% read blurry and washed out)
   step: 0.05,
   window: 30, // frames per decision (~0.5 s at 60 fps)
   slow: 1.12, // step down when the window average exceeds target × 1.12
