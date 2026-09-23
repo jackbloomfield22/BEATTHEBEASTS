@@ -12,6 +12,9 @@ import { bakeSpectatorAtlas } from './crowd/spectator';
 import { CROWD_DRAWN, createCrowd } from './crowd/crowd';
 import { crowdEnergy } from './crowd/reactions';
 import { createPrecipitation } from './weather/precip';
+import { createParticlePool } from './vfx/particles';
+import type { EffectId } from './vfx/effects';
+import { urlFlags } from '@/app/platform';
 import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, createRoofMaterial, createSeatingMaterial, stadiumUniforms } from './stadium/materials';
 import { createFieldMaterial, createFieldPaint } from './field/field';
 import { createGrassShells, GRASS_SHELLS } from './field/grass';
@@ -83,6 +86,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   useEffect(() => () => crowd.atlas.dispose(), [crowd]);
 
   const precip = useMemo(() => createPrecipitation(), []);
+  const vfx = useMemo(() => createParticlePool(), []);
   useEffect(() => {
     const g = crowd.mesh.geometry as THREE.InstancedBufferGeometry;
     const total = (g.attributes.aSeat as THREE.InstancedBufferAttribute).count;
@@ -143,6 +147,8 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     // light: radiance ≈ irradiance / π.
     const p = preset.precipitation;
     precip.set(p && quality.weatherParticles ? p : null, trans.clone().multiplyScalar(preset.sunIlluminance / Math.PI));
+    // Particles: sky ambient from straight up, sun as the key.
+    vfx.setLight(new THREE.Color(0.25, 0.28, 0.33).multiplyScalar(preset.envIntensity), sunColor.clone().multiplyScalar(0.25));
     stadiumUniforms.uLights.value = preset.stadiumLights;
     assets.ocean.material.uniforms.uStadiumLights!.value = preset.stadiumLights;
 
@@ -166,8 +172,8 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     scene.environment = rt.texture;
     scene.environmentIntensity = import.meta.env.DEV && new URLSearchParams(location.search).has("envI") ? Number(new URLSearchParams(location.search).get("envI")) : preset.envIntensity;
     if (prev && prev !== rt.texture) prev.dispose();
-    if (import.meta.env.DEV) Object.assign(window, { __btbCrowd: crowdEnergy, __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
-  }, [preset, gl, lut, pmrem, envScene, env, assets, scene, precip, quality.weatherParticles]);
+    if (import.meta.env.DEV) Object.assign(window, { __btbVfx: vfx, __btbCrowd: crowdEnergy, __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
+  }, [preset, gl, lut, pmrem, envScene, env, assets, scene, precip, vfx, quality.weatherParticles]);
 
   // Shadows follow quality: cascaded shadow maps (lighting/shadows.ts), sized
   // per tier; the plain key light never casts.
@@ -202,8 +208,19 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   }, [onReady]);
 
   const frameRef = useRef(0);
-  useFrame(({ camera, clock }) => {
+  // Dev preview (?vfx=<id>): loop the effect around midfield every 3 s.
+  const vfxLoop = useRef(-1e9);
+  const previewVfx = (t: number) => {
+    const id = urlFlags.vfx as EffectId | null;
+    // Pyro fountains burn continuously; the rest repeat.
+    if (!id || t - vfxLoop.current < (id === 'pyro' ? 0.15 : id === 'confetti' ? 3 : 1)) return;
+    vfxLoop.current = t;
+    const at: [number, number, number][] = id === 'confetti' ? [[-15, 26, -20], [15, 26, -20], [0, 28, 10]] : id === 'pyro' ? [[-20, 0, 55], [20, 0, 55]] : [[0, id === 'breath' ? 1.75 : 0.02, 0], [2, id === 'breath' ? 1.8 : 0.02, 1]];
+    at.forEach((pos) => vfx.emit(id, pos, { dir: [0, 0, 1], scale: id === 'pyro' ? 0.15 : 1 }));
+  };
+  useFrame(({ camera, clock, gl: r }) => {
     atmosphereUniforms.uTime.value = clock.elapsedTime;
+    vfx.setViewportHeight(r.domElement.height);
     const key = keyRef.current;
     const rig = rigRef.current;
     if (rig) {
@@ -217,6 +234,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     }
     stadiumUniforms.uCrowdEnergy.value = crowdEnergy.value(clock.elapsedTime);
     grass.update(camera);
+    if (import.meta.env.DEV) previewVfx(clock.elapsedTime);
     assets.sky.mesh.position.copy(camera.position);
   });
 
@@ -319,6 +337,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       <mesh geometry={bowl.seating} material={assets.seatingMat} receiveShadow castShadow />
       <primitive object={crowd.mesh} />
       <primitive object={precip.mesh} />
+      <primitive object={vfx.mesh} />
       <mesh geometry={bowl.concrete} material={assets.concreteMat} receiveShadow castShadow />
       <mesh geometry={bowl.glass} material={assets.glassMat} />
       <mesh geometry={bowl.roof} material={assets.roofMat} receiveShadow castShadow />
