@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import math
+
 import bpy
 from mathutils import Vector
 
-from .skeleton import J, bones
+from .skeleton import _A, J, bones
 
 
 def build_armature(name: str = "rig") -> bpy.types.Object:
@@ -31,6 +33,13 @@ def build_armature(name: str = "rig") -> bpy.types.Object:
     # positive X rotation bends a knee or an elbow the same way on both sides.
     for e in eb:
         e.align_roll(Vector((0, -1, 0)) if abs(e.vector.normalized().y) < 0.9 else Vector((0, 0, 1)))
+    # Hands and fingers: local Z toward the palm instead, so +X flexion curls
+    # a finger into the palm (and flexes the wrist) rather than sideways
+    # toward the thumb. The rest palm faces the thigh (skeleton.py).
+    for e in eb:
+        if e.name.startswith(("hand_", "index_", "fingers_", "thumb_")):
+            sg = 1.0 if e.name.endswith("_l") else -1.0
+            e.align_roll(Vector((-math.sin(_A) * sg, 0, -math.cos(_A))))
     bpy.ops.object.mode_set(mode="OBJECT")
     return ob
 

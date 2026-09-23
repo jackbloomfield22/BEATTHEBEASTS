@@ -7,19 +7,19 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | Clip | Kind | Frames | Speed (m/s) | Foot slide (cm) | Loop (°) | Clearance (cm) | CoM margin (cm) | Result |
 |---|---|---|---|---|---|---|---|---|
 | `stance_idle` | stance | 60 | 0.0 | 0.00 | 0.00 | 21.8 | 11.1 | pass |
-| `stance_ol_3pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 42.5 | 5.9 | pass |
-| `stance_dl_4pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 44.7 | 20.7 | pass |
-| `stance_wr_2pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 35.3 | 1.1 | pass |
-| `stance_lb_ready` | stance | 60 | 0.0 | 0.00 | 0.00 | 36.5 | 1.1 | pass |
-| `stance_db_ready` | stance | 60 | 0.0 | 0.00 | 0.00 | 33.4 | 1.5 | pass |
-| `stance_rb_2pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 30.9 | 1.2 | pass |
-| `stance_qb_center` | stance | 60 | 0.0 | 0.00 | 0.00 | 31.1 | 1.3 | pass |
-| `stance_qb_gun` | stance | 60 | 0.0 | 0.00 | 0.00 | 28.8 | 5.8 | pass |
-| `stance_huddle` | stance | 60 | 0.0 | 0.00 | 0.00 | 29.6 | 1.2 | pass |
-| `loco_walk` | locomotion | 32 | 1.3 | 0.17 | 0.00 | 21.2 | — | pass |
-| `loco_jog` | locomotion | 22 | 3.5 | 0.21 | 0.00 | 22.5 | — | pass |
-| `loco_run` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.3 | — | pass |
-| `loco_sprint` | locomotion | 14 | 8.5 | 0.00 | 0.00 | 21.9 | — | pass |
-| `loco_backpedal` | locomotion | 16 | 3.2 | 0.00 | 0.00 | 26.0 | — | pass |
+| `stance_ol_3pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 43.1 | 5.9 | pass |
+| `stance_dl_4pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 46.0 | 20.7 | pass |
+| `stance_wr_2pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 35.7 | 1.0 | pass |
+| `stance_lb_ready` | stance | 60 | 0.0 | 0.00 | 0.00 | 40.3 | 1.1 | pass |
+| `stance_db_ready` | stance | 60 | 0.0 | 0.00 | 0.00 | 35.1 | 1.5 | pass |
+| `stance_rb_2pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 33.2 | 1.2 | pass |
+| `stance_qb_center` | stance | 60 | 0.0 | 0.00 | 0.00 | 33.6 | 1.3 | pass |
+| `stance_qb_gun` | stance | 60 | 0.0 | 0.00 | 0.00 | 30.3 | 5.8 | pass |
+| `stance_huddle` | stance | 60 | 0.0 | 0.00 | 0.00 | 31.7 | 1.2 | pass |
+| `loco_walk` | locomotion | 32 | 1.3 | 0.03 | 0.00 | 17.2 | — | pass |
+| `loco_jog` | locomotion | 22 | 3.5 | 0.31 | 0.00 | 21.7 | — | pass |
+| `loco_run` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.8 | — | pass |
+| `loco_sprint` | locomotion | 14 | 8.5 | 0.00 | 0.00 | 25.0 | — | pass |
+| `loco_backpedal` | locomotion | 16 | 3.2 | 0.00 | 0.00 | 25.3 | — | pass |
 
 **15 of 15 clips pass.**
