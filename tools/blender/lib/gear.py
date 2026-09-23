@@ -59,7 +59,7 @@ def jersey(voxel=0.006):
         sh, el = _v(f"shoulder_{s}"), _v(f"elbow_{s}")
         parts.append(loft("sleeve", [Ring(sh - (el - sh).normalized() * 0.04, 0.085), Ring(sh.lerp(el, 0.2), 0.082, 0.078), Ring(sh.lerp(el, SLEEVE_END + 0.1), 0.071, 0.066)], side_hint=(0, 1, 0), segs=20))
     # The arch over the back and chest that ties the caps together, narrowing to the collar.
-    parts.append(loft("pad_arch", [Ring((0, 0.010, 1.50), 0.235, 0.150), Ring((0, 0.012, 1.555), 0.225, 0.145), Ring((0, 0.016, 1.60), 0.105, 0.088)], segs=40))
+    parts.append(loft("pad_arch", [Ring((0, 0.010, 1.50), 0.235, 0.150), Ring((0, 0.012, 1.555), 0.225, 0.145), Ring((0, 0.018, 1.60), 0.092, 0.080)], segs=40))
     return union_remesh(parts, "jersey", voxel=voxel, smooth_iters=24)
 
 

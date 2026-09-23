@@ -70,7 +70,9 @@ function linear(hex: string): THREE.Color {
 }
 
 export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMaterial {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0 });
+  // Double-sided: a look down the collar or up a sleeve sees the fabric's
+  // inside, not through the player (the covered body is culled at build).
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0, side: THREE.DoubleSide });
   // Players dress for the weather through their kit, not snow caps on helmets.
   mat.userData.noWeather = true;
   const uniforms = {

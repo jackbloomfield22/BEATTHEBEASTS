@@ -26,7 +26,7 @@ from mathutils import Vector  # noqa: E402
 from lib import gear  # noqa: E402
 from lib.body import build_body  # noqa: E402
 from lib.geo import decimate_to, delete_verts, duplicate, tri_count  # noqa: E402
-from lib.rig import bind, build_armature, limit_weights, transfer_weights  # noqa: E402
+from lib.rig import bind, build_armature, crotch_weights, fill_bare, limit_weights, remap_weights, transfer_weights  # noqa: E402
 from lib.shapes import PART_FOLLOW, SHAPES  # noqa: E402
 from lib.skeleton import RUNTIME_BONES, J  # noqa: E402
 
@@ -151,6 +151,14 @@ def main() -> None:
             finish[name](p)
             tag(p, lambda co, pid=pid: gear.PARTS[pid])
             transfer_weights(src, p, rig)
+            if name == "jersey":
+                # Pads and collar ride on the chest: no neck or head influence
+                # (neck extension in stances tore the collar open).
+                remap_weights(p, {"neck_01": "spine_04", "neck_02": "spine_04", "head": "spine_04"})
+                limit_weights(p, 4)
+            if name == "pants":
+                crotch_weights(p)
+                limit_weights(p, 4)
             parts.append(p)
         helm = decimate_to(duplicate(pieces["helmet"], f"helmet_{i}"), b["helmet"])
         gear.cut_helmet(helm)
@@ -171,6 +179,13 @@ def main() -> None:
             p.use_smooth = True
         ob.data.materials.clear()
         ob.data.materials.append(mat)
+        # Every vertex must be skinned to at least one deform bone, or the
+        # exporter binds it to a placeholder and it spikes when posed.
+        deform = {b.name for b in rig.data.bones if b.use_deform}
+        fill_bare(ob, deform)
+        names = {g.index: g.name for g in ob.vertex_groups}
+        bare = [v for v in ob.data.vertices if not any(names[g.group] in deform and g.weight > 0 for g in v.groups)]
+        assert not bare, f"lod{i}: {len(bare)} vertices without deform weights"
         add_shapes(ob)
         stats.append({"lod": i, "triangles": tri_count(ob), "vertices": len(ob.data.vertices)})
         lods.append(ob)
