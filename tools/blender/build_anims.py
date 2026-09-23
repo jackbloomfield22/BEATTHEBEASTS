@@ -32,6 +32,7 @@ from lib.anim_rig import Controls  # noqa: E402
 from lib.skeleton import J  # noqa: E402
 from lib.gait import FPS, GAITS, contacts, gait_pose  # noqa: E402
 from lib.poses import HEEL_REST, STANCES, Pose, apply_pose  # noqa: E402
+from lib.transitions import transitions  # noqa: E402
 from lib.rig import build_armature  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -100,7 +101,9 @@ def clip_list():
     for name, st in STANCES.items():
         clips.append({"name": f"stance_{name}", "kind": "stance", "stance": name, "frames": STANCE_FRAMES, "loop": True, "speed": 0.0, "dir": [0, 0], "pose": (lambda f, st=st: breathing(st, f)), "contacts": {"l": [[0, STANCE_FRAMES]], "r": [[0, STANCE_FRAMES]]}})
     for name, g in GAITS.items():
-        clips.append({"name": f"loco_{name}", "kind": "locomotion", "frames": g.frames, "loop": True, "speed": g.speed, "dir": list(g.dir), "pose": (lambda f, g=g: gait_pose(g, f % g.frames)), "contacts": contacts(g)})
+        clips.append({"name": f"loco_{name}", "kind": "locomotion", "frames": g.frames, "loop": True, "speed": g.speed, "dir": list(g.dir), "pose": (lambda f, g=g: gait_pose(g, f % g.frames)), "contacts": contacts(g), "travel": (lambda f, g=g: g.speed * f / FPS)})
+    for tr in transitions():
+        clips.append({"name": tr.name, "kind": "transition", "frames": tr.frames, "loop": False, "speed": 0.0, "dir": [0.0, -1.0], "pose": tr.pose, "contacts": tr.contacts, "travel": tr.travel, "from": tr.frm, "to": tr.to})
     return clips
 
 
@@ -190,7 +193,9 @@ def contact_point(rig, s):
     rest = rig.data.bones[f"foot_{s}"].matrix_local
     heel = rig.matrix_world @ pb.matrix @ rest.inverted() @ HEEL_REST[s]
     ball = world(rig, f"toe_{s}")
-    if heel.z < ball.z - 0.004:
+    # Toes up: the heel below where it sits on a flat foot (its rest point
+    # is 1 cm under the ball's), not merely below the ball.
+    if heel.z < ball.z - (Vector(J[f"ball_{s}"]).z - HEEL_REST[s].z) - 0.004:
         # Report where the ball would be with this heel down flat, so the
         # heel-to-ball hand-over is one continuous track.
         v = ball - heel
@@ -338,13 +343,16 @@ def bake(rig, c, clip):
     # Foot slide: while planted, a foot's ball plus the distance the body
     # travels should stay put (in-place clips: the ground moves under us).
     dx, dy = clip["dir"]
-    step = Vector((dx, dy, 0)) * clip["speed"] / FPS
+    heading = Vector((dx, dy, 0))
+    travel = clip.get("travel") or (lambda f: 0.0)
     slide = 0.0
     for s in "lr":
         for a, b in clip["contacts"][s]:
             end = b if b > a else b + frames  # a contact can wrap past the loop point
-            span = range(a, end)
-            pts = [ball_track[s][f % frames] + step * f for f in span]
+            span = range(a, min(end, frames if not clip["loop"] else end))
+            if not span:
+                continue
+            pts = [ball_track[s][f % frames] + heading * travel(f) for f in span]
             mean = sum(pts, Vector()) / len(pts)
             slide = max(slide, max((p - mean).length for p in pts))
     # Loop continuity: frame N against frame 0.
@@ -365,7 +373,9 @@ def bake(rig, c, clip):
     rig.animation_data_create()
     rig.animation_data.action = act
     prev = {}
-    last = frames if clip["loop"] else frames - 1
+    # Loops key their first frame again at the end; transitions key their
+    # last pose so they land exactly on the clip they hand over to.
+    last = frames
     for f in range(last + 1):
         src = samples[0] if (clip["loop"] and f == frames) else samples[f]
         for pb in rig.pose.bones:
@@ -444,6 +454,10 @@ def main():
             "contacts": clip["contacts"],
             "gates": gates,
         }
+        if clip["kind"] == "transition":
+            # Root motion: meters travelled along `dir` by each frame (the
+            # clip itself plays in place), and the clips it joins.
+            meta["clips"][clip["name"]].update({"travel": [round(clip["travel"](f), 4) for f in range(clip["frames"] + 1)], "from": clip["from"], "to": clip["to"]})
         print(f"{clip['name']:20s} {gates}")
 
     # Export the armature and the clips (the mesh lives in player.glb).

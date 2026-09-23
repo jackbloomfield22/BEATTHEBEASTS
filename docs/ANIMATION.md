@@ -17,10 +17,31 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `stance_qb_center` | stance | 60 | 0.0 | 0.00 | 0.00 | 33.6 | 1.9 | pass |
 | `stance_qb_gun` | stance | 60 | 0.0 | 0.00 | 0.00 | 32.1 | 8.8 | pass |
 | `stance_huddle` | stance | 60 | 0.0 | 0.00 | 0.00 | 31.7 | 1.8 | pass |
-| `loco_walk` | locomotion | 32 | 1.3 | 0.03 | 0.00 | 17.2 | — | pass |
+| `loco_walk` | locomotion | 32 | 1.3 | 0.05 | 0.00 | 17.2 | — | pass |
 | `loco_jog` | locomotion | 22 | 3.5 | 0.31 | 0.00 | 21.7 | — | pass |
 | `loco_run` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.8 | — | pass |
 | `loco_sprint` | locomotion | 14 | 8.5 | 0.00 | 0.00 | 25.0 | — | pass |
 | `loco_backpedal` | locomotion | 16 | 3.2 | 0.00 | 0.00 | 25.3 | — | pass |
+| `huddle_break` | transition | 39 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `set_ol_3pt` | transition | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `set_dl_3pt` | transition | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `set_dl_4pt` | transition | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `set_wr_2pt` | transition | 24 | 0.0 | 0.00 | 0.00 | 22.9 | — | pass |
+| `set_lb_ready` | transition | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `set_db_ready` | transition | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `set_rb_2pt` | transition | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `set_qb_center` | transition | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `set_qb_gun` | transition | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `getoff_ol_3pt` | transition | 19 | 0.0 | 0.00 | 0.00 | 25.9 | — | pass |
+| `getoff_dl_3pt` | transition | 19 | 0.0 | 0.00 | 0.00 | 23.9 | — | pass |
+| `getoff_dl_4pt` | transition | 19 | 0.0 | 0.00 | 0.00 | 23.9 | — | pass |
+| `getoff_wr_2pt` | transition | 15 | 0.0 | 0.00 | 0.00 | 25.9 | — | pass |
+| `getoff_lb_ready` | transition | 15 | 0.0 | 0.00 | 0.00 | 26.2 | — | pass |
+| `getoff_db_ready` | transition | 15 | 0.0 | 0.00 | 0.00 | 26.0 | — | pass |
+| `getoff_rb_2pt` | transition | 15 | 0.0 | 0.00 | 0.00 | 25.9 | — | pass |
+| `stop_walk` | transition | 27 | 0.0 | 0.03 | 0.00 | 23.3 | — | pass |
+| `stop_jog` | transition | 33 | 0.0 | 0.01 | 0.00 | 16.1 | — | pass |
+| `stop_run` | transition | 42 | 0.0 | 0.00 | 0.00 | 17.4 | — | pass |
+| `stop_sprint` | transition | 51 | 0.0 | 0.00 | 0.00 | 18.4 | — | pass |
 
-**16 of 16 clips pass.**
+**37 of 37 clips pass.**

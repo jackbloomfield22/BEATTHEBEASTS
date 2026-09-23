@@ -59,6 +59,7 @@ class Arm:
     abd: float = 8.0  # upper arm out from the side
     inward: float = 0.2  # forearm angled toward the midline (share of the bend)
     clavicle: float = 0.0  # shoulder girdle protraction (+) with the arm forward
+    weight: float = 1.0  # how far the aim overrides the keyed joints (transitions fade it)
 
 
 @dataclass
@@ -66,7 +67,7 @@ class Pose:
     pelvis: dict = field(default_factory=dict)  # forward, up, side, flex, lateral, twist
     joints: dict = field(default_factory=dict)  # bone -> (flex, abd, twist)
     feet: dict = field(default_factory=dict)  # side -> Foot
-    hands: dict = field(default_factory=dict)  # side -> (x, y, z) wrist target; IK on
+    hands: dict = field(default_factory=dict)  # side -> (x, y, z[, weight]) wrist target; IK on
     arms: dict = field(default_factory=dict)  # side -> Arm (aimed after the spine is posed)
     # Head held to a world gaze: (pitch down deg, yaw deg[, neck share]).
     gaze: tuple | None = None
@@ -105,13 +106,17 @@ def _fk_ankle(rig, s: str, alpha: float, kappa: float) -> Vector:
     return hip + (fwd * math.sin(a) - up * math.cos(a)) * THIGH_LEN + (fwd * math.sin(k) - up * math.cos(k)) * SHANK_LEN
 
 
-def _set_matrix(rig, bone: str, x: Vector, y: Vector) -> None:
-    """Point a bone along y with its hinge axis x (pose space), keeping its head."""
+def _set_matrix(rig, bone: str, x: Vector, y: Vector, weight: float = 1.0) -> None:
+    """Point a bone along y with its hinge axis x (pose space), keeping its
+    head; with weight < 1, only that far from its current orientation."""
     pb = rig.pose.bones[bone]
     y = y.normalized()
     x = (x - y * x.dot(y)).normalized()
     z = x.cross(y)
-    m = Matrix((x, y, z)).transposed().to_4x4()
+    q = Matrix((x, y, z)).transposed().to_quaternion()
+    if weight < 1.0:
+        q = pb.matrix.to_quaternion().slerp(q, weight)
+    m = q.to_matrix().to_4x4()
     m.translation = pb.head
     pb.matrix = m
 
@@ -126,7 +131,7 @@ def aim_arms(rig, arms: dict) -> None:
     for s, a in arms.items():
         if a.clavicle:
             # Protraction: +X on the clavicle swings the shoulder forward.
-            set_joint(rig, f"clavicle_{s}", a.clavicle, 0.0, 0.0)
+            set_joint(rig, f"clavicle_{s}", a.clavicle * a.weight, 0.0, 0.0)
     bpy.context.view_layer.update()
     fore = {}
     for s, a in arms.items():
@@ -138,16 +143,16 @@ def aim_arms(rig, arms: dict) -> None:
         e = (e - out * a.inward)
         e = (e - d * e.dot(d)).normalized()
         hinge = d.cross(e)
-        _set_matrix(rig, f"upperarm_{s}", hinge, d)
+        _set_matrix(rig, f"upperarm_{s}", hinge, d, a.weight)
         ep = math.radians(a.elbow)
-        fore[s] = (hinge, d * math.cos(ep) + e * math.sin(ep))
+        fore[s] = (hinge, d * math.cos(ep) + e * math.sin(ep), a.weight)
     bpy.context.view_layer.update()
-    for s, (hinge, f) in fore.items():
-        _set_matrix(rig, f"forearm_{s}", hinge, f)
+    for s, (hinge, f, w) in fore.items():
+        _set_matrix(rig, f"forearm_{s}", hinge, f, w)
     bpy.context.view_layer.update()
 
 
-def hold_gaze(rig, pitch: float, yaw: float = 0.0, share: float = 0.45, follow: float = 0.35) -> None:
+def hold_gaze(rig, pitch: float, yaw: float = 0.0, share: float = 0.45, weight: float = 1.0, follow: float = 0.35) -> None:
     """Turn the neck and head so the face looks along a steady world direction
     (runners keep their eyes level while the trunk rotates and bobs). The
     head still follows `follow` of the shoulders' turn: holding it dead
@@ -160,6 +165,8 @@ def hold_gaze(rig, pitch: float, yaw: float = 0.0, share: float = 0.45, follow: 
     # pointing up; build the wanted frame from pitch (down +) and yaw (left +).
     # A positive rotation about +X tips the face (-Y) down toward -Z.
     want = Quaternion((0, 0, 1), math.radians(yaw)) @ Quaternion((1, 0, 0), math.radians(pitch)) @ rig.data.bones["head"].matrix_local.to_quaternion()
+    if weight < 1.0:
+        want = cur.slerp(want, weight)
     delta = want @ cur.inverted()
     for bone, w in (("neck_01", share * 0.5), ("neck_02", share * 0.5)):
         pb = rig.pose.bones[bone]
@@ -211,9 +218,9 @@ def apply_pose(rig, c: Controls, p: Pose) -> None:
         hip = rig.matrix_world @ rig.pose.bones[f"thigh_{s}"].head
         mid = (hip + c.foot[s].location) / 2
         c.knee[s].location = mid + Vector((0.12 * (1 if s == "l" else -1) * math.sin(math.radians(feet[s].out + 6)), -0.9, 0.0))
-    for s, xyz in p.hands.items():
-        c.arm_ik(s, 1.0)
-        c.hand[s].location = Vector(xyz)
+    for s, h in p.hands.items():
+        c.arm_ik(s, h[3] if len(h) > 3 else 1.0)
+        c.hand[s].location = Vector(h[:3])
     if p.arms or p.gaze:
         bpy.context.view_layer.update()
         aim_arms(rig, p.arms)
