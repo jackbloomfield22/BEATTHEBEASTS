@@ -5,8 +5,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { DEFENSE, OL_UNITS, PLAYERS } from '../../data/legacy/index.ts';
+import { applyAddedStints, type AddedStintRecord, type AddedStintsFile } from '../../src/engine/data/addedStints.ts';
 import { applyCorrections, validateCorrectionsFile, type AppliedCorrection } from '../../src/engine/data/corrections.ts';
-import type { InputSources } from '../../src/engine/ratings/inputs.ts';
+import type { AccoladeRecord, AirYardsRecord, FortyRecord, BigArmRecord, EstimatedDefStint, EstimatedStats, InputSources, NflverseEntry, PhysicalRecord } from '../../src/engine/ratings/inputs.ts';
 
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -29,11 +30,14 @@ function body<T>(obj: Record<string, unknown>, key?: string): Record<string, T> 
 
 export interface LoadedSources extends InputSources {
   applied: AppliedCorrection[];
+  /** Stints added by data/augment/added_stints.json (validated). */
+  added: AddedStintRecord[];
   /** Files that weren't present (the engine regresses those inputs to priors). */
   missing: string[];
 }
 
-export function loadSources(): LoadedSources {
+/** `forty: false` leaves out data/augment/forty_times.json (tools/augment/forty.ts picks its targets without it). */
+export function loadSources(opts: { forty?: boolean } = {}): LoadedSources {
   const missing: string[] = [];
   const opt = (rel: string): Record<string, unknown> => {
     if (!existsSync(ROOT + rel)) {
@@ -51,12 +55,14 @@ export function loadSources(): LoadedSources {
   const nflverse = readJson<Record<string, unknown>>('data/augment/nflverse_entries.json');
   const ol = readJson<Record<string, unknown>>('data/augment/ol_rosters.json');
   const baselines = readJson<Record<string, unknown>>('data/era_baselines.json');
-  return {
+  const arm = opt('data/augment/arm_strength.json') as { airYards?: Record<string, AirYardsRecord>; bigArm?: BigArmRecord[] };
+  const S: LoadedSources = {
     players: p.entries,
     defense: d.entries,
     olUnits: u.entries,
     excluded,
     applied: [...p.applied, ...d.applied, ...u.applied],
+    added: [],
     people: body(people, 'entries'),
     nflverse: body(nflverse, 'entries'),
     olRosters: body(ol, 'units'),
@@ -65,6 +71,44 @@ export function loadSources(): LoadedSources {
     accolades: body(opt('data/augment/accolades.json'), 'people'),
     physical: body(opt('data/augment/estimated_physical.json'), 'people'),
     baselines: body(baselines, 'seasons'),
+    arm: arm.airYards || arm.bigArm ? { airYards: body<AirYardsRecord>(arm, 'airYards'), bigArm: arm.bigArm ?? [] } : undefined,
+    forty: opts.forty === false ? undefined : body<FortyRecord>(opt('data/augment/forty_times.json'), 'people'),
     missing,
   };
+  addStints(S, opt('data/augment/added_stints.json') as unknown as AddedStintsFile);
+  return S;
+}
+
+/**
+ * Added stints (data/augment/added_stints.json, validated by
+ * src/engine/data/addedStints.ts): the new entry joins the defensive pool and
+ * borrows what belongs to the person, not the stint, from his existing entry
+ * (`personOf`): person id, body and birth date, cited honors, measurables. The
+ * stint's own seasons, games and stats come from the record, at its source's
+ * confidence.
+ */
+function addStints(S: LoadedSources, file: AddedStintsFile): void {
+  if (!file?.stints?.length) return;
+  const { entries, records } = applyAddedStints(file, S.defense);
+  const people = S.people as Record<string, { personId: string; method: string; conf: 'verified' }>;
+  const nflverse = S.nflverse as Record<string, NflverseEntry>;
+  for (const [i, e] of entries.entries()) {
+    const r = records[i]!;
+    const src = `${r.source.title} (${r.source.permalink})`;
+    (S.defense as typeof entries).push(e);
+    if (people[r.personOf]) people[e.id] = people[r.personOf]!;
+    const nv = nflverse[r.personOf];
+    nflverse[e.id] = {
+      personId: nv?.personId ?? people[e.id]?.personId ?? `added:${e.id}`,
+      ...(nv?.physical ? { physical: nv.physical } : {}),
+      seasons: { list: [...r.seasons], games: Object.fromEntries(r.seasons.map((y) => [String(y), r.bySeason[String(y)]!.games])), src, conf: r.conf },
+    } as NflverseEntry;
+    const [a, b] = [r.seasons[0]!, r.seasons[r.seasons.length - 1]!];
+    // Games for pre-1999 seasons are read from the estimated-stats slot; here they are the cited games.
+    (S.estStats as Record<string, EstimatedStats>)[e.id] = { name: e.n, seasons: [a, b], games: r.totals.games, src, conf: r.conf };
+    (S.estDef as Record<string, EstimatedDefStint>)[e.id] = { name: e.n, seasons: [a, b], sk: r.totals.sk, int: r.totals.int, fr: r.totals.fr, td: r.totals.td, src, conf: r.conf, file: 'data/augment/added_stints.json' };
+    for (const rec of Object.values(S.accolades as Record<string, AccoladeRecord>)) if (rec?.entries?.includes(r.personOf)) rec.entries = [...rec.entries, e.id];
+    for (const rec of Object.values(S.physical as Record<string, PhysicalRecord>)) if (rec?.entries?.includes(r.personOf)) rec.entries = [...rec.entries, e.id];
+  }
+  S.added = records;
 }

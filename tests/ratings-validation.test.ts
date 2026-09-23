@@ -36,11 +36,22 @@ describe('ratings run', () => {
   it('imp is at most 20% of every attribute for every player', () => {
     for (const e of run.entries) {
       for (const [k, a] of Object.entries(e.attrs)) {
-        const moves = a.contributions.filter((c) => c.kind !== 'base' && !c.label.startsWith('Pool-shape') && !c.label.startsWith('Clamped'));
+        const moves = a.contributions.filter((c) => c.kind !== 'base' && !c.label.startsWith('Pool-shape') && !c.label.startsWith('Clamped') && !c.label.startsWith('Pool calibration'));
         const total = moves.reduce((s, c) => s + Math.abs(c.delta), 0);
         const imp = moves.filter((c) => c.kind === 'reputation' && c.src === 'legacy:imp').reduce((s, c) => s + Math.abs(c.delta), 0);
         expect(imp, `${e.id} ${k}`).toBeLessThanOrEqual(0.2 * total + 1e-9);
       }
+    }
+  });
+
+  it('the TE block grade keeps its direction (weight cap only, no per-player cap)', () => {
+    // User decision (PR #3 round 2): a great blocker's grade lifts his blocking
+    // and a poor blocker's grade lowers it, whatever his size says.
+    const te = run.entries.filter((e) => e.pos === 'TE' && e.inputs.stats.blockGrade);
+    expect(te.length).toBeGreaterThan(400);
+    for (const e of te) {
+      const c = e.attrs.runBlock!.contributions.find((x) => x.label.startsWith('Legacy block grade'))!;
+      expect(c.label, e.id).not.toContain('capped');
     }
   });
 

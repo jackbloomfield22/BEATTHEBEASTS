@@ -1,0 +1,4386 @@
+{
+ "_meta": {
+  "what": "QB Throw Power, OVR and shown traits under the M2 Throw Power formula, for the before/after table in docs/RATINGS_REPORT.md.",
+  "source": "data/ratings/ratings.v1.json at commit ff13bff (git show), written by tools/ratings/throw-power-m2.ts",
+  "formula": "q_ypcmp 0.5, q_ypa 0.15, q_yds|q_tdg 0.15, imp 0.2"
+ },
+ "traitCounts": {
+  "bomb-squad": 36,
+  "unflappable": 34,
+  "field-general": 13,
+  "laser": 40,
+  "maestro": 33,
+  "backyard-ball": 27,
+  "efficiency-king": 34,
+  "deep-ball-artist": 23,
+  "off-platform": 27,
+  "volume-passer": 27,
+  "climber": 56,
+  "cannon": 26,
+  "ice-veins": 4,
+  "surgeon": 11,
+  "air-raid": 16,
+  "escape-artist": 9,
+  "pre-snap-wizard": 24,
+  "red-zone-sniper": 15,
+  "statue": 37,
+  "designed-runner": 30,
+  "sack-magnet": 32,
+  "quick-trigger": 7,
+  "run-pass-nightmare": 24,
+  "gunslinger": 15,
+  "noodle-arm": 63,
+  "game-manager": 28,
+  "turnover-machine": 23,
+  "happy-feet": 58,
+  "checkdown-charlie": 11,
+  "dual-threat": 13,
+  "riverboat-gambler": 12
+ },
+ "entries": {
+  "players:terry-bradshaw:PIT:1970s": {
+   "throwPower": 91,
+   "ovr": 88,
+   "traits": [
+    "bomb-squad",
+    "unflappable",
+    "field-general",
+    "laser"
+   ]
+  },
+  "players:roger-staubach:DAL:1970s": {
+   "throwPower": 93,
+   "ovr": 93,
+   "traits": [
+    "bomb-squad",
+    "maestro",
+    "backyard-ball",
+    "efficiency-king"
+   ]
+  },
+  "players:bob-griese:MIA:1970s": {
+   "throwPower": 87,
+   "ovr": 93,
+   "traits": [
+    "maestro",
+    "efficiency-king",
+    "deep-ball-artist",
+    "off-platform"
+   ]
+  },
+  "players:ken-stabler:LV:1970s": {
+   "throwPower": 86,
+   "ovr": 93,
+   "traits": [
+    "maestro",
+    "deep-ball-artist",
+    "efficiency-king",
+    "off-platform"
+   ]
+  },
+  "players:fran-tarkenton:MIN:1970s": {
+   "throwPower": 66,
+   "ovr": 94,
+   "traits": [
+    "maestro",
+    "backyard-ball",
+    "volume-passer",
+    "deep-ball-artist"
+   ]
+  },
+  "players:dan-fouts:LAC:1970s": {
+   "throwPower": 90,
+   "ovr": 88,
+   "traits": [
+    "unflappable",
+    "climber",
+    "cannon",
+    "volume-passer"
+   ]
+  },
+  "players:ken-anderson:CIN:1970s": {
+   "throwPower": 81,
+   "ovr": 90,
+   "traits": [
+    "maestro",
+    "efficiency-king",
+    "ice-veins"
+   ]
+  },
+  "players:archie-manning:NO:1970s": {
+   "throwPower": 84,
+   "ovr": 77,
+   "traits": []
+  },
+  "players:jim-plunkett:LV:1970s": {
+   "throwPower": 79,
+   "ovr": 76,
+   "traits": []
+  },
+  "players:bert-jones:IND:1970s": {
+   "throwPower": 87,
+   "ovr": 93,
+   "traits": [
+    "maestro",
+    "backyard-ball",
+    "efficiency-king",
+    "deep-ball-artist"
+   ]
+  },
+  "players:joe-montana:SF:1980s": {
+   "throwPower": 77,
+   "ovr": 96,
+   "traits": [
+    "maestro",
+    "efficiency-king",
+    "off-platform",
+    "deep-ball-artist"
+   ]
+  },
+  "players:danny-white:DAL:1980s": {
+   "throwPower": 81,
+   "ovr": 87,
+   "traits": [
+    "efficiency-king",
+    "surgeon"
+   ]
+  },
+  "players:dan-marino:MIA:1980s": {
+   "throwPower": 88,
+   "ovr": 95,
+   "traits": [
+    "air-raid",
+    "bomb-squad",
+    "unflappable",
+    "climber"
+   ]
+  },
+  "players:john-elway:DEN:1980s": {
+   "throwPower": 82,
+   "ovr": 87,
+   "traits": [
+    "unflappable",
+    "escape-artist",
+    "field-general",
+    "pre-snap-wizard"
+   ]
+  },
+  "players:jim-kelly:BUF:1980s": {
+   "throwPower": 80,
+   "ovr": 87,
+   "traits": [
+    "surgeon"
+   ]
+  },
+  "players:warren-moon:TEN:1980s": {
+   "throwPower": 93,
+   "ovr": 84,
+   "traits": [
+    "cannon",
+    "escape-artist"
+   ]
+  },
+  "players:phil-simms:NYG:1980s": {
+   "throwPower": 89,
+   "ovr": 86,
+   "traits": [
+    "cannon",
+    "climber",
+    "laser",
+    "field-general"
+   ]
+  },
+  "players:boomer-esiason:CIN:1980s": {
+   "throwPower": 97,
+   "ovr": 94,
+   "traits": [
+    "bomb-squad",
+    "unflappable",
+    "efficiency-king",
+    "off-platform"
+   ]
+  },
+  "players:joe-theismann:WAS:1980s": {
+   "throwPower": 76,
+   "ovr": 92,
+   "traits": [
+    "maestro",
+    "backyard-ball",
+    "deep-ball-artist",
+    "efficiency-king"
+   ]
+  },
+  "players:bernie-kosar:CLE:1980s": {
+   "throwPower": 76,
+   "ovr": 86,
+   "traits": [
+    "efficiency-king",
+    "climber",
+    "ice-veins"
+   ]
+  },
+  "players:tony-eason:NE:1980s": {
+   "throwPower": 74,
+   "ovr": 78,
+   "traits": []
+  },
+  "players:steve-young:SF:1990s": {
+   "throwPower": 92,
+   "ovr": 98,
+   "traits": [
+    "backyard-ball",
+    "bomb-squad",
+    "maestro",
+    "red-zone-sniper"
+   ]
+  },
+  "players:brett-favre:GB:1990s": {
+   "throwPower": 79,
+   "ovr": 93,
+   "traits": [
+    "air-raid",
+    "maestro",
+    "deep-ball-artist",
+    "off-platform"
+   ]
+  },
+  "players:troy-aikman:DAL:1990s": {
+   "throwPower": 75,
+   "ovr": 88,
+   "traits": [
+    "unflappable",
+    "surgeon",
+    "climber",
+    "pre-snap-wizard"
+   ]
+  },
+  "players:john-elway:DEN:1990s": {
+   "throwPower": 89,
+   "ovr": 91,
+   "traits": [
+    "maestro",
+    "bomb-squad",
+    "unflappable",
+    "laser"
+   ]
+  },
+  "players:dan-marino:MIA:1990s": {
+   "throwPower": 87,
+   "ovr": 90,
+   "traits": [
+    "unflappable",
+    "statue",
+    "volume-passer",
+    "laser"
+   ]
+  },
+  "players:warren-moon:TEN:1990s": {
+   "throwPower": 86,
+   "ovr": 92,
+   "traits": [
+    "volume-passer",
+    "unflappable",
+    "deep-ball-artist",
+    "off-platform"
+   ]
+  },
+  "players:drew-bledsoe:NE:1990s": {
+   "throwPower": 81,
+   "ovr": 78,
+   "traits": [
+    "volume-passer",
+    "statue"
+   ]
+  },
+  "players:jim-kelly:BUF:1990s": {
+   "throwPower": 89,
+   "ovr": 90,
+   "traits": [
+    "bomb-squad",
+    "maestro",
+    "red-zone-sniper",
+    "climber"
+   ]
+  },
+  "players:mark-brunell:JAX:1990s": {
+   "throwPower": 84,
+   "ovr": 89,
+   "traits": [
+    "backyard-ball",
+    "designed-runner",
+    "surgeon",
+    "laser"
+   ]
+  },
+  "players:randall-cunningham:PHI:1990s": {
+   "throwPower": 84,
+   "ovr": 85,
+   "traits": [
+    "designed-runner",
+    "sack-magnet",
+    "off-platform",
+    "laser"
+   ]
+  },
+  "players:peyton-manning:IND:2000s": {
+   "throwPower": 91,
+   "ovr": 96,
+   "traits": [
+    "air-raid",
+    "bomb-squad",
+    "unflappable",
+    "climber"
+   ]
+  },
+  "players:tom-brady:NE:2000s": {
+   "throwPower": 85,
+   "ovr": 94,
+   "traits": [
+    "unflappable",
+    "air-raid",
+    "climber",
+    "deep-ball-artist"
+   ]
+  },
+  "players:drew-brees:NO:2000s": {
+   "throwPower": 89,
+   "ovr": 95,
+   "traits": [
+    "air-raid",
+    "unflappable",
+    "bomb-squad",
+    "climber"
+   ]
+  },
+  "players:brett-favre:GB:2000s": {
+   "throwPower": 80,
+   "ovr": 88,
+   "traits": [
+    "unflappable",
+    "climber",
+    "volume-passer",
+    "deep-ball-artist"
+   ]
+  },
+  "players:donovan-mcnabb:PHI:2000s": {
+   "throwPower": 87,
+   "ovr": 90,
+   "traits": [
+    "backyard-ball",
+    "volume-passer",
+    "laser",
+    "field-general"
+   ]
+  },
+  "players:kurt-warner:ARI:2000s": {
+   "throwPower": 86,
+   "ovr": 86,
+   "traits": [
+    "statue",
+    "volume-passer",
+    "pre-snap-wizard",
+    "laser"
+   ]
+  },
+  "players:carson-palmer:CIN:2000s": {
+   "throwPower": 77,
+   "ovr": 83,
+   "traits": [
+    "climber",
+    "pre-snap-wizard",
+    "quick-trigger"
+   ]
+  },
+  "players:ben-roethlisberger:PIT:2000s": {
+   "throwPower": 95,
+   "ovr": 82,
+   "traits": [
+    "bomb-squad",
+    "sack-magnet",
+    "laser",
+    "red-zone-sniper"
+   ]
+  },
+  "players:michael-vick:ATL:2000s": {
+   "throwPower": 86,
+   "ovr": 75,
+   "traits": [
+    "run-pass-nightmare",
+    "sack-magnet",
+    "off-platform"
+   ]
+  },
+  "players:daunte-culpepper:MIN:2000s": {
+   "throwPower": 91,
+   "ovr": 88,
+   "traits": [
+    "run-pass-nightmare",
+    "air-raid",
+    "bomb-squad",
+    "surgeon"
+   ]
+  },
+  "players:eli-manning:NYG:2000s": {
+   "throwPower": 82,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:aaron-rodgers:GB:2010s": {
+   "throwPower": 89,
+   "ovr": 97,
+   "traits": [
+    "air-raid",
+    "bomb-squad",
+    "backyard-ball",
+    "maestro"
+   ]
+  },
+  "players:tom-brady:NE:2010s": {
+   "throwPower": 87,
+   "ovr": 95,
+   "traits": [
+    "maestro",
+    "air-raid",
+    "statue",
+    "deep-ball-artist"
+   ]
+  },
+  "players:peyton-manning:DEN:2010s": {
+   "throwPower": 88,
+   "ovr": 93,
+   "traits": [
+    "air-raid",
+    "bomb-squad",
+    "unflappable",
+    "climber"
+   ]
+  },
+  "players:drew-brees:NO:2010s": {
+   "throwPower": 81,
+   "ovr": 93,
+   "traits": [
+    "air-raid",
+    "unflappable",
+    "climber",
+    "deep-ball-artist"
+   ]
+  },
+  "players:patrick-mahomes:KC:2010s": {
+   "throwPower": 97,
+   "ovr": 97,
+   "traits": [
+    "backyard-ball",
+    "bomb-squad",
+    "air-raid",
+    "unflappable"
+   ]
+  },
+  "players:russell-wilson:SEA:2010s": {
+   "throwPower": 91,
+   "ovr": 92,
+   "traits": [
+    "backyard-ball",
+    "bomb-squad",
+    "red-zone-sniper",
+    "maestro"
+   ]
+  },
+  "players:cam-newton:CAR:2010s": {
+   "throwPower": 89,
+   "ovr": 87,
+   "traits": [
+    "run-pass-nightmare",
+    "bomb-squad",
+    "unflappable",
+    "gunslinger"
+   ]
+  },
+  "players:matt-ryan:ATL:2010s": {
+   "throwPower": 81,
+   "ovr": 92,
+   "traits": [
+    "maestro",
+    "volume-passer",
+    "deep-ball-artist",
+    "climber"
+   ]
+  },
+  "players:philip-rivers:LAC:2010s": {
+   "throwPower": 90,
+   "ovr": 86,
+   "traits": [
+    "bomb-squad",
+    "volume-passer",
+    "statue",
+    "field-general"
+   ]
+  },
+  "players:andrew-luck:IND:2010s": {
+   "throwPower": 85,
+   "ovr": 83,
+   "traits": [
+    "backyard-ball",
+    "run-pass-nightmare",
+    "volume-passer",
+    "pre-snap-wizard"
+   ]
+  },
+  "players:ben-roethlisberger:PIT:2010s": {
+   "throwPower": 89,
+   "ovr": 89,
+   "traits": [
+    "volume-passer",
+    "unflappable",
+    "laser",
+    "climber"
+   ]
+  },
+  "players:patrick-mahomes:KC:2020s": {
+   "throwPower": 87,
+   "ovr": 93,
+   "traits": [
+    "backyard-ball",
+    "unflappable",
+    "volume-passer",
+    "deep-ball-artist"
+   ]
+  },
+  "players:josh-allen:BUF:2020s": {
+   "throwPower": 90,
+   "ovr": 92,
+   "traits": [
+    "backyard-ball",
+    "bomb-squad",
+    "unflappable",
+    "air-raid"
+   ]
+  },
+  "players:lamar-jackson:BAL:2020s": {
+   "throwPower": 95,
+   "ovr": 94,
+   "traits": [
+    "run-pass-nightmare",
+    "bomb-squad",
+    "maestro",
+    "red-zone-sniper"
+   ]
+  },
+  "players:joe-burrow:CIN:2020s": {
+   "throwPower": 80,
+   "ovr": 88,
+   "traits": [
+    "air-raid",
+    "efficiency-king",
+    "surgeon"
+   ]
+  },
+  "players:jalen-hurts:PHI:2020s": {
+   "throwPower": 88,
+   "ovr": 87,
+   "traits": [
+    "run-pass-nightmare",
+    "backyard-ball",
+    "cannon",
+    "laser"
+   ]
+  },
+  "players:justin-herbert:LAC:2020s": {
+   "throwPower": 80,
+   "ovr": 87,
+   "traits": [
+    "backyard-ball",
+    "volume-passer"
+   ]
+  },
+  "players:tom-brady:TB:2020s": {
+   "throwPower": 75,
+   "ovr": 88,
+   "traits": [
+    "unflappable",
+    "volume-passer",
+    "statue",
+    "climber"
+   ]
+  },
+  "players:dak-prescott:DAL:2020s": {
+   "throwPower": 86,
+   "ovr": 89,
+   "traits": [
+    "volume-passer",
+    "backyard-ball",
+    "unflappable",
+    "laser"
+   ]
+  },
+  "players:jared-goff:DET:2020s": {
+   "throwPower": 88,
+   "ovr": 91,
+   "traits": [
+    "maestro",
+    "volume-passer",
+    "bomb-squad",
+    "climber"
+   ]
+  },
+  "players:aaron-rodgers:GB:2020s": {
+   "throwPower": 83,
+   "ovr": 96,
+   "traits": [
+    "maestro",
+    "red-zone-sniper",
+    "deep-ball-artist",
+    "climber"
+   ]
+  },
+  "players:c-j-stroud:HOU:2020s": {
+   "throwPower": 91,
+   "ovr": 81,
+   "traits": [
+    "cannon"
+   ]
+  },
+  "players:cam-ward:TEN:2020s": {
+   "throwPower": 59,
+   "ovr": 65,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:jaxson-dart:NYG:2020s": {
+   "throwPower": 66,
+   "ovr": 72,
+   "traits": [
+    "designed-runner",
+    "game-manager"
+   ]
+  },
+  "players:tyler-shough:NO:2020s": {
+   "throwPower": 75,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:j-j-mccarthy:MIN:2020s": {
+   "throwPower": 73,
+   "ovr": 52,
+   "traits": [
+    "turnover-machine",
+    "happy-feet"
+   ]
+  },
+  "players:steve-bartkowski:ATL:1970s": {
+   "throwPower": 85,
+   "ovr": 81,
+   "traits": []
+  },
+  "players:joe-ferguson:BUF:1970s": {
+   "throwPower": 83,
+   "ovr": 79,
+   "traits": []
+  },
+  "players:steve-grogan:NE:1970s": {
+   "throwPower": 82,
+   "ovr": 79,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:greg-landry:DET:1970s": {
+   "throwPower": 82,
+   "ovr": 84,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:pat-haden:LAR:1970s": {
+   "throwPower": 82,
+   "ovr": 80,
+   "traits": []
+  },
+  "players:john-hadl:LAC:1970s": {
+   "throwPower": 84,
+   "ovr": 82,
+   "traits": [
+    "pre-snap-wizard"
+   ]
+  },
+  "players:doug-williams:TB:1970s": {
+   "throwPower": 83,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:brian-sipe:CLE:1970s": {
+   "throwPower": 77,
+   "ovr": 84,
+   "traits": [
+    "pre-snap-wizard"
+   ]
+  },
+  "players:craig-morton:DEN:1970s": {
+   "throwPower": 82,
+   "ovr": 78,
+   "traits": []
+  },
+  "players:roman-gabriel:PHI:1970s": {
+   "throwPower": 87,
+   "ovr": 85,
+   "traits": [
+    "climber",
+    "laser"
+   ]
+  },
+  "players:jim-mcmahon:CHI:1980s": {
+   "throwPower": 83,
+   "ovr": 85,
+   "traits": [
+    "game-manager",
+    "escape-artist",
+    "laser"
+   ]
+  },
+  "players:dave-krieg:SEA:1980s": {
+   "throwPower": 82,
+   "ovr": 87,
+   "traits": [
+    "red-zone-sniper",
+    "efficiency-king",
+    "deep-ball-artist"
+   ]
+  },
+  "players:neil-lomax:ARI:1980s": {
+   "throwPower": 80,
+   "ovr": 87,
+   "traits": [
+    "efficiency-king"
+   ]
+  },
+  "players:lynn-dickey:GB:1980s": {
+   "throwPower": 94,
+   "ovr": 82,
+   "traits": [
+    "bomb-squad",
+    "laser"
+   ]
+  },
+  "players:vinny-testaverde:TB:1980s": {
+   "throwPower": 77,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:ken-o-brien:NYJ:1980s": {
+   "throwPower": 69,
+   "ovr": 84,
+   "traits": [
+    "checkdown-charlie",
+    "efficiency-king"
+   ]
+  },
+  "players:tommy-kramer:MIN:1980s": {
+   "throwPower": 82,
+   "ovr": 79,
+   "traits": []
+  },
+  "players:steve-deberg:KC:1980s": {
+   "throwPower": 79,
+   "ovr": 78,
+   "traits": []
+  },
+  "players:wade-wilson:MIN:1980s": {
+   "throwPower": 79,
+   "ovr": 77,
+   "traits": []
+  },
+  "players:doug-williams:WAS:1980s": {
+   "throwPower": 76,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:bobby-hebert:NO:1980s": {
+   "throwPower": 80,
+   "ovr": 80,
+   "traits": []
+  },
+  "players:ron-jaworski:PHI:1980s": {
+   "throwPower": 85,
+   "ovr": 83,
+   "traits": []
+  },
+  "players:jim-plunkett:LV:1980s": {
+   "throwPower": 76,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:bill-kenney:KC:1980s": {
+   "throwPower": 81,
+   "ovr": 81,
+   "traits": []
+  },
+  "players:steve-mcnair:TEN:1990s": {
+   "throwPower": 78,
+   "ovr": 80,
+   "traits": [
+    "designed-runner",
+    "game-manager"
+   ]
+  },
+  "players:rich-gannon:KC:1990s": {
+   "throwPower": 70,
+   "ovr": 81,
+   "traits": [
+    "backyard-ball",
+    "game-manager"
+   ]
+  },
+  "players:vinny-testaverde:NYJ:1990s": {
+   "throwPower": 85,
+   "ovr": 90,
+   "traits": [
+    "efficiency-king",
+    "maestro",
+    "climber",
+    "laser"
+   ]
+  },
+  "players:jeff-george:ATL:1990s": {
+   "throwPower": 88,
+   "ovr": 82,
+   "traits": [
+    "laser",
+    "cannon"
+   ]
+  },
+  "players:trent-dilfer:TB:1990s": {
+   "throwPower": 73,
+   "ovr": 60,
+   "traits": []
+  },
+  "players:jim-everett:LAR:1990s": {
+   "throwPower": 87,
+   "ovr": 80,
+   "traits": [
+    "quick-trigger",
+    "climber"
+   ]
+  },
+  "players:phil-simms:NYG:1990s": {
+   "throwPower": 83,
+   "ovr": 89,
+   "traits": [
+    "maestro",
+    "efficiency-king",
+    "climber",
+    "laser"
+   ]
+  },
+  "players:erik-kramer:CHI:1990s": {
+   "throwPower": 82,
+   "ovr": 77,
+   "traits": []
+  },
+  "players:stan-humphries:LAC:1990s": {
+   "throwPower": 85,
+   "ovr": 79,
+   "traits": [
+    "climber"
+   ]
+  },
+  "players:neil-o-donnell:PIT:1990s": {
+   "throwPower": 84,
+   "ovr": 86,
+   "traits": [
+    "off-platform",
+    "laser"
+   ]
+  },
+  "players:chris-chandler:ATL:1990s": {
+   "throwPower": 98,
+   "ovr": 89,
+   "traits": [
+    "bomb-squad",
+    "red-zone-sniper",
+    "efficiency-king",
+    "field-general"
+   ]
+  },
+  "players:brad-johnson:MIN:1990s": {
+   "throwPower": 67,
+   "ovr": 81,
+   "traits": [
+    "climber"
+   ]
+  },
+  "players:bernie-kosar:CLE:1990s": {
+   "throwPower": 78,
+   "ovr": 77,
+   "traits": []
+  },
+  "players:kerry-collins:CAR:1990s": {
+   "throwPower": 78,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:steve-mcnair:TEN:2000s": {
+   "throwPower": 84,
+   "ovr": 91,
+   "traits": [
+    "backyard-ball",
+    "maestro",
+    "unflappable",
+    "deep-ball-artist"
+   ]
+  },
+  "players:rich-gannon:LV:2000s": {
+   "throwPower": 77,
+   "ovr": 95,
+   "traits": [
+    "backyard-ball",
+    "maestro",
+    "efficiency-king",
+    "deep-ball-artist"
+   ]
+  },
+  "players:jake-plummer:DEN:2000s": {
+   "throwPower": 90,
+   "ovr": 85,
+   "traits": [
+    "cannon",
+    "pre-snap-wizard",
+    "quick-trigger"
+   ]
+  },
+  "players:jake-delhomme:CAR:2000s": {
+   "throwPower": 90,
+   "ovr": 79,
+   "traits": [
+    "cannon",
+    "climber"
+   ]
+  },
+  "players:trent-green:KC:2000s": {
+   "throwPower": 95,
+   "ovr": 87,
+   "traits": [
+    "bomb-squad",
+    "laser",
+    "volume-passer",
+    "off-platform"
+   ]
+  },
+  "players:matt-hasselbeck:SEA:2000s": {
+   "throwPower": 82,
+   "ovr": 82,
+   "traits": []
+  },
+  "players:tony-romo:DAL:2000s": {
+   "throwPower": 96,
+   "ovr": 89,
+   "traits": [
+    "bomb-squad",
+    "air-raid",
+    "unflappable",
+    "climber"
+   ]
+  },
+  "players:philip-rivers:LAC:2000s": {
+   "throwPower": 93,
+   "ovr": 90,
+   "traits": [
+    "bomb-squad",
+    "efficiency-king",
+    "climber",
+    "ice-veins"
+   ]
+  },
+  "players:jay-cutler:DEN:2000s": {
+   "throwPower": 88,
+   "ovr": 84,
+   "traits": [
+    "quick-trigger",
+    "escape-artist",
+    "laser",
+    "cannon"
+   ]
+  },
+  "players:vince-young:TEN:2000s": {
+   "throwPower": 72,
+   "ovr": 71,
+   "traits": [
+    "run-pass-nightmare",
+    "turnover-machine"
+   ]
+  },
+  "players:chad-pennington:NYJ:2000s": {
+   "throwPower": 70,
+   "ovr": 82,
+   "traits": [
+    "checkdown-charlie"
+   ]
+  },
+  "players:marc-bulger:LAR:2000s": {
+   "throwPower": 84,
+   "ovr": 80,
+   "traits": [
+    "laser"
+   ]
+  },
+  "players:jeff-garcia:SF:2000s": {
+   "throwPower": 79,
+   "ovr": 91,
+   "traits": [
+    "backyard-ball",
+    "unflappable",
+    "maestro",
+    "red-zone-sniper"
+   ]
+  },
+  "players:aaron-brooks:NO:2000s": {
+   "throwPower": 88,
+   "ovr": 77,
+   "traits": [
+    "dual-threat",
+    "cannon"
+   ]
+  },
+  "players:david-garrard:JAX:2000s": {
+   "throwPower": 76,
+   "ovr": 82,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:andy-dalton:CIN:2010s": {
+   "throwPower": 77,
+   "ovr": 80,
+   "traits": []
+  },
+  "players:joe-flacco:BAL:2010s": {
+   "throwPower": 63,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:alex-smith:KC:2010s": {
+   "throwPower": 71,
+   "ovr": 89,
+   "traits": [
+    "backyard-ball",
+    "maestro",
+    "designed-runner"
+   ]
+  },
+  "players:eli-manning:NYG:2010s": {
+   "throwPower": 82,
+   "ovr": 79,
+   "traits": [
+    "climber",
+    "riverboat-gambler",
+    "pre-snap-wizard",
+    "quick-trigger"
+   ]
+  },
+  "players:carson-wentz:PHI:2010s": {
+   "throwPower": 68,
+   "ovr": 85,
+   "traits": [
+    "backyard-ball"
+   ]
+  },
+  "players:ryan-tannehill:MIA:2010s": {
+   "throwPower": 69,
+   "ovr": 70,
+   "traits": [
+    "sack-magnet"
+   ]
+  },
+  "players:nick-foles:PHI:2010s": {
+   "throwPower": 79,
+   "ovr": 83,
+   "traits": []
+  },
+  "players:derek-carr:LV:2010s": {
+   "throwPower": 65,
+   "ovr": 84,
+   "traits": [
+    "unflappable",
+    "pre-snap-wizard",
+    "off-platform"
+   ]
+  },
+  "players:jared-goff:LAR:2010s": {
+   "throwPower": 91,
+   "ovr": 81,
+   "traits": [
+    "cannon"
+   ]
+  },
+  "players:kirk-cousins:WAS:2010s": {
+   "throwPower": 87,
+   "ovr": 83,
+   "traits": [
+    "laser"
+   ]
+  },
+  "players:marcus-mariota:TEN:2010s": {
+   "throwPower": 86,
+   "ovr": 74,
+   "traits": [
+    "run-pass-nightmare",
+    "off-platform",
+    "sack-magnet"
+   ]
+  },
+  "players:dak-prescott:DAL:2010s": {
+   "throwPower": 84,
+   "ovr": 88,
+   "traits": [
+    "backyard-ball",
+    "designed-runner",
+    "laser"
+   ]
+  },
+  "players:deshaun-watson:HOU:2010s": {
+   "throwPower": 90,
+   "ovr": 85,
+   "traits": [
+    "off-platform",
+    "bomb-squad",
+    "designed-runner",
+    "sack-magnet"
+   ]
+  },
+  "players:jameis-winston:TB:2010s": {
+   "throwPower": 95,
+   "ovr": 71,
+   "traits": [
+    "riverboat-gambler",
+    "cannon",
+    "volume-passer"
+   ]
+  },
+  "players:geno-smith:SEA:2020s": {
+   "throwPower": 79,
+   "ovr": 85,
+   "traits": [
+    "escape-artist"
+   ]
+  },
+  "players:brock-purdy:SF:2020s": {
+   "throwPower": 98,
+   "ovr": 86,
+   "traits": [
+    "bomb-squad",
+    "red-zone-sniper",
+    "laser",
+    "efficiency-king"
+   ]
+  },
+  "players:kirk-cousins:MIN:2020s": {
+   "throwPower": 87,
+   "ovr": 88,
+   "traits": [
+    "air-raid",
+    "laser",
+    "climber",
+    "efficiency-king"
+   ]
+  },
+  "players:trevor-lawrence:JAX:2020s": {
+   "throwPower": 78,
+   "ovr": 75,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:kyler-murray:ARI:2020s": {
+   "throwPower": 65,
+   "ovr": 82,
+   "traits": [
+    "run-pass-nightmare",
+    "backyard-ball",
+    "checkdown-charlie"
+   ]
+  },
+  "players:tua-tagovailoa:MIA:2020s": {
+   "throwPower": 82,
+   "ovr": 81,
+   "traits": [
+    "laser"
+   ]
+  },
+  "players:russell-wilson:DEN:2020s": {
+   "throwPower": 81,
+   "ovr": 78,
+   "traits": [
+    "run-pass-nightmare",
+    "sack-magnet",
+    "off-platform"
+   ]
+  },
+  "players:matthew-stafford:LAR:2020s": {
+   "throwPower": 92,
+   "ovr": 91,
+   "traits": [
+    "air-raid",
+    "bomb-squad",
+    "maestro",
+    "climber"
+   ]
+  },
+  "players:daniel-jones:NYG:2020s": {
+   "throwPower": 59,
+   "ovr": 66,
+   "traits": [
+    "designed-runner",
+    "sack-magnet",
+    "noodle-arm"
+   ]
+  },
+  "players:jordan-love:GB:2020s": {
+   "throwPower": 90,
+   "ovr": 83,
+   "traits": [
+    "cannon"
+   ]
+  },
+  "players:baker-mayfield:TB:2020s": {
+   "throwPower": 81,
+   "ovr": 86,
+   "traits": [
+    "backyard-ball",
+    "red-zone-sniper"
+   ]
+  },
+  "players:sam-darnold:SEA:2020s": {
+   "throwPower": 94,
+   "ovr": 86,
+   "traits": [
+    "bomb-squad",
+    "gunslinger",
+    "unflappable",
+    "laser"
+   ]
+  },
+  "players:deshaun-watson:CLE:2020s": {
+   "throwPower": 58,
+   "ovr": 60,
+   "traits": [
+    "sack-magnet",
+    "designed-runner",
+    "noodle-arm"
+   ]
+  },
+  "players:caleb-williams:CHI:2020s": {
+   "throwPower": 76,
+   "ovr": 77,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:jayden-daniels:WAS:2020s": {
+   "throwPower": 75,
+   "ovr": 81,
+   "traits": [
+    "run-pass-nightmare",
+    "off-platform"
+   ]
+  },
+  "players:ryan-tannehill:TEN:2020s": {
+   "throwPower": 84,
+   "ovr": 79,
+   "traits": [
+    "sack-magnet"
+   ]
+  },
+  "players:joe-theismann:WAS:1970s": {
+   "throwPower": 84,
+   "ovr": 84,
+   "traits": [
+    "efficiency-king",
+    "laser"
+   ]
+  },
+  "players:james-harris:LAR:1970s": {
+   "throwPower": 84,
+   "ovr": 83,
+   "traits": [
+    "efficiency-king",
+    "laser"
+   ]
+  },
+  "players:jim-hart:ARI:1970s": {
+   "throwPower": 86,
+   "ovr": 84,
+   "traits": [
+    "quick-trigger",
+    "deep-ball-artist"
+   ]
+  },
+  "players:marc-wilson:LV:1980s": {
+   "throwPower": 78,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:jeff-hostetler:NYG:1990s": {
+   "throwPower": 78,
+   "ovr": 80,
+   "traits": []
+  },
+  "players:trent-green:LAR:1990s": {
+   "throwPower": 71,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:jim-harbaugh:IND:1990s": {
+   "throwPower": 79,
+   "ovr": 83,
+   "traits": [
+    "game-manager"
+   ]
+  },
+  "players:steve-beuerlein:CAR:1990s": {
+   "throwPower": 89,
+   "ovr": 85,
+   "traits": [
+    "statue",
+    "bomb-squad",
+    "efficiency-king",
+    "laser"
+   ]
+  },
+  "players:drew-bledsoe:DAL:2000s": {
+   "throwPower": 87,
+   "ovr": 74,
+   "traits": [
+    "gunslinger",
+    "sack-magnet"
+   ]
+  },
+  "players:brett-favre:NYJ:2000s": {
+   "throwPower": 62,
+   "ovr": 77,
+   "traits": [
+    "turnover-machine",
+    "climber",
+    "checkdown-charlie",
+    "statue"
+   ]
+  },
+  "players:brett-favre:MIN:2000s": {
+   "throwPower": 83,
+   "ovr": 91,
+   "traits": [
+    "maestro",
+    "statue",
+    "efficiency-king",
+    "laser"
+   ]
+  },
+  "players:david-carr:HOU:2000s": {
+   "throwPower": 61,
+   "ovr": 61,
+   "traits": [
+    "sack-magnet",
+    "happy-feet"
+   ]
+  },
+  "players:brian-griese:DEN:2000s": {
+   "throwPower": 76,
+   "ovr": 82,
+   "traits": []
+  },
+  "players:jon-kitna:CIN:2000s": {
+   "throwPower": 63,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:byron-leftwich:JAX:2000s": {
+   "throwPower": 73,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:kerry-collins:NYG:2000s": {
+   "throwPower": 83,
+   "ovr": 79,
+   "traits": [
+    "volume-passer",
+    "climber"
+   ]
+  },
+  "players:robert-griffin-iii:WAS:2010s": {
+   "throwPower": 82,
+   "ovr": 79,
+   "traits": [
+    "run-pass-nightmare",
+    "off-platform",
+    "sack-magnet"
+   ]
+  },
+  "players:colin-kaepernick:SF:2010s": {
+   "throwPower": 84,
+   "ovr": 79,
+   "traits": [
+    "run-pass-nightmare",
+    "off-platform",
+    "sack-magnet",
+    "game-manager"
+   ]
+  },
+  "players:ryan-fitzpatrick:BUF:2010s": {
+   "throwPower": 66,
+   "ovr": 72,
+   "traits": [
+    "turnover-machine"
+   ]
+  },
+  "players:sam-bradford:LAR:2010s": {
+   "throwPower": 60,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:mitchell-trubisky:CHI:2010s": {
+   "throwPower": 62,
+   "ovr": 70,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:bryce-young:CAR:2020s": {
+   "throwPower": 53,
+   "ovr": 58,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:mac-jones:NE:2020s": {
+   "throwPower": 65,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:bo-nix:DEN:2020s": {
+   "throwPower": 63,
+   "ovr": 77,
+   "traits": [
+    "escape-artist",
+    "quick-trigger",
+    "designed-runner"
+   ]
+  },
+  "players:anthony-richardson:IND:2020s": {
+   "throwPower": 90,
+   "ovr": 56,
+   "traits": [
+    "run-pass-nightmare",
+    "riverboat-gambler",
+    "cannon"
+   ]
+  },
+  "players:drake-maye:NE:2020s": {
+   "throwPower": 88,
+   "ovr": 89,
+   "traits": [
+    "maestro",
+    "bomb-squad",
+    "off-platform",
+    "designed-runner"
+   ]
+  },
+  "players:justin-fields:CHI:2020s": {
+   "throwPower": 82,
+   "ovr": 60,
+   "traits": [
+    "run-pass-nightmare",
+    "riverboat-gambler",
+    "sack-magnet",
+    "happy-feet"
+   ]
+  },
+  "players:kenny-pickett:PIT:2020s": {
+   "throwPower": 58,
+   "ovr": 65,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:matt-schaub:HOU:2000s": {
+   "throwPower": 91,
+   "ovr": 87,
+   "traits": [
+    "cannon",
+    "volume-passer",
+    "surgeon",
+    "climber"
+   ]
+  },
+  "players:matt-schaub:HOU:2010s": {
+   "throwPower": 84,
+   "ovr": 81,
+   "traits": [
+    "statue",
+    "climber",
+    "pre-snap-wizard",
+    "laser"
+   ]
+  },
+  "players:carson-palmer:ARI:2010s": {
+   "throwPower": 91,
+   "ovr": 82,
+   "traits": [
+    "cannon",
+    "volume-passer",
+    "climber"
+   ]
+  },
+  "players:donovan-mcnabb:WAS:2010s": {
+   "throwPower": 83,
+   "ovr": 71,
+   "traits": [
+    "gunslinger"
+   ]
+  },
+  "players:frank-reich:BUF:1990s": {
+   "throwPower": 75,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:cam-newton:NE:2020s": {
+   "throwPower": 69,
+   "ovr": 65,
+   "traits": [
+    "run-pass-nightmare"
+   ]
+  },
+  "players:russell-wilson:PIT:2020s": {
+   "throwPower": 83,
+   "ovr": 85,
+   "traits": [
+    "field-general",
+    "escape-artist"
+   ]
+  },
+  "players:sam-howell:WAS:2020s": {
+   "throwPower": 65,
+   "ovr": 56,
+   "traits": [
+    "turnover-machine",
+    "happy-feet"
+   ]
+  },
+  "players:marcus-mariota:ATL:2020s": {
+   "throwPower": 82,
+   "ovr": 73,
+   "traits": [
+    "run-pass-nightmare",
+    "off-platform",
+    "gunslinger"
+   ]
+  },
+  "players:sam-howell:SEA:2020s": {
+   "throwPower": 59,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:mike-phipps:CLE:1970s": {
+   "throwPower": 79,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:norris-weese:DEN:1970s": {
+   "throwPower": 76,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:bob-berry:ATL:1970s": {
+   "throwPower": 79,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:mike-boryla:PHI:1970s": {
+   "throwPower": 80,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:steve-fuller:KC:1970s": {
+   "throwPower": 72,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:vince-ferragamo:LAR:1970s": {
+   "throwPower": 82,
+   "ovr": 76,
+   "traits": []
+  },
+  "players:greg-cook:CIN:1970s": {
+   "throwPower": 84,
+   "ovr": 81,
+   "traits": [
+    "efficiency-king",
+    "laser"
+   ]
+  },
+  "players:pat-sullivan:ATL:1970s": {
+   "throwPower": 76,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:steve-pelluer:DAL:1980s": {
+   "throwPower": 73,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:don-strock:MIA:1980s": {
+   "throwPower": 73,
+   "ovr": 79,
+   "traits": []
+  },
+  "players:bob-avellini:CHI:1980s": {
+   "throwPower": 68,
+   "ovr": 60,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:gary-hogeboom:IND:1980s": {
+   "throwPower": 74,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:david-woodley:MIA:1980s": {
+   "throwPower": 74,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:pat-ryan:NYJ:1980s": {
+   "throwPower": 71,
+   "ovr": 78,
+   "traits": []
+  },
+  "players:eric-hipple:DET:1980s": {
+   "throwPower": 75,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:mark-malone:PIT:1980s": {
+   "throwPower": 74,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:jay-schroeder:WAS:1980s": {
+   "throwPower": 80,
+   "ovr": 77,
+   "traits": []
+  },
+  "players:wade-wilson:ATL:1990s": {
+   "throwPower": 76,
+   "ovr": 76,
+   "traits": []
+  },
+  "players:tony-banks:LAR:1990s": {
+   "throwPower": 78,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:heath-shuler:WAS:1990s": {
+   "throwPower": 68,
+   "ovr": 43,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:ty-detmer:PHI:1990s": {
+   "throwPower": 75,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:browning-nagle:NYJ:1990s": {
+   "throwPower": 76,
+   "ovr": 56,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:cody-carlson:TEN:1990s": {
+   "throwPower": 78,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:charlie-batch:DET:1990s": {
+   "throwPower": 86,
+   "ovr": 75,
+   "traits": [
+    "sack-magnet"
+   ]
+  },
+  "players:akili-smith:CIN:1990s": {
+   "throwPower": 55,
+   "ovr": 56,
+   "traits": [
+    "noodle-arm",
+    "happy-feet"
+   ]
+  },
+  "players:tim-couch:CLE:1990s": {
+   "throwPower": 60,
+   "ovr": 61,
+   "traits": [
+    "sack-magnet",
+    "happy-feet"
+   ]
+  },
+  "players:jim-miller:CHI:1990s": {
+   "throwPower": 77,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:joey-harrington:DET:2000s": {
+   "throwPower": 54,
+   "ovr": 58,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:patrick-ramsey:WAS:2000s": {
+   "throwPower": 76,
+   "ovr": 64,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:tim-rattay:SF:2000s": {
+   "throwPower": 63,
+   "ovr": 69,
+   "traits": [
+    "sack-magnet"
+   ]
+  },
+  "players:j-p-losman:BUF:2000s": {
+   "throwPower": 65,
+   "ovr": 62,
+   "traits": [
+    "sack-magnet",
+    "happy-feet"
+   ]
+  },
+  "players:damon-huard:KC:2000s": {
+   "throwPower": 71,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:kyle-boller:BAL:2000s": {
+   "throwPower": 55,
+   "ovr": 57,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:charlie-frye:CLE:2000s": {
+   "throwPower": 53,
+   "ovr": 56,
+   "traits": [
+    "sack-magnet",
+    "noodle-arm"
+   ]
+  },
+  "players:sage-rosenfels:HOU:2000s": {
+   "throwPower": 75,
+   "ovr": 76,
+   "traits": [
+    "turnover-machine"
+   ]
+  },
+  "players:jeff-blake:CIN:1990s": {
+   "throwPower": 79,
+   "ovr": 78,
+   "traits": []
+  },
+  "players:brock-osweiler:DEN:2010s": {
+   "throwPower": 64,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:trevor-siemian:DEN:2010s": {
+   "throwPower": 75,
+   "ovr": 61,
+   "traits": []
+  },
+  "players:brandon-weeden:CLE:2010s": {
+   "throwPower": 72,
+   "ovr": 57,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:mike-glennon:TB:2010s": {
+   "throwPower": 61,
+   "ovr": 62,
+   "traits": []
+  },
+  "players:blake-bortles:JAX:2010s": {
+   "throwPower": 72,
+   "ovr": 62,
+   "traits": [
+    "designed-runner",
+    "turnover-machine"
+   ]
+  },
+  "players:ej-manuel:BUF:2010s": {
+   "throwPower": 60,
+   "ovr": 60,
+   "traits": []
+  },
+  "players:christian-ponder:MIN:2010s": {
+   "throwPower": 54,
+   "ovr": 57,
+   "traits": [
+    "dual-threat",
+    "turnover-machine",
+    "noodle-arm"
+   ]
+  },
+  "players:jacoby-brissett:IND:2010s": {
+   "throwPower": 64,
+   "ovr": 72,
+   "traits": [
+    "game-manager"
+   ]
+  },
+  "players:case-keenum:MIN:2010s": {
+   "throwPower": 73,
+   "ovr": 86,
+   "traits": [
+    "backyard-ball",
+    "pre-snap-wizard"
+   ]
+  },
+  "players:matt-cassel:NE:2000s": {
+   "throwPower": 70,
+   "ovr": 77,
+   "traits": [
+    "game-manager"
+   ]
+  },
+  "players:andy-dalton:NO:2020s": {
+   "throwPower": 81,
+   "ovr": 79,
+   "traits": []
+  },
+  "players:jameis-winston:NO:2020s": {
+   "throwPower": 80,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:mason-rudolph:PIT:2020s": {
+   "throwPower": 61,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:joshua-dobbs:MIN:2020s": {
+   "throwPower": 60,
+   "ovr": 66,
+   "traits": [
+    "dual-threat"
+   ]
+  },
+  "players:tyler-huntley:BAL:2020s": {
+   "throwPower": 40,
+   "ovr": 63,
+   "traits": [
+    "run-pass-nightmare",
+    "noodle-arm"
+   ]
+  },
+  "players:bailey-zappe:NE:2020s": {
+   "throwPower": 66,
+   "ovr": 59,
+   "traits": [
+    "turnover-machine",
+    "happy-feet"
+   ]
+  },
+  "players:cooper-rush:DAL:2020s": {
+   "throwPower": 59,
+   "ovr": 67,
+   "traits": [
+    "climber",
+    "noodle-arm"
+   ]
+  },
+  "players:aidan-o-connell:LV:2020s": {
+   "throwPower": 64,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:joe-flacco:CLE:2020s": {
+   "throwPower": 79,
+   "ovr": 71,
+   "traits": [
+    "turnover-machine",
+    "climber",
+    "statue",
+    "pre-snap-wizard"
+   ]
+  },
+  "players:dan-pastorini:TEN:1970s": {
+   "throwPower": 86,
+   "ovr": 71,
+   "traits": [
+    "gunslinger"
+   ]
+  },
+  "players:lynn-dickey:GB:1970s": {
+   "throwPower": 83,
+   "ovr": 73,
+   "traits": [
+    "gunslinger"
+   ]
+  },
+  "players:bob-avellini:CHI:1970s": {
+   "throwPower": 79,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:joe-pisarcik:NYG:1970s": {
+   "throwPower": 77,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:jim-plunkett:NE:1970s": {
+   "throwPower": 83,
+   "ovr": 71,
+   "traits": [
+    "gunslinger"
+   ]
+  },
+  "players:joe-ferguson:BUF:1980s": {
+   "throwPower": 78,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:steve-bartkowski:ATL:1980s": {
+   "throwPower": 81,
+   "ovr": 83,
+   "traits": [
+    "climber"
+   ]
+  },
+  "players:brian-sipe:CLE:1980s": {
+   "throwPower": 76,
+   "ovr": 90,
+   "traits": [
+    "unflappable",
+    "pre-snap-wizard",
+    "field-general",
+    "volume-passer"
+   ]
+  },
+  "players:vinny-testaverde:CLE:1990s": {
+   "throwPower": 91,
+   "ovr": 79,
+   "traits": [
+    "cannon"
+   ]
+  },
+  "players:don-majkowski:GB:1980s": {
+   "throwPower": 75,
+   "ovr": 83,
+   "traits": [
+    "off-platform"
+   ]
+  },
+  "players:trent-dilfer:BAL:2000s": {
+   "throwPower": 67,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:jim-everett:NO:1990s": {
+   "throwPower": 77,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:tony-banks:BAL:1990s": {
+   "throwPower": 79,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:scott-mitchell:DET:1990s": {
+   "throwPower": 83,
+   "ovr": 72,
+   "traits": [
+    "gunslinger"
+   ]
+  },
+  "players:drew-bledsoe:BUF:2000s": {
+   "throwPower": 72,
+   "ovr": 75,
+   "traits": [
+    "sack-magnet"
+   ]
+  },
+  "players:steve-walsh:NO:1990s": {
+   "throwPower": 76,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:rick-mirer:SEA:1990s": {
+   "throwPower": 74,
+   "ovr": 54,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:jake-plummer:ARI:2000s": {
+   "throwPower": 67,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:tommy-maddox:PIT:2000s": {
+   "throwPower": 81,
+   "ovr": 69,
+   "traits": [
+    "riverboat-gambler"
+   ]
+  },
+  "players:trent-edwards:BUF:2000s": {
+   "throwPower": 64,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:tarvaris-jackson:MIN:2000s": {
+   "throwPower": 66,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:charlie-batch:DET:2000s": {
+   "throwPower": 74,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:tim-couch:CLE:2000s": {
+   "throwPower": 64,
+   "ovr": 63,
+   "traits": [
+    "turnover-machine"
+   ]
+  },
+  "players:jay-cutler:CHI:2010s": {
+   "throwPower": 81,
+   "ovr": 75,
+   "traits": [
+    "riverboat-gambler"
+   ]
+  },
+  "players:mark-sanchez:NYJ:2010s": {
+   "throwPower": 67,
+   "ovr": 57,
+   "traits": []
+  },
+  "players:tim-tebow:DEN:2010s": {
+   "throwPower": 87,
+   "ovr": 66,
+   "traits": [
+    "designed-runner",
+    "off-platform",
+    "sack-magnet"
+   ]
+  },
+  "players:geno-smith:NYJ:2010s": {
+   "throwPower": 75,
+   "ovr": 52,
+   "traits": [
+    "turnover-machine",
+    "happy-feet",
+    "dual-threat"
+   ]
+  },
+  "players:ryan-tannehill:TEN:2010s": {
+   "throwPower": 94,
+   "ovr": 90,
+   "traits": [
+    "bomb-squad",
+    "maestro",
+    "efficiency-king",
+    "escape-artist"
+   ]
+  },
+  "players:teddy-bridgewater:MIN:2010s": {
+   "throwPower": 67,
+   "ovr": 68,
+   "traits": [
+    "sack-magnet"
+   ]
+  },
+  "players:jimmy-garoppolo:SF:2010s": {
+   "throwPower": 92,
+   "ovr": 81,
+   "traits": [
+    "cannon",
+    "laser"
+   ]
+  },
+  "players:brian-hoyer:CLE:2010s": {
+   "throwPower": 88,
+   "ovr": 66,
+   "traits": [
+    "gunslinger",
+    "cannon"
+   ]
+  },
+  "players:sam-darnold:NYJ:2020s": {
+   "throwPower": 59,
+   "ovr": 52,
+   "traits": [
+    "happy-feet",
+    "noodle-arm"
+   ]
+  },
+  "players:aaron-rodgers:NYJ:2020s": {
+   "throwPower": 69,
+   "ovr": 75,
+   "traits": [
+    "climber"
+   ]
+  },
+  "players:cliff-stoudt:PIT:1980s": {
+   "throwPower": 72,
+   "ovr": 60,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:mike-pagel:IND:1980s": {
+   "throwPower": 70,
+   "ovr": 60,
+   "traits": []
+  },
+  "players:mike-pagel:CLE:1980s": {
+   "throwPower": 68,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:david-archer:ATL:1980s": {
+   "throwPower": 73,
+   "ovr": 60,
+   "traits": []
+  },
+  "players:mike-tomczak:CHI:1980s": {
+   "throwPower": 71,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:dieter-brock:LAR:1980s": {
+   "throwPower": 72,
+   "ovr": 78,
+   "traits": []
+  },
+  "players:scott-brunner:NYG:1980s": {
+   "throwPower": 70,
+   "ovr": 59,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:bert-jones:LAR:1980s": {
+   "throwPower": 70,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:richard-todd:NYJ:1980s": {
+   "throwPower": 78,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:gary-danielson:DET:1980s": {
+   "throwPower": 74,
+   "ovr": 76,
+   "traits": []
+  },
+  "players:gary-danielson:CLE:1980s": {
+   "throwPower": 77,
+   "ovr": 79,
+   "traits": []
+  },
+  "players:archie-manning:NO:1980s": {
+   "throwPower": 75,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:archie-manning:TEN:1980s": {
+   "throwPower": 70,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:bubby-brister:PIT:1980s": {
+   "throwPower": 77,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:steve-grogan:NE:1980s": {
+   "throwPower": 74,
+   "ovr": 70,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:mark-rypien:WAS:1980s": {
+   "throwPower": 76,
+   "ovr": 80,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:pat-haden:LAR:1980s": {
+   "throwPower": 68,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:steve-fuller:CHI:1980s": {
+   "throwPower": 69,
+   "ovr": 75,
+   "traits": [
+    "game-manager"
+   ]
+  },
+  "players:vince-evans:CHI:1980s": {
+   "throwPower": 67,
+   "ovr": 62,
+   "traits": []
+  },
+  "players:mark-herrmann:LAC:1980s": {
+   "throwPower": 69,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:mike-moroski:ATL:1980s": {
+   "throwPower": 70,
+   "ovr": 55,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:dave-wilson:NO:1980s": {
+   "throwPower": 74,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:babe-laufenberg:DAL:1980s": {
+   "throwPower": 68,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:mark-vlasic:LAC:1980s": {
+   "throwPower": 67,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:joe-pisarcik:PHI:1980s": {
+   "throwPower": 68,
+   "ovr": 62,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:greg-landry:CHI:1980s": {
+   "throwPower": 68,
+   "ovr": 70,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:steve-beuerlein:LV:1980s": {
+   "throwPower": 72,
+   "ovr": 73,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:jay-schroeder:LAR:1980s": {
+   "throwPower": 78,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:stan-humphries:WAS:1980s": {
+   "throwPower": 72,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:doug-flutie:NE:1980s": {
+   "throwPower": 75,
+   "ovr": 77,
+   "traits": [
+    "dual-threat"
+   ]
+  },
+  "players:doug-flutie:CHI:1980s": {
+   "throwPower": 73,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:boomer-esiason:NYJ:1990s": {
+   "throwPower": 81,
+   "ovr": 76,
+   "traits": [
+    "gunslinger"
+   ]
+  },
+  "players:bubby-brister:PHI:1990s": {
+   "throwPower": 73,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:bubby-brister:DEN:1990s": {
+   "throwPower": 74,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:mark-rypien:WAS:1990s": {
+   "throwPower": 83,
+   "ovr": 84,
+   "traits": [
+    "unflappable",
+    "climber",
+    "pre-snap-wizard",
+    "statue"
+   ]
+  },
+  "players:dave-krieg:KC:1990s": {
+   "throwPower": 80,
+   "ovr": 79,
+   "traits": []
+  },
+  "players:dave-krieg:DET:1990s": {
+   "throwPower": 75,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:rodney-peete:DET:1990s": {
+   "throwPower": 79,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:rodney-peete:DAL:1990s": {
+   "throwPower": 72,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:rodney-peete:PHI:1990s": {
+   "throwPower": 77,
+   "ovr": 80,
+   "traits": []
+  },
+  "players:steve-bono:KC:1990s": {
+   "throwPower": 78,
+   "ovr": 82,
+   "traits": [
+    "efficiency-king"
+   ]
+  },
+  "players:steve-bono:SF:1990s": {
+   "throwPower": 77,
+   "ovr": 81,
+   "traits": [
+    "efficiency-king"
+   ]
+  },
+  "players:erik-wilhelm:CIN:1990s": {
+   "throwPower": 70,
+   "ovr": 59,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:dan-mcgwire:SEA:1990s": {
+   "throwPower": 69,
+   "ovr": 51,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:scott-zolak:NE:1990s": {
+   "throwPower": 71,
+   "ovr": 59,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:jim-harbaugh:CHI:1990s": {
+   "throwPower": 77,
+   "ovr": 78,
+   "traits": []
+  },
+  "players:mike-tomczak:PIT:1990s": {
+   "throwPower": 73,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:gus-frerotte:WAS:1990s": {
+   "throwPower": 78,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:gus-frerotte:DET:1990s": {
+   "throwPower": 78,
+   "ovr": 76,
+   "traits": []
+  },
+  "players:brian-griese:DEN:1990s": {
+   "throwPower": 72,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:doug-pederson:PHI:1990s": {
+   "throwPower": 57,
+   "ovr": 60,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:damon-huard:MIA:1990s": {
+   "throwPower": 73,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:scott-mitchell:MIA:1990s": {
+   "throwPower": 77,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:kordell-stewart:PIT:1990s": {
+   "throwPower": 75,
+   "ovr": 72,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:donovan-mcnabb:PHI:1990s": {
+   "throwPower": 43,
+   "ovr": 56,
+   "traits": [
+    "noodle-arm",
+    "designed-runner"
+   ]
+  },
+  "players:daunte-culpepper:MIN:1990s": {
+   "throwPower": 69,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:cade-mcnown:CHI:1990s": {
+   "throwPower": 61,
+   "ovr": 61,
+   "traits": []
+  },
+  "players:stoney-case:ARI:1990s": {
+   "throwPower": 69,
+   "ovr": 54,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:jake-plummer:ARI:1990s": {
+   "throwPower": 77,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:steve-stenstrom:CHI:1990s": {
+   "throwPower": 69,
+   "ovr": 61,
+   "traits": []
+  },
+  "players:shaun-king:TB:1990s": {
+   "throwPower": 57,
+   "ovr": 68,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:doug-pederson:GB:1990s": {
+   "throwPower": 69,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:glenn-foley:NYJ:1990s": {
+   "throwPower": 74,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:hugh-millen:NE:1990s": {
+   "throwPower": 76,
+   "ovr": 62,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:paul-mcdonald:CLE:1980s": {
+   "throwPower": 71,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:matt-robinson:DEN:1980s": {
+   "throwPower": 68,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:jim-zorn:SEA:1980s": {
+   "throwPower": 74,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:steve-dils:MIN:1980s": {
+   "throwPower": 70,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:steve-deberg:TB:1980s": {
+   "throwPower": 77,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:steve-deberg:DEN:1980s": {
+   "throwPower": 78,
+   "ovr": 79,
+   "traits": []
+  },
+  "players:chuck-long:DET:1980s": {
+   "throwPower": 71,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:joe-dufek:BUF:1980s": {
+   "throwPower": 64,
+   "ovr": 51,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:joe-ferguson:DET:1980s": {
+   "throwPower": 71,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:steve-fuller:KC:1980s": {
+   "throwPower": 70,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:tom-owen:NE:1980s": {
+   "throwPower": 68,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:jeff-komlo:DET:1980s": {
+   "throwPower": 67,
+   "ovr": 59,
+   "traits": []
+  },
+  "players:vince-evans:LV:1980s": {
+   "throwPower": 67,
+   "ovr": 61,
+   "traits": []
+  },
+  "players:steve-bono:PIT:1980s": {
+   "throwPower": 68,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:frank-reich:BUF:1980s": {
+   "throwPower": 69,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:jim-everett:LAC:1990s": {
+   "throwPower": 73,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:steve-pelluer:KC:1990s": {
+   "throwPower": 71,
+   "ovr": 61,
+   "traits": []
+  },
+  "players:tommy-maddox:DEN:1990s": {
+   "throwPower": 71,
+   "ovr": 55,
+   "traits": []
+  },
+  "players:tommy-maddox:LAR:1990s": {
+   "throwPower": 66,
+   "ovr": 50,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:jim-mcmahon:GB:1990s": {
+   "throwPower": 70,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:jim-mcmahon:PHI:1990s": {
+   "throwPower": 76,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:mike-pagel:LAR:1990s": {
+   "throwPower": 69,
+   "ovr": 62,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:hugh-millen:DAL:1990s": {
+   "throwPower": 71,
+   "ovr": 59,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:stan-gelbaugh:SEA:1990s": {
+   "throwPower": 70,
+   "ovr": 54,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:kelly-stouffer:SEA:1990s": {
+   "throwPower": 71,
+   "ovr": 58,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:jeff-george:IND:1990s": {
+   "throwPower": 61,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:jeff-george:LV:1990s": {
+   "throwPower": 81,
+   "ovr": 73,
+   "traits": [
+    "gunslinger"
+   ]
+  },
+  "players:jeff-george:MIN:1990s": {
+   "throwPower": 94,
+   "ovr": 81,
+   "traits": [
+    "bomb-squad",
+    "laser",
+    "red-zone-sniper"
+   ]
+  },
+  "players:frank-reich:CAR:1990s": {
+   "throwPower": 67,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:frank-reich:NYJ:1990s": {
+   "throwPower": 67,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:mark-brunell:GB:1990s": {
+   "throwPower": 70,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:don-majkowski:IND:1990s": {
+   "throwPower": 73,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:don-majkowski:DET:1990s": {
+   "throwPower": 71,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:babe-laufenberg:DAL:1990s": {
+   "throwPower": 70,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:sean-salisbury:MIN:1990s": {
+   "throwPower": 75,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:bernie-kosar:DAL:1990s": {
+   "throwPower": 74,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:bernie-kosar:MIA:1990s": {
+   "throwPower": 73,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:vinny-testaverde:TB:1990s": {
+   "throwPower": 80,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:bobby-hebert:ATL:1990s": {
+   "throwPower": 80,
+   "ovr": 79,
+   "traits": []
+  },
+  "players:boomer-esiason:ARI:1990s": {
+   "throwPower": 74,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:bubby-brister:NYJ:1990s": {
+   "throwPower": 69,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:bob-gagliano:DET:1990s": {
+   "throwPower": 70,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:chris-miller:ATL:1990s": {
+   "throwPower": 80,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:chris-miller:DEN:1990s": {
+   "throwPower": 68,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:drew-brees:LAC:2000s": {
+   "throwPower": 69,
+   "ovr": 81,
+   "traits": [
+    "checkdown-charlie"
+   ]
+  },
+  "players:jason-campbell:WAS:2000s": {
+   "throwPower": 65,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:a-j-feeley:PHI:2000s": {
+   "throwPower": 74,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:a-j-feeley:MIA:2000s": {
+   "throwPower": 50,
+   "ovr": 49,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:kelly-holcomb:CLE:2000s": {
+   "throwPower": 63,
+   "ovr": 72,
+   "traits": [
+    "checkdown-charlie"
+   ]
+  },
+  "players:quincy-carter:DAL:2000s": {
+   "throwPower": 76,
+   "ovr": 62,
+   "traits": [
+    "dual-threat",
+    "turnover-machine"
+   ]
+  },
+  "players:seneca-wallace:SEA:2000s": {
+   "throwPower": 52,
+   "ovr": 67,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:charlie-whitehurst:LAC:2000s": {
+   "throwPower": 69,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:cleo-lemon:MIA:2000s": {
+   "throwPower": 58,
+   "ovr": 61,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:anthony-wright:BAL:2000s": {
+   "throwPower": 61,
+   "ovr": 56,
+   "traits": []
+  },
+  "players:doug-pederson:CLE:2000s": {
+   "throwPower": 43,
+   "ovr": 54,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:mark-brunell:WAS:2000s": {
+   "throwPower": 64,
+   "ovr": 76,
+   "traits": [
+    "game-manager"
+   ]
+  },
+  "players:mark-brunell:NO:2000s": {
+   "throwPower": 41,
+   "ovr": 58,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:jeff-garcia:PHI:2000s": {
+   "throwPower": 68,
+   "ovr": 82,
+   "traits": [
+    "game-manager",
+    "pre-snap-wizard"
+   ]
+  },
+  "players:jeff-garcia:TB:2000s": {
+   "throwPower": 79,
+   "ovr": 87,
+   "traits": [
+    "field-general"
+   ]
+  },
+  "players:brad-johnson:TB:2000s": {
+   "throwPower": 64,
+   "ovr": 82,
+   "traits": [
+    "climber",
+    "checkdown-charlie",
+    "pre-snap-wizard"
+   ]
+  },
+  "players:brad-johnson:DAL:2000s": {
+   "throwPower": 60,
+   "ovr": 61,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:steve-mcnair:BAL:2000s": {
+   "throwPower": 56,
+   "ovr": 76,
+   "traits": [
+    "checkdown-charlie",
+    "noodle-arm"
+   ]
+  },
+  "players:brian-griese:CHI:2000s": {
+   "throwPower": 71,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:brian-griese:TB:2000s": {
+   "throwPower": 62,
+   "ovr": 72,
+   "traits": [
+    "checkdown-charlie"
+   ]
+  },
+  "players:brodie-croyle:KC:2000s": {
+   "throwPower": 45,
+   "ovr": 58,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:tyler-thigpen:KC:2000s": {
+   "throwPower": 68,
+   "ovr": 64,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:kerry-collins:TEN:2000s": {
+   "throwPower": 63,
+   "ovr": 69,
+   "traits": [
+    "climber",
+    "statue"
+   ]
+  },
+  "players:kyle-orton:CHI:2000s": {
+   "throwPower": 56,
+   "ovr": 55,
+   "traits": [
+    "statue",
+    "noodle-arm"
+   ]
+  },
+  "players:kyle-orton:DEN:2000s": {
+   "throwPower": 74,
+   "ovr": 77,
+   "traits": []
+  },
+  "players:steve-beuerlein:DEN:2000s": {
+   "throwPower": 81,
+   "ovr": 62,
+   "traits": [
+    "statue",
+    "gunslinger",
+    "happy-feet"
+   ]
+  },
+  "players:doug-flutie:BUF:2000s": {
+   "throwPower": 83,
+   "ovr": 84,
+   "traits": [
+    "game-manager",
+    "pre-snap-wizard"
+   ]
+  },
+  "players:nick-foles:JAX:2010s": {
+   "throwPower": 60,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:brian-hoyer:HOU:2010s": {
+   "throwPower": 74,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:brian-hoyer:CHI:2010s": {
+   "throwPower": 68,
+   "ovr": 79,
+   "traits": [
+    "climber",
+    "statue"
+   ]
+  },
+  "players:charlie-whitehurst:TEN:2010s": {
+   "throwPower": 74,
+   "ovr": 69,
+   "traits": [
+    "game-manager"
+   ]
+  },
+  "players:jason-campbell:LV:2010s": {
+   "throwPower": 78,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:jason-campbell:CHI:2010s": {
+   "throwPower": 47,
+   "ovr": 64,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:jason-campbell:CIN:2010s": {
+   "throwPower": 46,
+   "ovr": 61,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:sam-bradford:PHI:2010s": {
+   "throwPower": 67,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:sam-bradford:MIN:2010s": {
+   "throwPower": 62,
+   "ovr": 84,
+   "traits": [
+    "checkdown-charlie",
+    "surgeon"
+   ]
+  },
+  "players:jacoby-brissett:NE:2010s": {
+   "throwPower": 69,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:matt-cassel:KC:2010s": {
+   "throwPower": 67,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:matt-cassel:MIN:2010s": {
+   "throwPower": 69,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:josh-mccown:CHI:2010s": {
+   "throwPower": 78,
+   "ovr": 81,
+   "traits": [
+    "game-manager",
+    "escape-artist"
+   ]
+  },
+  "players:josh-mccown:NYJ:2010s": {
+   "throwPower": 63,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:connor-cook:LV:2010s": {
+   "throwPower": 64,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:tom-savage:HOU:2010s": {
+   "throwPower": 64,
+   "ovr": 57,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:christian-hackenberg:NYJ:2010s": {
+   "throwPower": 68,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:paxton-lynch:DEN:2010s": {
+   "throwPower": 61,
+   "ovr": 61,
+   "traits": []
+  },
+  "players:kellen-clemens:LAC:2010s": {
+   "throwPower": 36,
+   "ovr": 67,
+   "traits": [
+    "noodle-arm",
+    "game-manager",
+    "climber"
+   ]
+  },
+  "players:kirk-cousins:MIN:2010s": {
+   "throwPower": 70,
+   "ovr": 88,
+   "traits": [
+    "checkdown-charlie",
+    "surgeon",
+    "efficiency-king",
+    "climber"
+   ]
+  },
+  "players:tyrod-taylor:BUF:2010s": {
+   "throwPower": 76,
+   "ovr": 83,
+   "traits": [
+    "run-pass-nightmare",
+    "off-platform",
+    "sack-magnet",
+    "game-manager"
+   ]
+  },
+  "players:tyrod-taylor:CLE:2010s": {
+   "throwPower": 64,
+   "ovr": 62,
+   "traits": [
+    "dual-threat"
+   ]
+  },
+  "players:aj-mccarron:CIN:2010s": {
+   "throwPower": 56,
+   "ovr": 62,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:quincy-carter:NYJ:2000s": {
+   "throwPower": 79,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:drew-henson:DAL:2000s": {
+   "throwPower": 54,
+   "ovr": 66,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:chad-henne:MIA:2000s": {
+   "throwPower": 60,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:bruce-gradkowski:TB:2000s": {
+   "throwPower": 42,
+   "ovr": 54,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:bruce-gradkowski:LV:2000s": {
+   "throwPower": 75,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:gus-frerotte:MIN:2000s": {
+   "throwPower": 89,
+   "ovr": 69,
+   "traits": [
+    "riverboat-gambler",
+    "statue",
+    "cannon"
+   ]
+  },
+  "players:gus-frerotte:LAR:2000s": {
+   "throwPower": 63,
+   "ovr": 57,
+   "traits": [
+    "statue",
+    "turnover-machine"
+   ]
+  },
+  "players:gus-frerotte:MIA:2000s": {
+   "throwPower": 72,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:jim-sorgi:IND:2000s": {
+   "throwPower": 39,
+   "ovr": 68,
+   "traits": [
+    "game-manager",
+    "noodle-arm"
+   ]
+  },
+  "players:charlie-frye:LV:2000s": {
+   "throwPower": 68,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:shaun-hill:SF:2000s": {
+   "throwPower": 64,
+   "ovr": 71,
+   "traits": [
+    "game-manager"
+   ]
+  },
+  "players:j-t-o-sullivan:SF:2000s": {
+   "throwPower": 85,
+   "ovr": 65,
+   "traits": [
+    "riverboat-gambler",
+    "happy-feet",
+    "sack-magnet"
+   ]
+  },
+  "players:daunte-culpepper:MIA:2000s": {
+   "throwPower": 73,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:daunte-culpepper:LV:2000s": {
+   "throwPower": 80,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:daunte-culpepper:DET:2000s": {
+   "throwPower": 67,
+   "ovr": 58,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:rex-grossman:CHI:2000s": {
+   "throwPower": 77,
+   "ovr": 61,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:luke-mccown:TB:2000s": {
+   "throwPower": 61,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:luke-mccown:CLE:2000s": {
+   "throwPower": 70,
+   "ovr": 58,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:derek-anderson:CLE:2000s": {
+   "throwPower": 81,
+   "ovr": 59,
+   "traits": [
+    "riverboat-gambler"
+   ]
+  },
+  "players:ken-dorsey:SF:2000s": {
+   "throwPower": 51,
+   "ovr": 50,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:ryan-lindley:ARI:2010s": {
+   "throwPower": 49,
+   "ovr": 31,
+   "traits": [
+    "happy-feet",
+    "noodle-arm"
+   ]
+  },
+  "players:john-skelton:ARI:2010s": {
+   "throwPower": 66,
+   "ovr": 47,
+   "traits": [
+    "turnover-machine",
+    "happy-feet"
+   ]
+  },
+  "players:max-hall:ARI:2010s": {
+   "throwPower": 50,
+   "ovr": 49,
+   "traits": [
+    "noodle-arm",
+    "happy-feet"
+   ]
+  },
+  "players:drew-stanton:ARI:2010s": {
+   "throwPower": 66,
+   "ovr": 52,
+   "traits": []
+  },
+  "players:drew-stanton:DET:2010s": {
+   "throwPower": 63,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:caleb-hanie:CHI:2010s": {
+   "throwPower": 65,
+   "ovr": 53,
+   "traits": [
+    "happy-feet",
+    "turnover-machine"
+   ]
+  },
+  "players:t-j-yates:HOU:2010s": {
+   "throwPower": 59,
+   "ovr": 56,
+   "traits": [
+    "happy-feet",
+    "sack-magnet"
+   ]
+  },
+  "players:curtis-painter:IND:2010s": {
+   "throwPower": 63,
+   "ovr": 54,
+   "traits": []
+  },
+  "players:dan-orlovsky:IND:2010s": {
+   "throwPower": 54,
+   "ovr": 69,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:bruce-gradkowski:PIT:2010s": {
+   "throwPower": 69,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:charlie-batch:PIT:2010s": {
+   "throwPower": 66,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:byron-leftwich:PIT:2010s": {
+   "throwPower": 61,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:joe-webb:MIN:2010s": {
+   "throwPower": 34,
+   "ovr": 55,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:mcleod-bethel-thompson:SF:2010s": {
+   "throwPower": 62,
+   "ovr": 39,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:kellen-moore:DAL:2010s": {
+   "throwPower": 71,
+   "ovr": 55,
+   "traits": []
+  },
+  "players:brock-osweiler:HOU:2010s": {
+   "throwPower": 55,
+   "ovr": 55,
+   "traits": [
+    "noodle-arm",
+    "turnover-machine"
+   ]
+  },
+  "players:brock-osweiler:MIA:2010s": {
+   "throwPower": 66,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:michael-vick:NYJ:2010s": {
+   "throwPower": 46,
+   "ovr": 60,
+   "traits": [
+    "noodle-arm",
+    "happy-feet"
+   ]
+  },
+  "players:michael-vick:PIT:2010s": {
+   "throwPower": 51,
+   "ovr": 63,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:daryle-lamonica:LV:1970s": {
+   "throwPower": 77,
+   "ovr": 78,
+   "traits": []
+  },
+  "players:john-hadl:LAR:1970s": {
+   "throwPower": 78,
+   "ovr": 86,
+   "traits": [
+    "unflappable",
+    "field-general",
+    "climber"
+   ]
+  },
+  "players:charley-johnson:DEN:1970s": {
+   "throwPower": 76,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:billy-kilmer:WAS:1970s": {
+   "throwPower": 74,
+   "ovr": 76,
+   "traits": []
+  },
+  "players:norm-snead:NYG:1970s": {
+   "throwPower": 77,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:vince-ferragamo:LAR:1980s": {
+   "throwPower": 72,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:elvis-grbac:KC:1990s": {
+   "throwPower": 76,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:dave-brown:NYG:1990s": {
+   "throwPower": 72,
+   "ovr": 61,
+   "traits": []
+  },
+  "players:jon-kitna:DET:2000s": {
+   "throwPower": 79,
+   "ovr": 69,
+   "traits": [
+    "volume-passer",
+    "sack-magnet",
+    "happy-feet"
+   ]
+  },
+  "players:josh-mccown:ARI:2000s": {
+   "throwPower": 61,
+   "ovr": 61,
+   "traits": [
+    "dual-threat",
+    "happy-feet"
+   ]
+  },
+  "players:gary-cuozzo:MIN:1970s": {
+   "throwPower": 69,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:bobby-douglass:CHI:1970s": {
+   "throwPower": 66,
+   "ovr": 62,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:mike-livingston:KC:1970s": {
+   "throwPower": 72,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:bill-munson:DET:1970s": {
+   "throwPower": 72,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:marty-domres:IND:1970s": {
+   "throwPower": 71,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:don-strock:MIA:1970s": {
+   "throwPower": 74,
+   "ovr": 76,
+   "traits": []
+  },
+  "players:gary-huff:CHI:1970s": {
+   "throwPower": 71,
+   "ovr": 62,
+   "traits": []
+  },
+  "players:john-reaves:PHI:1970s": {
+   "throwPower": 72,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:scott-hunter:GB:1970s": {
+   "throwPower": 68,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:joe-reed:SF:1970s": {
+   "throwPower": 71,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:steve-bono:SF:1980s": {
+   "throwPower": 69,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:matt-cavanaugh:SF:1980s": {
+   "throwPower": 65,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:billy-joe-tolliver:LAC:1990s": {
+   "throwPower": 72,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:ryan-fitzpatrick:NYJ:2010s": {
+   "throwPower": 79,
+   "ovr": 69,
+   "traits": [
+    "turnover-machine"
+   ]
+  },
+  "players:chase-daniel:CHI:2010s": {
+   "throwPower": 57,
+   "ovr": 68,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:gardner-minshew:JAX:2020s": {
+   "throwPower": 67,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:jacoby-brissett:CLE:2020s": {
+   "throwPower": 73,
+   "ovr": 76,
+   "traits": []
+  },
+  "players:tyrod-taylor:NYG:2020s": {
+   "throwPower": 72,
+   "ovr": 74,
+   "traits": [
+    "dual-threat"
+   ]
+  },
+  "players:jimmy-garoppolo:SF:2020s": {
+   "throwPower": 93,
+   "ovr": 83,
+   "traits": [
+    "cannon",
+    "laser"
+   ]
+  },
+  "players:derek-carr:NO:2020s": {
+   "throwPower": 74,
+   "ovr": 86,
+   "traits": [
+    "pre-snap-wizard"
+   ]
+  },
+  "players:zach-wilson:NYJ:2020s": {
+   "throwPower": 71,
+   "ovr": 48,
+   "traits": [
+    "sack-magnet",
+    "happy-feet"
+   ]
+  },
+  "players:desmond-ridder:ATL:2020s": {
+   "throwPower": 74,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:bill-munson:LAC:1970s": {
+   "throwPower": 74,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:joe-namath:NYJ:1970s": {
+   "throwPower": 94,
+   "ovr": 80,
+   "traits": [
+    "riverboat-gambler",
+    "cannon",
+    "unflappable",
+    "pre-snap-wizard"
+   ]
+  },
+  "players:bob-lee:ATL:1970s": {
+   "throwPower": 70,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:don-majkowski:GB:1990s": {
+   "throwPower": 73,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:billy-volek:TEN:2000s": {
+   "throwPower": 62,
+   "ovr": 66,
+   "traits": [
+    "game-manager"
+   ]
+  },
+  "players:matt-moore:MIA:2010s": {
+   "throwPower": 73,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:blaine-gabbert:JAX:2010s": {
+   "throwPower": 50,
+   "ovr": 45,
+   "traits": [
+    "happy-feet",
+    "noodle-arm"
+   ]
+  },
+  "players:joshua-dobbs:ARI:2020s": {
+   "throwPower": 58,
+   "ovr": 70,
+   "traits": [
+    "run-pass-nightmare",
+    "noodle-arm"
+   ]
+  },
+  "players:andy-dalton:CAR:2020s": {
+   "throwPower": 60,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:mike-phipps:CHI:1970s": {
+   "throwPower": 71,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:bobby-scott:NO:1970s": {
+   "throwPower": 70,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:gary-marangi:BUF:1970s": {
+   "throwPower": 65,
+   "ovr": 53,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:clint-longley:DAL:1970s": {
+   "throwPower": 69,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:jerry-tagge:GB:1970s": {
+   "throwPower": 68,
+   "ovr": 59,
+   "traits": []
+  },
+  "players:joe-gilliam:PIT:1970s": {
+   "throwPower": 73,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:mike-rae:LV:1970s": {
+   "throwPower": 70,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:david-humm:LV:1970s": {
+   "throwPower": 65,
+   "ovr": 62,
+   "traits": []
+  },
+  "players:sammy-baugh:WAS:1980s": {
+   "throwPower": 63,
+   "ovr": 59,
+   "traits": []
+  },
+  "players:greg-landry:IND:1980s": {
+   "throwPower": 65,
+   "ovr": 72,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:blair-kiel:GB:1980s": {
+   "throwPower": 62,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:gino-torretta:SEA:1990s": {
+   "throwPower": 64,
+   "ovr": 51,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:mike-buck:NO:1990s": {
+   "throwPower": 67,
+   "ovr": 59,
+   "traits": []
+  },
+  "players:steve-walsh:CHI:1990s": {
+   "throwPower": 67,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:jay-schroeder:ARI:1990s": {
+   "throwPower": 70,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:jeff-hostetler:LV:1990s": {
+   "throwPower": 75,
+   "ovr": 77,
+   "traits": []
+  },
+  "players:mike-pawlawski:TB:1990s": {
+   "throwPower": 66,
+   "ovr": 58,
+   "traits": []
+  },
+  "players:tony-sacca:ARI:1990s": {
+   "throwPower": 63,
+   "ovr": 48,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:doug-johnson:ATL:2000s": {
+   "throwPower": 73,
+   "ovr": 58,
+   "traits": [
+    "turnover-machine",
+    "happy-feet"
+   ]
+  },
+  "players:shaun-king:TB:2000s": {
+   "throwPower": 65,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:chris-weinke:CAR:2000s": {
+   "throwPower": 49,
+   "ovr": 46,
+   "traits": [
+    "noodle-arm",
+    "statue"
+   ]
+  },
+  "players:spergon-wynn:CLE:2000s": {
+   "throwPower": 29,
+   "ovr": 44,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:craig-nall:GB:2000s": {
+   "throwPower": 66,
+   "ovr": 68,
+   "traits": [
+    "game-manager"
+   ]
+  },
+  "players:kellen-clemens:LAR:2010s": {
+   "throwPower": 68,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:matt-mcgloin:LV:2010s": {
+   "throwPower": 67,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:thad-lewis:BUF:2010s": {
+   "throwPower": 72,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:scott-tolzien:IND:2010s": {
+   "throwPower": 64,
+   "ovr": 62,
+   "traits": []
+  },
+  "players:brett-hundley:GB:2010s": {
+   "throwPower": 46,
+   "ovr": 46,
+   "traits": [
+    "noodle-arm",
+    "happy-feet",
+    "dual-threat"
+   ]
+  },
+  "players:will-levis:TEN:2020s": {
+   "throwPower": 78,
+   "ovr": 58,
+   "traits": [
+    "sack-magnet",
+    "happy-feet"
+   ]
+  },
+  "players:tommy-devito:NYG:2020s": {
+   "throwPower": 53,
+   "ovr": 67,
+   "traits": [
+    "sack-magnet",
+    "noodle-arm",
+    "game-manager"
+   ]
+  },
+  "players:jake-browning:CIN:2020s": {
+   "throwPower": 68,
+   "ovr": 67,
+   "traits": [
+    "turnover-machine"
+   ]
+  },
+  "players:dorian-thompson-robinson:CLE:2020s": {
+   "throwPower": 25,
+   "ovr": 34,
+   "traits": [
+    "noodle-arm",
+    "turnover-machine"
+   ]
+  },
+  "players:nathan-rourke:NE:2020s": {
+   "throwPower": 69,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:steve-young:TB:1980s": {
+   "throwPower": 69,
+   "ovr": 68,
+   "traits": [
+    "dual-threat"
+   ]
+  },
+  "players:joe-montana:KC:1990s": {
+   "throwPower": 78,
+   "ovr": 87,
+   "traits": [
+    "climber",
+    "pre-snap-wizard",
+    "field-general",
+    "ice-veins"
+   ]
+  },
+  "players:johnny-unitas:LAC:1970s": {
+   "throwPower": 73,
+   "ovr": 71,
+   "traits": []
+  },
+  "players:warren-moon:MIN:1990s": {
+   "throwPower": 80,
+   "ovr": 86,
+   "traits": [
+    "volume-passer",
+    "unflappable",
+    "pre-snap-wizard",
+    "field-general"
+   ]
+  },
+  "players:warren-moon:SEA:1990s": {
+   "throwPower": 74,
+   "ovr": 82,
+   "traits": []
+  },
+  "players:kurt-warner:NYG:2000s": {
+   "throwPower": 75,
+   "ovr": 78,
+   "traits": [
+    "sack-magnet",
+    "statue"
+   ]
+  },
+  "players:carson-palmer:LV:2010s": {
+   "throwPower": 88,
+   "ovr": 76,
+   "traits": [
+    "gunslinger",
+    "climber",
+    "cannon"
+   ]
+  },
+  "players:michael-vick:PHI:2010s": {
+   "throwPower": 93,
+   "ovr": 83,
+   "traits": [
+    "run-pass-nightmare",
+    "cannon",
+    "off-platform"
+   ]
+  },
+  "players:carson-wentz:IND:2020s": {
+   "throwPower": 75,
+   "ovr": 80,
+   "traits": []
+  },
+  "players:matt-ryan:IND:2020s": {
+   "throwPower": 64,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:mason-rudolph:TEN:2020s": {
+   "throwPower": 66,
+   "ovr": 65,
+   "traits": [
+    "turnover-machine"
+   ]
+  },
+  "players:drew-lock:NYG:2020s": {
+   "throwPower": 61,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:mac-jones:JAX:2020s": {
+   "throwPower": 59,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:kenny-pickett:PHI:2020s": {
+   "throwPower": 65,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:malik-willis:GB:2020s": {
+   "throwPower": 88,
+   "ovr": 83,
+   "traits": [
+    "game-manager",
+    "laser",
+    "cannon"
+   ]
+  },
+  "players:spencer-rattler:NO:2020s": {
+   "throwPower": 55,
+   "ovr": 59,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:michael-penix-jr:ATL:2020s": {
+   "throwPower": 85,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:jacoby-brissett:NE:2020s": {
+   "throwPower": 52,
+   "ovr": 65,
+   "traits": [
+    "noodle-arm",
+    "game-manager"
+   ]
+  },
+  "players:karl-sweetan:LAR:1970s": {
+   "throwPower": 65,
+   "ovr": 64,
+   "traits": []
+  },
+  "players:bobby-douglass:NO:1970s": {
+   "throwPower": 67,
+   "ovr": 64,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:john-reaves:CIN:1970s": {
+   "throwPower": 70,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:edd-hargett:TEN:1970s": {
+   "throwPower": 69,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:norm-snead:SF:1970s": {
+   "throwPower": 74,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:jim-del-gaizo:MIA:1970s": {
+   "throwPower": 65,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:rusty-hilger:LV:1980s": {
+   "throwPower": 66,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:bubby-brister:PIT:1990s": {
+   "throwPower": 73,
+   "ovr": 69,
+   "traits": []
+  },
+  "players:wade-wilson:DAL:1990s": {
+   "throwPower": 70,
+   "ovr": 70,
+   "traits": []
+  },
+  "players:david-klingler:CIN:1990s": {
+   "throwPower": 70,
+   "ovr": 56,
+   "traits": [
+    "happy-feet"
+   ]
+  },
+  "players:craig-erickson:TB:1990s": {
+   "throwPower": 72,
+   "ovr": 63,
+   "traits": []
+  },
+  "players:jay-fiedler:MIA:2000s": {
+   "throwPower": 79,
+   "ovr": 71,
+   "traits": [
+    "turnover-machine"
+   ]
+  },
+  "players:rodney-peete:CAR:2000s": {
+   "throwPower": 75,
+   "ovr": 68,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:jeff-blake:BAL:2000s": {
+   "throwPower": 84,
+   "ovr": 70,
+   "traits": [
+    "gunslinger"
+   ]
+  },
+  "players:brian-st-pierre:PIT:2000s": {
+   "throwPower": 69,
+   "ovr": 65,
+   "traits": []
+  },
+  "players:vinny-testaverde:DAL:2000s": {
+   "throwPower": 76,
+   "ovr": 69,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:akili-smith:CIN:2000s": {
+   "throwPower": 51,
+   "ovr": 46,
+   "traits": [
+    "happy-feet",
+    "noodle-arm"
+   ]
+  },
+  "players:charlie-whitehurst:LAC:2010s": {
+   "throwPower": 69,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:bruce-gradkowski:CIN:2010s": {
+   "throwPower": 65,
+   "ovr": 67,
+   "traits": []
+  },
+  "players:jimmy-clausen:CAR:2010s": {
+   "throwPower": 45,
+   "ovr": 37,
+   "traits": [
+    "happy-feet",
+    "noodle-arm"
+   ]
+  },
+  "players:colt-mccoy:CLE:2010s": {
+   "throwPower": 57,
+   "ovr": 60,
+   "traits": [
+    "noodle-arm",
+    "happy-feet"
+   ]
+  },
+  "players:ryan-mallett:HOU:2010s": {
+   "throwPower": 53,
+   "ovr": 55,
+   "traits": [
+    "statue",
+    "climber",
+    "noodle-arm"
+   ]
+  },
+  "players:bryce-petty:NYJ:2010s": {
+   "throwPower": 56,
+   "ovr": 42,
+   "traits": [
+    "happy-feet",
+    "noodle-arm"
+   ]
+  },
+  "players:tyson-bagent:CHI:2020s": {
+   "throwPower": 50,
+   "ovr": 60,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:tyrod-taylor:NYJ:2020s": {
+   "throwPower": 55,
+   "ovr": 66,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:mike-white:MIA:2020s": {
+   "throwPower": 39,
+   "ovr": 67,
+   "traits": [
+    "noodle-arm",
+    "game-manager",
+    "statue"
+   ]
+  },
+  "players:davis-mills:HOU:2020s": {
+   "throwPower": 60,
+   "ovr": 62,
+   "traits": []
+  },
+  "players:clayton-tune:ARI:2020s": {
+   "throwPower": 22,
+   "ovr": 49,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:joe-kapp:NE:1970s": {
+   "throwPower": 70,
+   "ovr": 66,
+   "traits": []
+  },
+  "players:jim-zorn:SEA:1970s": {
+   "throwPower": 78,
+   "ovr": 73,
+   "traits": []
+  },
+  "players:dave-krieg:ARI:1990s": {
+   "throwPower": 72,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:matthew-stafford:DET:2010s": {
+   "throwPower": 82,
+   "ovr": 83,
+   "traits": [
+    "volume-passer"
+   ]
+  },
+  "players:tony-romo:DAL:2010s": {
+   "throwPower": 81,
+   "ovr": 88,
+   "traits": [
+    "efficiency-king",
+    "surgeon",
+    "climber",
+    "deep-ball-artist"
+   ]
+  },
+  "players:matt-ryan:ATL:2020s": {
+   "throwPower": 77,
+   "ovr": 77,
+   "traits": []
+  },
+  "players:alex-smith:SF:2000s": {
+   "throwPower": 59,
+   "ovr": 55,
+   "traits": [
+    "happy-feet",
+    "noodle-arm"
+   ]
+  },
+  "players:josh-freeman:TB:2010s": {
+   "throwPower": 80,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:baker-mayfield:CLE:2010s": {
+   "throwPower": 87,
+   "ovr": 68,
+   "traits": [
+    "riverboat-gambler"
+   ]
+  },
+  "players:lamar-jackson:BAL:2010s": {
+   "throwPower": 79,
+   "ovr": 94,
+   "traits": [
+    "run-pass-nightmare",
+    "maestro",
+    "deep-ball-artist",
+    "red-zone-sniper"
+   ]
+  },
+  "players:josh-allen:BUF:2010s": {
+   "throwPower": 75,
+   "ovr": 60,
+   "traits": [
+    "designed-runner",
+    "off-platform"
+   ]
+  },
+  "players:russell-wilson:SEA:2020s": {
+   "throwPower": 85,
+   "ovr": 89,
+   "traits": [
+    "backyard-ball",
+    "red-zone-sniper",
+    "deep-ball-artist",
+    "field-general"
+   ]
+  },
+  "players:cam-newton:CAR:2020s": {
+   "throwPower": 58,
+   "ovr": 63,
+   "traits": [
+    "dual-threat",
+    "noodle-arm"
+   ]
+  },
+  "players:kurt-warner:LAR:2000s": {
+   "throwPower": 96,
+   "ovr": 91,
+   "traits": [
+    "bomb-squad",
+    "riverboat-gambler",
+    "maestro",
+    "climber"
+   ]
+  },
+  "players:ben-roethlisberger:PIT:2020s": {
+   "throwPower": 56,
+   "ovr": 77,
+   "traits": [
+    "climber",
+    "statue",
+    "pre-snap-wizard",
+    "noodle-arm"
+   ]
+  },
+  "players:drew-brees:NO:2020s": {
+   "throwPower": 72,
+   "ovr": 83,
+   "traits": [
+    "statue",
+    "climber",
+    "pre-snap-wizard"
+   ]
+  },
+  "players:aaron-rodgers:GB:2000s": {
+   "throwPower": 90,
+   "ovr": 88,
+   "traits": [
+    "bomb-squad",
+    "efficiency-king",
+    "laser",
+    "surgeon"
+   ]
+  },
+  "players:joe-namath:LAR:1970s": {
+   "throwPower": 73,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:joe-flacco:DEN:2010s": {
+   "throwPower": 66,
+   "ovr": 72,
+   "traits": []
+  },
+  "players:warren-moon:KC:1990s": {
+   "throwPower": 61,
+   "ovr": 68,
+   "traits": []
+  },
+  "players:vinny-testaverde:BAL:1990s": {
+   "throwPower": 86,
+   "ovr": 84,
+   "traits": [
+    "volume-passer",
+    "climber",
+    "laser"
+   ]
+  },
+  "players:randall-cunningham:PHI:1980s": {
+   "throwPower": 73,
+   "ovr": 82,
+   "traits": [
+    "run-pass-nightmare",
+    "sack-magnet",
+    "off-platform"
+   ]
+  },
+  "players:randall-cunningham:MIN:1990s": {
+   "throwPower": 94,
+   "ovr": 91,
+   "traits": [
+    "bomb-squad",
+    "red-zone-sniper",
+    "maestro",
+    "unflappable"
+   ]
+  },
+  "players:rich-gannon:MIN:1990s": {
+   "throwPower": 67,
+   "ovr": 78,
+   "traits": [
+    "off-platform",
+    "game-manager",
+    "dual-threat"
+   ]
+  },
+  "players:ken-anderson:CIN:1980s": {
+   "throwPower": 71,
+   "ovr": 92,
+   "traits": [
+    "maestro",
+    "efficiency-king",
+    "off-platform",
+    "deep-ball-artist"
+   ]
+  },
+  "players:ken-stabler:TEN:1980s": {
+   "throwPower": 69,
+   "ovr": 66,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:ken-stabler:NO:1980s": {
+   "throwPower": 68,
+   "ovr": 63,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:bart-starr:GB:1970s": {
+   "throwPower": 71,
+   "ovr": 73,
+   "traits": [
+    "statue",
+    "game-manager"
+   ]
+  },
+  "players:craig-morton:DAL:1970s": {
+   "throwPower": 75,
+   "ovr": 77,
+   "traits": []
+  },
+  "players:jim-everett:LAR:1980s": {
+   "throwPower": 92,
+   "ovr": 86,
+   "traits": [
+    "unflappable",
+    "cannon",
+    "climber",
+    "efficiency-king"
+   ]
+  },
+  "players:neil-o-donnell:NYJ:1990s": {
+   "throwPower": 71,
+   "ovr": 75,
+   "traits": []
+  },
+  "players:neil-o-donnell:TEN:1990s": {
+   "throwPower": 72,
+   "ovr": 78,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:elvis-grbac:BAL:2000s": {
+   "throwPower": 73,
+   "ovr": 67,
+   "traits": [
+    "statue"
+   ]
+  },
+  "players:kordell-stewart:PIT:2000s": {
+   "throwPower": 74,
+   "ovr": 76,
+   "traits": [
+    "designed-runner"
+   ]
+  },
+  "players:kordell-stewart:CHI:2000s": {
+   "throwPower": 67,
+   "ovr": 57,
+   "traits": [
+    "designed-runner",
+    "happy-feet"
+   ]
+  },
+  "players:robert-griffin-iii:BAL:2010s": {
+   "throwPower": 47,
+   "ovr": 61,
+   "traits": [
+    "noodle-arm"
+   ]
+  },
+  "players:chad-pennington:MIA:2000s": {
+   "throwPower": 72,
+   "ovr": 84,
+   "traits": [
+    "climber"
+   ]
+  },
+  "players:teddy-bridgewater:NO:2010s": {
+   "throwPower": 57,
+   "ovr": 74,
+   "traits": [
+    "game-manager",
+    "noodle-arm"
+   ]
+  },
+  "players:teddy-bridgewater:CAR:2020s": {
+   "throwPower": 75,
+   "ovr": 74,
+   "traits": []
+  },
+  "players:justin-fields:PIT:2020s": {
+   "throwPower": 62,
+   "ovr": 75,
+   "traits": [
+    "run-pass-nightmare",
+    "game-manager"
+   ]
+  }
+ }
+}

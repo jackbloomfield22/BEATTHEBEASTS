@@ -1,0 +1,480 @@
+{
+ "_meta": {
+  "what": "League fumble rate per season: fumbles ÷ touches (carries + receptions) of running backs with 100+ touches. The era baseline for Ball Security.",
+  "generatedBy": "tools/augment/fumbles.ts",
+  "sources": {
+   "1999+": "nflverse weekly player stats (CC-BY-4.0), REG weeks, position RB/FB, rushing_fumbles + receiving_fumbles",
+   "1970–1998": "Fantasy Index: \"Fumbles have almost become a non-issue in the NFL\" (2020-06-23), https://fantasyindex.com/2020/06/23/factoid/running-back-fumbles (retrieved 2026-09-23); table \"FUMBLE RATES, LAST 50 YEARS\"; definition quoted: \"I looked at all running backs who had at least 100 touches in each of those seasons.\"",
+   "1960–1969": "estimated: the pooled 1970, 1971, 1972 rate (2.46%)"
+  },
+  "crossCheck": {
+   "seasons": "1999–2019",
+   "meanGapPts": -0.047,
+   "note": "nflverse minus the cited table, percentage points, same definition"
+  }
+ },
+ "seasons": {
+  "1960": {
+   "rate": 0.02458,
+   "touches": 0,
+   "fumbles": 0,
+   "src": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure)",
+   "conf": "estimated"
+  },
+  "1961": {
+   "rate": 0.02458,
+   "touches": 0,
+   "fumbles": 0,
+   "src": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure)",
+   "conf": "estimated"
+  },
+  "1962": {
+   "rate": 0.02458,
+   "touches": 0,
+   "fumbles": 0,
+   "src": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure)",
+   "conf": "estimated"
+  },
+  "1963": {
+   "rate": 0.02458,
+   "touches": 0,
+   "fumbles": 0,
+   "src": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure)",
+   "conf": "estimated"
+  },
+  "1964": {
+   "rate": 0.02458,
+   "touches": 0,
+   "fumbles": 0,
+   "src": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure)",
+   "conf": "estimated"
+  },
+  "1965": {
+   "rate": 0.02458,
+   "touches": 0,
+   "fumbles": 0,
+   "src": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure)",
+   "conf": "estimated"
+  },
+  "1966": {
+   "rate": 0.02458,
+   "touches": 0,
+   "fumbles": 0,
+   "src": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure)",
+   "conf": "estimated"
+  },
+  "1967": {
+   "rate": 0.02458,
+   "touches": 0,
+   "fumbles": 0,
+   "src": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure)",
+   "conf": "estimated"
+  },
+  "1968": {
+   "rate": 0.02458,
+   "touches": 0,
+   "fumbles": 0,
+   "src": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure)",
+   "conf": "estimated"
+  },
+  "1969": {
+   "rate": 0.02458,
+   "touches": 0,
+   "fumbles": 0,
+   "src": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure)",
+   "conf": "estimated"
+  },
+  "1970": {
+   "rate": 0.02443,
+   "touches": 8147,
+   "fumbles": 199,
+   "src": "fantasyindex:rb-fumbles-2020 (1970 row: 199 fumbles / 8,147 touches)",
+   "conf": "reference"
+  },
+  "1971": {
+   "rate": 0.02568,
+   "touches": 9462,
+   "fumbles": 243,
+   "src": "fantasyindex:rb-fumbles-2020 (1971 row: 243 fumbles / 9,462 touches)",
+   "conf": "reference"
+  },
+  "1972": {
+   "rate": 0.02366,
+   "touches": 10102,
+   "fumbles": 239,
+   "src": "fantasyindex:rb-fumbles-2020 (1972 row: 239 fumbles / 10,102 touches)",
+   "conf": "reference"
+  },
+  "1973": {
+   "rate": 0.02656,
+   "touches": 10918,
+   "fumbles": 290,
+   "src": "fantasyindex:rb-fumbles-2020 (1973 row: 290 fumbles / 10,918 touches)",
+   "conf": "reference"
+  },
+  "1974": {
+   "rate": 0.02269,
+   "touches": 9827,
+   "fumbles": 223,
+   "src": "fantasyindex:rb-fumbles-2020 (1974 row: 223 fumbles / 9,827 touches)",
+   "conf": "reference"
+  },
+  "1975": {
+   "rate": 0.02602,
+   "touches": 11031,
+   "fumbles": 287,
+   "src": "fantasyindex:rb-fumbles-2020 (1975 row: 287 fumbles / 11,031 touches)",
+   "conf": "reference"
+  },
+  "1976": {
+   "rate": 0.02496,
+   "touches": 11861,
+   "fumbles": 296,
+   "src": "fantasyindex:rb-fumbles-2020 (1976 row: 296 fumbles / 11,861 touches)",
+   "conf": "reference"
+  },
+  "1977": {
+   "rate": 0.02273,
+   "touches": 11878,
+   "fumbles": 270,
+   "src": "fantasyindex:rb-fumbles-2020 (1977 row: 270 fumbles / 11,878 touches)",
+   "conf": "reference"
+  },
+  "1978": {
+   "rate": 0.02303,
+   "touches": 13371,
+   "fumbles": 308,
+   "src": "fantasyindex:rb-fumbles-2020 (1978 row: 308 fumbles / 13,371 touches)",
+   "conf": "reference"
+  },
+  "1979": {
+   "rate": 0.02212,
+   "touches": 12927,
+   "fumbles": 286,
+   "src": "fantasyindex:rb-fumbles-2020 (1979 row: 286 fumbles / 12,927 touches)",
+   "conf": "reference"
+  },
+  "1980": {
+   "rate": 0.02107,
+   "touches": 12293,
+   "fumbles": 259,
+   "src": "fantasyindex:rb-fumbles-2020 (1980 row: 259 fumbles / 12,293 touches)",
+   "conf": "reference"
+  },
+  "1981": {
+   "rate": 0.02397,
+   "touches": 11974,
+   "fumbles": 287,
+   "src": "fantasyindex:rb-fumbles-2020 (1981 row: 287 fumbles / 11,974 touches)",
+   "conf": "reference"
+  },
+  "1982": {
+   "rate": 0.02235,
+   "touches": 5056,
+   "fumbles": 113,
+   "src": "fantasyindex:rb-fumbles-2020 (1982 row: 113 fumbles / 5,056 touches)",
+   "conf": "reference"
+  },
+  "1983": {
+   "rate": 0.02231,
+   "touches": 12328,
+   "fumbles": 275,
+   "src": "fantasyindex:rb-fumbles-2020 (1983 row: 275 fumbles / 12,328 touches)",
+   "conf": "reference"
+  },
+  "1984": {
+   "rate": 0.02155,
+   "touches": 11877,
+   "fumbles": 256,
+   "src": "fantasyindex:rb-fumbles-2020 (1984 row: 256 fumbles / 11,877 touches)",
+   "conf": "reference"
+  },
+  "1985": {
+   "rate": 0.01983,
+   "touches": 12457,
+   "fumbles": 247,
+   "src": "fantasyindex:rb-fumbles-2020 (1985 row: 247 fumbles / 12,457 touches)",
+   "conf": "reference"
+  },
+  "1986": {
+   "rate": 0.02066,
+   "touches": 11229,
+   "fumbles": 232,
+   "src": "fantasyindex:rb-fumbles-2020 (1986 row: 232 fumbles / 11,229 touches)",
+   "conf": "reference"
+  },
+  "1987": {
+   "rate": 0.01867,
+   "touches": 7982,
+   "fumbles": 149,
+   "src": "fantasyindex:rb-fumbles-2020 (1987 row: 149 fumbles / 7,982 touches)",
+   "conf": "reference"
+  },
+  "1988": {
+   "rate": 0.02051,
+   "touches": 11363,
+   "fumbles": 233,
+   "src": "fantasyindex:rb-fumbles-2020 (1988 row: 233 fumbles / 11,363 touches)",
+   "conf": "reference"
+  },
+  "1989": {
+   "rate": 0.01861,
+   "touches": 10640,
+   "fumbles": 198,
+   "src": "fantasyindex:rb-fumbles-2020 (1989 row: 198 fumbles / 10,640 touches)",
+   "conf": "reference"
+  },
+  "1990": {
+   "rate": 0.02109,
+   "touches": 9767,
+   "fumbles": 206,
+   "src": "fantasyindex:rb-fumbles-2020 (1990 row: 206 fumbles / 9,767 touches)",
+   "conf": "reference"
+  },
+  "1991": {
+   "rate": 0.01622,
+   "touches": 9739,
+   "fumbles": 158,
+   "src": "fantasyindex:rb-fumbles-2020 (1991 row: 158 fumbles / 9,739 touches)",
+   "conf": "reference"
+  },
+  "1992": {
+   "rate": 0.01619,
+   "touches": 10189,
+   "fumbles": 165,
+   "src": "fantasyindex:rb-fumbles-2020 (1992 row: 165 fumbles / 10,189 touches)",
+   "conf": "reference"
+  },
+  "1993": {
+   "rate": 0.01419,
+   "touches": 10430,
+   "fumbles": 148,
+   "src": "fantasyindex:rb-fumbles-2020 (1993 row: 148 fumbles / 10,430 touches)",
+   "conf": "reference"
+  },
+  "1994": {
+   "rate": 0.01332,
+   "touches": 11039,
+   "fumbles": 147,
+   "src": "fantasyindex:rb-fumbles-2020 (1994 row: 147 fumbles / 11,039 touches)",
+   "conf": "reference"
+  },
+  "1995": {
+   "rate": 0.01453,
+   "touches": 11217,
+   "fumbles": 163,
+   "src": "fantasyindex:rb-fumbles-2020 (1995 row: 163 fumbles / 11,217 touches)",
+   "conf": "reference"
+  },
+  "1996": {
+   "rate": 0.01288,
+   "touches": 11024,
+   "fumbles": 142,
+   "src": "fantasyindex:rb-fumbles-2020 (1996 row: 142 fumbles / 11,024 touches)",
+   "conf": "reference"
+  },
+  "1997": {
+   "rate": 0.01312,
+   "touches": 11430,
+   "fumbles": 150,
+   "src": "fantasyindex:rb-fumbles-2020 (1997 row: 150 fumbles / 11,430 touches)",
+   "conf": "reference"
+  },
+  "1998": {
+   "rate": 0.01125,
+   "touches": 11021,
+   "fumbles": 124,
+   "src": "fantasyindex:rb-fumbles-2020 (1998 row: 124 fumbles / 11,021 touches)",
+   "conf": "reference"
+  },
+  "1999": {
+   "rate": 0.01307,
+   "touches": 10711,
+   "fumbles": 140,
+   "src": "nflverse:stats_player_week 1999 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2000": {
+   "rate": 0.01295,
+   "touches": 11270,
+   "fumbles": 146,
+   "src": "nflverse:stats_player_week 2000 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2001": {
+   "rate": 0.01181,
+   "touches": 11178,
+   "fumbles": 132,
+   "src": "nflverse:stats_player_week 2001 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2002": {
+   "rate": 0.01205,
+   "touches": 12368,
+   "fumbles": 149,
+   "src": "nflverse:stats_player_week 2002 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2003": {
+   "rate": 0.0125,
+   "touches": 12396,
+   "fumbles": 155,
+   "src": "nflverse:stats_player_week 2003 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2004": {
+   "rate": 0.01151,
+   "touches": 11639,
+   "fumbles": 134,
+   "src": "nflverse:stats_player_week 2004 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2005": {
+   "rate": 0.00966,
+   "touches": 12113,
+   "fumbles": 117,
+   "src": "nflverse:stats_player_week 2005 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2006": {
+   "rate": 0.01075,
+   "touches": 12657,
+   "fumbles": 136,
+   "src": "nflverse:stats_player_week 2006 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2007": {
+   "rate": 0.00988,
+   "touches": 11848,
+   "fumbles": 117,
+   "src": "nflverse:stats_player_week 2007 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2008": {
+   "rate": 0.01023,
+   "touches": 12125,
+   "fumbles": 124,
+   "src": "nflverse:stats_player_week 2008 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2009": {
+   "rate": 0.01157,
+   "touches": 11755,
+   "fumbles": 136,
+   "src": "nflverse:stats_player_week 2009 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2010": {
+   "rate": 0.01141,
+   "touches": 11745,
+   "fumbles": 134,
+   "src": "nflverse:stats_player_week 2010 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2011": {
+   "rate": 0.00932,
+   "touches": 11368,
+   "fumbles": 106,
+   "src": "nflverse:stats_player_week 2011 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2012": {
+   "rate": 0.01065,
+   "touches": 10890,
+   "fumbles": 116,
+   "src": "nflverse:stats_player_week 2012 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2013": {
+   "rate": 0.00901,
+   "touches": 10992,
+   "fumbles": 99,
+   "src": "nflverse:stats_player_week 2013 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2014": {
+   "rate": 0.00849,
+   "touches": 10371,
+   "fumbles": 88,
+   "src": "nflverse:stats_player_week 2014 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2015": {
+   "rate": 0.01058,
+   "touches": 10587,
+   "fumbles": 112,
+   "src": "nflverse:stats_player_week 2015 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2016": {
+   "rate": 0.00865,
+   "touches": 11093,
+   "fumbles": 96,
+   "src": "nflverse:stats_player_week 2016 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2017": {
+   "rate": 0.00791,
+   "touches": 11119,
+   "fumbles": 88,
+   "src": "nflverse:stats_player_week 2017 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2018": {
+   "rate": 0.00682,
+   "touches": 10844,
+   "fumbles": 74,
+   "src": "nflverse:stats_player_week 2018 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2019": {
+   "rate": 0.00833,
+   "touches": 10809,
+   "fumbles": 90,
+   "src": "nflverse:stats_player_week 2019 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2020": {
+   "rate": 0.00824,
+   "touches": 10564,
+   "fumbles": 87,
+   "src": "nflverse:stats_player_week 2020 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2021": {
+   "rate": 0.00779,
+   "touches": 11044,
+   "fumbles": 86,
+   "src": "nflverse:stats_player_week 2021 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2022": {
+   "rate": 0.00825,
+   "touches": 11034,
+   "fumbles": 91,
+   "src": "nflverse:stats_player_week 2022 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2023": {
+   "rate": 0.00765,
+   "touches": 11758,
+   "fumbles": 90,
+   "src": "nflverse:stats_player_week 2023 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2024": {
+   "rate": 0.00853,
+   "touches": 11137,
+   "fumbles": 95,
+   "src": "nflverse:stats_player_week 2024 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  },
+  "2025": {
+   "rate": 0.00651,
+   "touches": 11669,
+   "fumbles": 76,
+   "src": "nflverse:stats_player_week 2025 (REG, RB/FB with 100+ touches)",
+   "conf": "verified"
+  }
+ }
+}

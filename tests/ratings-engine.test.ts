@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { DEFENSE, OL_UNITS, PLAYERS } from '@data/legacy';
 import { applyCorrections, validateCorrectionsFile, type CorrectionsFile } from '@/engine/data/corrections';
-import { IMP_MAX_SHARE, SKILL_ATTRS } from '@/engine/ratings/attributes';
-import { OVR_WEIGHTS } from '@/engine/ratings/ovrWeights';
+import { CAPPED_SIGNALS, IMP_MAX_SHARE, SKILL_ATTRS } from '@/engine/ratings/attributes';
+import { OVR_WEIGHTS, OVR_WEIGHTS_SET, PHYSICAL_CAPPED_POS, PHYSICAL_OVR_CAP, physicalExposure, physicalShare } from '@/engine/ratings/ovrWeights';
 import { composeFromZ, normInv, poolScale, sumContributions, zToRating } from '@/engine/ratings/scale';
 import { SIGNALS } from '@/engine/ratings/signals';
 import { gamesPerSeason, passerRating, pickFive, type OlRosterLineman } from '@/engine/ratings/inputs';
@@ -24,6 +24,11 @@ describe('attribute definitions', () => {
         const imp = def.terms.filter((t) => (typeof t.s === 'string' ? [t.s] : t.s).includes('imp')).reduce((a, t) => a + t.w, 0);
         expect(imp / total).toBeLessThanOrEqual(IMP_MAX_SHARE + 1e-12);
         expect(def.terms.filter((t) => (typeof t.s === 'string' ? [t.s] : t.s).includes('imp')).length).toBeLessThanOrEqual(1);
+        // Every hand-set grade follows the same rule (the TE block grade since the ratings follow-up).
+        for (const [key, share] of Object.entries(CAPPED_SIGNALS)) {
+          const w = def.terms.filter((t) => (typeof t.s === 'string' ? [t.s] : t.s).includes(key)).reduce((a, t) => a + t.w, 0);
+          expect(w / total, `${pos} ${def.key} ${key}`).toBeLessThanOrEqual(share + 1e-12);
+        }
       });
     }
   }
@@ -42,6 +47,23 @@ describe('attribute definitions', () => {
       expect(Object.values(w).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9);
       for (const k of Object.keys(w)) expect(SKILL_ATTRS[pos].some((d) => d.key === k) || physical.includes(k), `${pos} OVR uses ${k}`).toBe(true);
     }
+  });
+
+  it('WR and TE OVR: raw physical attributes carry at most 8% (directly or through a skill formula)', () => {
+    for (const pos of PHYSICAL_CAPPED_POS) {
+      expect(physicalExposure(pos, OVR_WEIGHTS_SET[pos])).toBeGreaterThan(PHYSICAL_OVR_CAP);
+      expect(physicalExposure(pos, OVR_WEIGHTS[pos])).toBeCloseTo(PHYSICAL_OVR_CAP, 9);
+      const w = OVR_WEIGHTS[pos];
+      const set = OVR_WEIGHTS_SET[pos];
+      expect(Object.keys(w).sort()).toEqual(Object.keys(set).sort());
+      for (const [k, v] of Object.entries(w)) {
+        // Physical parts only lose weight; pure skills gain in proportion to their set weight.
+        if (physicalShare(pos, k) > 0) expect(v, `${pos} ${k}`).toBeLessThan(set[k]!);
+        else expect(v / set[k]!, `${pos} ${k}`).toBeCloseTo(w.catching! / set.catching!, 9);
+      }
+    }
+    // Other positions keep their weights as set.
+    for (const pos of POSITIONS.filter((p) => !PHYSICAL_CAPPED_POS.includes(p))) expect(OVR_WEIGHTS[pos]).toBe(OVR_WEIGHTS_SET[pos]);
   });
 });
 

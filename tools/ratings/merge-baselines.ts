@@ -24,6 +24,13 @@ interface Row {
 
 const post = read('data/augment/era_baselines_1999plus.json') as { _meta: Row; seasons: Record<string, Row> };
 const pre = read('data/augment/era_baselines_pre1999.json') as { _meta: Row; seasons: Record<string, Row> };
+// League RB fumble rate per season (tools/augment/fumbles.ts): the Ball Security baseline.
+const fumbles = read('data/augment/league_fumbles.json') as { seasons: Record<string, { rate: number; src: string; conf: string }> };
+const fumbleFields = (y: string): Row => {
+  const f = fumbles.seasons[y];
+  if (!f) throw new Error(`league_fumbles.json has no ${y}`);
+  return { rbFumblesPerTouch: f.rate, fumbleSrc: `${f.src} [${f.conf}]` };
+};
 
 const FIELDS = [
   'cmpPct',
@@ -88,8 +95,10 @@ for (const [y, r] of Object.entries(pre.seasons)) {
     row.yardsPerTarget = +(num(row, 'ypa') + yptGap).toFixed(3);
     row.targetsNote = `catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+${catchGap.toFixed(2)} pts, +${yptGap.toFixed(3)} yds)`;
   }
+  Object.assign(row, fumbleFields(y));
   const afl = r.afl as Row | undefined;
-  if (afl) row.afl = { ...norm(afl), gamesPerTeam: afl.gamesPerTeam, src: row.src, conf: 'estimated' };
+  // No separate AFL fumble figure exists; the AFL row uses the same league-wide estimate.
+  if (afl) row.afl = { ...norm(afl), gamesPerTeam: afl.gamesPerTeam, ...fumbleFields(y), src: row.src, conf: 'estimated' };
   seasons[y] = row;
 }
 for (const [y, r] of Object.entries(post.seasons)) {
@@ -100,6 +109,7 @@ for (const [y, r] of Object.entries(post.seasons)) {
     gamesPerTeam: Math.round(num(r, 'teamGames') / num(r, 'teams')),
     sacksOfficial: true,
     ...norm(r),
+    ...fumbleFields(y),
     src: String(r.src ?? 'nflverse'),
     conf: 'verified',
   };
@@ -113,6 +123,7 @@ const out = {
     sources: {
       '1960–1998': 'data/augment/era_baselines_pre1999.json (estimated from knowledge of published league averages; flagged, verify)',
       '1999+': 'data/augment/era_baselines_1999plus.json (computed from nflverse player stats, CC-BY-4.0)',
+      rbFumblesPerTouch: 'data/augment/league_fumbles.json (tools/augment/fumbles.ts): RBs with 100+ touches; nflverse 1999+, Fantasy Index table 1970–1998, estimated 1960s; per-season source in fumbleSrc',
     },
     targetsGap: { catchRate: +catchGap.toFixed(3), yardsPerTarget: +yptGap.toFixed(4) },
   },

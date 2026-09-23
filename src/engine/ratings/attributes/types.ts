@@ -49,9 +49,49 @@ export type PositionAttrs = Partial<Record<RatedPos, readonly SkillAttrDef[]>>;
 export const IMP_MAX_SHARE = 0.2;
 
 /**
+ * Hand-set legacy grades whose weight in any attribute definition is capped
+ * at this share (tests/ratings-engine.test.ts checks every definition).
+ *   imp      legacy reputation score (BRIEF "Stats first, reputation second":
+ *            "worth no more than 20%").
+ *   w_block  legacy TE block grade `b` (ratings follow-up, user-approved: cap
+ *            it at 20% of each TE blocking attribute). It was 40% of TE Run
+ *            Block, 35% of Pass Block and 25% of Impact Block.
+ */
+export const CAPPED_SIGNALS: Readonly<Record<string, number>> = { imp: IMP_MAX_SHARE, w_block: 0.2 };
+
+/**
+ * Grades that are also capped per player (engine.ts): the term may amplify
+ * the other evidence by at most a quarter of what points the same way (so
+ * ≤ 20% of the attribute's movement), and can't make or overturn a rating.
+ * Only `imp`. The TE block grade had this cap for one round and the user
+ * dropped it (PR #3 round 2): TE blocking has no stat, so its other inputs
+ * are body and strength, and the per-player cap let a big frame overrule the
+ * grades of a known great blocker (Kittle) and a known poor one (Winslow).
+ * The block grade keeps its 20% weight cap and its direction.
+ */
+export const PLAYER_CAPPED_SIGNALS: Readonly<Record<string, number>> = { imp: IMP_MAX_SHARE };
+
+/**
+ * Caps the weight of one term at `share` of the formula and moves the excess
+ * to the other terms in proportion to their weights, except the capped
+ * signals (reputation never gains weight). Keeps the formula summing to 1.
+ */
+export function capTermWeight(terms: readonly TermDef[], key: string, share: number): TermDef[] {
+  const keys = (t: TermDef) => (typeof t.s === 'string' ? [t.s] : t.s);
+  const total = terms.reduce((a, t) => a + t.w, 0);
+  const cur = terms.filter((t) => keys(t).includes(key)).reduce((a, t) => a + t.w, 0);
+  const excess = cur - share * total;
+  if (excess <= 0) return [...terms];
+  const gains = (t: TermDef) => !keys(t).some((k) => k in CAPPED_SIGNALS);
+  const pool = terms.filter(gains).reduce((a, t) => a + t.w, 0);
+  return terms.map((t) => (keys(t).includes(key) ? { s: t.s, w: (t.w * share * total) / cur } : gains(t) ? { s: t.s, w: t.w + (excess * t.w) / pool } : t));
+}
+
+/**
  * Missing inputs: a term with no data contributes 0 (the position average),
  * and part of its weight moves to the player's other evidence (stats, honors,
- * unit results; never body, physical or reputation terms).
+ * sourced scouting grades, unit results; never body, physical or reputation
+ * terms).
  * Present weights are scaled by (total / present)^MISSING_REWEIGHT, so a
  * player with half the inputs keeps most of what those inputs say instead of
  * being dragged to the average (which would favor data-rich modern eras),

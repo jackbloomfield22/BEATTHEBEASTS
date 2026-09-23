@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { rateAll } from '@/engine/ratings/engine';
-import { TRAIT_LABELS } from '@/engine/ratings/traits';
+import { detectSynergies, heldTraitIds, traitInfo, type RosterView } from '@/engine/ratings/traits';
 import type { AttributeResult, RatedEntry, RatedPos, RatingInputs } from '@/engine/ratings/types';
 import { ContributionBars, CONF_LABEL } from '@/ui/scouting/ContributionBars';
 import { ScoutingPanel } from '@/ui/scouting/ScoutingPanel';
+import { SynergyBadge, TraitList } from '@/ui/scouting/TraitBadge';
+import { TraitIcon } from '@/ui/scouting/traitIcons';
 import inputsUrl from '@data/ratings/inputs.v1.json?url';
 import { attrKeys, attrLabel, attrNote, buildModel, CARD_ATTRS, DECADES, pct, POSITIONS, toCsv, valueOf, type Model } from './model';
 import './explorer.css';
@@ -11,7 +13,8 @@ import './explorer.css';
 // Ratings Explorer (BRIEF "Tools for reviewing ratings"; TECH_PLAN §7):
 // search any stint, see every attribute with its contribution breakdown, the
 // real stats and era baseline behind it, percentiles all-time and within the
-// era, compare two players, filter/sort the pool by any attribute, export CSV.
+// era, compare two players (with their roster synergies), filter/sort the pool
+// by any attribute or trait, export CSV.
 // Ratings are computed live from data/ratings/inputs.v1.json, so what you see
 // is exactly what the engine produces.
 
@@ -37,6 +40,8 @@ export function RatingsExplorer() {
   const [pos, setPos] = useState<RatedPos | 'ALL'>('ALL');
   const [decade, setDecade] = useState<string>('ALL');
   const [lowOnly, setLowOnly] = useState(false);
+  /** Trait filter: a trait id, 'any' (at least one trait) or 'none' (no traits). */
+  const [trait, setTrait] = useState<string | null>(null);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'ovr', dir: -1 });
   const [selected, setSelected] = useState<string | null>(null);
   const [compare, setCompare] = useState<string | null>(null);
@@ -69,6 +74,7 @@ export function RatingsExplorer() {
         (pos === 'ALL' || e.pos === pos) &&
         (decade === 'ALL' || e.decade === decade) &&
         (!lowOnly || e.ovr.conf === 'low') &&
+        (!trait || (trait === 'any' ? e.traits.length > 0 : trait === 'none' ? e.traits.length === 0 : heldTraitIds(e.traits).includes(trait))) &&
         (!q || e.name.toLowerCase().includes(q) || e.team.toLowerCase() === q || e.id.includes(q)),
     );
     const k = sort.key;
@@ -79,7 +85,15 @@ export function RatingsExplorer() {
       return (typeof va === 'string' ? va.localeCompare(vb as string) : va - (vb as number)) * sort.dir;
     });
     return out;
-  }, [model, query, pos, decade, lowOnly, sort]);
+  }, [model, query, pos, decade, lowOnly, trait, sort]);
+
+  // Traits available at the selected position, with how many hold each.
+  const traitCounts = useMemo(() => {
+    if (!model || pos === 'ALL') return [];
+    const counts = new Map<string, number>();
+    for (const e of model.run.entries) if (e.pos === pos) for (const id of heldTraitIds(e.traits)) counts.set(id, (counts.get(id) ?? 0) + 1);
+    return [...counts].sort((a, b) => (traitInfo(a[0])?.label ?? '').localeCompare(traitInfo(b[0])?.label ?? ''));
+  }, [model, pos]);
 
   if (error) return <div className="rx-root rx-center">Could not load ratings: {error}. Run <code>npm run ratings</code>.</div>;
   if (!model) return <div className="rx-root rx-center">Rating {`>`}4,000 stints…</div>;
@@ -132,7 +146,14 @@ export function RatingsExplorer() {
             <input className="rx-search" placeholder="Search player, team code or id…" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
             <div className="rx-chips">
               {(['ALL', ...POSITIONS] as const).map((p) => (
-                <button key={p} className={`rx-chip ${pos === p ? 'is-on' : ''}`} onClick={() => setPos(p)}>
+                <button
+                  key={p}
+                  className={`rx-chip ${pos === p ? 'is-on' : ''}`}
+                  onClick={() => {
+                    setPos(p);
+                    setTrait(null);
+                  }}
+                >
                   {p === 'ALL' ? 'All' : p}
                 </button>
               ))}
@@ -146,6 +167,23 @@ export function RatingsExplorer() {
               <button className={`rx-chip ${lowOnly ? 'is-on' : ''}`} onClick={() => setLowOnly((x) => !x)} title="Only players whose OVR confidence is low">
                 Low confidence
               </button>
+            </div>
+            <div className="rx-chips rx-trait-chips">
+              {(['any', 'none'] as const).map((t) => (
+                <button key={t} className={`rx-chip ${trait === t ? 'is-on' : ''}`} onClick={() => setTrait((x) => (x === t ? null : t))} title={t === 'any' ? 'Players with at least one trait' : 'Players with no trait'}>
+                  {t === 'any' ? 'Any trait' : 'No traits'}
+                </button>
+              ))}
+              {pos === 'ALL' && <span className="rx-dim rx-chip-hint">Pick a position to filter by a trait</span>}
+              {traitCounts.map(([id, n]) => {
+                const info = traitInfo(id);
+                return (
+                  <button key={id} className={`rx-chip rx-trait-chip rx-tone-${toneOf(id)} ${trait === id ? 'is-on' : ''}`} onClick={() => setTrait((x) => (x === id ? null : id))} title={info?.effect}>
+                    <TraitIcon id={info?.icon ?? 'star'} size={12} />
+                    {info?.label ?? id} <span className="rx-chip-n">{n}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <PoolTable
@@ -174,6 +212,7 @@ export function RatingsExplorer() {
               </button>
             </div>
           )}
+          {cmp && sel && <SynergyPanel model={model} a={sel} b={cmp} />}
           {sel ? <PlayerCard model={model} e={sel} other={cmp} /> : <div className="rx-center">Select a player.</div>}
           {cmp && sel && <PlayerCard model={model} e={cmp} other={sel} />}
         </section>
@@ -207,7 +246,7 @@ function PoolTable(props: {
   }, []);
   const first = Math.max(0, Math.floor((scroll - HEAD) / ROW_H) - 10);
   const last = Math.min(list.length, Math.ceil((scroll + height) / ROW_H) + 10);
-  const gridCols = `minmax(11rem, 1.6fr) 3rem 3.2rem 3.6rem 3rem 3.4rem ${columns.map(() => '3.4rem').join(' ')} 2.2rem`;
+  const gridCols = `minmax(11rem, 1.6fr) 3rem 3.2rem 3.6rem 3rem 3.4rem ${columns.map(() => '3.4rem').join(' ')} 5.6rem 2.2rem`;
   return (
     <div className="rx-table" ref={ref} onScroll={(e) => setScroll(e.currentTarget.scrollTop)}>
       <div className="rx-tr rx-thead" style={{ gridTemplateColumns: gridCols }}>
@@ -220,6 +259,7 @@ function PoolTable(props: {
         {columns.map((k) => (
           <span key={k}>{th(k, shortLabel(pos as RatedPos, k))}</span>
         ))}
+        <span className="rx-th" title="Traits (combinations count as one)">Traits</span>
         <span className="rx-th" title="Pin for side-by-side compare">⇄</span>
       </div>
       <div className="rx-tbody">
@@ -244,6 +284,13 @@ function PoolTable(props: {
                   {e.attrs[k] ? <Val v={e.attrs[k]!.value} conf={e.attrs[k]!.conf} /> : '–'}
                 </span>
               ))}
+              <span className="rx-td rx-trait-icons">
+                {e.traits.map((t) => (
+                  <span key={t.id} className={`rx-tone-${toneOf(t.id)}`} title={`${traitInfo(t.id)?.label ?? t.id}: ${t.why}`}>
+                    <TraitIcon id={traitInfo(t.id)?.icon ?? 'star'} size={13} />
+                  </span>
+                ))}
+              </span>
               <button
                 className="rx-td rx-pin"
                 onClick={(ev) => {
@@ -333,6 +380,7 @@ function PlayerCard({ model, e, other }: { model: Model; e: RatedEntry; other?: 
   const keys = ['ovr', ...attrKeys(e.pos)];
   const card = new Set(CARD_ATTRS[e.pos]);
   const inp = e.inputs;
+  const unit = inp.olUnit ? model.run.olUnits[inp.olUnit.unitId] : undefined;
   const fmt = (v: number) => (Math.abs(v) >= 100 ? v.toFixed(0) : Math.abs(v) >= 10 ? v.toFixed(1) : v.toFixed(2));
   return (
     <div className="rx-card">
@@ -348,14 +396,14 @@ function PlayerCard({ model, e, other }: { model: Model; e: RatedEntry; other?: 
             {inp.age ? ` · age ${inp.age.v.toFixed(1)}` : ''} · legacy imp {e.imp}
           </div>
           <div className="rx-traits">
-            {e.traits.length ? (
-              e.traits.map((t) => (
-                <span key={t.id} className="rx-trait" title={t.reasons.join('\n')}>
-                  {TRAIT_LABELS[t.id]}
-                </span>
-              ))
-            ) : (
-              <span className="rx-dim">No traits</span>
+            <TraitList traits={e.traits} empty={e.pos === 'OL' ? "Linemen carry their unit's traits (below)." : 'No traits: nothing about his game clears a trait gate.'} />
+            {unit && (
+              <div className="rx-unit-traits">
+                <div className="rx-dim">
+                  O-line unit ({unit.linemen.length} linemen): pass block {Math.round(unit.attrs.passBlock!)}, run block {Math.round(unit.attrs.runBlock!)}
+                </div>
+                <TraitList traits={unit.traits} size="sm" empty="No unit traits." />
+              </div>
             )}
           </div>
         </div>
@@ -481,6 +529,44 @@ function PlayerCard({ model, e, other }: { model: Model; e: RatedEntry; other?: 
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function toneOf(id: string): string {
+  const t = traitInfo(id);
+  if (!t) return 'standard';
+  if (t.polarity === 'negative') return 'negative';
+  if (t.parts) return 'combo';
+  return t.tier;
+}
+
+/** The roster a compared pair forms: skill players as players, a lineman as his OL unit. */
+function rosterOf(model: Model, list: RatedEntry[]): RosterView {
+  const players = list.filter((e) => e.pos !== 'OL').map((e) => ({ id: e.id, pos: e.pos, traits: heldTraitIds(e.traits) }));
+  const ol = list.find((e) => e.pos === 'OL' && e.inputs.olUnit);
+  const unit = ol ? model.run.olUnits[ol.inputs.olUnit!.unitId] : undefined;
+  return { players, olUnit: unit ? { unitId: unit.unitId, traits: heldTraitIds(unit.traits) } : undefined };
+}
+
+/** Roster synergies between the two compared players (matchup preview and pre-game show the same from M7). */
+function SynergyPanel({ model, a, b }: { model: Model; a: RatedEntry; b: RatedEntry }) {
+  const hits = detectSynergies(rosterOf(model, [a, b]));
+  const nameOf = (id: string, unit?: boolean) => {
+    if (unit) {
+      const ol = [a, b].find((e) => e.inputs.olUnit?.unitId === id);
+      return ol ? `${ol.team} ${ol.decade} O-line` : id;
+    }
+    return model.byId.get(id)?.name ?? id;
+  };
+  return (
+    <div className="rx-synergies">
+      <h3>Roster synergies</h3>
+      {hits.length ? (
+        hits.map((h) => <SynergyBadge key={`${h.synergy.id}|${h.a.id}|${h.b.id}`} hit={h} nameOf={nameOf} />)
+      ) : (
+        <p className="rx-dim">No synergy between these two. Synergies pair a QB with a receiver or back, or a QB or back with an O-line (pin a lineman to compare his unit), when their traits fit together.</p>
+      )}
     </div>
   );
 }
