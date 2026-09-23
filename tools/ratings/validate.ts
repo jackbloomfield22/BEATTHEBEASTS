@@ -52,6 +52,7 @@ export function evaluateAnchors(run: RatingRun, anchors: readonly Anchor[] = ANC
     for (const id of a.ids) {
       const e = byId.get(id);
       for (const c of a.checks) {
+        if (c.only && !c.only.includes(id)) continue;
         if (!e) {
           results.push({ id, check: c, pass: false, actual: undefined, text: `${id}: not rated (excluded or missing)` });
           continue;
