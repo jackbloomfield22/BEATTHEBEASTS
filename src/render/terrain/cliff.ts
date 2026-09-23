@@ -33,8 +33,8 @@ export function cliffRelief(u: number, y: number): number {
   const strataAmt = 0.5 + 0.5 * smoothstep(-0.2, 0.4, fbm2(u / 140, 0.5, 2, SEED + 4));
   const strata = (1 - f) * (1 - f) * 1.1 * strataAmt;
   // Broad bulges and buttresses (vertical ribs tens of meters apart).
-  const big = fbm2(u / 90, y / 60, 3, SEED) * 2.8;
-  const butt = (ridged2(u / 26, y / 110, 3, SEED + 1) - 0.35) * 5.5;
+  const big = fbm2(u / 90, y / 60, 3, SEED) * 4.5;
+  const butt = (ridged2(u / 26, y / 110, 3, SEED + 1) - 0.35) * 9;
   // Columnar joints: narrow vertical prisms.
   const cols = ridged2(u / 3.1, y / 34, 2, SEED + 2) * 0.9;
   // Fractured blocks: each (column, bed) block sits at its own depth, so the

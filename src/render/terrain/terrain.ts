@@ -214,7 +214,12 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
             // Coastal grass: green in the hollows, drier on the exposed tops.
             vec3 grass = mix(vec3(0.11, 0.19, 0.05), vec3(0.24, 0.27, 0.1), n1);
             grass = mix(grass, vec3(0.07, 0.15, 0.04), smoothstep(0.55, 0.8, n2) * 0.6);
+            // Seepage stains and salt streaks run down the faces.
+            float streak = fbm(vec2((w.x + w.z) * 0.35, w.y * 0.02), 3);
+            rock *= mix(0.6, 1.25, smoothstep(0.3, 0.7, streak));
             float rockMask = smoothstep(0.22, 0.42, slope + (n2 - 0.5) * 0.25);
+            // Nothing grows on the spray-washed talus.
+            rockMask = max(rockMask, smoothstep(uSeaLevel + 14.0, uSeaLevel + 8.0, w.y));
             vec3 col = mix(grass, rock, rockMask);
             // Wet dark rock and pale sand near the waterline.
             float h = w.y - uSeaLevel;

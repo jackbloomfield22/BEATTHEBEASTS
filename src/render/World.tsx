@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { atmosphereUniforms, SkyLUT, sunDirection, sunTransmittance } from './sky/atmosphere';
 import { createSkyDome } from './sky/SkyDome';
 import { buildCliff } from './terrain/cliff';
+import { buildCypress, buildShrub, createVegetationMaterial, ledgePlants, scatterVegetation } from './terrain/vegetation';
 import { buildBoulders, buildHeadlands, buildTerrain, createBoulderMaterial, createTerrainMaterial } from './terrain/terrain';
 import { createOcean } from './ocean/ocean';
 import { buildBowl, PROFILE } from './stadium/bowl';
@@ -179,6 +180,33 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     return mesh;
   }, [bowl, lightBankGeo, assets.lightBankMat]);
 
+  const vegetation = useMemo(() => {
+    const mat = createVegetationMaterial();
+    const scatter = scatterVegetation();
+    const ledges = ledgePlants(assets.cliff.geometry);
+    const group = new THREE.Group();
+    const add = (geo: THREE.BufferGeometry, mats: THREE.Matrix4[], tints: THREE.Color[]) => {
+      const mesh = new THREE.InstancedMesh(geo, mat, mats.length);
+      mats.forEach((m, i) => {
+        mesh.setMatrixAt(i, m);
+        mesh.setColorAt(i, tints[i]!);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.computeBoundingSphere();
+      group.add(mesh);
+    };
+    // Three shrub and two cypress variants, instances dealt round-robin.
+    const deal = <T,>(list: T[], k: number, i: number) => list.filter((_, j) => j % k === i);
+    for (let v = 0; v < 3; v++) {
+      add(buildShrub(11 + v), deal(scatter.shrubs, 3, v), deal(scatter.tints[0]!, 3, v));
+      add(buildShrub(21 + v), deal(ledges.matrices, 3, v), deal(ledges.tints, 3, v));
+    }
+    for (let v = 0; v < 2; v++) add(buildCypress(31 + v), deal(scatter.cypress, 2, v), deal(scatter.tints[1]!, 2, v));
+    return group;
+  }, [assets.cliff]);
+
   const boulders = useMemo(() => {
     const b = buildBoulders(quality.terrainSegments >= 320 ? 700 : 350);
     const mesh = new THREE.InstancedMesh(b.geometry, createBoulderMaterial(), b.matrices.length);
@@ -231,6 +259,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       <mesh geometry={assets.headlands} material={assets.headlandMat} />
       <primitive object={assets.ocean.mesh} />
       <primitive object={boulders} />
+      <primitive object={vegetation} />
 
       {/* Stadium bowl */}
       <mesh geometry={bowl.seating} material={assets.seatingMat} receiveShadow castShadow />
