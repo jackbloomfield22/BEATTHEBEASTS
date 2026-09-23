@@ -401,7 +401,7 @@ Each is a data preset (sun, sky, fog, LUT, bloom, wetness, particles), not a sep
   - Custom: helmet, jersey, pants and trim colors, facemask color, stripe style.
   - None of these resemble a real NFL team.
 - **Beasts** (fixed): black and deep crimson, with a subtle emissive crimson helmet stripe that glows at night, and dark smoked visors on a few stars.
-- **No NFL logos, wordmarks or team names** on uniforms, helmets, field or stadium. The field has a stylized Beasts claw mark at midfield and "BLACKCLIFF" in the end zones. Draft cards and the draft room use `TEAM_COLORS` for team+decade accents.
+- **No NFL logos, wordmarks or team names** on uniforms, helmets, field or stadium. The stadium is the Beasts' home: a stylized claw mark at midfield, "BEASTS" in both end zones and Beasts branding on the video board. "Blackcliff" is the venue name, used only on the intro title card. Draft cards and the draft room use `TEAM_COLORS` for team+decade accents.
 
 ### 12.6 Players' bodies and skin tone
 - Height and weight from the ratings data drive each body. Linemen are visibly different from corners.

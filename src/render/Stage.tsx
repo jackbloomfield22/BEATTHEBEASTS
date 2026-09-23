@@ -1,15 +1,18 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, N8AO, SMAA } from '@react-three/postprocessing';
 import * as THREE from 'three';
+import type { EffectComposer as EffectComposerImpl } from 'postprocessing';
 import { World, type WorldQuality } from './World';
 import { CameraDirector } from './cameras/CameraDirector';
+import { FlyCamera } from './cameras/FlyCamera';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
-import { useSettings, type QualityPreset } from '@/app/settings';
+import { renderDpr, useSettings, type QualityPreset } from '@/app/settings';
 import { guessQuality } from './quality';
 import { useApp } from '@/app/appStore';
 import { perfStats, recordFrame } from '@/dev/perfStats';
+import { DynamicResolution, FirstLaunchBenchmark } from './perf/Adaptive';
 import { urlFlags } from '@/app/platform';
 
 // The one WebGL canvas. Everything 3D lives here and persists across screens.
@@ -18,6 +21,16 @@ function useLightingPreset(): LightingPreset {
   const lighting = useSettings((s) => s.settings.gameplay.lighting);
   const id = (urlFlags.lighting as LightingPreset['id'] | null) ?? (lighting === 'random' ? 'golden' : lighting);
   return LIGHTING_PRESETS[id] ?? LIGHTING_PRESETS.golden;
+}
+
+function useWindowSize(): { w: number; h: number } {
+  const [s, setS] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  useEffect(() => {
+    const on = () => setS({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return s;
 }
 
 function PerfProbe({ preset }: { preset: string }) {
@@ -61,8 +74,18 @@ function Post({ preset, quality }: { preset: LightingPreset; quality: QualityPre
     color.vignette = g.vignette ? 0.38 : 0;
   }, [color, preset, g.vignette]);
   const ao = g.ao !== 'off' && !(import.meta.env.DEV && location.search.includes('noao'));
+  // The composer resizes its buffers only when the canvas's CSS size changes,
+  // not its pixel ratio, so a preset switch or a dynamic-resolution step
+  // would leave every effect pass at the old resolution (upscaled: soft, and
+  // no cheaper). Resize it whenever the ratio moves.
+  const composer = useRef<EffectComposerImpl | null>(null);
+  const dpr = useThree((s) => s.viewport.dpr);
+  const size = useThree((s) => s.size);
+  useEffect(() => {
+    composer.current?.setSize(size.width, size.height);
+  }, [dpr, size]);
   return (
-    <EffectComposer multisampling={g.antialias === 'smaa+msaa' ? 4 : 0} frameBufferType={THREE.HalfFloatType} enableNormalPass={false}>
+    <EffectComposer ref={composer} multisampling={g.antialias === 'smaa+msaa' ? 4 : 0} frameBufferType={THREE.HalfFloatType} enableNormalPass={false}>
       {ao ? <N8AO halfRes={g.ao === 'half'} aoRadius={1.6} distanceFalloff={0.6} intensity={2.2} quality={quality === 'ultra' ? 'high' : quality === 'high' ? 'medium' : 'low'} /> : <></>}
       {g.bloom ? <Bloom mipmapBlur intensity={preset.bloom.intensity * (reduceFlashing ? 0.6 : 1)} luminanceThreshold={preset.bloom.threshold} luminanceSmoothing={0.2} radius={0.72} /> : <></>}
       <primitive object={color} dispose={null} />
@@ -102,7 +125,7 @@ export function currentQuality(): QualityPreset {
   return (urlFlags.quality as QualityPreset | null) ?? (s.graphics.preset === 'custom' ? 'high' : s.graphics.preset);
 }
 
-export function Stage() {
+export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasElement) => void } = {}) {
   const preset = useLightingPreset();
   const shot = useApp((s) => s.shot);
   const setSceneReady = useApp((s) => s.setSceneReady);
@@ -111,10 +134,18 @@ export function Stage() {
   const quality = currentQuality();
 
   const worldQuality: WorldQuality = {
-    shadowMapSize: { off: 0, low: 1024, medium: 2048, high: 4096 }[graphics.shadows],
+    shadows: graphics.shadows,
+    tier: quality,
     terrainSegments: quality === 'low' ? 240 : quality === 'medium' ? 320 : 400,
+    crowdDensity: graphics.crowdDensity,
+    grassDetail: graphics.grassDetail,
+    // Vegetation follows the grass-detail setting (both are ground clutter).
+    vegetationDensity: { low: 0.35, medium: 0.6, high: 1, ultra: 1 }[graphics.grassDetail],
+    weatherParticles: graphics.weatherParticles,
   };
-  const dpr = Math.min(window.devicePixelRatio || 1, 2) * display.resolutionScale;
+  const win = useWindowSize();
+  // The tier's pixel budget caps the render size (settings.ts RENDER_PIXEL_BUDGET).
+  const dpr = +renderDpr(win.w, win.h, window.devicePixelRatio, quality, display.resolutionScale).toFixed(3);
 
   return (
     <Canvas
@@ -126,6 +157,10 @@ export function Stage() {
       camera={{ fov: 40, near: 0.5, far: 16000, position: [-420, -8, 520] }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x05040a);
+        // three already preventDefault()s the loss so the context can come
+        // back; the app remounts the stage on a fresh canvas (App.tsx).
+        gl.domElement.addEventListener('webglcontextlost', () => onContextLost?.(gl.domElement), { once: true });
+        if (import.meta.env.DEV) Object.assign(window, { __btbLoseContext: () => gl.getContext().getExtension('WEBGL_lose_context')?.loseContext() });
         perfStats.quality = quality;
         // First launch: pick a preset from the GPU name.
         const st = useSettings.getState();
@@ -141,8 +176,10 @@ export function Stage() {
       }}
     >
       <FrameDriver cap={display.frameCap} />
+      <DynamicResolution baseDpr={dpr} enabled={display.dynamicResolution} targetFps={display.frameCap || 60} />
+      <FirstLaunchBenchmark targetFps={display.frameCap || 60} />
       <World preset={preset} quality={worldQuality} onReady={setSceneReady} />
-      <CameraDirector shot={shot} fovOffset={display.fov} />
+      {urlFlags.fly ? <FlyCamera /> : <CameraDirector shot={shot} fovOffset={display.fov} />}
       <Post preset={preset} quality={quality} />
       <PerfProbe preset={preset.id} />
     </Canvas>

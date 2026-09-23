@@ -19,10 +19,16 @@ export function terrainHeight(x: number, z: number): number {
   // Flatten a generous pad for the stadium and its concourse.
   const pad = smoothstep(260, 170, Math.hypot(x * 0.85, (z + 5) * 0.8));
   land = lerp(land, 0, pad);
+  // ...and sink the ground 25 cm under the whole 250 m plaza square
+  // (props.ts buildPlazaGeometry): paving a few millimeters above flat ground
+  // z-fights at flyover distances. The drop reads as the plaza's curb.
+  const square = smoothstep(126, 124.5, Math.max(Math.abs(x), Math.abs(z + 10)));
+  land = lerp(land, -0.25, square);
   land = Math.max(land, lerp(-3, 0, pad));
   // Toward the edge the land rolls off slightly before the cliff.
   const edge = cz - z; // meters from the cliff edge (positive = on land)
-  land -= smoothstep(40, 0, edge) * 3;
+  // Under the plaza the roll-off waits until past the paving (it ends 8 m back).
+  land -= smoothstep(lerp(40, 8, square), 0, edge) * 3;
   // Cliff: a steep upper wall with ledges, then a rubble talus into the sea.
   const ledge = ridged2(x * 0.03, z * 0.03, 4, SEED + 3);
   const wallT = smoothstep(1 + ledge * 4, -9 - ledge * 5, edge);
@@ -73,18 +79,52 @@ export function buildTerrain(segments = 360, half = 2600): TerrainBuild {
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
 
-  // Height texture for the ocean shader (512² over ±heightExtent).
+  // Seabed texture for the ocean shader (512² over ±heightExtent):
+  // R = terrain height, G = distance to the nearest land (m). The cliffs
+  // plunge straight into deep water, so surf has to key on distance to the
+  // rock, not on depth. Two-pass chamfer distance transform (3-4 weights).
   const res = 512;
   const heightExtent = 900;
-  const data = new Float32Array(res * res);
+  const texel = (2 * heightExtent) / res;
+  const data = new Float32Array(res * res * 2);
+  const dist = new Float32Array(res * res);
   for (let j = 0; j < res; j++) {
     for (let i = 0; i < res; i++) {
       const x = ((i + 0.5) / res) * 2 * heightExtent - heightExtent;
       const z = ((j + 0.5) / res) * 2 * heightExtent - heightExtent + 300;
-      data[j * res + i] = terrainHeight(x, z);
+      const h = terrainHeight(x, z);
+      data[(j * res + i) * 2] = h;
+      dist[j * res + i] = h > SEA_LEVEL - 0.5 ? 0 : 1e9;
     }
   }
-  const heightTexture = new THREE.DataTexture(data, res, res, THREE.RedFormat, THREE.FloatType);
+  const relax = (k: number, n: number, w: number) => {
+    const c = dist[n]! + w;
+    if (c < dist[k]!) dist[k] = c;
+  };
+  for (let j = 0; j < res; j++) {
+    for (let i = 0; i < res; i++) {
+      const k = j * res + i;
+      if (i > 0) relax(k, k - 1, 3);
+      if (j > 0) {
+        relax(k, k - res, 3);
+        if (i > 0) relax(k, k - res - 1, 4);
+        if (i < res - 1) relax(k, k - res + 1, 4);
+      }
+    }
+  }
+  for (let j = res - 1; j >= 0; j--) {
+    for (let i = res - 1; i >= 0; i--) {
+      const k = j * res + i;
+      if (i < res - 1) relax(k, k + 1, 3);
+      if (j < res - 1) {
+        relax(k, k + res, 3);
+        if (i < res - 1) relax(k, k + res + 1, 4);
+        if (i > 0) relax(k, k + res - 1, 4);
+      }
+    }
+  }
+  for (let k = 0; k < res * res; k++) data[k * 2 + 1] = Math.min(dist[k]! / 3, 1e4) * texel;
+  const heightTexture = new THREE.DataTexture(data, res, res, THREE.RGFormat, THREE.FloatType);
   heightTexture.minFilter = THREE.LinearFilter;
   heightTexture.magFilter = THREE.LinearFilter;
   heightTexture.wrapS = heightTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -158,6 +198,7 @@ function mergeGeometries(geoms: THREE.BufferGeometry[]): THREE.BufferGeometry {
  */
 export function createTerrainMaterial(distant = false): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, metalness: 0 });
+  mat.userData.porosity = 0.75; // rock, soil and scrub
   return patchMaterial(
     mat,
     (shader) => {
@@ -175,7 +216,7 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
           ${NOISE_GLSL}
           vec3 terrAlbedo;
           float terrRough;
-          float terrDetail(vec3 w) { vec3 n = normalize(vTerrNormal); vec3 tw = pow(abs(n), vec3(4.0)); tw /= (tw.x + tw.y + tw.z); float a = fbm(vec2(w.z, w.y) * vec2(0.16, 0.07), 5) + 0.35 * fbm(vec2(w.z, w.y) * 0.9, 3); float b = fbm(vec2(w.x, w.y) * vec2(0.16, 0.07), 5) + 0.35 * fbm(vec2(w.x, w.y) * 0.9, 3); float c = fbm(w.xz * 0.35, 4); return a * tw.x + b * tw.z + c * tw.y; }`,
+          float terrDetail(vec3 w) { vec3 n = normalize(vTerrNormal); vec3 tw = pow(abs(n), vec3(4.0)); tw /= (tw.x + tw.y + tw.z); float a = fbm(vec2(w.z, w.y) * vec2(0.16, 0.07), 3) + 0.25 * fbm(vec2(w.z, w.y) * 0.6, 1); float b = fbm(vec2(w.x, w.y) * vec2(0.16, 0.07), 3) + 0.25 * fbm(vec2(w.x, w.y) * 0.6, 1); float c = fbm(w.xz * 0.35, 2); return a * tw.x + b * tw.z + c * tw.y; }`,
         )
         .replace(
           '#include <color_fragment>',
@@ -197,20 +238,33 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
             float bedding = fbm(pX * vec2(0.03, 0.35), 4) * tw.x + fbm(pZ * vec2(0.03, 0.35), 4) * tw.z + fbm(w.xz * 0.05, 3) * tw.y;
             float grain = fbm(pX * 0.9, 3) * tw.x + fbm(pZ * 0.9, 3) * tw.z + fbm(w.xz * 0.9, 3) * tw.y;
             float crev = smoothstep(0.4, 0.27, joints) * 0.6 + smoothstep(0.5, 0.33, bedding) * 0.25;
-            vec3 rockA = vec3(0.19, 0.17, 0.15);
-            vec3 rockB = vec3(0.4, 0.35, 0.29);
+            // Blackcliff is dark volcanic rock (basalt, albedo ~0.06-0.15),
+            // paler where it weathers in bands.
+            vec3 rockA = vec3(0.03, 0.031, 0.034);
+            vec3 rockB = vec3(0.1, 0.1, 0.105);
             vec3 rock = mix(rockA, rockB, smoothstep(0.28, 0.72, joints * 0.55 + bedding * 0.3 + grain * 0.25));
-            rock = mix(rock, vec3(0.55, 0.5, 0.42), smoothstep(0.63, 0.82, bedding) * 0.45);
+            rock = mix(rock, vec3(0.19, 0.18, 0.17), smoothstep(0.63, 0.82, bedding) * 0.4);
             rock *= (1.0 - crev) * (0.85 + 0.3 * grain);
-            rock = mix(rock, vec3(0.3, 0.32, 0.18), smoothstep(0.62, 0.85, fbm(w.xz * 0.2 + w.y * 0.1, 3)) * 0.3);
-            // Dry coastal grass, greener in the hollows.
-            vec3 grass = mix(vec3(0.2, 0.24, 0.08), vec3(0.34, 0.33, 0.13), n1);
-            grass = mix(grass, vec3(0.12, 0.19, 0.07), smoothstep(0.55, 0.8, n2) * 0.6);
+            // Orange-yellow lichen (Xanthoria) on the sunny upper faces above
+            // the spray, gray-green lichen and moss on ledges.
+            float hh = w.y - uSeaLevel;
+            float lichen = smoothstep(0.66, 0.8, fbm(vec2(w.x + w.z, w.y) * 0.21, 4)) * smoothstep(9.0, 18.0, hh);
+            rock = mix(rock, vec3(0.42, 0.26, 0.07), lichen * 0.55);
+            rock = mix(rock, vec3(0.16, 0.19, 0.1), smoothstep(0.6, 0.85, fbm(w.xz * 0.2 + w.y * 0.1, 3)) * 0.35);
+            // Coastal grass: green in the hollows, drier on the exposed tops.
+            vec3 grass = mix(vec3(0.11, 0.19, 0.05), vec3(0.24, 0.27, 0.1), n1);
+            grass = mix(grass, vec3(0.07, 0.15, 0.04), smoothstep(0.55, 0.8, n2) * 0.6);
+            // Seepage stains and salt streaks run down the faces.
+            float streak = fbm(vec2((w.x + w.z) * 0.35, w.y * 0.02), 3);
+            rock *= mix(0.6, 1.25, smoothstep(0.3, 0.7, streak));
             float rockMask = smoothstep(0.22, 0.42, slope + (n2 - 0.5) * 0.25);
+            // Nothing grows on the spray-washed talus.
+            rockMask = max(rockMask, smoothstep(uSeaLevel + 14.0, uSeaLevel + 8.0, w.y));
             vec3 col = mix(grass, rock, rockMask);
             // Wet dark rock and pale sand near the waterline.
             float h = w.y - uSeaLevel;
-            col = mix(vec3(0.12, 0.11, 0.1), col, smoothstep(0.0, 3.0, h));
+            col = mix(vec3(0.03, 0.03, 0.03), col, smoothstep(0.0, 4.0, h));
+            col = mix(col, vec3(0.04, 0.08, 0.035), smoothstep(1.6, 0.3, h) * smoothstep(-0.8, 0.2, h) * 0.8); // algae
             col = mix(col, vec3(0.62, 0.55, 0.43), smoothstep(3.0, 1.0, h) * smoothstep(0.35, 0.1, slope) * smoothstep(-1.0, 0.0, h));
             if (uDistant > 0.5) col = mix(col, vec3(0.2, 0.24, 0.12), 0.35);
             diffuseColor.rgb = col;
@@ -232,7 +286,13 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
             vec3 r2 = cross(normal, dpx);
             float det = dot(dpx, r1);
             vec3 grad = sign(det) * (dhx * r1 + dhy * r2);
-            normal = normalize(abs(det) * normal - grad * 1.6);
+            // Surface gradient (Mikkelsen), clamped: at grazing view angles
+            // det -> 0 and the unclamped form flips normals per 2x2 pixel
+            // quad (a checkerboard). Also fade detail finer than a pixel.
+            float aa = 1.0 - smoothstep(0.04, 0.25, fwidth(hgt));
+            vec3 sg = grad / max(abs(det), 1e-8) * 1.0 * aa;
+            sg *= min(1.0, 0.7 / max(length(sg), 1e-6));
+            normal = normalize(normal - sg);
           }`,
         );
     },
@@ -242,16 +302,33 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
 
 /** Instanced boulders along the cliff foot and on the talus. */
 export function buildBoulders(count = 700): { geometry: THREE.BufferGeometry; matrices: THREE.Matrix4[] } {
-  const geo = new THREE.IcosahedronGeometry(1, 4);
+  // Fractured basalt blocks: a sphere cut by a dozen random planes (each
+  // vertex pulled in to the nearest cut), then faceted, so the rocks read
+  // as broken angular blocks instead of smooth pebbles.
+  // Detail 2 (320 faces) is enough: the plane cuts make the silhouette, and
+  // 700 boulders × 5 passes (main + 4 shadow cascades) add up fast.
+  const geo = new THREE.IcosahedronGeometry(1, 2);
   const p = geo.attributes.position as THREE.BufferAttribute;
+  const cuts: { n: THREE.Vector3; d: number }[] = [];
+  let cs = 77;
+  const cr = () => ((cs = (cs * 1664525 + 1013904223) >>> 0) / 4294967296);
+  for (let i = 0; i < 14; i++) {
+    const n = new THREE.Vector3(cr() * 2 - 1, cr() * 2 - 1, cr() * 2 - 1).normalize();
+    cuts.push({ n, d: 0.45 + cr() * 0.3 });
+  }
   for (let i = 0; i < p.count; i++) {
     const v = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i));
-    const d = 1 + fbm2(v.x * 1.3 + v.z * 0.7, v.y * 1.3 - v.z * 0.4, 4, 77) * 0.35 + ridged2(v.x * 2, v.y * 2 + v.z, 2, 78) * 0.15;
-    v.multiplyScalar(d);
-    v.y *= 0.65;
+    for (const c of cuts) {
+      const k = v.dot(c.n);
+      if (k > c.d) v.addScaledVector(c.n, c.d - k);
+    }
+    v.multiplyScalar(1 + fbm2(v.x * 2.3 + v.z, v.y * 2.3 - v.z, 3, 78) * 0.03);
+    v.y *= 0.7;
     p.setXYZ(i, v.x, v.y, v.z);
   }
-  geo.computeVertexNormals();
+  const faceted = geo.toNonIndexed();
+  geo.dispose();
+  faceted.computeVertexNormals();
   const rand = (() => {
     let a = 4242;
     return () => ((a = (a * 1664525 + 1013904223) >>> 0) / 4294967296);
@@ -273,11 +350,12 @@ export function buildBoulders(count = 700): { geometry: THREE.BufferGeometry; ma
     );
     matrices.push(m);
   }
-  return { geometry: geo, matrices };
+  return { geometry: faceted, matrices };
 }
 
 export function createBoulderMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+  mat.userData.porosity = 0.5; // weathered stone
   return patchMaterial(
     mat,
     (shader) => {
@@ -291,7 +369,7 @@ export function createBoulderMaterial(): THREE.MeshStandardMaterial {
           `#include <color_fragment>
           {
             float n = fbm(vBWorld.xz * 0.4 + vBWorld.y * 0.3, 4);
-            vec3 c = mix(vec3(0.16, 0.15, 0.13), vec3(0.36, 0.32, 0.27), n) * (0.8 + 0.4 * fbm(vBWorld.xz * 2.5 + vBWorld.y, 3));
+            vec3 c = mix(vec3(0.03, 0.031, 0.034), vec3(0.12, 0.12, 0.125), n) * (0.8 + 0.4 * fbm(vBWorld.xz * 2.5 + vBWorld.y, 3));
             float wet = smoothstep(uSeaLevel + 2.5, uSeaLevel + 0.2, vBWorld.y);
             c = mix(c, c * 0.35, wet);
             c = mix(c, vec3(0.2, 0.26, 0.12), smoothstep(0.65, 0.8, fbm(vBWorld.xz * 1.3, 3)) * (1.0 - wet) * 0.5);
@@ -302,7 +380,9 @@ export function createBoulderMaterial(): THREE.MeshStandardMaterial {
           '#include <normal_fragment_maps>',
           `#include <normal_fragment_maps>
           {
-            float hgt = fbm(vBWorld.xz * 1.1 + vBWorld.y * 0.9, 5) + 0.4 * fbm(vBWorld.zy * 3.0, 3);
+            // Two low octaves only: finer bump detail can't be filtered per
+            // pixel quad without TAA and stipples; albedo carries the grain.
+            float hgt = fbm(vBWorld.xz * 0.7 + vBWorld.y * 0.6, 2);
             vec3 dpx = dFdx(vViewPosition);
             vec3 dpy = dFdy(vViewPosition);
             float dhx = dFdx(hgt);
@@ -311,7 +391,10 @@ export function createBoulderMaterial(): THREE.MeshStandardMaterial {
             vec3 r2 = cross(normal, dpx);
             float det = dot(dpx, r1);
             vec3 grad = sign(det) * (dhx * r1 + dhy * r2);
-            normal = normalize(abs(det) * normal - grad * 1.2);
+            float aa = 1.0 - smoothstep(0.04, 0.25, fwidth(hgt));
+            vec3 sg = grad / max(abs(det), 1e-8) * 0.35 * aa;
+            sg *= min(1.0, 0.6 / max(length(sg), 1e-6));
+            normal = normalize(normal - sg);
           }`,
         );
     },

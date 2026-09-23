@@ -21,7 +21,7 @@ export interface GraphicsSettings {
 }
 
 export interface Settings {
-  version: 1;
+  version: 2;
   display: {
     fullscreen: boolean;
     resolutionScale: number; // 0.5 .. 1.0
@@ -62,6 +62,8 @@ export interface Settings {
   };
   /** Set once the first-launch auto-detect has run. */
   detectedPreset?: QualityPreset;
+  /** Set once the first-launch benchmark has refined the guess (its verdict). */
+  benchmarked?: QualityPreset;
 }
 
 export const PRESET_GRAPHICS: Record<QualityPreset, Omit<GraphicsSettings, 'preset'>> = {
@@ -71,13 +73,35 @@ export const PRESET_GRAPHICS: Record<QualityPreset, Omit<GraphicsSettings, 'pres
   ultra: { shadows: 'high', ao: 'full', crowdDensity: 'ultra', grassDetail: 'ultra', bloom: true, vignette: true, replayDof: true, replayMotionBlur: true, weatherParticles: true, antialias: 'smaa+msaa' },
 };
 
-/** Default internal resolution scale per preset (before dynamic scaling). */
-export const PRESET_RES_SCALE: Record<QualityPreset, number> = { low: 0.75, medium: 0.9, high: 1, ultra: 1 };
+/**
+ * Default internal resolution scale per preset (before dynamic scaling). The
+ * tier's pixel budget (RENDER_PIXEL_BUDGET) already caps the render size, so
+ * the scale only trims Low further.
+ */
+export const PRESET_RES_SCALE: Record<QualityPreset, number> = { low: 0.85, medium: 1, high: 1, ultra: 1 };
+
+/**
+ * Most pixels a tier renders at 100% resolution scale. A Retina display at
+ * DPR 2 would otherwise render a 1920×1080 window at 3840×2160, four times the
+ * work of 1080p, which no Medium-class GPU holds at 60 fps with this scene.
+ * Medium renders at most 1080p worth of pixels and High 1440p; Ultra renders
+ * at the display's own density (DPR capped at 2). The HTML UI stays at the
+ * display's density either way.
+ */
+export const RENDER_PIXEL_BUDGET: Record<QualityPreset, number> = { low: 1920 * 1080, medium: 1920 * 1080, high: 2560 * 1440, ultra: Infinity };
+
+/** Canvas pixel ratio for a window of cssW×cssH on a display of deviceDpr. */
+export function renderDpr(cssW: number, cssH: number, deviceDpr: number, preset: QualityPreset, scale: number): number {
+  const native = Math.min(deviceDpr || 1, 2);
+  const budget = RENDER_PIXEL_BUDGET[preset];
+  const fit = Number.isFinite(budget) ? Math.sqrt(budget / Math.max(1, cssW * cssH)) : native;
+  return Math.min(native, fit) * scale;
+}
 
 export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings {
   return {
-    version: 1,
-    display: { fullscreen: true, resolutionScale: 0.9, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
+    version: 2,
+    display: { fullscreen: false, resolutionScale: 1, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 200, ballInAir: 'assist', keyboard, gamepad },
     audio: { master: 0.8, music: 0.6, sfx: 0.8, crowd: 0.8, ui: 0.7, muteUnfocused: true },
@@ -128,16 +152,30 @@ export const useSettings = create<SettingsStore>((set, get) => ({
   reset: (section) => {
     const defaults = defaultsFactory();
     get().set((d) => {
-      if (!section) Object.assign(d, defaults, { detectedPreset: d.detectedPreset });
+      if (!section) Object.assign(d, defaults, { detectedPreset: d.detectedPreset, benchmarked: d.benchmarked });
       else (d as unknown as Record<string, unknown>)[section] = defaults[section];
     });
   },
 }));
 
+/** Bring older saved settings up to the current version. */
+function migrate(stored: Settings): Settings {
+  const s = structuredClone(stored);
+  if ((s.version as number) === 1) {
+    // v2: fullscreen became opt-in (it was requested on the title keypress),
+    // and the per-tier pixel budget replaced Medium's 0.9 resolution scale.
+    s.display.fullscreen = false;
+    const p = s.graphics?.preset;
+    if (p && p !== 'custom') s.display.resolutionScale = PRESET_RES_SCALE[p];
+    s.version = 2;
+  }
+  return s;
+}
+
 export function initSettings(factory: () => Settings): void {
   defaultsFactory = factory;
   const stored = loadJSON<Settings>(STORAGE_KEY);
-  const settings = stored && stored.version === 1 ? mergeDeep(factory(), stored) : factory();
+  const settings = stored && (stored.version as number) >= 1 ? mergeDeep(factory(), migrate(stored)) : factory();
   useSettings.setState({ settings });
 }
 
