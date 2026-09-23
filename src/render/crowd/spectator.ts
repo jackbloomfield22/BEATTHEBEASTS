@@ -166,16 +166,17 @@ export function bakeSpectatorAtlas(gl: THREE.WebGLRenderer): SpectatorAtlas {
   const prevTarget = gl.getRenderTarget();
   const prevClear = gl.getClearColor(new THREE.Color());
   const prevAlpha = gl.getClearAlpha();
-  const prevScissor = gl.getScissorTest();
+  const prevAutoClear = gl.autoClear;
+  // Each cell is one render into a viewport of the atlas; clear once per atlas.
+  gl.autoClear = false;
   gl.setClearColor(0x000000, 0);
   for (const [rt, mat] of [
     [maskRT, matMask],
     [normalRT, matNormal],
   ] as const) {
     gl.setRenderTarget(rt);
-    gl.setScissorTest(false);
+    rt.viewport.set(0, 0, W, H);
     gl.clear(true, true, true);
-    gl.setScissorTest(true);
     for (let pose = 0; pose < POSES; pose++) {
       const geo = buildPerson(pose);
       const mesh = new THREE.Mesh(geo, mat);
@@ -188,7 +189,6 @@ export function bakeSpectatorAtlas(gl: THREE.WebGLRenderer): SpectatorAtlas {
         const x = d * CELL_W;
         const y = (POSES - 1 - pose) * CELL_H; // row 0 (seated) at the top of the texture (uv v high)
         rt.viewport.set(x, y, CELL_W, CELL_H);
-        rt.scissor.set(x, y, CELL_W, CELL_H);
         gl.setRenderTarget(rt);
         gl.render(scene, cam);
       }
@@ -196,7 +196,7 @@ export function bakeSpectatorAtlas(gl: THREE.WebGLRenderer): SpectatorAtlas {
       geo.dispose();
     }
   }
-  gl.setScissorTest(prevScissor);
+  gl.autoClear = prevAutoClear;
   gl.setRenderTarget(prevTarget);
   gl.setClearColor(prevClear, prevAlpha);
   matMask.dispose();
