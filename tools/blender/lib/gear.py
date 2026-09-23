@@ -14,14 +14,21 @@ import math
 
 from mathutils import Vector
 
-from .body import torso
+from .body import hand_parts, torso
 from .geo import Ring, cut, delete_verts, ellipsoid, loft, smoothstep, tube_path, union_remesh
 from .skeleton import J
 
 # Part ids, written to TEXCOORD_0.x as id / PART_SCALE (the runtime shader
 # styles each part; one mesh and one draw call per player).
 PART_SCALE = 16.0
-PARTS = {"skin": 0, "glove": 1, "sock": 2, "cleat": 3, "jersey": 4, "pants": 5, "helmet": 6, "facemask": 7}
+PARTS = {
+    "skin": 0, "glove": 1, "sock": 2, "cleat": 3, "jersey": 4, "pants": 5, "helmet": 6,
+    # Facemask styles (each player shows one; the runtime hides the others):
+    # skill (three bars), lineman cage, quarterback two-bar, and the one
+    # generic mask the Low LOD carries.
+    "mask_skill": 7, "mask_cage": 8, "mask_qb": 9, "mask_low": 10,
+    "visor": 11, "strap": 12, "towel": 13, "collar": 14,
+}
 
 
 def _v(k):
@@ -58,13 +65,14 @@ def jersey(voxel=0.006):
         s = "l" if sx > 0 else "r"
         sh, el = _v(f"shoulder_{s}"), _v(f"elbow_{s}")
         parts.append(loft("sleeve", [Ring(sh - (el - sh).normalized() * 0.04, 0.085), Ring(sh.lerp(el, 0.2), 0.082, 0.078), Ring(sh.lerp(el, SLEEVE_END + 0.1), 0.071, 0.066)], side_hint=(0, 1, 0), segs=20))
-    # The arch over the back and chest that ties the caps together, narrowing to the collar.
-    parts.append(loft("pad_arch", [Ring((0, 0.010, 1.50), 0.235, 0.150), Ring((0, 0.012, 1.555), 0.225, 0.145), Ring((0, 0.018, 1.60), 0.092, 0.080)], segs=40))
+    # The arch over the back and chest that ties the caps together. It ends in
+    # a wide, low neck opening (a raised back read as a hood in profile).
+    parts.append(loft("pad_arch", [Ring((0, 0.010, 1.50), 0.235, 0.150), Ring((0, 0.012, 1.550), 0.215, 0.140), Ring((0, 0.014, 1.588), 0.112, 0.100)], segs=40))
     return union_remesh(parts, "jersey", voxel=voxel, smooth_iters=24)
 
 
 COLLAR_Z = 1.585
-JERSEY_HEM_Z = 1.035  # tucked 10 cm into the pants (top at 1.13)
+JERSEY_HEM_Z = 1.085  # tucked 4.5 cm into the pants (top at 1.13): a deeper tuck pokes out when the trunk twists against the hips
 
 
 def cut_jersey(ob):
@@ -101,13 +109,18 @@ def pants(voxel=0.006):
         parts.append(
             loft(
                 "pant_leg",
+                # Game pants are stretch fabric over thigh and knee pads:
+                # ~1 cm outside the thigh (body.leg), tapering to a snug
+                # band under the knee.
                 [
                     Ring(top, 0.090, 0.098),
-                    Ring(hp.lerp(kn, 0.12), 0.102, 0.104),
-                    Ring(hp.lerp(kn, 0.35), 0.102, 0.100),  # thigh pad
+                    Ring(hp.lerp(kn, 0.12), 0.101, 0.104),
+                    Ring(hp.lerp(kn, 0.35), 0.101, 0.099),  # thigh pad
                     Ring(hp.lerp(kn, 0.75), 0.084, 0.082),
-                    Ring(kn, 0.070, 0.076),  # knee pad
-                    Ring(kn + (kn - hp).normalized() * 0.10, 0.064, 0.066),
+                    Ring(kn, 0.070, 0.075),  # knee pad
+                    # Snug under the knee, but outside the calf (0.060 / 0.062
+                    # there, fuller behind) so the leg never shows through.
+                    Ring(kn + (kn - hp).normalized() * 0.10, 0.068, 0.073),
                 ],
                 side_hint=(1, 0, 0),
                 segs=24,
@@ -140,29 +153,6 @@ def cut_helmet(ob):
     cut(ob, planes, lambda co: co.z < bottom or face_opening(co), region=lambda co: co.z < brow + 0.02)
 
 
-def facemask(segs=8, bars=3):
-    """Tubes around the face opening: `bars` horizontal bars plus a center bar."""
-    c = HELMET_CENTER
-    parts = []
-    r = 0.0055
-    zs = [0.0, -0.045, -0.085][:bars]
-    for dz in zs:
-        pts = []
-        for k in range(13):
-            a = math.radians(-58 + k * (116 / 12))
-            # Bars bow out in front of the face, ~3 cm off the shell.
-            rr = 0.152 + 0.012 * math.cos(a)
-            pts.append(tuple(c + Vector((math.sin(a) * 0.118, -math.cos(a) * rr, dz - 0.012 * (1 - math.cos(a))))))
-        parts.append(tube_path("bar", pts, r, segs=segs))
-    # Center bar and the side struts to the shell.
-    parts.append(tube_path("vbar", [tuple(c + Vector((0, -0.164, 0.012))), tuple(c + Vector((0, -0.166, -0.045))), tuple(c + Vector((0, -0.162, -0.095)))], r, segs=segs))
-    for sx in (1, -1):
-        parts.append(tube_path("strut", [tuple(c + Vector((0.100 * sx, -0.085, 0.012))), tuple(c + Vector((0.104 * sx, -0.080, -0.060))), tuple(c + Vector((0.095 * sx, -0.065, -0.105)))], r, segs=segs))
-    from .geo import join
-
-    return join(parts, "facemask")
-
-
 def cleats(voxel=0.005):
     parts = []
     for s in ("l", "r"):
@@ -188,3 +178,91 @@ def cleats(voxel=0.005):
         if v.co.z < 0.006:
             v.co.z = 0.004
     return ob
+
+
+def glove(s: str, voxel: float = 0.0028):
+    """A receiver-style glove: the hand (body.hand_parts) a millimetre proud,
+    with a cuff that overlaps the wrist so the edge is clean."""
+    wr, el = _v(f"wrist_{s}"), _v(f"elbow_{s}")
+    d = (wr - el).normalized()
+    parts = hand_parts(s, grow=0.0012)
+    parts.append(loft("cuff", [Ring(wr - d * 0.045, 0.034, 0.028), Ring(wr - d * 0.005, 0.034, 0.027), Ring(wr + d * 0.02, 0.034, 0.024)], side_hint=(0, 1, 0), segs=16))
+    return union_remesh(parts, f"glove_{s}", voxel=voxel, smooth_iters=4)
+
+
+def collar_insert():
+    """Closes the jersey's neck opening: the collar band from the neck down
+    and out to the jersey's edge (no hollow jersey inside visible)."""
+    # The band stands ~1.5 cm proud of the jersey's edge (1.585, ~0.11 x 0.10
+    # across) so it reads as a collar.
+    rings = [Ring((0, 0.022, 1.545), 0.080, 0.074), Ring((0, 0.022, 1.575), 0.088, 0.081), Ring((0, 0.020, 1.600), 0.100, 0.090)]
+    return loft("collar", rings, segs=32, cap=False)
+
+
+def chin_strap():
+    """A hard chin cup on straps that run up to the shell's sides."""
+    c = HELMET_CENTER
+    parts = [ellipsoid("cup", tuple(c + Vector((0, -0.084, -0.098))), (0.030, 0.018, 0.024), segs=14)]
+    for sx in (1, -1):
+        parts.append(tube_path("strap", [tuple(c + Vector((0.026 * sx, -0.086, -0.094))), tuple(c + Vector((0.070 * sx, -0.060, -0.082))), tuple(c + Vector((0.104 * sx, -0.030, -0.070)))], 0.0045, segs=6))
+    from .geo import join
+
+    return join(parts, "chin_strap")
+
+
+def visor():
+    """A smoked eye shield just inside the facemask across the eye opening."""
+    import bmesh
+
+    from .geo import new_object
+
+    c = HELMET_CENTER
+    bm = bmesh.new()
+    cols, rows = 12, 3
+    verts = []
+    for j in range(rows + 1):
+        z = c.z + 0.030 - 0.058 * j / rows
+        row = []
+        for i in range(cols + 1):
+            a = math.radians(-50 + 100 * i / cols)
+            row.append(bm.verts.new((math.sin(a) * 0.110, c.y - math.cos(a) * 0.142, z)))
+        verts.append(row)
+    for j in range(rows):
+        for i in range(cols):
+            bm.faces.new((verts[j][i], verts[j][i + 1], verts[j + 1][i + 1], verts[j + 1][i]))
+    return new_object("visor", bm)
+
+
+def facemask(segs=8, bars=3, style="skill"):
+    """Tubes around the face opening. Styles by position: `skill` (three bars
+    and a center bar), `cage` (a lineman's closed cage: four bars, two
+    uprights and a nose bumper, down to the chin), `qb` (two open bars)."""
+    c = HELMET_CENTER
+    parts = []
+    r = 0.0055
+    zs = {"skill": [0.0, -0.045, -0.085], "cage": [0.012, -0.022, -0.056, -0.092], "qb": [0.0, -0.070]}[style][:bars if style == "skill" else None]
+    for dz in zs:
+        pts = []
+        for k in range(13):
+            a = math.radians(-58 + k * (116 / 12))
+            # Bars bow out in front of the face, ~3 cm off the shell.
+            rr = 0.152 + 0.012 * math.cos(a)
+            pts.append(tuple(c + Vector((math.sin(a) * 0.118, -math.cos(a) * rr, dz - 0.012 * (1 - math.cos(a))))))
+        parts.append(tube_path("bar", pts, r, segs=segs))
+    if style == "cage":
+        for sx in (1, -1):
+            parts.append(tube_path("upright", [tuple(c + Vector((0.030 * sx, -0.166, 0.016))), tuple(c + Vector((0.032 * sx, -0.168, -0.050))), tuple(c + Vector((0.028 * sx, -0.160, -0.110)))], r, segs=segs))
+    elif style == "skill":
+        parts.append(tube_path("vbar", [tuple(c + Vector((0, -0.164, 0.012))), tuple(c + Vector((0, -0.166, -0.045))), tuple(c + Vector((0, -0.162, -0.095)))], r, segs=segs))
+    for sx in (1, -1):
+        parts.append(tube_path("strut", [tuple(c + Vector((0.100 * sx, -0.085, 0.012))), tuple(c + Vector((0.104 * sx, -0.080, -0.060))), tuple(c + Vector((0.095 * sx, -0.065, -0.105)))], r, segs=segs))
+    from .geo import join
+
+    return join(parts, f"facemask_{style}")
+
+
+def towel():
+    """A hand towel tucked into the waistband over the left front pocket,
+    hanging ~20 cm (a quarterback's or a receiver's)."""
+    pts = [(0.118, -0.118, 1.112), (0.126, -0.124, 1.04), (0.130, -0.120, 0.975), (0.131, -0.112, 0.925)]
+    return loft("towel", [Ring(p, 0.040, 0.003) for p in pts], side_hint=(0.6, 0.8, 0), segs=8)

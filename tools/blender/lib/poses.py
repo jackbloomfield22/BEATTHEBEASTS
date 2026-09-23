@@ -147,14 +147,19 @@ def aim_arms(rig, arms: dict) -> None:
     bpy.context.view_layer.update()
 
 
-def hold_gaze(rig, pitch: float, yaw: float = 0.0, share: float = 0.45) -> None:
-    """Turn the neck and head so the face looks along a fixed world direction
-    (runners keep their eyes level while the trunk rotates and bobs)."""
+def hold_gaze(rig, pitch: float, yaw: float = 0.0, share: float = 0.45, follow: float = 0.35) -> None:
+    """Turn the neck and head so the face looks along a steady world direction
+    (runners keep their eyes level while the trunk rotates and bobs). The
+    head still follows `follow` of the shoulders' turn: holding it dead
+    still would twist the neck hard against the pads."""
+    t = rig.pose.bones["spine_04"].matrix.to_3x3().col[2]
+    yaw += follow * math.degrees(math.atan2(t.x, -t.y))
     head = rig.pose.bones["head"]
     cur = head.matrix.to_quaternion()
     # The head's rest frame looks forward (local Z = world -Y) with its bone
     # pointing up; build the wanted frame from pitch (down +) and yaw (left +).
-    want = Quaternion((0, 0, 1), math.radians(yaw)) @ Quaternion((1, 0, 0), math.radians(-pitch)) @ rig.data.bones["head"].matrix_local.to_quaternion()
+    # A positive rotation about +X tips the face (-Y) down toward -Z.
+    want = Quaternion((0, 0, 1), math.radians(yaw)) @ Quaternion((1, 0, 0), math.radians(pitch)) @ rig.data.bones["head"].matrix_local.to_quaternion()
     delta = want @ cur.inverted()
     for bone, w in (("neck_01", share * 0.5), ("neck_02", share * 0.5)):
         pb = rig.pose.bones[bone]

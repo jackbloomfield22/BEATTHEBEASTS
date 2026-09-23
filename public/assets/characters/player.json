@@ -3,18 +3,18 @@
   "lods": [
     {
       "lod": 0,
-      "triangles": 19860,
-      "vertices": 10677
+      "triangles": 24784,
+      "vertices": 13222
     },
     {
       "lod": 1,
-      "triangles": 8976,
-      "vertices": 5076
+      "triangles": 12065,
+      "vertices": 6709
     },
     {
       "lod": 2,
-      "triangles": 3461,
-      "vertices": 2072
+      "triangles": 3629,
+      "vertices": 2196
     }
   ],
   "bones": 52,
@@ -63,13 +63,25 @@
     "jersey": 4,
     "pants": 5,
     "helmet": 6,
-    "facemask": 7
+    "mask_skill": 7,
+    "mask_cage": 8,
+    "mask_qb": 9,
+    "mask_low": 10,
+    "visor": 11,
+    "strap": 12,
+    "towel": 13,
+    "collar": 14
   },
   "partScale": 16.0,
   "shapes": [
     "heavy",
     "lean",
-    "belly"
+    "belly",
+    "pads",
+    "neck",
+    "waist",
+    "calves",
+    "arms"
   ],
-  "bytes": 1546896
+  "bytes": 2023228
 }

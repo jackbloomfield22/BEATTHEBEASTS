@@ -8,6 +8,7 @@ import { loadPlayerAsset, Player, type PlayerAsset } from '@/render/players/play
 import { bodyFromImperial } from '@/render/players/bodyShape';
 import { loadAnimLibrary, planted, type AnimLibrary } from '@/anim/library';
 import { PlayerAnimator } from '@/anim/animator';
+import { playerVariety, type Position, type Variety } from '@/render/players/variety';
 import './anim.css';
 
 // Animation Lab (TECH_PLAN §9.3), #/dev/anim.
@@ -23,19 +24,19 @@ import './anim.css';
 // green on planted frames.
 //
 // Hash query: mode=lineup|single, clip, speed, t (freeze at time, s), rate
-// (playback rate), lock=0|1, kit, skin, lod, num, name, clip2, yaw, look=1,
+// (playback rate), lock=0|1, kit, skin, lod, num, name, seed, clip2, yaw, look=1,
 // cam=x,y,z,tx,ty,tz.
 
 // Numbers and names exercise the lettering: one and two digits, short,
 // long (squeezed) and accented names.
-const LINEUP: { label: string; h: number; w: number; num: number; name: string }[] = [
-  { label: 'CB 5\'10" 185', h: 70, w: 185, num: 2, name: 'Lott' },
-  { label: 'WR 6\'1" 200', h: 73, w: 200, num: 81, name: 'Houshmandzadeh' },
-  { label: 'QB 6\'3" 225', h: 75, w: 225, num: 16, name: 'Montana' },
-  { label: 'LB 6\'3" 245', h: 75, w: 245, num: 52, name: 'St. Brown' },
-  { label: 'TE 6\'5" 260', h: 77, w: 260, num: 87, name: 'Gronkowski' },
-  { label: 'OT 6\'6" 320', h: 78, w: 320, num: 75, name: 'Muñoz' },
-  { label: 'DT 6\'3" 335', h: 75, w: 335, num: 90, name: 'White' },
+const LINEUP: { label: string; pos: Position; h: number; w: number; num: number; name: string }[] = [
+  { label: 'CB 5\'10" 185', pos: 'CB', h: 70, w: 185, num: 2, name: 'Lott' },
+  { label: 'WR 6\'1" 200', pos: 'WR', h: 73, w: 200, num: 81, name: 'Houshmandzadeh' },
+  { label: 'QB 6\'3" 225', pos: 'QB', h: 75, w: 225, num: 16, name: 'Montana' },
+  { label: 'LB 6\'3" 245', pos: 'LB', h: 75, w: 245, num: 52, name: 'St. Brown' },
+  { label: 'TE 6\'5" 260', pos: 'TE', h: 77, w: 260, num: 87, name: 'Gronkowski' },
+  { label: 'OT 6\'6" 320', pos: 'OL', h: 78, w: 320, num: 75, name: 'Muñoz' },
+  { label: 'DT 6\'3" 335', pos: 'DL', h: 75, w: 335, num: 90, name: 'White' },
 ];
 
 const params = () => new URLSearchParams(location.hash.split('?')[1] ?? '');
@@ -55,6 +56,8 @@ interface LabState {
   /** Blend mode: turn rate (rad/s, + = left) for the lean, and head tracking of the camera. */
   yaw: number;
   look: boolean;
+  /** Re-rolls every player's gear and proportions (variety.ts). */
+  seed: string;
   /** Single mode's jersey number and name (lineup players carry their own). */
   num: number;
   name: string;
@@ -94,8 +97,10 @@ function gridTexture(): THREE.CanvasTexture {
   return t;
 }
 
-function lettering(s: LabState, b: (typeof LINEUP)[number]): { number: number; name: string } {
-  return s.mode === 'lineup' ? { number: b.num, name: b.name } : { number: s.num, name: s.name };
+function lettering(s: LabState, b: (typeof LINEUP)[number]): { number: number; name: string; variety: Variety } {
+  const { heightM, weightKg } = bodyFromImperial(b.h, b.w);
+  const who = s.mode === 'lineup' ? { number: b.num, name: b.name } : { number: s.num, name: s.name };
+  return { ...who, variety: playerVariety(b.pos, heightM, weightKg, `${who.name}${s.seed}`) };
 }
 
 /** One figure on the lab floor. */
@@ -188,7 +193,7 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
   useEffect(() => {
     players.forEach((p, i) => p.setLook({ kit: KITS[s.kit]!, skin: SKIN_TONES[s.skin]!.hex, ...lettering(s, bodies[i]!) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [players, s.kit, s.skin, s.num, s.name]);
+  }, [players, s.kit, s.skin, s.num, s.name, s.seed]);
 
   // Raw clip playback (everything except "blend").
   useEffect(() => {
@@ -297,6 +302,7 @@ export function AnimLab() {
     freezeT: q.has('t') ? Number(q.get('t')) : null,
     yaw: Number(q.get('yaw') ?? 0),
     look: q.get('look') === '1',
+    seed: q.get('seed') ?? '',
     num: Number(q.get('num') ?? 16),
     name: q.get('name') ?? 'Montana',
   });
@@ -407,6 +413,10 @@ export function AnimLab() {
             </label>
           </div>
         ) : null}
+        <label>
+          Variety seed
+          <input value={s.seed} maxLength={12} onChange={(e) => set({ seed: e.target.value })} />
+        </label>
         <label>
           Skin tone
           <select value={s.skin} onChange={(e) => set({ skin: Number(e.target.value) })}>

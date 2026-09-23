@@ -149,10 +149,13 @@ def crotch_weights(mesh: bpy.types.Object, half_width: float = 0.08, top: float 
             g.new(name=name)
     for v in mesh.data.vertices:
         x, z = v.co.x, v.co.z
-        if abs(x) > half_width or z > top:
+        # The crotch only: below it the inner faces of the two pant legs sit
+        # within half_width of the midline too, and blending them toward the
+        # opposite thigh webbed the legs together when they split.
+        if abs(x) > half_width or z > top or z < 0.80:
             continue
         # How far into the blend zone (1 on the midline, 0 at its edge).
-        k = 1 - smoothstep(half_width * 0.5, half_width, abs(x))
+        k = (1 - smoothstep(half_width * 0.5, half_width, abs(x))) * smoothstep(0.80, 0.85, z)
         side = smoothstep(-half_width * 0.6, half_width * 0.6, x)  # 0 right .. 1 left
         pelvis = 0.35 * k
         blend = {"thigh_l": (1 - pelvis) * side, "thigh_r": (1 - pelvis) * (1 - side), "pelvis": pelvis}

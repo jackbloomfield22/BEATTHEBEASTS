@@ -17,11 +17,16 @@ from PIL import Image, ImageDraw
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 PLAYER = os.path.join(ROOT, "public", "assets", "characters", "player.glb")
 
-# skin, glove, sock, cleat, jersey, pants, helmet, facemask (linear RGB)
+# By part id (gear.PARTS; linear RGB): skin, glove, sock, cleat, jersey,
+# pants, helmet, the four facemasks, visor, strap, towel, collar.
 PART_COLORS = [
     (0.42, 0.24, 0.14), (0.9, 0.9, 0.9), (0.05, 0.05, 0.06), (0.02, 0.02, 0.02),
     (0.30, 0.02, 0.04), (0.75, 0.75, 0.78), (0.02, 0.02, 0.025), (0.6, 0.6, 0.62),
+    (0.6, 0.6, 0.62), (0.6, 0.6, 0.62), (0.6, 0.6, 0.62), (0.03, 0.03, 0.04),
+    (0.85, 0.85, 0.85), (0.9, 0.9, 0.88), (0.02, 0.02, 0.02),
 ]
+# Parts a preview player doesn't wear (one mask style, no visor or towel).
+HIDDEN = {8, 9, 11, 13}
 
 
 def import_player(rig: bpy.types.Object, lod: int = 0) -> bpy.types.Object:
@@ -39,8 +44,22 @@ def import_player(rig: bpy.types.Object, lod: int = 0) -> bpy.types.Object:
     am = mesh.modifiers.new("rig", "ARMATURE")
     am.object = rig
     mesh.parent = rig
+    _hide_parts(mesh, HIDDEN)
     _part_material(mesh)
     return mesh
+
+
+def _hide_parts(mesh: bpy.types.Object, parts: set[int]) -> None:
+    import bmesh
+
+    uv = mesh.data.uv_layers[0]
+    bm = bmesh.new()
+    bm.from_mesh(mesh.data)
+    lay = bm.loops.layers.uv[uv.name]
+    dead = [f for f in bm.faces if int(f.loops[0][lay].uv.x * 16) in parts]
+    bmesh.ops.delete(bm, geom=dead, context="FACES")
+    bm.to_mesh(mesh.data)
+    bm.free()
 
 
 def _part_material(mesh: bpy.types.Object) -> None:
@@ -58,7 +77,7 @@ def _part_material(mesh: bpy.types.Object) -> None:
         els.remove(els[-1])
     els[0].position = 0.0
     els[0].color = (*PART_COLORS[0], 1)
-    for i in range(1, 8):
+    for i in range(1, len(PART_COLORS)):
         e = els.new(i / 16.0)
         e.color = (*PART_COLORS[i], 1)
     nt.links.new(uv.outputs["UV"], sep.inputs[0])

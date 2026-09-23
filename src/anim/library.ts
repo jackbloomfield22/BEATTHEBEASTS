@@ -38,8 +38,17 @@ export function loadAnimLibrary(): Promise<AnimLibrary> {
   ]).then(([gltf, json]) => {
     const clips = new Map<string, THREE.AnimationClip>();
     for (const c of gltf.animations) {
-      // The armature node itself isn't part of a player clone; keep bone tracks only.
-      c.tracks = c.tracks.filter((t) => !t.name.startsWith('rig.'));
+      // The armature node itself isn't part of a player clone; keep bone
+      // tracks only. Clips move bones by rotation; only the root and the
+      // pelvis translate. Dropping the other (constant) position and every
+      // scale track lets each player keep its own bone proportions
+      // (variety.ts: shoulder width, arm length) through playback.
+      c.tracks = c.tracks.filter((t) => {
+        if (t.name.startsWith('rig.')) return false;
+        if (t.name.endsWith('.scale')) return false;
+        if (t.name.endsWith('.position')) return t.name === 'root.position' || t.name === 'pelvis.position';
+        return true;
+      });
       clips.set(c.name, c);
     }
     const gaits = ['loco_walk', 'loco_jog', 'loco_run', 'loco_sprint']
