@@ -175,6 +175,7 @@ function travel(lib: AnimLibrary, s: LabState): { speed: number; dir: [number, n
 
 function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibrary; s: LabState; onReadout: (r: Readout) => void }) {
   const camera = useThree((st) => st.camera);
+  const gl = useThree((st) => st.gl);
   const actors = useMemo(() => actorsFor(s.mode, s.pos), [s.mode, s.pos]);
   const bodies = actors.map((a) => a.body);
   const players = useMemo(
@@ -287,7 +288,7 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
           readout = { phase: ph, time: clock.current, planted: { l: planted(meta, 'l', ph), r: planted(meta, 'r', ph) }, correction: { l: 0, r: 0 } };
         }
       }
-      if (s.lod === 'auto') p.updateLod(camera.position);
+      if (s.lod === 'auto') p.updateLod(camera, gl.domElement.height);
       else p.setLod(Number(s.lod));
     });
     // Contact markers on the first player's feet.

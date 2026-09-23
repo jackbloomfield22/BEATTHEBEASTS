@@ -125,4 +125,20 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
  * Ask the live rig to set up materials mounted since its last sweep (it
  * sweeps the scene every 120 frames anyway; this makes it the next frame).
  */
-export const shadowAttach = { requested: false };
+export const shadowAttach: { requested: boolean; rig: ShadowRig | null } = { requested: false, rig: null };
+
+/**
+ * Get objects that join the scene late (the players) ready to draw without a
+ * stall: set their materials up for the live cascades, then compile their
+ * programs off the frame. Compiling the skinned, morphing, cascade-shadowed
+ * player program on first draw froze the first lineup frame for ~1.8 s on
+ * an M1 Pro (M4.5 report).
+ */
+export async function prepareLate(root: THREE.Object3D, renderer: THREE.WebGLRenderer, camera: THREE.Camera, scene: THREE.Scene): Promise<void> {
+  shadowAttach.rig?.attachTree(root);
+  try {
+    await renderer.compileAsync(root, camera, scene);
+  } catch {
+    /* compiling on first draw still works, just with the stall */
+  }
+}

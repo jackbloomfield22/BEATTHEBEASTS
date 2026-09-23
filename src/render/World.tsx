@@ -201,9 +201,11 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     const rig = createShadowRig({ camera: camera as THREE.PerspectiveCamera, parent: scene, ...cfg });
     rig.attachTree(scene);
     rigRef.current = rig;
+    shadowAttach.rig = rig;
     sun.visible = false;
     return () => {
       rigRef.current = null;
+      if (shadowAttach.rig === rig) shadowAttach.rig = null;
       sun.visible = true;
       rig.dispose();
     };

@@ -16,5 +16,6 @@ export default defineConfig({
     sourcemap: true,
     chunkSizeWarningLimit: 1500,
   },
-  server: { host: true },
+  // Agent worktrees and debug output live under .claude; edits there must not reload the dev page.
+  server: { host: true, watch: { ignored: ['**/.claude/**', '**/tools/shots/out/**'] } },
 });

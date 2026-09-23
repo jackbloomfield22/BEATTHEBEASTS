@@ -15,8 +15,17 @@ const PROPORTION_BONES = ['upperarm_l', 'upperarm_r', 'forearm_l', 'forearm_r', 
 // morph weights; geometry is shared.
 
 export const PLAYER_URL = `${import.meta.env.BASE_URL}assets/characters/player.glb`;
-/** Screen-space switch points (camera distance in m at the default 40° lens) for LOD 1 and 2. */
-export const LOD_DISTANCES = [0, 22, 55];
+/**
+ * LOD switch points by the player's height on screen, in render-target pixels:
+ * High (~25k triangles) above 240 px, Medium (~12k) above 64 px, Low (~3.6k)
+ * below. The facemask bars and fingers the High LOD adds are under a pixel
+ * below ~240 px; from the broadcast camera (~50-70 px a player at 1080p) all
+ * 22 draw Medium or Low. By screen size rather than distance, a zoomed lens,
+ * a small window or a lower resolution scale all pick the right detail.
+ */
+export const LOD_SCREEN_PX = [240, 64] as const;
+const BASE_HEIGHT_M = 1.88;
+const _camPos = new THREE.Vector3();
 
 export interface PlayerAsset {
   scene: THREE.Group;
@@ -151,9 +160,24 @@ export class Player {
     this.lods.forEach((m, k) => (m.visible = k === i));
   }
 
-  /** Pick the LOD from the camera distance (bias > 1 prefers lower detail, per quality tier). */
-  updateLod(cameraPos: THREE.Vector3, bias = 1): void {
-    const d = cameraPos.distanceTo(this.root.position) * bias;
-    this.setLod(d > LOD_DISTANCES[2]! ? 2 : d > LOD_DISTANCES[1]! ? 1 : 0);
+  /**
+   * Pick the LOD from the player's height on screen. `viewportPx` is the
+   * render target's height in pixels; bias > 1 prefers lower detail.
+   */
+  updateLod(camera: THREE.Camera, viewportPx: number, bias = 1): void {
+    this.setLod(lodForScreenHeight(screenHeightPx(camera, this.root.position, BASE_HEIGHT_M * this.shape.scale, viewportPx) / bias));
   }
+}
+
+/** Height on screen (px) of an upright object `heightM` tall standing at `pos`. */
+export function screenHeightPx(camera: THREE.Camera, pos: THREE.Vector3, heightM: number, viewportPx: number): number {
+  const d = Math.max(0.1, camera.getWorldPosition(_camPos).distanceTo(pos));
+  const cam = camera as THREE.PerspectiveCamera;
+  if (!cam.isPerspectiveCamera) return viewportPx;
+  const view = 2 * d * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2) / cam.zoom;
+  return (heightM / view) * viewportPx;
+}
+
+export function lodForScreenHeight(px: number): number {
+  return px >= LOD_SCREEN_PX[0] ? 0 : px >= LOD_SCREEN_PX[1] ? 1 : 2;
 }

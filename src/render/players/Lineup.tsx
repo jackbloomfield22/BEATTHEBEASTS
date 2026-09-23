@@ -11,7 +11,7 @@ import { jerseyName } from './glyphs';
 import { playerVariety, type Position } from './variety';
 import { loadPlayerAsset, Player, type PlayerAsset } from './playerAsset';
 import { YARD } from '../world/constants';
-import { shadowAttach } from '../lighting/shadows';
+import { prepareLate, shadowAttach } from '../lighting/shadows';
 
 // The M4 exit check (TECH_PLAN §16): 22 players lined up at the line of
 // scrimmage in the stadium, in their stances, for the broadcast camera
@@ -116,17 +116,22 @@ function place(slots: Slot[], kit: Kit, side: 1 | -1, asset: PlayerAsset, lib: A
 
 export function Lineup() {
   const scene = useThree((s) => s.scene);
+  const gl = useThree((s) => s.gl);
+  const camera = useThree((s) => s.camera);
   const [placed, setPlaced] = useState<Placed[]>([]);
 
   useEffect(() => {
     let alive = true;
     let group: THREE.Group | null = null;
-    Promise.all([loadPlayerAsset(), loadAnimLibrary()]).then(([asset, lib]) => {
+    Promise.all([loadPlayerAsset(), loadAnimLibrary()]).then(async ([asset, lib]) => {
       if (!alive) return;
       const all = [...place(OFFENSE, KITS.royal!, 1, asset, lib), ...place(DEFENSE, KITS.beasts!, -1, asset, lib)];
-      group = new THREE.Group();
-      group.name = 'lineup';
-      for (const p of all) group.add(p.player.root);
+      const g = new THREE.Group();
+      g.name = 'lineup';
+      for (const p of all) g.add(p.player.root);
+      await prepareLate(g, gl, camera, scene);
+      if (!alive) return;
+      group = g;
       scene.add(group);
       shadowAttach.requested = true;
       setPlaced(all);
@@ -136,14 +141,15 @@ export function Lineup() {
       alive = false;
       if (group) scene.remove(group);
     };
-  }, [scene]);
+  }, [scene, gl, camera]);
 
-  useFrame(({ camera }, dt) => {
+  useFrame(({ camera, gl }, dt) => {
+    const viewportPx = gl.domElement.height;
     // Screenshots step a fixed 1/60 s, like the rest of the scene.
     const step = urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
     for (const p of placed) {
       p.animator.update(step, { speed: 0 });
-      p.player.updateLod(camera.position);
+      p.player.updateLod(camera, viewportPx);
     }
   });
 
