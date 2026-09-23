@@ -16,8 +16,20 @@ export const QB_ATTRS: readonly SkillAttrDef[] = [
     // "yards per attempt index plus the deep share of production, with
     // reputation used to separate true cannons"
     // Honors say nothing about arm strength, so they're left out.
-    terms: [t('q_ypcmp', 0.5), t('q_ypa', 0.15), t(['q_yds', 'q_tdg'], 0.15), t('imp', 0.2)],
-    note: 'Yards per completion (deep share) and per attempt vs league, plus volume. Drives release velocity and max air distance.',
+    // Ratings follow-up (user-approved): two arm-specific inputs.
+    //   q_air  intended air yards per attempt vs league, 2006+ (verified).
+    //          It measures where he throws, not how hard (the graded cannons
+    //          average a ratio of 1.04, the weak arms 0.88), so it is one input
+    //          of five, weighted below the deep share it complements.
+    //   q_arm  our grade of cited arm descriptions, any era (estimated),
+    //          scaled by evidence strength (signals.ts ARM_GRADE_Z,
+    //          ARM_EVIDENCE_WEIGHT). Most QBs have no grade; like any
+    //          missing evidence it then regresses to the average and moves
+    //          part of its weight to the stats he has.
+    // The deep share stays the largest term (every era has it); volume and
+    // reputation give up the weight (volume says little about the arm).
+    terms: [t('q_ypcmp', 0.3), t('q_air', 0.2), t('q_arm', 0.2), t('q_ypa', 0.1), t(['q_yds', 'q_tdg'], 0.05), t('imp', 0.15)],
+    note: 'Yards per completion (deep share), intended air yards per attempt (2006+) and per-attempt yards vs league, plus a sourced arm grade (estimated) where one exists. Drives release velocity and max air distance.',
   },
   {
     key: 'shortAcc',

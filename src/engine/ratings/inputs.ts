@@ -1,6 +1,6 @@
 import type { Decade, Defender, OLUnit, Player } from '@data/legacy/types';
 import { HONOR_WEIGHTS, worse } from './signals';
-import type { Accolades, Baseline, Conf, Measurables, RatedPos, RatingInputs, Sourced, StintStats } from './types';
+import type { Accolades, ArmEvidence, ArmGrade, ArmInputs, Baseline, Conf, Measurables, RatedPos, RatingInputs, Sourced, StintStats } from './types';
 
 // Input assembly (TECH_PLAN §6–§7): one sourced RatingInputs record per stint
 // (player + franchise + decade), built from
@@ -10,6 +10,8 @@ import type { Accolades, Baseline, Conf, Measurables, RatedPos, RatingInputs, So
 //   data/augment/estimated_def_stints_pre1999.json          "estimated"
 //   data/augment/accolades.json (Wikipedia infoboxes)       "reference"
 //   data/augment/estimated_physical.json (40 times)         "reference"/"estimated"
+//   data/augment/arm_strength.json (QB air yards 2006+      "verified",
+//                                   cited arm grades        "estimated")
 //   data/era_baselines.json                                 per-season league averages
 //
 // Precedence per field: verified data for the stint wins when it covers the
@@ -141,6 +143,32 @@ export interface OlRosterLineman {
   inKeyList: number[] | false;
 }
 
+/** data/augment/arm_strength.json `airYards` record (tools/augment/arm.ts). */
+export interface AirYardsRecord {
+  name: string;
+  seasons: number[];
+  stintSeasons: number;
+  partial: boolean;
+  attempts: number;
+  intendedAirYardsPerAtt: number;
+  league: { intendedAirYardsPerAtt: number };
+  iayRatio: number;
+  src: string;
+  conf: Conf;
+}
+
+/** data/augment/arm_strength.json `bigArm` record. */
+export interface BigArmRecord {
+  name: string;
+  entryIds: string[];
+  grade: ArmGrade;
+  evidence: ArmEvidence;
+  basis: string;
+  sources: { url: string }[];
+  src: string;
+  conf: Conf;
+}
+
 export interface InputSources {
   players: readonly Player[];
   defense: readonly Defender[];
@@ -154,6 +182,8 @@ export interface InputSources {
   accolades: Record<string, AccoladeRecord>;
   physical: Record<string, PhysicalRecord>;
   baselines: Record<string, SeasonBaseline>;
+  /** Arm-strength inputs for QB Throw Power (absent: Throw Power uses its other inputs). */
+  arm?: { airYards: Record<string, AirYardsRecord>; bigArm: readonly BigArmRecord[] };
 }
 
 // ------------------------------------------------------------ helpers
@@ -627,6 +657,8 @@ export function buildInputs(S: InputSources): { inputs: RatingInputs[]; notes: s
   const physByEntry = new Map<string, PhysicalRecord>();
   for (const r of Object.values(S.physical)) if (r && Array.isArray(r.entries)) for (const e of r.entries) physByEntry.set(e, r);
   const inputs: RatingInputs[] = [];
+  const armGrades = new Map<string, BigArmRecord>();
+  for (const r of S.arm?.bigArm ?? []) for (const id of r.entryIds) armGrades.set(id, r);
 
   const common = (e: Player | Defender, pos: RatedPos) => {
     const nv = S.nflverse[e.id];
@@ -675,6 +707,7 @@ export function buildInputs(S: InputSources): { inputs: RatingInputs[]; notes: s
       accolades,
       baseline,
       experience: stint.age ? src(Math.max(0, stint.age.v - 22), 'age − 22 (proxy)', 'estimated') : undefined,
+      ...(pos === 'QB' ? armFor(e.id, stint.seasons, S.arm, armGrades) : {}),
     });
   }
 
@@ -781,6 +814,26 @@ export function buildInputs(S: InputSources): { inputs: RatingInputs[]; notes: s
     }
   }
   return { inputs, notes };
+}
+
+/**
+ * QB arm inputs. Air yards exist from 2006; a stint that also spans earlier
+ * seasons keeps its 2006+ figure only when those seasons are at least 40% of
+ * the stint (the same slice rule as mergeStats: a small slice doesn't speak
+ * for the whole stint). The grade applies to every entry its record lists.
+ */
+function armFor(id: string, seasons: readonly number[], arm: InputSources['arm'], grades: ReadonlyMap<string, BigArmRecord>): { arm?: ArmInputs } {
+  const out: ArmInputs = {};
+  const a = arm?.airYards[id];
+  if (a && a.attempts > 0 && a.league.intendedAirYardsPerAtt > 0) {
+    const covered = a.seasons.filter((y) => seasons.includes(y));
+    if (covered.length >= 0.4 * Math.max(1, seasons.length)) {
+      out.air = { ratio: a.iayRatio, perAtt: a.intendedAirYardsPerAtt, league: a.league.intendedAirYardsPerAtt, attempts: a.attempts, games: a.attempts / SAMPLE_PER_GAME.attempts, covered, stintSeasons: seasons.length, src: `${a.src} (data/augment/arm_strength.json)`, conf: a.conf };
+    }
+  }
+  const g = grades.get(id);
+  if (g) out.grade = { grade: g.grade, evidence: g.evidence, basis: g.basis, urls: g.sources.map((x) => x.url), src: `${g.src} (data/augment/arm_strength.json)`, conf: g.conf };
+  return out.air || out.grade ? { arm: out } : {};
 }
 
 const SLOTS = ['LT', 'LG', 'C', 'RG', 'RT'] as const;

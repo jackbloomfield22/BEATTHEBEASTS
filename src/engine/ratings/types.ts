@@ -27,7 +27,8 @@ export interface Contribution {
   /** Provenance of the input. */
   conf?: Conf;
   src?: string;
-  kind: 'base' | 'stat' | 'accolade' | 'reputation' | 'physical' | 'body' | 'aging' | 'prior' | 'unit';
+  /** `scouting`: a sourced description graded by us (e.g. the QB arm grade), evidence at `estimated` confidence. */
+  kind: 'base' | 'stat' | 'accolade' | 'scouting' | 'reputation' | 'physical' | 'body' | 'aging' | 'prior' | 'unit';
 }
 
 export interface AttributeResult {
@@ -174,6 +175,43 @@ export interface RatingInputs {
   };
   /** Years in the league at the stint midpoint (experience). */
   experience?: Sourced;
+  /** QB only: arm-strength inputs from data/augment/arm_strength.json (Throw Power). */
+  arm?: ArmInputs;
+}
+
+export type ArmGrade = 'cannon' | 'strong' | 'average' | 'weak';
+export type ArmEvidence = 'pro' | 'pre-pro' | 'comparison';
+
+export interface ArmInputs {
+  /**
+   * Intended air yards per attempt vs the attempt-weighted league figure over
+   * the stint's 2006+ seasons (nflverse play-by-play, verified). Where the
+   * stint lands downfield, not how hard he throws: one Throw Power input.
+   */
+  air?: {
+    /** Player ÷ league intended air yards per attempt. */
+    ratio: number;
+    perAtt: number;
+    league: number;
+    attempts: number;
+    /** Sample in games (attempts / 30, as for the other QB rate stats). */
+    games: number;
+    /** Stint seasons with air yards, and all stint seasons. */
+    covered: number[];
+    stintSeasons: number;
+    src: string;
+    conf: Conf;
+  };
+  /** Our grade of cited arm descriptions (estimated), any era. */
+  grade?: {
+    grade: ArmGrade;
+    evidence: ArmEvidence;
+    basis: string;
+    /** Source URLs behind the grade. */
+    urls: string[];
+    src: string;
+    conf: Conf;
+  };
 }
 
 export interface RatedEntry {

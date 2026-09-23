@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { DEFENSE, OL_UNITS, PLAYERS } from '../../data/legacy/index.ts';
 import { applyCorrections, validateCorrectionsFile, type AppliedCorrection } from '../../src/engine/data/corrections.ts';
-import type { InputSources } from '../../src/engine/ratings/inputs.ts';
+import type { AirYardsRecord, BigArmRecord, InputSources } from '../../src/engine/ratings/inputs.ts';
 
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -51,6 +51,7 @@ export function loadSources(): LoadedSources {
   const nflverse = readJson<Record<string, unknown>>('data/augment/nflverse_entries.json');
   const ol = readJson<Record<string, unknown>>('data/augment/ol_rosters.json');
   const baselines = readJson<Record<string, unknown>>('data/era_baselines.json');
+  const arm = opt('data/augment/arm_strength.json') as { airYards?: Record<string, AirYardsRecord>; bigArm?: BigArmRecord[] };
   return {
     players: p.entries,
     defense: d.entries,
@@ -65,6 +66,7 @@ export function loadSources(): LoadedSources {
     accolades: body(opt('data/augment/accolades.json'), 'people'),
     physical: body(opt('data/augment/estimated_physical.json'), 'people'),
     baselines: body(baselines, 'seasons'),
+    arm: arm.airYards || arm.bigArm ? { airYards: body<AirYardsRecord>(arm, 'airYards'), bigArm: arm.bigArm ?? [] } : undefined,
     missing,
   };
 }

@@ -116,9 +116,12 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
   }
 
   const zFrom = (e: RatingInputs, key: string, v: SignalValue | undefined): number | undefined => {
-    const m = pools.get(`${e.pos}|${key}`);
-    if (!v || !m || !Number.isFinite(v.x)) return undefined;
+    if (!v || !Number.isFinite(v.x)) return undefined;
     const def = SIGNALS[key]!;
+    // Already on the z scale (signals.ts `absolute`): not standardized in the pool.
+    if (def.absolute) return Math.max(-Z_CLIP, Math.min(Z_CLIP, def.dir * v.x)) * shrink(v.games, def.k);
+    const m = pools.get(`${e.pos}|${key}`);
+    if (!m) return undefined;
     const z = Math.max(-Z_CLIP, Math.min(Z_CLIP, (def.dir * (v.x - m.mean)) / m.sd));
     return z * shrink(v.games, def.k);
   };
@@ -181,12 +184,12 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
       return { key: keys[0]!, label: `${sd.label} (no data: position average)`, z: 0, kind: 'prior' as const, conf: 'prior' as const, src: undefined, input: undefined, weight: t.w / wSum, present: false };
     });
     // Partly move missing evidence weight onto the present evidence (stats,
-    // honors, unit results; types.ts MISSING_REWEIGHT). Body, physical and
+    // honors, sourced scouting grades, unit results; types.ts MISSING_REWEIGHT). Body, physical and
     // reputation terms are priors, not evidence of the skill, so they are
     // never scaled up to stand in for missing stats.
     const isEvidence = (key: string) => {
       const k = SIGNALS[key]!.kind;
-      return k === 'stat' || k === 'accolade' || k === 'unit';
+      return k === 'stat' || k === 'accolade' || k === 'scouting' || k === 'unit';
     };
     const ev = raw.filter((t) => isEvidence(t.key));
     const wAll = ev.reduce((a, t) => a + t.weight, 0);

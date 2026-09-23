@@ -51,7 +51,8 @@ export const IMP_MAX_SHARE = 0.2;
 /**
  * Missing inputs: a term with no data contributes 0 (the position average),
  * and part of its weight moves to the player's other evidence (stats, honors,
- * unit results; never body, physical or reputation terms).
+ * sourced scouting grades, unit results; never body, physical or reputation
+ * terms).
  * Present weights are scaled by (total / present)^MISSING_REWEIGHT, so a
  * player with half the inputs keeps most of what those inputs say instead of
  * being dragged to the average (which would favor data-rich modern eras),

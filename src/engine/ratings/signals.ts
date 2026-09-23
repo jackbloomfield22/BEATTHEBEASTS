@@ -1,5 +1,5 @@
 import { log } from '../math/detmath';
-import type { Conf, RatingInputs, Sourced } from './types';
+import type { ArmEvidence, ArmGrade, Conf, RatingInputs, Sourced } from './types';
 
 // Signals: the era-adjusted inputs the attribute formulas combine. Each one
 // is a number where "higher = better at the thing it measures" after `dir`
@@ -28,7 +28,15 @@ export interface SignalDef {
   k: number;
   /** +1: higher raw is better; -1: lower raw is better (INT rate, sack rate, fumbles). */
   dir: 1 | -1;
-  kind: 'stat' | 'accolade' | 'reputation' | 'body' | 'physical' | 'unit';
+  kind: 'stat' | 'accolade' | 'scouting' | 'reputation' | 'body' | 'physical' | 'unit';
+  /**
+   * The value is already a z-like score on the position scale (a documented
+   * mapping, e.g. ARM_GRADE_Z), so it is not standardized within the pool.
+   * Used where the players who have the signal are a selected group (only
+   * QBs with a cited arm description are graded), whose own mean and spread
+   * would misplace them against the rest of the position.
+   */
+  absolute?: boolean;
   get: (inp: RatingInputs, phys: PhysicalSnapshot) => SignalValue | undefined;
 }
 
@@ -94,6 +102,27 @@ export function accoladeScore(inp: RatingInputs): SignalValue | undefined {
 }
 
 const g = (inp: RatingInputs) => inp.games.v;
+
+/**
+ * QB arm grade → z-like score (data/augment/arm_strength.json `_meta.definitions.grade`).
+ * The grades are ours, from cited descriptions, so each maps to the normal
+ * quantile its definition describes within the QB position:
+ *   cannon  "one of the strongest arms of his era"           ≈ top 2–3%  → +2.0
+ *   strong  "a strong, powerful or rifle arm"                 ≈ top 16%   → +1.0
+ *   average "ordinary, unexceptional or doubted" (the doubt
+ *           puts it a little below the typical QB)            ≈ 31st pct  → −0.5
+ *   weak    "lacked arm strength"                             ≈ 7th pct   → −1.5
+ */
+export const ARM_GRADE_Z: Record<ArmGrade, number> = { cannon: 2.0, strong: 1.0, average: -0.5, weak: -1.5 };
+
+/**
+ * How much of the grade's z counts, by the strength of its evidence
+ * (`_meta.definitions.evidence`): a description of his arm as a pro counts in
+ * full; being cited as the benchmark in another QB's description is indirect
+ * but still about the pro arm (¾); draft, college and high-school reports
+ * describe the arm before the NFL and count half.
+ */
+export const ARM_EVIDENCE_WEIGHT: Record<ArmEvidence, number> = { pro: 1, comparison: 0.75, 'pre-pro': 0.5 };
 
 export const SIGNALS: Record<string, SignalDef> = {
   // ---------------------------------------------------------------- shared
@@ -166,6 +195,35 @@ export const SIGNALS: Record<string, SignalDef> = {
       const mine = ypa.v / (cmpPct.v / 100);
       const lg = b.ypa / (b.cmpPct / 100);
       return { x: ln(mine / lg), conf: worse(ypa.conf, cmpPct.conf), src: `${ypa.src}+${cmpPct.src}`, input: `${f1(mine)} vs league ${f1(lg)}`, games: g(inp) };
+    },
+  },
+  q_air: {
+    key: 'q_air',
+    label: 'Intended air yards/att vs league (2006+)',
+    // Same shrinkage as the other deep-share rate (q_ypcmp); games = attempts / 30.
+    k: 12,
+    dir: 1,
+    kind: 'stat',
+    get: (inp) => {
+      const a = inp.arm?.air;
+      if (!a || !(a.ratio > 0)) return undefined;
+      const part = a.covered.length < a.stintSeasons ? `, ${a.covered[0]}–${a.covered[a.covered.length - 1]} only (${a.covered.length} of ${a.stintSeasons} seasons)` : '';
+      return { x: ln(a.ratio), conf: a.conf, src: a.src, input: `${f2(a.perAtt)} vs league ${f2(a.league)} on ${a.attempts} att${part}`, games: a.games };
+    },
+  },
+  q_arm: {
+    key: 'q_arm',
+    label: 'Arm grade (cited descriptions, estimated)',
+    k: 0,
+    dir: 1,
+    kind: 'scouting',
+    absolute: true,
+    get: (inp) => {
+      const a = inp.arm?.grade;
+      if (!a) return undefined;
+      const w = ARM_EVIDENCE_WEIGHT[a.evidence];
+      const z = ARM_GRADE_Z[a.grade] * w;
+      return { x: z, conf: a.conf, src: `${a.src}: ${a.urls.join(' ')}`, input: `${a.grade}, ${a.evidence} evidence (×${w}): z ${z >= 0 ? '+' : ''}${f2(z)}`, games: g(inp) };
     },
   },
   q_tdint: {

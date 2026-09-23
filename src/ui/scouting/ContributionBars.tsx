@@ -8,6 +8,7 @@ const KIND_COLOR: Record<Contribution['kind'], string> = {
   base: 'var(--rx-base)',
   stat: 'var(--rx-stat)',
   accolade: 'var(--rx-acc)',
+  scouting: 'var(--rx-scout)',
   reputation: 'var(--rx-rep)',
   physical: 'var(--rx-phys)',
   body: 'var(--rx-body)',
