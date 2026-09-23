@@ -62,6 +62,14 @@ export class PlayerAnimator {
   private look = new THREE.Quaternion();
   private padSpring = { x: 0, v: 0 };
   private chestY: number[] = [];
+  /**
+   * Every bone's rotation as the clips alone left it last frame. three's
+   * mixer only writes a bone when its mixed value changes, so a bone whose
+   * clip value holds still (the root, a frozen stance) would keep last
+   * frame's procedural edits (lean, IK, look-at, pads) and they would
+   * compound. Each update puts this pose back before the mixer runs.
+   */
+  private animPose: [THREE.Bone, THREE.Quaternion][] = [];
   footLock = true;
   /** Last frame's foot-lock correction per foot (m): how much slide the lock removed. */
   readonly correction = { l: 0, r: 0 };
@@ -79,6 +87,7 @@ export class PlayerAnimator {
       this.actions.set(name, a);
     }
     this.stanceWeights.set(this.stance, 1);
+    for (const bone of player.bones.values()) this.animPose.push([bone, bone.quaternion.clone()]);
   }
 
   /** Forget all runtime state (phase, planted feet, springs): replay from a clean start. */
@@ -142,7 +151,9 @@ export class PlayerAnimator {
       a.time = this.stanceTime % a.getClip().duration;
     }
     // Everything else (the backpedal, future clips) stays silent unless driven.
+    for (const [bone, q] of this.animPose) bone.quaternion.copy(q);
     this.mixer.update(0);
+    for (const [bone, q] of this.animPose) q.copy(bone.quaternion);
     this.player.root.updateMatrixWorld(true);
 
     // 3. Lean (before the feet are locked, so the lock sees the leaned body).

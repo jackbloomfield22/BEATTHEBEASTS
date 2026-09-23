@@ -23,7 +23,8 @@ import './anim.css';
 // green on planted frames.
 //
 // Hash query: mode=lineup|single, clip, speed, t (freeze at time, s), rate
-// (playback rate), lock=0|1, kit, skin, lod, num, name, clip2, cam=x,y,z,tx,ty,tz.
+// (playback rate), lock=0|1, kit, skin, lod, num, name, clip2, yaw, look=1,
+// cam=x,y,z,tx,ty,tz.
 
 // Numbers and names exercise the lettering: one and two digits, short,
 // long (squeezed) and accented names.
@@ -51,6 +52,9 @@ interface LabState {
   skin: number;
   lod: string;
   freezeT: number | null;
+  /** Blend mode: turn rate (rad/s, + = left) for the lean, and head tracking of the camera. */
+  yaw: number;
+  look: boolean;
   /** Single mode's jersey number and name (lineup players carry their own). */
   num: number;
   name: string;
@@ -171,6 +175,8 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
     [asset, s.mode],
   );
   const animators = useMemo(() => players.map((p) => new PlayerAnimator(p, lib)), [players, lib]);
+  // Dev console access: __labAnimators[0].player.bones.get(...)
+  (window as unknown as { __labAnimators?: PlayerAnimator[] }).__labAnimators = animators;
   const raw = useMemo(
     () =>
       players.map((p) => {
@@ -213,16 +219,17 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
       const clipName = clipOf(s, actor);
       if (clipName === 'blend') {
         const an = animators[i]!;
+        const input = { speed, groundVelocity: ground, yawRate: s.yaw, lookAt: s.look ? camera.position : null };
         an.footLock = s.lock;
         an.setStance('stance_idle');
         if (s.freezeT !== null) {
           // Deterministic: re-run from a clean start to the frozen time.
           an.reset();
           const steps = Math.round(s.freezeT * 60);
-          for (let k = 0; k < steps; k++) an.update(1 / 60, { speed, groundVelocity: ground });
-          an.update(0, { speed, groundVelocity: ground });
+          for (let k = 0; k < steps; k++) an.update(1 / 60, input);
+          an.update(0, input);
         } else {
-          an.update(dt, { speed, groundVelocity: ground });
+          an.update(dt, input);
         }
         if (i === 0) readout = { phase: an.phase, time: clock.current, planted: { l: false, r: false }, correction: { ...an.correction } };
       } else {
@@ -288,6 +295,8 @@ export function AnimLab() {
     skin: Number(q.get('skin') ?? 2),
     lod: q.get('lod') ?? '0',
     freezeT: q.has('t') ? Number(q.get('t')) : null,
+    yaw: Number(q.get('yaw') ?? 0),
+    look: q.get('look') === '1',
     num: Number(q.get('num') ?? 16),
     name: q.get('name') ?? 'Montana',
   });
@@ -354,6 +363,17 @@ export function AnimLab() {
             Speed {s.speed.toFixed(1)} m/s
             <input type="range" min={0} max={9.5} step={0.1} value={s.speed} onChange={(e) => set({ speed: Number(e.target.value) })} />
           </label>
+        ) : null}
+        {s.clip === 'blend' ? (
+          <>
+            <label>
+              Turn rate {s.yaw.toFixed(1)} rad/s (lean)
+              <input type="range" min={-2} max={2} step={0.1} value={s.yaw} onChange={(e) => set({ yaw: Number(e.target.value) })} />
+            </label>
+            <label className="lab-check">
+              <input type="checkbox" checked={s.look} onChange={(e) => set({ look: e.target.checked })} /> Look at the camera
+            </label>
+          </>
         ) : null}
         <label>
           Playback {s.rate}×
