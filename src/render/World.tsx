@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { atmosphereUniforms, SkyLUT, sunDirection, sunTransmittance } from './sky/atmosphere';
 import { createSkyDome } from './sky/SkyDome';
+import { buildCliff } from './terrain/cliff';
 import { buildBoulders, buildHeadlands, buildTerrain, createBoulderMaterial, createTerrainMaterial } from './terrain/terrain';
 import { createOcean } from './ocean/ocean';
 import { buildBowl, PROFILE } from './stadium/bowl';
@@ -39,6 +40,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     return {
       terrain,
       terrainMat: createTerrainMaterial(false),
+      cliff: buildCliff(),
       headlands: buildHeadlands(),
       headlandMat: createTerrainMaterial(true),
       ocean,
@@ -225,6 +227,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
 
       <primitive object={assets.sky.mesh} />
       <mesh geometry={assets.terrain.geometry} material={assets.terrainMat} receiveShadow castShadow />
+      <mesh geometry={assets.cliff.geometry} material={assets.terrainMat} receiveShadow castShadow />
       <mesh geometry={assets.headlands} material={assets.headlandMat} />
       <primitive object={assets.ocean.mesh} />
       <primitive object={boulders} />
