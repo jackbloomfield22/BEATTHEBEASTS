@@ -75,6 +75,8 @@ export interface RatingRun {
   composites: Record<string, Record<string, Moments>>;
   /** Body per entry: listed height/weight and the era-translated weight used for physics. */
   bodies: Record<string, { heightIn: number; weightLb: number; weightEq: number }>;
+  /** Pool calibration per position (see calibratePools). */
+  calibration: Record<string, { medianHonors: number; center: number }>;
 }
 
 type PoolKey = `${RatedPos}|${string}`;
@@ -269,9 +271,14 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
     // OVR confidence is the weighted confidence of its attributes.
     ovr.confScore = terms.reduce((a, t) => a + t.weight * t.confScore, 0);
     ovr.conf = confLabel(ovr.confScore);
-    const traits = deriveTraits(e, attrs, (key) => zFrom(e, key, signal(e, key)));
-    entries.push({ id: e.id, personId: e.personId, name: e.name, pos: e.pos, team: e.team, decade: e.decade, imp: e.imp, attrs, ovr, traits, inputs: e });
+    entries.push({ id: e.id, personId: e.personId, name: e.name, pos: e.pos, team: e.team, decade: e.decade, imp: e.imp, attrs, ovr, traits: [], inputs: e });
   }
+
+  // 6. Pool calibration: re-center curated elite pools on the shared scale.
+  const calibration = calibratePools(entries, byPos);
+
+  // 7. Traits (after calibration: thresholds read final values).
+  for (const r of entries) r.traits = deriveTraits(r.inputs, r.attrs, (key) => zFrom(r.inputs, key, signal(r.inputs, key)));
 
   const poolsOut: RatingRun['pools'] = {};
   for (const [k, m] of pools) {
@@ -285,7 +292,7 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
   }
   const bodies: RatingRun['bodies'] = {};
   for (const [id, p] of physicals) bodies[id] = { heightIn: p.heightIn, weightLb: p.weightLb, weightEq: p.weightEq };
-  return { entries, pools: poolsOut, composites: compOut, bodies };
+  return { entries, pools: poolsOut, composites: compOut, bodies, calibration };
 }
 
 function labelOf(pos: RatedPos, key: string): string {
@@ -293,3 +300,81 @@ function labelOf(pos: RatedPos, key: string): string {
 }
 
 export { CONF_WEIGHT };
+
+// ---------------------------------------------------------------------------
+// Pool calibration.
+//
+// Every position is standardized within its own pool, so each pool's median
+// lands at 72 ("solid starter"). That is right for the broad offensive pools
+// (thousands of stints, median honors 0 per season), but the defensive pools
+// are the curated Beasts candidates: about 90% of them have honors, with a
+// median of ~0.5–0.75 honors per season. On the shared scale their median
+// player is a Pro Bowl-level defender, not a solid starter.
+//
+// The offensive pools give the relation between honors per season and rating
+// (median OVR by honors band). A pool whose median honors are well above zero
+// is re-centered on the rating that honors level earns on offense, keeping
+// the best ever at the top: values above 72 are compressed into
+// [center, POOL_BEST_RATING], values below are shifted down by the same
+// offset. Only the position's own skills (base 72) and OVR move; occasional
+// skills keep their own [base, top] ranges.
+
+const OFFENSE: readonly RatedPos[] = ['QB', 'RB', 'WR', 'TE'];
+
+function median(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b);
+  if (!s.length) return NaN;
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+}
+
+function calibratePools(entries: RatedEntry[], byPos: Map<RatedPos, RatingInputs[]>): RatingRun['calibration'] {
+  const honors = (e: RatedEntry) => SIGNALS.acc!.get(e.inputs, undefined as never)?.x;
+  // Honors → OVR on offense: zero-honors median, then eight equal-count bands.
+  const off = entries.filter((e) => OFFENSE.includes(e.pos));
+  const withH = off.map((e) => ({ h: honors(e), ovr: e.ovr.value })).filter((x): x is { h: number; ovr: number } => x.h !== undefined);
+  const zero = withH.filter((x) => x.h <= 0);
+  const pos = withH.filter((x) => x.h > 0).sort((a, b) => a.h - b.h);
+  const pts: [number, number][] = [[0, median(zero.map((x) => x.ovr))]];
+  const bands = 8;
+  for (let i = 0; i < bands; i++) {
+    const band = pos.slice(Math.floor((i * pos.length) / bands), Math.floor(((i + 1) * pos.length) / bands));
+    if (band.length) pts.push([median(band.map((x) => x.h)), median(band.map((x) => x.ovr))]);
+  }
+  const ovrAt = (h: number): number => {
+    if (h <= pts[0]![0]) return pts[0]![1];
+    for (let i = 1; i < pts.length; i++) {
+      const [h1, r1] = pts[i]!;
+      const [h0, r0] = pts[i - 1]!;
+      if (h <= h1) return r0 + ((h - h0) / Math.max(1e-9, h1 - h0)) * (r1 - r0);
+    }
+    return pts[pts.length - 1]![1];
+  };
+
+  const out: RatingRun['calibration'] = {};
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  for (const [p, list] of byPos) {
+    const hs = list.map((e) => SIGNALS.acc!.get(e, undefined as never)?.x).filter((x): x is number => x !== undefined);
+    const mh = median(hs);
+    // Only pools whose typical member has honors (the curated defensive pools).
+    if (OFFENSE.includes(p) || !(mh > 0.05) || hs.length < list.length / 2) continue;
+    const center = Math.min(POOL_BEST_RATING - 4, ovrAt(mh));
+    out[p] = { medianHonors: mh, center };
+    const up = (POOL_BEST_RATING - center) / (POOL_BEST_RATING - 72);
+    const adjust = (r: AttributeResult) => {
+      const v = r.value;
+      const next = v >= 72 ? center + (v - 72) * up : v + (center - 72);
+      const d = Math.min(99, Math.max(1, next)) - v;
+      if (Math.abs(d) < 1e-9) return;
+      r.contributions.push({ label: `Pool calibration (elite pool: median ${mh.toFixed(2)} honors/season ≈ ${center.toFixed(0)} on offense)`, delta: d, kind: 'prior' });
+      r.value = v + d;
+    };
+    const primary = new Set(SKILL_ATTRS[p].filter((d) => d.top === undefined && d.base === 72).map((d) => d.key));
+    for (const inp of list) {
+      const e = byId.get(inp.id)!;
+      for (const k of primary) if (e.attrs[k]) adjust(e.attrs[k]!);
+      adjust(e.ovr);
+    }
+  }
+  return out;
+}

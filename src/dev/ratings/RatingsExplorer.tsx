@@ -3,6 +3,7 @@ import { rateAll } from '@/engine/ratings/engine';
 import { TRAIT_LABELS } from '@/engine/ratings/traits';
 import type { AttributeResult, RatedEntry, RatedPos, RatingInputs } from '@/engine/ratings/types';
 import { ContributionBars, CONF_LABEL } from '@/ui/scouting/ContributionBars';
+import { ScoutingPanel } from '@/ui/scouting/ScoutingPanel';
 import inputsUrl from '@data/ratings/inputs.v1.json?url';
 import { attrKeys, attrLabel, attrNote, buildModel, CARD_ATTRS, DECADES, pct, POSITIONS, toCsv, valueOf, type Model } from './model';
 import './explorer.css';
@@ -407,6 +408,8 @@ function PlayerCard({ model, e, other }: { model: Model; e: RatedEntry; other?: 
       </div>
 
       <div className="rx-inputs">
+        <h3>In-game Scouting panel (preview)</h3>
+        <ScoutingPanel e={e} />
         <h3>Real stats behind it</h3>
         <table className="rx-kv">
           <tbody>
