@@ -318,13 +318,25 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   useFrame(({ camera }) => vegetation.update(camera.position));
 
   const boulders = useMemo(() => {
-    const b = buildBoulders(quality.terrainSegments >= 320 ? 700 : 350);
+    // Built in full; the tier draws a prefix (placement is sequential from one
+    // seed, so the first 350 are exactly Low's set) and a preset switch
+    // matches a fresh load.
+    const b = buildBoulders(700);
     const white = new THREE.Color(1, 1, 1);
     const chunked = buildChunkedScatter(createBoulderMaterial(), [{ name: 'boulders', variants: [b.geometry], matrices: b.matrices, tints: b.matrices.map(() => white), castShadow: true }], 180);
     chunked.group.name = 'boulders';
     return chunked;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // The terrain mesh follows the tier at runtime (the height texture the
+  // ocean reads is a fixed 512², so only the mesh is rebuilt).
+  const firstSegments = useRef(quality.terrainSegments).current;
+  const terrainGeo = useMemo(
+    () => (quality.terrainSegments === firstSegments ? assets.terrain.geometry : buildTerrain(quality.terrainSegments).geometry),
+    [assets, firstSegments, quality.terrainSegments],
+  );
+  useEffect(() => () => terrainGeo.dispose(), [terrainGeo]);
+
+  useEffect(() => boulders.setDensity(quality.terrainSegments >= 320 ? 1 : 0.5), [boulders, quality.terrainSegments]);
   // Boulder shadows are a few pixels at broadcast distance: High only.
   useEffect(() => {
     boulders.group.traverse((o) => void (o.castShadow = quality.shadows === 'high'));
@@ -372,7 +384,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       <primitive object={assets.sky.mesh} />
       {/* The heightfield receives but doesn't cast: 320 k triangles × 4 cascades,
           and the cliff face (its own mesh) casts the shadows that matter. */}
-      <mesh name="terrain" geometry={assets.terrain.geometry} material={assets.terrainMat} receiveShadow />
+      <mesh name="terrain" geometry={terrainGeo} material={assets.terrainMat} receiveShadow />
       <mesh name="cliff" geometry={assets.cliff.geometry} material={assets.terrainMat} receiveShadow castShadow />
       <mesh name="headlands" geometry={assets.headlands} material={assets.headlandMat} />
       <primitive object={assets.ocean.mesh} />

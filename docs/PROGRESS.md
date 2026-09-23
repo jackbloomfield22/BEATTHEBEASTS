@@ -58,7 +58,8 @@ What made it slow, biggest first:
 4. **Shadows.** Medium drops from 3 cascades to 2 (2048², out to 350 m, no blend band), and the crowd no longer casts (it was the costliest caster in every cascade; the seating steps already cast the row shadows).
 5. **Geometry.** Vegetation and boulders are split into 180 m chunks, so the camera and each cascade draw only what they can see. Scrub switches to an 80-triangle LOD (from 220) past 50 m, and boulders cast only on High. Crowd density on Medium went from 80% to 60% of seats (High 100% → 85%), and precipitation and vegetation are budgeted per tier.
 6. **Startup spike (1.8 s).** It was almost certainly a first-use shader compile: anything hidden at the first frame, such as effects that appear later or the far vegetation LOD, compiled mid-frame on first sight. The whole scene, hidden meshes included, now compiles with `compileAsync` before the menu shows.
-7. **Dynamic resolution** no longer goes below 75% (it was 60%, which you saw as blurry and washed out). With the budget, Medium should rarely need it.
+7. **Dynamic resolution never made the effects cheaper.** The post-processing chain (AO, bloom, color, SMAA) resized its buffers only when the window size changed, not the pixel ratio. When dynamic resolution stepped down, every effect pass kept running at the old resolution. After a preset switch they ran at the wrong size (a soft image). The chain now resizes whenever the pixel ratio changes.
+8. **Dynamic resolution** no longer goes below 75% (it was 60%, which you saw as blurry and washed out). With the budget, Medium should rarely need it.
 
 Measured here (SwiftShader, 1080p; this measures geometry, not GPU time):
 
@@ -82,7 +83,11 @@ Frame times can't be measured here (software rendering), so the 60 fps at 100% t
   - after each switch, check the cascade count, that no material carries another rig's cascades, and that the plain sun is hidden;
   - compare a thumbnail of the frame to a fresh load at that preset;
   - repeat your exact path (Settings → Graphics → Quality preset, High → Medium → High).
-  With the old `shadows.ts` restored, the Settings test fails exactly as you saw it.
+  With the old `shadows.ts` restored, the Settings test fails exactly as you saw it. The walk also found four more switch bugs, now fixed:
+  - three reused a rebuilt rig's cached program with the old rig's uniforms, because the program cache key didn't change;
+  - CSM's own `dispose()` deleted every material's shader hook, so switched materials lost their look;
+  - the post-processing buffers stayed at the old resolution (item 7 above);
+  - boulder count and terrain resolution were fixed at load, so a switch didn't apply them.
 - **Fullscreen** is a Display setting, off by default (existing saves are migrated to off), toggled with F11 or Alt+Enter. The title keypress enters fullscreen only if the setting is on. Shortcut capture (Tab, F1-F3, arrows, Backspace) works the same in a window.
 - **Branding:** BEASTS in both end zones and on the video board; the studio is Comfortable Cave Interactive on the intro, in the page metadata, `package.json` and `CREDITS.md`.
 - **CLAUDE.md rule 9:** stability and frame rate beat visual fidelity.

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, N8AO, SMAA } from '@react-three/postprocessing';
 import * as THREE from 'three';
+import type { EffectComposer as EffectComposerImpl } from 'postprocessing';
 import { World, type WorldQuality } from './World';
 import { CameraDirector } from './cameras/CameraDirector';
 import { FlyCamera } from './cameras/FlyCamera';
@@ -73,8 +74,18 @@ function Post({ preset, quality }: { preset: LightingPreset; quality: QualityPre
     color.vignette = g.vignette ? 0.38 : 0;
   }, [color, preset, g.vignette]);
   const ao = g.ao !== 'off' && !(import.meta.env.DEV && location.search.includes('noao'));
+  // The composer resizes its buffers only when the canvas's CSS size changes,
+  // not its pixel ratio, so a preset switch or a dynamic-resolution step
+  // would leave every effect pass at the old resolution (upscaled: soft, and
+  // no cheaper). Resize it whenever the ratio moves.
+  const composer = useRef<EffectComposerImpl | null>(null);
+  const dpr = useThree((s) => s.viewport.dpr);
+  const size = useThree((s) => s.size);
+  useEffect(() => {
+    composer.current?.setSize(size.width, size.height);
+  }, [dpr, size]);
   return (
-    <EffectComposer multisampling={g.antialias === 'smaa+msaa' ? 4 : 0} frameBufferType={THREE.HalfFloatType} enableNormalPass={false}>
+    <EffectComposer ref={composer} multisampling={g.antialias === 'smaa+msaa' ? 4 : 0} frameBufferType={THREE.HalfFloatType} enableNormalPass={false}>
       {ao ? <N8AO halfRes={g.ao === 'half'} aoRadius={1.6} distanceFalloff={0.6} intensity={2.2} quality={quality === 'ultra' ? 'high' : quality === 'high' ? 'medium' : 'low'} /> : <></>}
       {g.bloom ? <Bloom mipmapBlur intensity={preset.bloom.intensity * (reduceFlashing ? 0.6 : 1)} luminanceThreshold={preset.bloom.threshold} luminanceSmoothing={0.2} radius={0.72} /> : <></>}
       <primitive object={color} dispose={null} />
