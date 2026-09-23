@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { coastZ } from '../world/constants';
 import { patchMaterial } from '../sky/atmosphere';
 import { stadiumUniforms } from './materials';
 
@@ -95,4 +96,40 @@ export function createLightHeadMaterial(): THREE.MeshStandardMaterial {
     },
     'lighthead',
   );
+}
+
+/**
+ * The plaza ring around the stadium: a 250 m square of paving, minus
+ * everything within 8 m of the cliff edge (the square's southern corners
+ * would otherwise hang out over the sea). Built as a grid and trimmed per
+ * cell, with the cut edge snapped to the setback line.
+ */
+export function buildPlazaGeometry(): THREE.BufferGeometry {
+  const half = 125;
+  const cz = -10;
+  const n = 100;
+  const setback = (x: number) => coastZ(x) - 8;
+  const pos: number[] = [];
+  const uv: number[] = [];
+  const v = (x: number, z: number) => {
+    pos.push(x, 0, Math.min(z, setback(x)));
+    uv.push((x + half) / 250, (z - cz + half) / 250);
+  };
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      const x0 = -half + (i / n) * 250;
+      const x1 = -half + ((i + 1) / n) * 250;
+      const z0 = cz - half + (j / n) * 250;
+      const z1 = cz - half + ((j + 1) / n) * 250;
+      if (z0 >= setback(x0) && z0 >= setback(x1)) continue;
+      v(x0, z0); v(x0, z1); v(x1, z0);
+      v(x1, z0); v(x0, z1); v(x1, z1);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
+  return g;
 }

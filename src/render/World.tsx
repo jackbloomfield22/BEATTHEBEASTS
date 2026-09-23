@@ -14,8 +14,9 @@ import { crowdEnergy } from './crowd/reactions';
 import { createPrecipitation } from './weather/precip';
 import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, createRoofMaterial, createSeatingMaterial, stadiumUniforms } from './stadium/materials';
 import { createFieldMaterial, createFieldPaint } from './field/field';
-import { createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
+import { buildPlazaGeometry, createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
+import { createShadowRig, type ShadowRig } from './lighting/shadows';
 import { STAND } from './world/constants';
 
 export interface WorldQuality {
@@ -28,8 +29,12 @@ export interface WorldQuality {
  * once and kept alive across every app state (TECH_PLAN §4.2).
  */
 export function World({ preset, quality, onReady }: { preset: LightingPreset; quality: WorldQuality; onReady?: () => void }) {
-  const { gl, scene } = useThree();
+  const { gl, scene, camera } = useThree();
   const sunRef = useRef<THREE.DirectionalLight>(null!);
+  // The key light as the preset defines it; with cascaded shadows on, the
+  // cascade lights carry it and the plain directional light is dark.
+  const keyRef = useRef({ color: new THREE.Color(), intensity: 0, dir: new THREE.Vector3(0, 1, 0) });
+  const rigRef = useRef<ShadowRig | null>(null);
 
   const assets = useMemo(() => {
     const terrain = buildTerrain(quality.terrainSegments);
@@ -71,6 +76,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   useEffect(() => () => crowd.atlas.dispose(), [crowd]);
 
   const precip = useMemo(() => createPrecipitation(), []);
+  const plaza = useMemo(() => buildPlazaGeometry(), []);
 
   // Sky LUT + IBL, regenerated whenever the lighting preset changes.
   const lut = useMemo(() => new SkyLUT(512, 256), []);
@@ -122,6 +128,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     sun.position.copy(dir).multiplyScalar(600);
     sun.target.position.set(0, 0, 0);
     sun.target.updateMatrixWorld();
+    keyRef.current = { color: sun.color.clone(), intensity: sun.intensity, dir: dir.clone() };
 
     // IBL from the same sky (clouds included) so ambient light matches it.
     const rt = pmrem.fromScene(envScene, 0, 1, 2000);
@@ -132,28 +139,25 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     if (import.meta.env.DEV) Object.assign(window, { __btbCrowd: crowdEnergy, __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
   }, [preset, gl, lut, pmrem, envScene, env, assets, scene, precip]);
 
-  // Shadows follow quality.
+  // Shadows follow quality: cascaded shadow maps (lighting/shadows.ts), sized
+  // per tier; the plain key light never casts.
   useEffect(() => {
-    const sun = sunRef.current;
-    sun.castShadow = quality.shadowMapSize > 0;
-    if (quality.shadowMapSize > 0) {
-      sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
-      sun.shadow.map?.dispose();
-      sun.shadow.map = null as unknown as THREE.WebGLRenderTarget;
-      const cam = sun.shadow.camera;
-      cam.left = -175;
-      cam.right = 175;
-      cam.top = 175;
-      cam.bottom = -175;
-      cam.near = 100;
-      cam.far = 1100;
-      cam.updateProjectionMatrix();
-      sun.shadow.bias = -0.0005;
-      // Wide map (±175 m) and a grazing golden-hour sun: a larger normal
-      // offset keeps faceted rock free of acne. Cascades replace this later.
-      sun.shadow.normalBias = 0.6;
-    }
-  }, [quality.shadowMapSize]);
+    sunRef.current.castShadow = false;
+    if (quality.shadowMapSize <= 0) return;
+    const rig = createShadowRig({
+      camera: camera as THREE.PerspectiveCamera,
+      parent: scene,
+      // Per cascade: high 4 × 2048², medium 3 × 2048², low 3 × 1024².
+      mapSize: quality.shadowMapSize >= 2048 ? 2048 : 1024,
+      cascades: quality.shadowMapSize >= 4096 ? 4 : 3,
+    });
+    rig.attachTree(scene);
+    rigRef.current = rig;
+    return () => {
+      rigRef.current = null;
+      rig.dispose();
+    };
+  }, [quality.shadowMapSize, camera, scene]);
 
   useEffect(() => {
     // Let the first frames compile shaders before announcing readiness.
@@ -167,8 +171,20 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     return () => cancelAnimationFrame(raf);
   }, [onReady]);
 
+  const frameRef = useRef(0);
   useFrame(({ camera, clock }) => {
     atmosphereUniforms.uTime.value = clock.elapsedTime;
+    const key = keyRef.current;
+    const rig = rigRef.current;
+    if (rig) {
+      sunRef.current.intensity = 0;
+      rig.setKey(key.color, key.intensity, key.dir);
+      // Objects mounted later (players, props) pick up the cascades too.
+      if (frameRef.current++ % 120 === 0) rig.attachTree(scene);
+      rig.update();
+    } else {
+      sunRef.current.intensity = key.intensity;
+    }
     stadiumUniforms.uCrowdEnergy.value = crowdEnergy.value(clock.elapsedTime);
     assets.sky.mesh.position.copy(camera.position);
   });
@@ -284,9 +300,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       </mesh>
 
       {/* Plaza ring around the stadium and the open-end terrace */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.005, -10]} material={assets.pavingMat} receiveShadow>
-        <planeGeometry args={[250, 250]} />
-      </mesh>
+      <mesh geometry={plaza} position={[0, 0.005, 0]} material={assets.pavingMat} receiveShadow />
       <mesh position={[0, 0.6, 71]} material={assets.concreteMat} receiveShadow castShadow>
         <boxGeometry args={[100, 1.2, 0.4]} />
       </mesh>
