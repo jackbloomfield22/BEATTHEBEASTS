@@ -141,7 +141,10 @@ void main() {
 
   // Water depth from the terrain height texture (seabed below the surface).
   vec2 huv = (vWorld.xz - vec2(0.0, 300.0)) / (2.0 * uHeightExtent) + 0.5;
-  float bed = (huv.x > 0.0 && huv.x < 1.0 && huv.y > 0.0 && huv.y < 1.0) ? texture2D(uHeight, huv).r : uSeaLevel - 80.0;
+  bool inTex = huv.x > 0.0 && huv.x < 1.0 && huv.y > 0.0 && huv.y < 1.0;
+  vec2 seabed = inTex ? texture2D(uHeight, huv).rg : vec2(uSeaLevel - 80.0, 1e4);
+  float bed = seabed.r;
+  float shore = seabed.g; // meters to the nearest rock
   float depth = max(uSeaLevel - bed, 0.0);
 
   // Reflection
@@ -186,14 +189,18 @@ void main() {
   // contours advect with the swell period, ~9 s) and break up as they go.
   float foamN = fbm(vWorld.xz * 0.35 + vec2(uTime * 0.2, -uTime * 0.3), 4);
   float foamF = fbm(vWorld.xz * 1.6 - vec2(uTime * 0.5, uTime * 0.35), 3);
-  float core = smoothstep(2.4, 0.2, depth) * step(0.001, depth + 0.5);
-  float surge = sin(depth * 1.1 + uTime * 0.7 + foamN * 4.0) * 0.5 + 0.5;
-  float wash = smoothstep(7.0, 1.0, depth) * smoothstep(0.72, 0.95, surge) * smoothstep(0.35, 0.6, foamF);
+  // The shore distance comes from a 3.5 m grid: the surf band starts a few
+  // meters out so the rock line itself always sits inside white water.
+  float core = max(smoothstep(2.4, 0.2, depth), smoothstep(12.0, 3.0, shore));
+  float surge = sin(shore * 0.55 + uTime * 0.9 + foamN * 4.0) * 0.5 + 0.5;
+  float wash = max(smoothstep(7.0, 1.0, depth), smoothstep(30.0, 6.0, shore)) * smoothstep(0.72, 0.95, surge) * smoothstep(0.35, 0.6, foamF);
   float foam = max(core * smoothstep(0.3, 0.7, foamN + core * 0.45), wash * 0.7);
   // Lacy residue: foam thins to streaks, not a flat sheet.
   foam *= mix(0.55, 1.0, smoothstep(0.3, 0.7, foamF));
-  vec3 foamCol = (skyAmb * 1.2 + uSunColor * 0.08 * sunUp) * 0.9;
-  col = mix(col, foamCol, foam * 0.85);
+  // Foam is a bright diffuse surface (albedo ~0.8): lit by the sun (E/π)
+  // as well as the sky, so it reads white at golden hour, not gray.
+  vec3 foamCol = 0.8 * (uSunColor * sunUp * max(uSunDir.y + 0.25, 0.1) / 3.14159 * 1.5 + skyAmb * 1.2);
+  col = mix(col, foamCol, min(foam, 1.0) * 0.95);
 
   gl_FragColor = vec4(applyAtmosphere(col, vWorld), 1.0);
 }

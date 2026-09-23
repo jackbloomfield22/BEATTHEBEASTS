@@ -73,18 +73,52 @@ export function buildTerrain(segments = 360, half = 2600): TerrainBuild {
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
 
-  // Height texture for the ocean shader (512² over ±heightExtent).
+  // Seabed texture for the ocean shader (512² over ±heightExtent):
+  // R = terrain height, G = distance to the nearest land (m). The cliffs
+  // plunge straight into deep water, so surf has to key on distance to the
+  // rock, not on depth. Two-pass chamfer distance transform (3-4 weights).
   const res = 512;
   const heightExtent = 900;
-  const data = new Float32Array(res * res);
+  const texel = (2 * heightExtent) / res;
+  const data = new Float32Array(res * res * 2);
+  const dist = new Float32Array(res * res);
   for (let j = 0; j < res; j++) {
     for (let i = 0; i < res; i++) {
       const x = ((i + 0.5) / res) * 2 * heightExtent - heightExtent;
       const z = ((j + 0.5) / res) * 2 * heightExtent - heightExtent + 300;
-      data[j * res + i] = terrainHeight(x, z);
+      const h = terrainHeight(x, z);
+      data[(j * res + i) * 2] = h;
+      dist[j * res + i] = h > SEA_LEVEL - 0.5 ? 0 : 1e9;
     }
   }
-  const heightTexture = new THREE.DataTexture(data, res, res, THREE.RedFormat, THREE.FloatType);
+  const relax = (k: number, n: number, w: number) => {
+    const c = dist[n]! + w;
+    if (c < dist[k]!) dist[k] = c;
+  };
+  for (let j = 0; j < res; j++) {
+    for (let i = 0; i < res; i++) {
+      const k = j * res + i;
+      if (i > 0) relax(k, k - 1, 3);
+      if (j > 0) {
+        relax(k, k - res, 3);
+        if (i > 0) relax(k, k - res - 1, 4);
+        if (i < res - 1) relax(k, k - res + 1, 4);
+      }
+    }
+  }
+  for (let j = res - 1; j >= 0; j--) {
+    for (let i = res - 1; i >= 0; i--) {
+      const k = j * res + i;
+      if (i < res - 1) relax(k, k + 1, 3);
+      if (j < res - 1) {
+        relax(k, k + res, 3);
+        if (i < res - 1) relax(k, k + res + 1, 4);
+        if (i > 0) relax(k, k + res - 1, 4);
+      }
+    }
+  }
+  for (let k = 0; k < res * res; k++) data[k * 2 + 1] = Math.min(dist[k]! / 3, 1e4) * texel;
+  const heightTexture = new THREE.DataTexture(data, res, res, THREE.RGFormat, THREE.FloatType);
   heightTexture.minFilter = THREE.LinearFilter;
   heightTexture.magFilter = THREE.LinearFilter;
   heightTexture.wrapS = heightTexture.wrapT = THREE.ClampToEdgeWrapping;
