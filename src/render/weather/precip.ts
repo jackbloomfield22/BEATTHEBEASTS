@@ -52,7 +52,7 @@ void main() {
   // Fade in near the camera (no drops through the lens) and out at the box edge.
   float dist = length(rel);
   // Rain streaks close to the lens are a blur, not bold lines: fade them longer.
-  vFade = keep * smoothstep(mix(1.5, 0.6, uKind), mix(7.0, 2.5, uKind), dist) * (1.0 - smoothstep(uBox.x * 0.3, uBox.x * 0.5, dist));
+  vFade = keep * smoothstep(mix(1.5, 1.5, uKind), mix(7.0, 5.0, uKind), dist) * (1.0 - smoothstep(uBox.x * 0.3, uBox.x * 0.5, dist));
   // Floodlit inside and around the bowl.
   vLit = 1.0 + stadiumLit(wp);
 

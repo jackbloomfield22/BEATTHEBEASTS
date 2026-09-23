@@ -62,8 +62,9 @@ export const EFFECTS: Record<EffectId, EffectSpec> = {
     alpha: 0.28, gravity: 0.3, drag: 2.2, spin: R(-1, 1), emissive: 0,
   },
   confetti: {
-    count: 900, spread: 0.5, speed: R(8, 16), push: 0, jitter: 1.5, life: R(5, 8),
-    size: [R(0.035, 0.05), R(0.035, 0.05)],
+    // Cannon confetti: ~5 × 7 cm pieces fired in the thousands.
+    count: 1800, spread: 0.55, speed: R(8, 16), push: 0, jitter: 1.5, life: R(5, 8),
+    size: [R(0.05, 0.075), R(0.05, 0.075)],
     colors: [[0.45, 0.03, 0.05], [0.9, 0.9, 0.88], [0.02, 0.02, 0.02], [0.4, 0.85, 0.03]], // crimson, white, black, lime
     alpha: 1, gravity: 9.81, drag: 2.6, spin: R(-18, 18), emissive: 0,
   },
