@@ -210,7 +210,10 @@ export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMat
             float swept = aaBand(yl, 0.3) * step(abs(f.y), 50.3) * step(abs(f.x), 26.667);
             swept = max(swept, aaBand(abs(abs(f.y) - 50.0), 0.45) * step(abs(f.x), 26.667));
             swept = max(swept, max(sideB, endB));
-            weatherSnowMask = (1.0 - swept) * mix(0.72, 0.9, n1);
+            // Crews also keep the numbers and logos readable, and the turf
+            // shows through where play has churned it.
+            float painted = max(max(paint.r, paint.g), max(paint.b, line));
+            weatherSnowMask = (1.0 - swept) * mix(0.42, 0.72, n1) * (1.0 - 0.55 * painted);
           }`,
         )
         .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = fieldRough;')
