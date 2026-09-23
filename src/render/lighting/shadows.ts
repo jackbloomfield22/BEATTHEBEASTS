@@ -30,6 +30,8 @@ export interface ShadowRig {
   dispose(): void;
 }
 
+let rigCount = 0;
+
 export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent: THREE.Object3D; mapSize: number; cascades: number; maxFar?: number; fade?: boolean }): ShadowRig {
   const csm = new CSM({
     camera: opts.camera,
@@ -56,17 +58,25 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
   // Every material this rig patched, with its own hook, so dispose() can put
   // it back exactly. (A quality change rebuilds the rig; materials still
   // carrying the old rig's defines and hook render with stale cascades.)
-  const attached = new Map<THREE.Material, THREE.Material['onBeforeCompile']>();
+  const attached = new Map<THREE.Material, { hook: THREE.Material['onBeforeCompile']; key: THREE.Material['customProgramCacheKey'] }>();
+  // three keeps each material's compiled programs by cache key and runs
+  // onBeforeCompile only when a key is new. A rig with the same cascade
+  // defines as an earlier one would get that rig's program back, with
+  // uniforms wired to the old rig's (disposed) objects or missing. A per-rig
+  // key makes every rig compile, and wire, its own.
+  const rigId = ++rigCount;
   const attach = (mat: THREE.Material) => {
     if (attached.has(mat) || !(mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) return;
     const mine = mat.onBeforeCompile;
-    attached.set(mat, mine);
+    const key = mat.customProgramCacheKey;
+    attached.set(mat, { hook: mine, key });
     csm.setupMaterial(mat);
     const theirs = mat.onBeforeCompile;
     mat.onBeforeCompile = (shader, renderer) => {
       mine.call(mat, shader, renderer);
       theirs.call(mat, shader, renderer);
     };
+    mat.customProgramCacheKey = () => `${key.call(mat)}|csm-rig-${rigId}`;
     mat.needsUpdate = true;
   };
 
@@ -92,8 +102,9 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
       csm.update();
     },
     dispose() {
-      for (const [mat, hook] of attached) {
+      for (const [mat, { hook, key }] of attached) {
         mat.onBeforeCompile = hook;
+        mat.customProgramCacheKey = key;
         if (mat.defines) {
           delete mat.defines.USE_CSM;
           delete mat.defines.CSM_CASCADES;

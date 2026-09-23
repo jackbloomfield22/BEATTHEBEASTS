@@ -94,6 +94,7 @@ test('every preset switch, both directions, matches a fresh load', async ({ brow
     expectShadowRig(s, to);
     const d = meanDiff(s.thumb, ref[to].thumb);
     console.log(`${from} -> ${to}: diff ${d.toFixed(2)}`);
+    expect(errors, `${from} -> ${to}: page errors`).toEqual([]);
     expect(d, `${from} -> ${to} differs from a fresh ${to} load`).toBeLessThan(tolerance);
   }
   expect(errors).toEqual([]);
