@@ -67,6 +67,8 @@ export const urlFlags = (() => {
     noIntro: p.has('nointro'),
     // Fixed camera for screenshots and dev: x,y,z,lookX,lookY,lookZ[,fov].
     cam: p.get('cam')?.split(',').map(Number) ?? null,
+    // Ambient crowd energy 0..1 (screenshots of a quiet or a rocking bowl).
+    crowd: p.has('crowd') ? Number(p.get('crowd')) : null,
     shotTime: p.has('t') ? Number(p.get('t')) : null, // freeze the cinematic clock (screenshots)
   };
 })();

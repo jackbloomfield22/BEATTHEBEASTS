@@ -8,6 +8,7 @@ import { createOcean } from './ocean/ocean';
 import { buildBowl, PROFILE } from './stadium/bowl';
 import { bakeSpectatorAtlas } from './crowd/spectator';
 import { createCrowd } from './crowd/crowd';
+import { crowdEnergy } from './crowd/reactions';
 import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, createRoofMaterial, createSeatingMaterial, stadiumUniforms } from './stadium/materials';
 import { createFieldMaterial, createFieldPaint } from './field/field';
 import { createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
@@ -117,7 +118,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     scene.environment = rt.texture;
     scene.environmentIntensity = import.meta.env.DEV && new URLSearchParams(location.search).has("envI") ? Number(new URLSearchParams(location.search).get("envI")) : preset.envIntensity;
     if (prev && prev !== rt.texture) prev.dispose();
-    if (import.meta.env.DEV) Object.assign(window, { __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
+    if (import.meta.env.DEV) Object.assign(window, { __btbCrowd: crowdEnergy, __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
   }, [preset, gl, lut, pmrem, envScene, env, assets, scene]);
 
   // Shadows follow quality.
@@ -155,6 +156,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
 
   useFrame(({ camera, clock }) => {
     atmosphereUniforms.uTime.value = clock.elapsedTime;
+    stadiumUniforms.uCrowdEnergy.value = crowdEnergy.value(clock.elapsedTime);
     assets.sky.mesh.position.copy(camera.position);
   });
 
