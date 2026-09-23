@@ -10,3 +10,4 @@ tools/augment/cache
 tools/reference/cache/
 data/ratings/inputs.v*.json
 tools/reference/__pycache__
+.claude/worktrees/

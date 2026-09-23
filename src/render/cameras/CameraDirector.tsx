@@ -61,6 +61,8 @@ export function CameraDirector({ shot, fovOffset = 0 }: { shot: CameraShot; fovO
   }, [shot]);
 
   const target = (t: number): Pose => {
+    const c = urlFlags.cam;
+    if (c && c.length >= 6) return { pos: v(c[0]!, c[1]!, c[2]!), look: v(c[3]!, c[4]!, c[5]!), fov: c[6] ?? 40 };
     if (shot === 'title' || shot === 'intro') {
       const u = ((t / title.duration) % 1 + 1) % 1;
       return { pos: title.pos.getPoint(u), look: title.look.getPoint(u), fov: 40 };

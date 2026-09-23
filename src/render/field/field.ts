@@ -78,7 +78,9 @@ export function createFieldPaint(): THREE.CanvasTexture {
       }
     }
 
-    // End-zone lettering: BLACKCLIFF (north), BEASTS (south), read from the field.
+    // End-zone lettering: BEASTS in both end zones, read from the field. The
+    // stadium is the Beasts' home; Blackcliff is only the venue name on the
+    // intro title card (owner's call, GDD §12.4).
     const endText = (label: string, zCenter: number, north: boolean) => {
       const up: [number, number] = north ? [0, -1] : [0, 1];
       const right: [number, number] = north ? [1, 0] : [-1, 0];
@@ -94,7 +96,7 @@ export function createFieldPaint(): THREE.CanvasTexture {
         ctx.fillText(label, 0, 0.3);
       });
     };
-    endText('BLACKCLIFF', -55, true);
+    endText('BEASTS', -55, true);
     endText('BEASTS', 55, false);
 
     // Midfield claw: three raking slashes.
@@ -126,39 +128,26 @@ export function createFieldPaint(): THREE.CanvasTexture {
   return tex;
 }
 
-export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMaterial {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
-  return patchMaterial(
-    mat,
-    (shader) => {
-      shader.uniforms.uPaint = { value: paint };
-      shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vFWorld;')
-        .replace('#include <project_vertex>', '#include <project_vertex>\nvFWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-      shader.fragmentShader = shader.fragmentShader
-        .replace(
-          '#include <common>',
-          `#include <common>
-          varying vec3 vFWorld;
-          uniform sampler2D uPaint;
-          ${NOISE_GLSL}
-          float fieldRough;
-          float aaBand(float d, float halfW) {
-            float fw = max(fwidth(d), 1e-4);
-            return 1.0 - smoothstep(halfW - fw, halfW + fw, d);
-          }`,
-        )
-        .replace(
-          '#include <color_fragment>',
-          `#include <color_fragment>
-          {
+/**
+ * The field's albedo, roughness and paint coverage at a world point: grass,
+ * mowing stripes, wear, analytic markings and painted decals. Shared by the
+ * field surface and the grass shells (grass.ts) so blades carry the paint.
+ * Needs NOISE_GLSL, uPaint and the atmosphere pars (for weatherSnowMask).
+ */
+export const FIELD_SAMPLE_GLSL = /* glsl */ `
+struct FieldSample { vec3 col; float rough; float white; };
+float aaBand(float d, float halfW) {
+  float fw = max(fwidth(d), 1e-4);
+  return 1.0 - smoothstep(halfW - fw, halfW + fw, d);
+}
+FieldSample fieldSample(vec3 w) {
             const float YD = ${YARD.toFixed(4)};
-            vec2 f = vec2(vFWorld.x, vFWorld.z) / YD; // yards: x across, y along
-            vec3 V = normalize(cameraPosition - vFWorld);
+            vec2 f = vec2(w.x, w.z) / YD; // yards: x across, y along
+            vec3 V = normalize(cameraPosition - w);
 
             // Grass base with multi-scale variation.
-            float n1 = fbm(vFWorld.xz * 0.08, 4);
-            float n2 = fbm(vFWorld.xz * 1.7, 3);
+            float n1 = fbm(w.xz * 0.08, 4);
+            float n2 = fbm(w.xz * 1.7, 3);
             vec3 grass = mix(vec3(0.045, 0.2, 0.03), vec3(0.085, 0.29, 0.04), n1);
             grass *= 0.88 + 0.24 * n2;
 
@@ -201,8 +190,52 @@ export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMat
             col = mix(col, vec3(0.42, 0.02, 0.035), paint.g * chalk);
             float whiteAmt = max(line, paint.r) * chalk;
             col = mix(col, vec3(0.86, 0.86, 0.83), whiteAmt);
-            diffuseColor.rgb = col;
-            fieldRough = mix(0.92, 0.7, whiteAmt);
+            FieldSample o;
+            o.col = col;
+            o.rough = mix(0.92, 0.7, whiteAmt);
+            o.white = whiteAmt;
+            // Snow games: the crew sweeps the yard lines, goal lines and
+            // borders clear (about a foot either side), so they read as
+            // green-edged white lines through the snow; play scuffs the rest.
+            float swept = aaBand(yl, 0.3) * step(abs(f.y), 50.3) * step(abs(f.x), 26.667);
+            swept = max(swept, aaBand(abs(abs(f.y) - 50.0), 0.45) * step(abs(f.x), 26.667));
+            swept = max(swept, max(sideB, endB));
+            // Crews also keep the numbers and logos readable, and the turf
+            // shows through where play has churned it.
+            float painted = max(max(paint.r, paint.g), max(paint.b, line));
+            weatherSnowMask = (1.0 - swept) * mix(0.42, 0.72, n1) * (1.0 - 0.55 * painted);
+  return o;
+}
+`;
+
+export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMaterial {
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
+  mat.userData.porosity = 0.85; // natural grass over sand root zone
+  return patchMaterial(
+    mat,
+    (shader) => {
+      shader.uniforms.uPaint = { value: paint };
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vFWorld;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvFWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          '#include <common>',
+          `#include <common>
+          varying vec3 vFWorld;
+          uniform sampler2D uPaint;
+          ${NOISE_GLSL}
+          float fieldRough;`,
+        )
+        // After the atmosphere pars (patchMaterial puts them right after <common>).
+        .replace('#include <color_pars_fragment>', `#include <color_pars_fragment>\n${FIELD_SAMPLE_GLSL}`)
+        .replace(
+          '#include <color_fragment>',
+          `#include <color_fragment>
+          {
+            FieldSample fs = fieldSample(vFWorld);
+            diffuseColor.rgb = fs.col;
+            fieldRough = fs.rough;
           }`,
         )
         .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = fieldRough;')

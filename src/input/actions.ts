@@ -107,6 +107,7 @@ export const ACTIONS: ActionDef[] = [
   a('global.camAll22', 'global', 'Camera: All-22', ['F2'], []),
   a('global.camField', 'global', 'Camera: Field level', ['F3'], []),
   a('global.perf', 'global', 'Performance screen', ['Backquote'], [], true),
+  a('global.fullscreen', 'global', 'Toggle fullscreen', ['F11'], []),
 ];
 
 export const ACTIONS_BY_ID = new Map(ACTIONS.map((d) => [d.id, d]));

@@ -40,7 +40,12 @@ export function HowToScreen() {
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, []);
-  useEffect(() => scroller.current?.scrollTo({ top: 0 }), [page]);
+  useEffect(() => {
+    // Braces matter: scrollTo returns a Promise in current Chrome, and an
+    // effect that returns it hands React a "cleanup" that isn't a function
+    // (it threw on the first page change: the How to Play → The Draft crash).
+    scroller.current?.scrollTo({ top: 0 });
+  }, [page]);
 
   return (
     <div className="menu-screen howto-screen">

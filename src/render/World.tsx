@@ -3,18 +3,38 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { atmosphereUniforms, SkyLUT, sunDirection, sunTransmittance } from './sky/atmosphere';
 import { createSkyDome } from './sky/SkyDome';
+import { buildCliff } from './terrain/cliff';
+import { buildCypress, buildShrub, buildShrubLod, createVegetationMaterial, ledgePlants, scatterVegetation } from './terrain/vegetation';
+import { buildChunkedScatter } from './terrain/scatterChunks';
 import { buildBoulders, buildHeadlands, buildTerrain, createBoulderMaterial, createTerrainMaterial } from './terrain/terrain';
 import { createOcean } from './ocean/ocean';
 import { buildBowl, PROFILE } from './stadium/bowl';
+import { bakeSpectatorAtlas } from './crowd/spectator';
+import { CROWD_DRAWN, createCrowd } from './crowd/crowd';
+import { crowdEnergy } from './crowd/reactions';
+import { createPrecipitation, PRECIP_COUNT } from './weather/precip';
+import { createParticlePool } from './vfx/particles';
+import type { EffectId } from './vfx/effects';
+import { urlFlags } from '@/app/platform';
 import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, createRoofMaterial, createSeatingMaterial, stadiumUniforms } from './stadium/materials';
 import { createFieldMaterial, createFieldPaint } from './field/field';
-import { createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
+import { createGrassShells, GRASS_SHELLS } from './field/grass';
+import { buildPlazaGeometry, plazaLampPositions, createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
+import { createShadowRig, type ShadowRig } from './lighting/shadows';
 import { STAND } from './world/constants';
 
 export interface WorldQuality {
-  shadowMapSize: number; // 0 = shadows off
+  /** Shadow tier (graphics.shadows): cascades, map size, distance. */
+  shadows: 'off' | 'low' | 'medium' | 'high';
+  /** Overall tier: the floodlight count at night. */
+  tier: 'low' | 'medium' | 'high' | 'ultra';
+  grassDetail: 'low' | 'medium' | 'high' | 'ultra';
   terrainSegments: number;
+  /** Graphics settings that scale instance counts without rebuilding. */
+  crowdDensity: 'low' | 'medium' | 'high' | 'ultra';
+  vegetationDensity: number; // 0..1 share of scattered plants drawn
+  weatherParticles: boolean;
 }
 
 /**
@@ -22,19 +42,26 @@ export interface WorldQuality {
  * once and kept alive across every app state (TECH_PLAN §4.2).
  */
 export function World({ preset, quality, onReady }: { preset: LightingPreset; quality: WorldQuality; onReady?: () => void }) {
-  const { gl, scene } = useThree();
+  const { gl, scene, camera } = useThree();
   const sunRef = useRef<THREE.DirectionalLight>(null!);
+  // The key light as the preset defines it; with cascaded shadows on, the
+  // cascade lights carry it and the plain directional light is dark.
+  const keyRef = useRef({ color: new THREE.Color(), intensity: 0, dir: new THREE.Vector3(0, 1, 0) });
+  const rigRef = useRef<ShadowRig | null>(null);
 
   const assets = useMemo(() => {
     const terrain = buildTerrain(quality.terrainSegments);
     const ocean = createOcean(terrain.heightTexture, terrain.heightTextureExtent);
     const sky = createSkyDome(true);
+    ocean.mesh.name = 'ocean';
+    sky.mesh.name = 'sky';
     const bowl = buildBowl();
     const paint = createFieldPaint();
     const boardTex = createVideoBoardTexture();
     return {
       terrain,
       terrainMat: createTerrainMaterial(false),
+      cliff: buildCliff(),
       headlands: buildHeadlands(),
       headlandMat: createTerrainMaterial(true),
       ocean,
@@ -45,6 +72,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       glassMat: createGlassMaterial(),
       roofMat: createRoofMaterial(),
       lightBankMat: createLightBankMaterial(),
+      paint,
       fieldMat: createFieldMaterial(paint),
       pavingMat: createPavingMaterial(),
       metalMat: createMetalMaterial(),
@@ -55,6 +83,41 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     // Built once; quality changes that need a rebuild remount the World.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The crowd atlas is rendered with the renderer, once.
+  const crowd = useMemo(() => {
+    const atlas = bakeSpectatorAtlas(gl);
+    return { atlas, mesh: createCrowd(atlas) };
+  }, [gl]);
+  useEffect(() => () => crowd.atlas.dispose(), [crowd]);
+
+  const precip = useMemo(() => createPrecipitation(), []);
+  const vfx = useMemo(() => createParticlePool(), []);
+  useEffect(() => {
+    const g = crowd.mesh.geometry as THREE.InstancedBufferGeometry;
+    const total = (g.attributes.aSeat as THREE.InstancedBufferAttribute).count;
+    g.instanceCount = Math.round(total * CROWD_DRAWN[quality.crowdDensity]);
+  }, [crowd, quality.crowdDensity]);
+  const plaza = useMemo(() => buildPlazaGeometry(), []);
+  const grass = useMemo(() => createGrassShells(assets.paint), [assets.paint]);
+  useEffect(() => {
+    grass.setShells(GRASS_SHELLS[quality.grassDetail]);
+  }, [grass, quality.grassDetail]);
+  // Plaza lamp posts: 6 m poles with a luminaire head (pools painted by the paving shader).
+  const lamps = useMemo(() => {
+    const at = plazaLampPositions();
+    const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.11, 6, 8).translate(0, 3, 0), assets.darkMetalMat, at.length);
+    const head = new THREE.InstancedMesh(new THREE.BoxGeometry(0.7, 0.18, 0.7).translate(0, 6.05, 0), assets.lightHeadMat, at.length);
+    at.forEach((p, i) => {
+      const m = new THREE.Matrix4().makeTranslation(p.x, 0, p.y);
+      pole.setMatrixAt(i, m);
+      head.setMatrixAt(i, m);
+    });
+    pole.castShadow = true;
+    const g = new THREE.Group();
+    g.add(pole, head);
+    return g;
+  }, [assets.darkMetalMat, assets.lightHeadMat]);
 
   // Sky LUT + IBL, regenerated whenever the lighting preset changes.
   const lut = useMemo(() => new SkyLUT(512, 256), []);
@@ -85,15 +148,33 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       m.uniforms.uSunDiscColor!.value.copy(trans).multiplyScalar(preset.sunIlluminance * 45);
       m.uniforms.uNight!.value = preset.moon ? 1 : 0;
     }
+    atmosphereUniforms.uStadiumGlow.value = preset.stadiumGlow ?? 0;
+    atmosphereUniforms.uWet.value = preset.wetness ?? 0;
+    atmosphereUniforms.uSnow.value = preset.snowCover ?? 0;
+    // Particles are lit like a white diffuse surface under the (clouded) key
+    // light: radiance ≈ irradiance / π.
+    const p = preset.precipitation;
+    precip.set(p && quality.weatherParticles ? p : null, trans.clone().multiplyScalar(preset.sunIlluminance / Math.PI));
+    // Particle budget per tier (each is a camera-facing, blended quad).
+    (precip.mesh.geometry as THREE.InstancedBufferGeometry).instanceCount = Math.round(PRECIP_COUNT * { low: 0.3, medium: 0.5, high: 1, ultra: 1 }[quality.tier]);
+    // Particles: sky ambient from straight up, sun as the key.
+    vfx.setLight(new THREE.Color(0.25, 0.28, 0.33).multiplyScalar(preset.envIntensity), sunColor.clone().multiplyScalar(0.25));
     stadiumUniforms.uLights.value = preset.stadiumLights;
     assets.ocean.material.uniforms.uStadiumLights!.value = preset.stadiumLights;
 
     const sun = sunRef.current;
     sun.color.copy(trans).multiplyScalar(1 / Math.max(trans.r, trans.g, trans.b, 1e-4));
+    if (preset.keyTint) {
+      const [tr, tg, tb] = preset.keyTint;
+      sun.color.multiply(new THREE.Color(tr, tg, tb));
+      sunColor.multiply(new THREE.Color(tr, tg, tb));
+      atmosphereUniforms.uSunColor.value.copy(sunColor);
+    }
     sun.intensity = preset.sunIlluminance * Math.max(trans.r, trans.g, trans.b) * (dir.y > 0 ? 1 : 0);
     sun.position.copy(dir).multiplyScalar(600);
     sun.target.position.set(0, 0, 0);
     sun.target.updateMatrixWorld();
+    keyRef.current = { color: sun.color.clone(), intensity: sun.intensity, dir: dir.clone() };
 
     // IBL from the same sky (clouds included) so ambient light matches it.
     const rt = pmrem.fromScene(envScene, 0, 1, 2000);
@@ -101,44 +182,101 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     scene.environment = rt.texture;
     scene.environmentIntensity = import.meta.env.DEV && new URLSearchParams(location.search).has("envI") ? Number(new URLSearchParams(location.search).get("envI")) : preset.envIntensity;
     if (prev && prev !== rt.texture) prev.dispose();
-    if (import.meta.env.DEV) Object.assign(window, { __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
-  }, [preset, gl, lut, pmrem, envScene, env, assets, scene]);
+    if (import.meta.env.DEV) Object.assign(window, { __btbVfx: vfx, __btbCrowd: crowdEnergy, __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
+  }, [preset, gl, lut, pmrem, envScene, env, assets, scene, precip, vfx, quality.weatherParticles, quality.tier]);
 
-  // Shadows follow quality.
+  // Shadows follow quality: cascaded shadow maps (lighting/shadows.ts), sized
+  // per tier. With the rig on, its cascade lights carry the key light and the
+  // plain directional light leaves the scene (a zero-intensity light still
+  // costs every lit pixel a trip through the light loop).
   useEffect(() => {
     const sun = sunRef.current;
-    sun.castShadow = quality.shadowMapSize > 0;
-    if (quality.shadowMapSize > 0) {
-      sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
-      sun.shadow.map?.dispose();
-      sun.shadow.map = null as unknown as THREE.WebGLRenderTarget;
-      const cam = sun.shadow.camera;
-      cam.left = -175;
-      cam.right = 175;
-      cam.top = 175;
-      cam.bottom = -175;
-      cam.near = 100;
-      cam.far = 1100;
-      cam.updateProjectionMatrix();
-      sun.shadow.bias = -0.0005;
-      sun.shadow.normalBias = 0.35;
-    }
-  }, [quality.shadowMapSize]);
+    sun.castShadow = false;
+    sun.visible = true;
+    if (quality.shadows === 'off' || (import.meta.env.DEV && location.search.includes('noshadow'))) return;
+    // Per tier (shadow cost on the GPU is casters × cascades × map area):
+    // high 4 × 2048² to 700 m with cascade fades; medium 2 × 2048² to 350 m;
+    // low 2 × 1024² to 250 m. Beyond that, aerial perspective carries depth.
+    const cfg = { low: { mapSize: 1024, cascades: 2, maxFar: 250, fade: false }, medium: { mapSize: 2048, cascades: 2, maxFar: 350, fade: false }, high: { mapSize: 2048, cascades: 4, maxFar: 700, fade: true } }[quality.shadows];
+    const rig = createShadowRig({ camera: camera as THREE.PerspectiveCamera, parent: scene, ...cfg });
+    rig.attachTree(scene);
+    rigRef.current = rig;
+    sun.visible = false;
+    return () => {
+      rigRef.current = null;
+      sun.visible = true;
+      rig.dispose();
+    };
+  }, [quality.shadows, camera, scene]);
 
   useEffect(() => {
-    // Let the first frames compile shaders before announcing readiness.
+    // Compile every program before announcing readiness, including objects
+    // that start hidden (grass shells, precipitation, particles, the crowd's
+    // shadow material): a program compiled the first time a view shows it
+    // stalls the GPU for up to seconds on some drivers. Then let a few
+    // frames settle.
     let raf = 0;
     let frames = 0;
+    let cancelled = false;
     const tick = () => {
       if (++frames > 3) onReady?.();
       else raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    const hidden: THREE.Object3D[] = [];
+    scene.traverse((o) => {
+      if (!o.visible && (o as THREE.Mesh).isMesh) {
+        hidden.push(o);
+        o.visible = true;
+      }
+    });
+    gl.compileAsync(scene, camera)
+      .catch(() => undefined)
+      .finally(() => {
+        for (const o of hidden) o.visible = false;
+        if (!cancelled) raf = requestAnimationFrame(tick);
+      });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onReady]);
 
-  useFrame(({ camera, clock }) => {
-    atmosphereUniforms.uTime.value = clock.elapsedTime;
+  const frameRef = useRef(0);
+  // Shader time. In the screenshot harness it advances a fixed 1/60 s per
+  // rendered frame instead of wall time: the software renderer takes
+  // seconds per frame, and wall time would make every capture differ (and
+  // let short effects live and die between two frames).
+  const simTime = useRef(0);
+  // Dev preview (?vfx=<id>): loop the effect around midfield every 3 s.
+  const vfxLoop = useRef(-1e9);
+  const previewVfx = (t: number) => {
+    const id = urlFlags.vfx as EffectId | null;
+    // Pyro fountains burn continuously; the rest repeat.
+    if (!id || t - vfxLoop.current < (id === 'pyro' ? 0.15 : id === 'confetti' ? 3 : 1)) return;
+    vfxLoop.current = t;
+    const at: [number, number, number][] = id === 'confetti' ? [[-15, 26, -20], [15, 26, -20], [0, 28, 10]] : id === 'pyro' ? [[-20, 0, 55], [20, 0, 55]] : [[0, id === 'breath' ? 1.75 : 0.02, 0], [2, id === 'breath' ? 1.8 : 0.02, 1]];
+    at.forEach((pos) => vfx.emit(id, pos, { dir: [0, 0, 1], scale: id === 'pyro' ? 0.15 : 1, age: urlFlags.vfxAge }));
+  };
+  useFrame(({ camera, clock, gl: r }) => {
+    simTime.current = urlFlags.shot !== null ? simTime.current + 1 / 60 : clock.elapsedTime;
+    const now = simTime.current;
+    atmosphereUniforms.uTime.value = now;
+    vfx.setViewportHeight(r.domElement.height);
+    const key = keyRef.current;
+    const rig = rigRef.current;
+    if (rig) {
+      sunRef.current.intensity = 0;
+      rig.setKey(key.color, key.intensity, key.dir);
+      // Objects mounted later (players, props) pick up the cascades too.
+      if (frameRef.current++ % 120 === 0) rig.attachTree(scene);
+      rig.update();
+    } else {
+      sunRef.current.intensity = key.intensity;
+    }
+    stadiumUniforms.uCrowdEnergy.value = crowdEnergy.value(now);
+    grass.update(camera);
+    if (import.meta.env.DEV) previewVfx(now);
     assets.sky.mesh.position.copy(camera.position);
   });
 
@@ -151,17 +289,64 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     return mesh;
   }, [bowl, lightBankGeo, assets.lightBankMat]);
 
+  const vegetation = useMemo(() => {
+    const scatter = scatterVegetation();
+    const ledges = ledgePlants(assets.cliff.geometry);
+    // Spatial chunks (terrain/scatterChunks.ts) so the camera and each shadow
+    // cascade draw only the plants they can see; scrub drops to a lighter
+    // LOD for chunks more than 50 m away. Only the cypress cast shadows:
+    // scrub shadows are a few pixels at broadcast distances, and the scrub
+    // still receives them.
+    const chunked = buildChunkedScatter(
+      createVegetationMaterial(),
+      [
+        {
+          name: 'scrub',
+          variants: [0, 1, 2].map((v) => buildShrub(11 + v)),
+          far: buildShrubLod(17),
+          lodDistance: 50,
+          matrices: [...scatter.shrubs, ...ledges.matrices],
+          tints: [...scatter.tints[0]!, ...ledges.tints],
+          castShadow: false,
+        },
+        { name: 'cypress', variants: [0, 1].map((v) => buildCypress(31 + v)), matrices: scatter.cypress, tints: scatter.tints[1]!, castShadow: true },
+      ],
+      180,
+    );
+    chunked.group.name = 'vegetation';
+    return chunked;
+  }, [assets.cliff]);
+  useEffect(() => {
+    vegetation.setDensity(quality.vegetationDensity);
+  }, [vegetation, quality.vegetationDensity]);
+  useFrame(({ camera }) => vegetation.update(camera.position));
+
   const boulders = useMemo(() => {
-    const b = buildBoulders(quality.terrainSegments >= 320 ? 700 : 350);
-    const mesh = new THREE.InstancedMesh(b.geometry, createBoulderMaterial(), b.matrices.length);
-    b.matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.computeBoundingSphere();
-    return mesh;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Built in full; the tier draws a prefix (placement is sequential from one
+    // seed, so the first 350 are exactly Low's set) and a preset switch
+    // matches a fresh load.
+    const b = buildBoulders(700);
+    const white = new THREE.Color(1, 1, 1);
+    const chunked = buildChunkedScatter(createBoulderMaterial(), [{ name: 'boulders', variants: [b.geometry], matrices: b.matrices, tints: b.matrices.map(() => white), castShadow: true }], 180);
+    chunked.group.name = 'boulders';
+    return chunked;
   }, []);
+  // The terrain mesh follows the tier at runtime (the height texture the
+  // ocean reads is a fixed 512², so only the mesh is rebuilt).
+  const firstSegments = useRef(quality.terrainSegments).current;
+  const terrainGeo = useMemo(
+    () => (quality.terrainSegments === firstSegments ? assets.terrain.geometry : buildTerrain(quality.terrainSegments).geometry),
+    [assets, firstSegments, quality.terrainSegments],
+  );
+  useEffect(() => () => terrainGeo.dispose(), [terrainGeo]);
+
+  useEffect(() => {
+    boulders.setDensity(quality.terrainSegments >= 320 ? 1 : 0.5);
+  }, [boulders, quality.terrainSegments]);
+  // Boulder shadows are a few pixels at broadcast distance: High only.
+  useEffect(() => {
+    boulders.group.traverse((o) => void (o.castShadow = quality.shadows === 'high'));
+  }, [boulders, quality.shadows]);
 
   // Floodlights: roof-corner and mast banks aimed at the field. They carry the
   // light at night and add to it in rain and snow; off at golden hour and
@@ -179,33 +364,47 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     });
   }, []);
   useEffect(() => {
-    const factor = preset.stadiumLights * (preset.sunElevationDeg < 0 ? 1 : preset.id === 'rain' || preset.id === 'snow' ? 0.35 : 0);
-    for (const l of flood) {
-      l.intensity = 17000 * factor;
+    const factor = preset.stadiumLights * (preset.moon ? 1 : preset.id === 'rain' || preset.id === 'snow' ? 0.35 : 0);
+    // Floodlights are only in the scene when they're on (every light in the
+    // scene is a pass through the light loop for every lit pixel, even at
+    // zero intensity). Low and Medium use every other bank at double power.
+    const every = quality.tier === 'high' || quality.tier === 'ultra' ? 1 : 2;
+    flood.forEach((l, i) => {
+      l.visible = factor > 0 && i % every === 0;
+      // Divided by the preset exposure so the field reads the same under the
+      // brighter night exposure that lets the moonlit sky and sea show.
+      l.intensity = (17000 * factor * every) / preset.exposure;
       l.target.updateMatrixWorld();
-    }
-  }, [preset, flood]);
+    });
+  }, [preset, flood, quality.tier]);
 
   const boardZ = STAND.northZ + 6;
   const roofFrontH = PROFILE.roof.hFront;
 
   return (
     <>
-      <directionalLight ref={sunRef} castShadow>
+      <directionalLight ref={sunRef} name="sun" castShadow>
         <object3D attach="target" />
       </directionalLight>
 
       <primitive object={assets.sky.mesh} />
-      <mesh geometry={assets.terrain.geometry} material={assets.terrainMat} receiveShadow castShadow />
-      <mesh geometry={assets.headlands} material={assets.headlandMat} />
+      {/* The heightfield receives but doesn't cast: 320 k triangles × 4 cascades,
+          and the cliff face (its own mesh) casts the shadows that matter. */}
+      <mesh name="terrain" geometry={terrainGeo} material={assets.terrainMat} receiveShadow />
+      <mesh name="cliff" geometry={assets.cliff.geometry} material={assets.terrainMat} receiveShadow castShadow />
+      <mesh name="headlands" geometry={assets.headlands} material={assets.headlandMat} />
       <primitive object={assets.ocean.mesh} />
-      <primitive object={boulders} />
+      <primitive object={boulders.group} />
+      <primitive object={vegetation.group} />
 
       {/* Stadium bowl */}
-      <mesh geometry={bowl.seating} material={assets.seatingMat} receiveShadow castShadow />
-      <mesh geometry={bowl.concrete} material={assets.concreteMat} receiveShadow castShadow />
+      <mesh name="seating" geometry={bowl.seating} material={assets.seatingMat} receiveShadow castShadow />
+      <primitive object={crowd.mesh} />
+      <primitive object={precip.mesh} />
+      <primitive object={vfx.mesh} />
+      <mesh name="concrete" geometry={bowl.concrete} material={assets.concreteMat} receiveShadow castShadow />
       <mesh geometry={bowl.glass} material={assets.glassMat} />
-      <mesh geometry={bowl.roof} material={assets.roofMat} receiveShadow castShadow />
+      <mesh name="roof" geometry={bowl.roof} material={assets.roofMat} receiveShadow castShadow />
       <primitive object={lightBanks} />
       {flood.map((l, i) => (
         <group key={i}>
@@ -214,15 +413,15 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
         </group>
       ))}
 
+      <primitive object={grass.mesh} />
       {/* Playing surface and apron */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.02, -2]} material={assets.fieldMat} receiveShadow>
+      <mesh name="field" rotation-x={-Math.PI / 2} position={[0, 0.02, -2]} material={assets.fieldMat} receiveShadow>
         <planeGeometry args={[STAND.halfWidth * 2, 138, 1, 1]} />
       </mesh>
 
       {/* Plaza ring around the stadium and the open-end terrace */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.005, -10]} material={assets.pavingMat} receiveShadow>
-        <planeGeometry args={[250, 250]} />
-      </mesh>
+      <mesh name="plaza" geometry={plaza} position={[0, 0.02, 0]} material={assets.pavingMat} receiveShadow />
+      <primitive object={lamps} />
       <mesh position={[0, 0.6, 71]} material={assets.concreteMat} receiveShadow castShadow>
         <boxGeometry args={[100, 1.2, 0.4]} />
       </mesh>
