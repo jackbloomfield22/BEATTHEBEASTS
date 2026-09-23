@@ -56,6 +56,46 @@ export function createMetalMaterial(color = 0x2a2b2e): THREE.MeshStandardMateria
   return patchMaterial(mat, undefined, 'metal');
 }
 
+/**
+ * Plaza lamps on a 22 m grid around the bowl. The same rule runs in JS (to
+ * place the posts) and in GLSL (to paint their light pools on the paving),
+ * so pools always sit under lamps: inside the plaza, back from the cliff,
+ * clear of the stands (rounded-rect distance > 58 m from the U, whose back
+ * wall is 50.8 m out) or on the open-end terrace.
+ */
+export const LAMP_GRID = 22;
+const LAMP_RULE_GLSL = /* glsl */ `
+float lampKeep(vec2 l) {
+  vec2 p = l - vec2(0.0, -5.0);
+  float r = p.y < 0.0 ? 30.0 : 0.0;
+  vec2 q = abs(p) - (vec2(39.0, 65.0) - r);
+  float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+  float coast = 104.0 - 0.00085 * l.x * l.x;
+  float plaza = step(abs(l.x), 118.0) * step(-130.0, l.y) * step(l.y, coast - 12.0);
+  float terrace = step(64.0, l.y) * step(abs(l.x), 38.0);
+  return plaza * max(step(58.0, d), terrace);
+}`;
+
+export function plazaLampPositions(): THREE.Vector2[] {
+  const out: THREE.Vector2[] = [];
+  for (let i = -6; i <= 6; i++) {
+    for (let j = -6; j <= 6; j++) {
+      const x = i * LAMP_GRID;
+      const z = j * LAMP_GRID - 10;
+      const px = x;
+      const pz = z + 5;
+      const r = pz < 0 ? 30 : 0;
+      const qx = Math.abs(px) - (39 - r);
+      const qz = Math.abs(pz) - (65 - r);
+      const d = Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - r;
+      const plaza = Math.abs(x) <= 118 && z >= -130 && z <= coastZ(x) - 12;
+      const terrace = z >= 64 && Math.abs(x) <= 38;
+      if (plaza && (d >= 58 || terrace)) out.push(new THREE.Vector2(x, z));
+    }
+  }
+  return out;
+}
+
 export function createPavingMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88 });
   mat.userData.porosity = 0.45; // sealed pavers
@@ -66,18 +106,24 @@ export function createPavingMaterial(): THREE.MeshStandardMaterial {
         .replace('#include <common>', '#include <common>\nvarying vec3 vPWorld;')
         .replace('#include <project_vertex>', '#include <project_vertex>\nvPWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vPWorld;')
+        .replace('#include <common>', `#include <common>\nvarying vec3 vPWorld;\nuniform float uLights;\nvec3 pavingPool;\n${LAMP_RULE_GLSL}`)
         .replace(
           '#include <color_fragment>',
           `#include <color_fragment>
           {
+            // Warm pool under the nearest plaza lamp (6 m head, ~5 m spread).
+            vec2 l = vec2(floor(vPWorld.x / ${LAMP_GRID.toFixed(1)} + 0.5) * ${LAMP_GRID.toFixed(1)}, floor((vPWorld.z + 10.0) / ${LAMP_GRID.toFixed(1)} + 0.5) * ${LAMP_GRID.toFixed(1)} - 10.0);
+            float dl = length(vPWorld.xz - l);
+            pavingPool = vec3(1.0, 0.78, 0.52) * lampKeep(l) * exp(-dl * dl / (2.0 * 5.0 * 5.0)) * uLights * 0.35;
             vec2 t = vPWorld.xz / vec2(1.8, 0.9);
             vec2 j = abs(fract(t) - 0.5);
             float joint = smoothstep(0.47, 0.5, max(j.x, j.y));
             float tone = fract(sin(dot(floor(t), vec2(12.9898, 78.233))) * 43758.5453);
             diffuseColor.rgb = mix(vec3(0.5, 0.47, 0.43), vec3(0.62, 0.59, 0.54), tone) * (1.0 - 0.35 * joint);
           }`,
-        );
+        )
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * pavingPool;');
+      Object.assign(shader.uniforms, stadiumUniforms);
     },
     'paving',
   );

@@ -60,7 +60,12 @@ export function createSeatingMaterial(): THREE.MeshStandardMaterial {
   );
 }
 
-/** Board-formed concrete with panel joints and weathering; the facade gets vertical fins. */
+/**
+ * Board-formed concrete with panel joints and weathering. The exterior facade
+ * is banded like a modern bowl: a dark stone plinth with gates, a concrete
+ * lintel, the glazed concourse ribbon, charcoal metal fins over the upper
+ * tier, and a crimson band under the roof with an LED line.
+ */
 export function createConcreteMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82, metalness: 0, side: THREE.DoubleSide });
   mat.userData.porosity = 0.6; // board-formed concrete
@@ -73,7 +78,7 @@ export function createConcreteMaterial(): THREE.MeshStandardMaterial {
         .replace('#include <uv_vertex>', '#include <uv_vertex>\nvAux = aux; vCUv = uv;')
         .replace('#include <project_vertex>', '#include <project_vertex>\nvCWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', `#include <common>\nvarying vec3 vAux;\nvarying vec2 vCUv;\nvarying vec3 vCWorld;\nuniform float uLights;\n${NOISE_GLSL}\nvec3 concreteEmissive;`)
+        .replace('#include <common>', `#include <common>\nvarying vec3 vAux;\nvarying vec2 vCUv;\nvarying vec3 vCWorld;\nuniform float uLights;\n${NOISE_GLSL}\nvec3 concreteEmissive;\nfloat concreteRough;\nfloat concreteMetal;`)
         .replace(
           '#include <color_fragment>',
           `#include <color_fragment>
@@ -82,6 +87,8 @@ export function createConcreteMaterial(): THREE.MeshStandardMaterial {
             float n = fbm(vCWorld.xz * 0.15 + vCWorld.y * 0.2, 4);
             vec3 c = mix(vec3(0.46, 0.44, 0.41), vec3(0.6, 0.58, 0.54), n);
             concreteEmissive = vec3(0.0);
+            concreteRough = 0.82;
+            concreteMetal = 0.0;
             if (part > 1.5 && part < 2.5) {
               // Padded pitch wall: dark crimson padding with a lime rule at the top.
               c = vec3(0.07, 0.012, 0.016);
@@ -89,22 +96,65 @@ export function createConcreteMaterial(): THREE.MeshStandardMaterial {
               c = mix(c, vec3(0.45, 0.85, 0.05), top);
               concreteEmissive = vec3(0.35, 0.7, 0.02) * top * (0.2 + uLights);
             } else if (part > 4.5 && part < 5.5) {
-              // Exterior facade: vertical precast fins, darker recesses, streaking.
-              float fin = smoothstep(0.35, 0.45, abs(fract(vCUv.x / 3.2) - 0.5));
-              c *= mix(1.0, 0.55, fin);
-              c *= mix(0.85, 1.0, smoothstep(-2.0, 12.0, vCWorld.y));
-              c *= 0.9 + 0.1 * fbm(vec2(vCUv.x * 2.0, vCWorld.y * 0.05), 3);
-              // Warm concourse glow through the facade slots at night.
-              float slot = step(0.47, abs(fract(vCUv.x / 3.2) - 0.5)) * step(14.0, vCWorld.y) * step(vCWorld.y, 16.5);
-              concreteEmissive = vec3(1.0, 0.72, 0.4) * slot * uLights * 1.6;
+              float y = vCWorld.y;
+              float s = vCUv.x;
+              vec3 warm = vec3(1.0, 0.72, 0.42);
+              if (y < 5.0) {
+                // Plinth: dark basalt-faced base; gates every 14.5 m (on the
+                // aisle lines), 5 m wide and 4 m tall, lit inside at night.
+                c = vec3(0.07, 0.068, 0.07) * (0.85 + 0.3 * n);
+                float g = abs(fract(s / 14.5 + 0.5) - 0.5) * 14.5;
+                float gate = step(g, 2.5) * step(y, 4.0);
+                c = mix(c, vec3(0.015), gate);
+                // Interior light falls off from the ceiling of the gate.
+                concreteEmissive = warm * gate * (0.01 + uLights * 0.12) * smoothstep(-0.5, 4.0, y);
+                concreteRough = 0.6;
+              } else if (y < 6.5) {
+                // Concrete lintel band.
+                c *= 1.05;
+              } else if (y < 13.0) {
+                // Concourse glazing: dark glass with mullions every 1.6 m and a transom.
+                float mull = step(0.46, abs(fract(s / 1.6) - 0.5)) + step(abs(y - 10.4), 0.07);
+                c = mix(vec3(0.012, 0.016, 0.02), vec3(0.16, 0.16, 0.17), min(mull, 1.0));
+                concreteRough = mix(0.06, 0.4, min(mull, 1.0));
+                concreteMetal = mix(0.0, 0.8, min(mull, 1.0));
+                // Concourse interior at night: a bright ceiling light line,
+                // darker below, and bays of varying brightness (some dim).
+                float bay = fract(sin(floor(s / 6.4) * 91.7) * 43758.5);
+                float ceiling = smoothstep(11.5, 12.8, y) + 0.35 * smoothstep(7.5, 11.0, y);
+                concreteEmissive = warm * (1.0 - min(mull, 1.0)) * (0.004 + uLights * 0.1) * ceiling * mix(0.25, 1.0, bay);
+              } else if (y < 33.5) {
+                // Upper tier cladding: charcoal aluminum fins (0.9 m pitch) over
+                // dark infill; every third fin stands proud and catches light.
+                float f = fract(s / 0.9);
+                float fin = smoothstep(0.0, 0.08, f) * smoothstep(0.42, 0.34, f);
+                float proud = step(2.5, mod(floor(s / 0.9), 3.0));
+                c = mix(vec3(0.03, 0.031, 0.034), vec3(0.11, 0.11, 0.115) * (1.0 + 0.5 * proud), fin);
+                // A slow twist in the fins' angle reads as a gradient up the facade.
+                c *= 0.85 + 0.3 * smoothstep(13.0, 33.0, y) * (0.5 + 0.5 * sin(s * 0.05));
+                concreteRough = mix(0.7, 0.35, fin);
+                concreteMetal = mix(0.0, 0.85, fin);
+                // Night: warm uplight wash from the lintel, fading up the fins.
+                concreteEmissive = warm * fin * uLights * 0.05 * (1.0 - smoothstep(13.0, 30.0, y));
+              } else {
+                // Crimson club band under the roof, with an LED line.
+                c = vec3(0.22, 0.015, 0.022);
+                float led = step(abs(y - 34.2), 0.08);
+                concreteEmissive = vec3(1.0, 0.1, 0.12) * led * (0.3 + uLights * 3.0);
+                concreteRough = 0.45;
+              }
+              // Weathering streaks below ledges.
+              c *= 0.92 + 0.08 * fbm(vec2(s * 2.0, y * 0.05), 3);
             } else if (part > 9.5) {
               c *= 0.8;
             }
             // Horizontal pour joints.
-            c *= 1.0 - 0.18 * smoothstep(0.04, 0.0, abs(fract(vCWorld.y / 1.2) - 0.5) - 0.46);
+            if (part < 4.5 || part > 5.5) c *= 1.0 - 0.18 * smoothstep(0.04, 0.0, abs(fract(vCWorld.y / 1.2) - 0.5) - 0.46);
             diffuseColor.rgb = c;
           }`,
         )
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = concreteRough;')
+        .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\nmetalnessFactor = concreteMetal;')
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += concreteEmissive;');
     },
     'concrete',

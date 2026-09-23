@@ -18,7 +18,10 @@ export function terrainHeight(x: number, z: number): number {
   let land = fbm2(x * 0.004, z * 0.004, 5, SEED + 1) * 22 + smoothstep(0, 900, inland) * 70 * (0.6 + 0.4 * fbm2(x * 0.002, z * 0.002, 3, SEED + 2));
   // Flatten a generous pad for the stadium and its concourse.
   const pad = smoothstep(260, 170, Math.hypot(x * 0.85, (z + 5) * 0.8));
-  land = lerp(land, 0, pad);
+  // ...and the whole 250 m plaza square (props.ts buildPlazaGeometry), so no
+  // ground pokes through the paving at its corners.
+  const square = smoothstep(136, 127, Math.max(Math.abs(x), Math.abs(z + 10)));
+  land = lerp(land, 0, Math.max(pad, square));
   land = Math.max(land, lerp(-3, 0, pad));
   // Toward the edge the land rolls off slightly before the cliff.
   const edge = cz - z; // meters from the cliff edge (positive = on land)

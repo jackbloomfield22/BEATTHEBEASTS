@@ -14,7 +14,7 @@ import { crowdEnergy } from './crowd/reactions';
 import { createPrecipitation } from './weather/precip';
 import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, createRoofMaterial, createSeatingMaterial, stadiumUniforms } from './stadium/materials';
 import { createFieldMaterial, createFieldPaint } from './field/field';
-import { buildPlazaGeometry, createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
+import { buildPlazaGeometry, plazaLampPositions, createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { createShadowRig, type ShadowRig } from './lighting/shadows';
 import { STAND } from './world/constants';
@@ -77,6 +77,21 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
 
   const precip = useMemo(() => createPrecipitation(), []);
   const plaza = useMemo(() => buildPlazaGeometry(), []);
+  // Plaza lamp posts: 6 m poles with a luminaire head (pools painted by the paving shader).
+  const lamps = useMemo(() => {
+    const at = plazaLampPositions();
+    const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.11, 6, 8).translate(0, 3, 0), assets.darkMetalMat, at.length);
+    const head = new THREE.InstancedMesh(new THREE.BoxGeometry(0.7, 0.18, 0.7).translate(0, 6.05, 0), assets.lightHeadMat, at.length);
+    at.forEach((p, i) => {
+      const m = new THREE.Matrix4().makeTranslation(p.x, 0, p.y);
+      pole.setMatrixAt(i, m);
+      head.setMatrixAt(i, m);
+    });
+    pole.castShadow = true;
+    const g = new THREE.Group();
+    g.add(pole, head);
+    return g;
+  }, [assets.darkMetalMat, assets.lightHeadMat]);
 
   // Sky LUT + IBL, regenerated whenever the lighting preset changes.
   const lut = useMemo(() => new SkyLUT(512, 256), []);
@@ -301,6 +316,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
 
       {/* Plaza ring around the stadium and the open-end terrace */}
       <mesh geometry={plaza} position={[0, 0.005, 0]} material={assets.pavingMat} receiveShadow />
+      <primitive object={lamps} />
       <mesh position={[0, 0.6, 71]} material={assets.concreteMat} receiveShadow castShadow>
         <boxGeometry args={[100, 1.2, 0.4]} />
       </mesh>
