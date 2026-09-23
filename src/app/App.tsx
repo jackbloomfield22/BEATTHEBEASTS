@@ -4,7 +4,7 @@ import { initSettings, defaultSettings, useSettings, getSettings, type QualityPr
 import { defaultBindings } from '@/input/actions';
 import { Input } from '@/input/InputManager';
 import { useApp, type CameraShot, type Screen } from './appStore';
-import { hasWebGL2, isUnsupportedDevice, urlFlags } from './platform';
+import { enterFullscreen, exitFullscreen, hasWebGL2, isFullscreen, isUnsupportedDevice, onFullscreenChange, urlFlags } from './platform';
 import { Audio } from '@/audio/audio';
 import { StudioIntro, TitleScreen } from '@/ui/screens/IntroTitle';
 import { MainMenu } from '@/ui/screens/MainMenu';
@@ -57,6 +57,13 @@ function useSettingsEffects() {
   }, [settings.audio.muteUnfocused]);
 }
 
+/** The fullscreen keybind (F11 by default, or Alt+Enter). */
+function toggleFullscreen(): void {
+  const on = !isFullscreen();
+  useSettings.getState().set((d) => void (d.display.fullscreen = on));
+  void (on ? enterFullscreen() : exitFullscreen());
+}
+
 export function App() {
   const [gate] = useState(() => (isUnsupportedDevice() ? 'device' : !hasWebGL2() ? 'webgl' : null));
   if (gate === 'device') return <DesktopGate />;
@@ -72,10 +79,32 @@ function Game() {
 
   useEffect(() => {
     Input.start();
-    return Input.onAction((id) => {
+    return Input.onAction((id, info) => {
       if (id === 'global.perf') togglePerf();
+      if (id === 'global.fullscreen' && !info.repeat) toggleFullscreen();
     });
   }, [togglePerf]);
+
+  useEffect(() => {
+    // Alt+Enter, the other PC convention (not rebindable: it's a chord).
+    const altEnter = (e: KeyboardEvent) => {
+      if (e.altKey && e.code === 'Enter' && !e.repeat) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        toggleFullscreen();
+      }
+    };
+    window.addEventListener('keydown', altEnter, { capture: true });
+    // Keep the Display setting in step when the browser leaves fullscreen
+    // on its own (held Esc, F11 in the browser, a window manager).
+    const off = onFullscreenChange((fs) => {
+      if (getSettings().display.fullscreen !== fs) useSettings.getState().set((d) => void (d.display.fullscreen = fs));
+    });
+    return () => {
+      window.removeEventListener('keydown', altEnter, { capture: true });
+      off();
+    };
+  }, []);
 
   return (
     <>

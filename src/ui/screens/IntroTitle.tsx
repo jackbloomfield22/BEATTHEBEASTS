@@ -50,7 +50,10 @@ export function StudioIntro() {
   );
 }
 
-/** "Press any key" over the live flyover. The press unlocks audio and requests fullscreen. */
+/**
+ * "Press any key" over the live flyover. The press unlocks audio, and enters
+ * fullscreen only if the player turned that on under Display (off by default).
+ */
 export function TitleScreen() {
   const go = useApp((s) => s.go);
   const setShot = useApp((s) => s.setShot);

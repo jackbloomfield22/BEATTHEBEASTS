@@ -29,7 +29,7 @@ function buildTabs(nav: { openEditor: () => void; applyPreset: (p: QualityPreset
       id: 'display',
       label: 'Display',
       rows: [
-        { kind: 'toggle', label: 'Fullscreen', desc: 'Play in fullscreen. Leaving fullscreen during a game pauses it.', get: (s) => s.display.fullscreen, set: (d, v) => { d.display.fullscreen = v; void (v ? enterFullscreen() : exitFullscreen()); } },
+        { kind: 'toggle', label: 'Fullscreen', desc: 'Play in fullscreen (toggle any time with F11 or Alt+Enter). Off by default. Leaving fullscreen during a game pauses it.', get: (s) => s.display.fullscreen, set: (d, v) => { d.display.fullscreen = v; void (v ? enterFullscreen() : exitFullscreen()); } },
         { kind: 'slider', label: 'Resolution scale', desc: 'Internal render resolution. Lower is faster; dynamic resolution adjusts below this to hold the frame rate.', min: 0.5, max: 1, step: 0.05, fmt: pct, get: (s) => s.display.resolutionScale, set: (d, v) => { d.display.resolutionScale = v; } },
         { kind: 'toggle', label: 'Dynamic resolution', desc: 'Lowers resolution during heavy moments to hold the frame rate.', get: (s) => s.display.dynamicResolution, set: (d, v) => { d.display.dynamicResolution = v; } },
         { kind: 'choice', label: 'Frame cap', desc: 'Limit the frame rate. Unlimited follows your display refresh rate (browsers always sync to the display, so there is no separate VSync switch).', options: [{ value: 0, label: 'Unlimited' }, { value: 30, label: '30' }, { value: 60, label: '60' }, { value: 120, label: '120' }, { value: 144, label: '144' }], get: (s) => s.display.frameCap, set: (d, v) => { d.display.frameCap = v as Settings['display']['frameCap']; } },
