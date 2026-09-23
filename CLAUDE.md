@@ -12,8 +12,9 @@ Read `docs/BRIEF.md`, `docs/GDD.md` and `docs/TECH_PLAN.md` before large changes
 6. **Every animation is authored in-house.** No downloaded, mocap or third-party motion, and nothing generated from third-party motion. Base clips are keyed by us in `tools/blender`. Variants may be built in code from our own clips. Technique clips (drops, route breaks, kick-slide, pass-rush moves, backpedal and hip flip, form tackles) can never be cut.
 7. **No NFL logos, wordmarks or team names** on uniforms, helmets, the field or the stadium. Player names and team+decade labels in the UI are fine.
 8. **Quality over scope.** Cut scope before cutting quality; the cut order is in GDD §16.
-9. **Verify visually.** Capture screenshots (`npm run shots`), look at them and compare them to `docs/reference/`, and write an honest critique in `docs/PROGRESS.md`. A visual milestone is never declared done from code alone.
-10. **Licenses:** CC0 or properly licensed assets only. Every third-party asset, dataset and library-bundled asset goes in `CREDITS.md`.
+9. **Stability and frame rate beat visual fidelity.** If a feature can't run smoothly on Medium (60 fps at 100% resolution on the target hardware), cut it down until it does. A slightly plainer game is better than one that lags or breaks.
+10. **Verify visually.** Capture screenshots (`npm run shots`), look at them and compare them to `docs/reference/`, and write an honest critique in `docs/PROGRESS.md`. A visual milestone is never declared done from code alone.
+11. **Licenses:** CC0 or properly licensed assets only. Every third-party asset, dataset and library-bundled asset goes in `CREDITS.md`.
 
 ## Workflow
 
