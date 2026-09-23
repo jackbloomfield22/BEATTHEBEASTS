@@ -127,6 +127,9 @@ float roofCover(vec3 wp) {
 // to ~0.3-0.5x at saturation, roughness toward the water film's ~0.1.
 // Snow settles on upward-facing surfaces, broken up by drift noise.
 void weatherSurface(inout vec3 albedo, inout float rough, vec3 nW, vec3 wp, float porosity) {
+  // Fair weather: nothing to do (a uniform branch, so every pixel takes it
+  // together; it skips four noise lookups on every lit pixel).
+  if (uWet <= 0.0 && uSnow <= 0.0) return;
   float open = 1.0 - roofCover(wp);
   float wet = uWet * open;
   float flatUp = smoothstep(0.92, 0.99, nW.y);
