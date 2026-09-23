@@ -61,6 +61,7 @@ export const urlFlags = (() => {
     dev: p.has('dev'),
     perf: p.has('perf'),
     seed: p.get('seed'),
+    fly: p.has('fly'), // free flythrough camera (render/cameras/FlyCamera.tsx)
     shot: p.get('shot'), // screenshot harness: jump straight to a named state
     lighting: p.get('lighting'),
     quality: p.get('quality'),

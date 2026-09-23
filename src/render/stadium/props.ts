@@ -61,7 +61,8 @@ export function createMetalMaterial(color = 0x2a2b2e): THREE.MeshStandardMateria
  * place the posts) and in GLSL (to paint their light pools on the paving),
  * so pools always sit under lamps: inside the plaza, back from the cliff,
  * clear of the stands (rounded-rect distance > 58 m from the U, whose back
- * wall is 50.8 m out) or on the open-end terrace.
+ * wall is 50.8 m out). None on the open-end terrace: posts there would stand
+ * across the signature view of the sea.
  */
 export const LAMP_GRID = 22;
 const LAMP_RULE_GLSL = /* glsl */ `
@@ -72,8 +73,7 @@ float lampKeep(vec2 l) {
   float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
   float coast = 104.0 - 0.00085 * l.x * l.x;
   float plaza = step(abs(l.x), 118.0) * step(-130.0, l.y) * step(l.y, coast - 12.0);
-  float terrace = step(64.0, l.y) * step(abs(l.x), 38.0);
-  return plaza * max(step(58.0, d), terrace);
+  return plaza * step(58.0, d);
 }`;
 
 export function plazaLampPositions(): THREE.Vector2[] {
@@ -89,8 +89,7 @@ export function plazaLampPositions(): THREE.Vector2[] {
       const qz = Math.abs(pz) - (65 - r);
       const d = Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - r;
       const plaza = Math.abs(x) <= 118 && z >= -130 && z <= coastZ(x) - 12;
-      const terrace = z >= 64 && Math.abs(x) <= 38;
-      if (plaza && (d >= 58 || terrace)) out.push(new THREE.Vector2(x, z));
+      if (plaza && d >= 58) out.push(new THREE.Vector2(x, z));
     }
   }
   return out;

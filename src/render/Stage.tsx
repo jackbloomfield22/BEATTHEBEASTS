@@ -4,12 +4,14 @@ import { EffectComposer, Bloom, N8AO, SMAA } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { World, type WorldQuality } from './World';
 import { CameraDirector } from './cameras/CameraDirector';
+import { FlyCamera } from './cameras/FlyCamera';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { useSettings, type QualityPreset } from '@/app/settings';
 import { guessQuality } from './quality';
 import { useApp } from '@/app/appStore';
 import { perfStats, recordFrame } from '@/dev/perfStats';
+import { DynamicResolution, FirstLaunchBenchmark } from './perf/Adaptive';
 import { urlFlags } from '@/app/platform';
 
 // The one WebGL canvas. Everything 3D lives here and persists across screens.
@@ -113,6 +115,10 @@ export function Stage() {
   const worldQuality: WorldQuality = {
     shadowMapSize: { off: 0, low: 1024, medium: 2048, high: 4096 }[graphics.shadows],
     terrainSegments: quality === 'low' ? 240 : quality === 'medium' ? 320 : 400,
+    crowdDensity: graphics.crowdDensity,
+    // Vegetation follows the grass-detail setting (both are ground clutter).
+    vegetationDensity: { low: 0.4, medium: 0.7, high: 1, ultra: 1 }[graphics.grassDetail],
+    weatherParticles: graphics.weatherParticles,
   };
   const dpr = Math.min(window.devicePixelRatio || 1, 2) * display.resolutionScale;
 
@@ -141,8 +147,10 @@ export function Stage() {
       }}
     >
       <FrameDriver cap={display.frameCap} />
+      <DynamicResolution baseDpr={dpr} enabled={display.dynamicResolution} targetFps={display.frameCap || 60} />
+      <FirstLaunchBenchmark targetFps={display.frameCap || 60} />
       <World preset={preset} quality={worldQuality} onReady={setSceneReady} />
-      <CameraDirector shot={shot} fovOffset={display.fov} />
+      {urlFlags.fly ? <FlyCamera /> : <CameraDirector shot={shot} fovOffset={display.fov} />}
       <Post preset={preset} quality={quality} />
       <PerfProbe preset={preset.id} />
     </Canvas>

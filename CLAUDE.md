@@ -32,4 +32,4 @@ Read `docs/BRIEF.md`, `docs/GDD.md` and `docs/TECH_PLAN.md` before large changes
 | `npm run shots` | Playwright screenshot matrix into `tools/shots/out/` |
 | `npm run build` | Production build |
 
-Dev-only URL flags: `?dev` (debug panels), `?perf` (perf screen), `?seed=N` (fixed scene seed).
+Dev-only URL flags: `?dev` (debug panels), `?perf` (perf screen), `?seed=N` (fixed scene seed), `?fly` (free flythrough camera; P logs the pose), `?cam=x,y,z,lx,ly,lz[,fov]` (fixed camera), `?crowd=0..1` (crowd energy), `?lighting=<preset>`, `?quality=<tier>`, `?noao` / `?noshadow` (A/B checks).

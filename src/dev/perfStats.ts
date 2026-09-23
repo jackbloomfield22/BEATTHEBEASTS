@@ -22,6 +22,8 @@ export const perfStats = {
   gpu: '',
   quality: '',
   preset: '',
+  /** Dynamic-resolution scale (1 = the user's resolution scale). */
+  dynScale: 1,
 };
 
 export function recordFrame(now: number): void {

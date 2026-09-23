@@ -48,6 +48,7 @@ export function PerfScreen() {
     ['Shader programs', String(perfStats.programs)],
     ['JS heap', heap ? `${heap.used.toFixed(0)} / ${heap.total.toFixed(0)} MB (limit ${heap.limit.toFixed(0)})` : 'n/a (Chromium only)'],
     ['Canvas / internal res', `${perfStats.width}×${perfStats.height} / ${internalW}×${internalH} (dpr ${perfStats.dpr.toFixed(2)})`],
+    ['Dynamic resolution', `${Math.round(perfStats.dynScale * 100)}% of the resolution scale`],
     ['Quality / lighting', `${perfStats.quality} / ${perfStats.preset}`],
     ['GPU', perfStats.gpu],
     ['Browser', navigator.userAgent.replace(/^Mozilla\/5.0 /, '')],

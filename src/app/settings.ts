@@ -62,6 +62,8 @@ export interface Settings {
   };
   /** Set once the first-launch auto-detect has run. */
   detectedPreset?: QualityPreset;
+  /** Set once the first-launch benchmark has refined the guess (its verdict). */
+  benchmarked?: QualityPreset;
 }
 
 export const PRESET_GRAPHICS: Record<QualityPreset, Omit<GraphicsSettings, 'preset'>> = {
@@ -128,7 +130,7 @@ export const useSettings = create<SettingsStore>((set, get) => ({
   reset: (section) => {
     const defaults = defaultsFactory();
     get().set((d) => {
-      if (!section) Object.assign(d, defaults, { detectedPreset: d.detectedPreset });
+      if (!section) Object.assign(d, defaults, { detectedPreset: d.detectedPreset, benchmarked: d.benchmarked });
       else (d as unknown as Record<string, unknown>)[section] = defaults[section];
     });
   },

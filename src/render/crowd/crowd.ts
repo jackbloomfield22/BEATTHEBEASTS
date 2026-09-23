@@ -75,8 +75,25 @@ export function buildSeats(occupancy = 0.93): Seats {
       }
     }
   }
-  return { seat: new Float32Array(seat), rand: new Float32Array(rand), count: seat.length / 4 };
+  // Shuffle (seeded) so any prefix is an even sample of the bowl: quality
+  // tiers draw fewer spectators by lowering instanceCount, no rebuild.
+  const n = seat.length / 4;
+  const order = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(hash(i * 7 + 3) * (i + 1));
+    [order[i], order[j]] = [order[j]!, order[i]!];
+  }
+  const S = new Float32Array(n * 4);
+  const R = new Float32Array(n * 4);
+  order.forEach((src, dst) => {
+    S.set(seat.slice(src * 4, src * 4 + 4), dst * 4);
+    R.set(rand.slice(src * 4, src * 4 + 4), dst * 4);
+  });
+  return { seat: S, rand: R, count: n };
 }
+
+/** Share of occupied seats drawn per crowd-density setting (the rest read as empty seats). */
+export const CROWD_DRAWN = { low: 0.55, medium: 0.8, high: 1, ultra: 1 } as const;
 
 const VERT_PARS = /* glsl */ `
 attribute vec4 aSeat;

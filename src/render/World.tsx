@@ -9,7 +9,7 @@ import { buildBoulders, buildHeadlands, buildTerrain, createBoulderMaterial, cre
 import { createOcean } from './ocean/ocean';
 import { buildBowl, PROFILE } from './stadium/bowl';
 import { bakeSpectatorAtlas } from './crowd/spectator';
-import { createCrowd } from './crowd/crowd';
+import { CROWD_DRAWN, createCrowd } from './crowd/crowd';
 import { crowdEnergy } from './crowd/reactions';
 import { createPrecipitation } from './weather/precip';
 import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, createRoofMaterial, createSeatingMaterial, stadiumUniforms } from './stadium/materials';
@@ -22,6 +22,10 @@ import { STAND } from './world/constants';
 export interface WorldQuality {
   shadowMapSize: number; // 0 = shadows off
   terrainSegments: number;
+  /** Graphics settings that scale instance counts without rebuilding. */
+  crowdDensity: 'low' | 'medium' | 'high' | 'ultra';
+  vegetationDensity: number; // 0..1 share of scattered plants drawn
+  weatherParticles: boolean;
 }
 
 /**
@@ -76,6 +80,11 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   useEffect(() => () => crowd.atlas.dispose(), [crowd]);
 
   const precip = useMemo(() => createPrecipitation(), []);
+  useEffect(() => {
+    const g = crowd.mesh.geometry as THREE.InstancedBufferGeometry;
+    const total = (g.attributes.aSeat as THREE.InstancedBufferAttribute).count;
+    g.instanceCount = Math.round(total * CROWD_DRAWN[quality.crowdDensity]);
+  }, [crowd, quality.crowdDensity]);
   const plaza = useMemo(() => buildPlazaGeometry(), []);
   // Plaza lamp posts: 6 m poles with a luminaire head (pools painted by the paving shader).
   const lamps = useMemo(() => {
@@ -127,7 +136,8 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     atmosphereUniforms.uSnow.value = preset.snowCover ?? 0;
     // Particles are lit like a white diffuse surface under the (clouded) key
     // light: radiance ≈ irradiance / π.
-    precip.set(preset.precipitation ?? null, trans.clone().multiplyScalar(preset.sunIlluminance / Math.PI));
+    const p = preset.precipitation;
+    precip.set(p && quality.weatherParticles ? p : null, trans.clone().multiplyScalar(preset.sunIlluminance / Math.PI));
     stadiumUniforms.uLights.value = preset.stadiumLights;
     assets.ocean.material.uniforms.uStadiumLights!.value = preset.stadiumLights;
 
@@ -152,7 +162,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     scene.environmentIntensity = import.meta.env.DEV && new URLSearchParams(location.search).has("envI") ? Number(new URLSearchParams(location.search).get("envI")) : preset.envIntensity;
     if (prev && prev !== rt.texture) prev.dispose();
     if (import.meta.env.DEV) Object.assign(window, { __btbCrowd: crowdEnergy, __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
-  }, [preset, gl, lut, pmrem, envScene, env, assets, scene, precip]);
+  }, [preset, gl, lut, pmrem, envScene, env, assets, scene, precip, quality.weatherParticles]);
 
   // Shadows follow quality: cascaded shadow maps (lighting/shadows.ts), sized
   // per tier; the plain key light never casts.
@@ -228,6 +238,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       mesh.computeBoundingSphere();
+      mesh.userData.fullCount = mats.length;
       group.add(mesh);
     };
     // Three shrub and two cypress variants, instances dealt round-robin.
@@ -239,6 +250,10 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     for (let v = 0; v < 2; v++) add(buildCypress(31 + v), deal(scatter.cypress, 2, v), deal(scatter.tints[1]!, 2, v));
     return group;
   }, [assets.cliff]);
+  // Scatter order is random, so drawing a prefix thins plants evenly.
+  useEffect(() => {
+    for (const m of vegetation.children as THREE.InstancedMesh[]) m.count = Math.round((m.userData.fullCount as number) * quality.vegetationDensity);
+  }, [vegetation, quality.vegetationDensity]);
 
   const boulders = useMemo(() => {
     const b = buildBoulders(quality.terrainSegments >= 320 ? 700 : 350);
