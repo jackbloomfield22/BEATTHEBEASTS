@@ -80,7 +80,10 @@ export function buildPerson(pose: number): THREE.BufferGeometry {
   // Neck, head, hair cap.
   parts.push(part(new THREE.CylinderGeometry(0.05, 0.055, 0.1, 8), SKIN, M(0, shoulderY + 0.06, 0)));
   parts.push(part(new THREE.SphereGeometry(0.105, 14, 10), SKIN, M(0, shoulderY + 0.2, 0.01, 0, 0, 0, 1, 1.12, 1.02)));
-  parts.push(part(new THREE.SphereGeometry(0.112, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.6), HAIR, M(0, shoulderY + 0.205, -0.02, -0.55, 0, 0, 1.03, 1.12, 1.08)));
+  // Hair shell: crown, sides down to the ears and the back of the head,
+  // framing the face from the front.
+  parts.push(part(new THREE.SphereGeometry(0.113, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), HAIR, M(0, shoulderY + 0.215, -0.004, -0.18, 0, 0, 1.06, 1.18, 1.1)));
+  parts.push(part(new THREE.SphereGeometry(0.1, 12, 8), HAIR, M(0, shoulderY + 0.19, -0.035, 0, 0, 0, 1.04, 1.1, 0.9)));
   // Arms by pose.
   for (const side of [-1, 1]) {
     const sh = V(0.21 * side, shoulderY - 0.04, 0);
