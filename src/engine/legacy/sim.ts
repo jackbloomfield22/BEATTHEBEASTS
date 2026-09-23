@@ -208,10 +208,18 @@ interface DriveOut {
  * Daily top-lineup guarantee; `diffAdj` (Daily) weakens the Beasts' effective
  * rating by 0–20.
  */
-export const simulateBeatdown = <B extends BeastLike>(roster: Roster, beasts: readonly B[], forceWin = false, diffAdj = 0): BeatdownResult<B> => {
+export const simulateBeatdown = <B extends BeastLike>(
+  roster: Roster,
+  beasts: readonly B[],
+  forceWin = false,
+  diffAdj = 0,
+  // Not in legacy: ratings from the new system through engine/legacy/adapter.ts
+  // (TECH_PLAN §6.4). Omitted, the port behaves exactly like legacy.
+  rated?: { off: OffenseRatings; defenders: RatedDefender<B>[] },
+): BeatdownResult<B> => {
   const rng = makeRng(matchupSeed(roster, beasts));
-  const off = rateOffense(roster);
-  const defenders = rateDefenders(beasts);
+  const off = rated ? rated.off : rateOffense(roster);
+  const defenders = rated ? rated.defenders : rateDefenders(beasts);
   const M = buildMatchups(off, defenders);
   const era = ERA[off.QB.dec] || ERA['2010s']!;
   const defR = rateBeasts(beasts);

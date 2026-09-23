@@ -7,7 +7,7 @@
 // biggest movers against legacy, every correction applied, and every
 // low-confidence rating among the top 200 players by OVR.
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { PHYSICAL_BY_POS, SKILL_ATTRS, attrLabel } from '../../src/engine/ratings/attributes/index.ts';
 import { rateAll, type RatingRun } from '../../src/engine/ratings/engine.ts';
 import { buildInputs } from '../../src/engine/ratings/inputs.ts';
@@ -186,6 +186,23 @@ for (const e of lowConf) {
   out(`| ${who(e)} | ${e.pos} | ${f0(e.ovr.value)} (${e.ovr.conf}) | ${lows.join(', ')} |`);
 }
 out('');
+
+// ------------------------------------------------------------------ adapter
+
+{
+  const fitFile = JSON.parse(readFileSync(ROOT + 'data/ratings/adapter.v1.json', 'utf8')) as Record<string, Record<string, { r2?: number; w: Record<string, number> }> | number>;
+  out('## Legacy-sim adapter (fitted, not tuned)', '', 'The legacy sim reads its own ability fields. `src/engine/legacy/adapter.ts` computes each one as a linear blend of new attributes, fitted by least squares to legacy\'s own values over the pool (`data/ratings/adapter.v1.json`). Legacy\'s fields lean on `imp`, which the new ratings deliberately do not reproduce, so the fit is loose by design. Calibration to the brief\'s targets (~21 / ~36 / ~14 points per game and the win-rate bands) waits for your sign-off on the ratings.', '');
+  out('| Group | Field | Inputs (weights) | R² |', '|---|---|---|---|');
+  for (const [g, fields] of Object.entries(fitFile)) {
+    if (typeof fields === 'number') continue;
+    for (const [f, v] of Object.entries(fields)) out(`| ${g} | ${f} | ${Object.entries(v.w).map(([k, w]) => `${k} ${w.toFixed(3)}`).join(', ')} | ${v.r2 ?? ''} |`);
+  }
+  try {
+    out('', readFileSync(ROOT + 'data/ratings/adapter.v1.check.txt', 'utf8').trim(), '');
+  } catch {
+    out('');
+  }
+}
 
 // ------------------------------------------------------------------ checks
 
