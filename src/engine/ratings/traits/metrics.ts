@@ -80,7 +80,7 @@ const NOUN: Record<string, string> = {
   q_rate: 'passer rating',
   q_yds: 'passing yards per game',
   q_ypcmp: 'yards per completion',
-  q_rush: 'rushing',
+  q_rush: 'QB rushing yards per game',
   r_ypc: 'yards per carry',
   r_car: 'carries per game',
   r_rec: 'receiving yards per game',
@@ -165,11 +165,17 @@ export function metricLabel(pos: RatedPos, key: string): string {
   if (key.startsWith('z:') || key.startsWith('t:')) {
     const k = key.slice(2);
     if (k === 'w_tdrate') return 'TDs per catch';
+    // Lower-is-better signals are gated on the better end.
+    const AVOID: Record<string, string> = { q_sack: 'Sack avoidance (sack rate vs league)', q_int: 'INT avoidance (INT rate vs league)', r_fum: 'Ball security (fumbles per touch)', u_sack: 'Unit sack avoidance (sacks allowed vs league)' };
+    if (AVOID[k]) return AVOID[k]!;
     if (k === 'w_recn') return "Share of the team's catches (receptions per game vs league team completions)";
     return (NOUN[k] ?? k).replace(/^./, (c) => c.toUpperCase()).replace(/^Of touches scored$/, 'TDs per touch');
   }
   if (key === 'height') return 'Height';
   if (key === 'weight') return 'Weight';
+  if (pos === 'OL' && key === 'passBlock') return 'Pass block (unit mean)';
+  if (pos === 'OL' && key === 'runBlock') return 'Run block (unit mean)';
+  if (pos === 'OL' && (key === 'pullMove' || key === 'awareness')) return `${attrLabel(pos, key)} (unit mean)`;
   return attrLabel(pos, key);
 }
 

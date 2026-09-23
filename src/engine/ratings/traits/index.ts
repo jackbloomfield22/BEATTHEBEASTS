@@ -6,7 +6,7 @@ import type { TraitIconId, TraitKind, TraitPolarity, TraitTier } from './types';
 
 export * from './types';
 export { COMBOS } from './combos';
-export { CUT_TRAITS } from './cut';
+export { CUT_TRAITS, REDEFINED_COMBOS } from './cut';
 export { DEFENSE_TRAITS, UNIT_TRAITS } from './catalogDefense';
 export { OFFENSE_TRAITS } from './catalogOffense';
 export { deriveAllTraits, MAX_NEGATIVE, MAX_TRAITS, TRAIT_DEFS, type OlUnitTraits, type TraitRun } from './derive';

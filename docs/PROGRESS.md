@@ -28,6 +28,27 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 
 ## Milestone log
 
+### Ratings follow-up (after the M2 review)
+
+Attribute formulas, OVR weights, the curve and calibration are unchanged (you asked not to revisit formulas yet); only anchors, traits and the Explorer moved.
+
+**Anchors** (`tools/ratings/anchors.ts`): Manning's 97+ band moved from Decision Making to Awareness (passes, 98); his Scramble check stays and still fails (61, 16th percentile), so his flag stays with an updated note. Fitzgerald's "speed below 88" check is gone (his measured 4.48 stands); Catch in Traffic (94.6, want 97) keeps its flag. Still 22 of 42 anchors passing, with fewer failing checks.
+
+**Traits, rebuilt** (`src/engine/ratings/traits/`, docs in `docs/TRAITS.md`, numbers in the report's new "Traits" section):
+- 120 trait definitions: QB 24, RB 25, WR 26, TE 20 (four shared with WR), and 29 defensive ones (DE 9, DT 9, LB 13, CB 12, S 13, many shared); 20 of them negative. Plus 25 combinations, 7 OL unit traits and 14 roster synergies. Each has an icon (in-house SVG set, `src/ui/scouting/traitIcons.tsx`), a one-line gameplay effect and a "why he earned it" line with the player's own numbers ("Speed 97 (top 2% of WRs)").
+- Gates are percentiles of the position pool: elite at the top 10%, standard at the top 25%, negatives at the bottom 10–15%. Three kinds of signal: physical (measurables, era-translated body), technical (attributes) and production signatures (share of the team's catches as the target-share proxy, yards per catch, TDs per touch, attempts vs the league, carries per game). No gate reads age, experience or seasons.
+- Up to 4 shown per player, at most 2 negatives. Combinations replace their parts. The best trait of each facet (for a QB: arm, pocket and legs, mind, style) is shown first, and the rank adds how rare a trait is among players of similar OVR, so stars read as different kinds of star: Montana is Maestro + Efficiency King + Off-Platform, Marino Air Raid + Bomb Squad + Unflappable + Climber, Mahomes Backyard Ball + Bomb Squad, Brady (NE 2010s) Maestro + Air Raid + Statue.
+- 42–46% of every position has no trait. Every kept trait is held by 5+ players and none rides along with another 95%+ of the time (tested in `tests/ratings-traits.test.ts`, 17 tests).
+- **Cut:** Touch Passer and Small but Mighty (under five holders), Separator (97% were Route Technicians), Rhythm Passer (95% overlap with Ice in His Veins; Point Guard went with it, Unflappable replaced it), Edge Setter (all holders were Wrecking Balls), Volume Target (same signal as Alpha), Return Man (no return gameplay and return stats only from 1999), and no career-arc traits. Four combinations were redefined while tuning (listed in the report).
+- **Synergies** are data with a bounded effect (≤ 5%, 0.15 s or 0.5 yd, for the pair only) and a pure `detectSynergies(roster)`. OL units read the mean of their five linemen and carry unit traits (Road Graders, Pass-Pro Wall, Athletic Line, Smart Line, Ground and Pound, Turnstile, Sack-Prone). The sim applies them from M5; the matchup preview and pre-game will show them in M7.
+- The snapshot (`ratings.v1.json`) now carries each trait with its why line, and each OL unit its block aggregates and unit traits.
+
+**UI:** reusable `TraitBadge`/`TraitList`/`SynergyBadge` (`src/ui/scouting/TraitBadge.tsx`). The Scouting panel shows icon, label and why line (Film Room hides the why numbers). The Explorer shows the same on the card, trait icons in the pool table, a trait filter per position (plus "any"/"no traits"), OL unit traits on a lineman's card, and the roster synergies of the two compared players.
+
+**Explorer fix:** the OVR block sat 19–23 px from the right edge of the page, where preview deployments float Vercel's round toolbar button. The detail pane and header now keep a 4rem right-edge gutter (the OVR sits 72 px in) and the OVR block can't shrink. Checked with Playwright at 1920×1080 and 1440×900, single and compare, with three mock 44 px toolbar buttons pinned to the right edge: no overlap (`docs/screenshots/m2-followup/`).
+
+**Honest notes:** why lines for combinations are long (both parts' numbers). Traits inherit the ratings' data limits: e.g. Ed Reed (2000s BAL) shows Arm Tackler because his 3.9 tackles per game are the lowest of the modern safeties and he was 200 lb; that is the Tackle formula reading real data, not a trait bug. Synergies read the traits a player shows, so a trait dropped by the four-trait cap (Barry Sanders' Patient Runner) doesn't trigger one.
+
 ### M2 Ratings (built, stopped for review)
 
 **How to review**

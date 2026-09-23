@@ -4,8 +4,9 @@
 //
 // BRIEF "Tools for reviewing ratings": anchor pass/fail, era parity,
 // distribution charts per attribute, top 25 per attribute and per OVR, the
-// biggest movers against legacy, every correction applied, and every
-// low-confidence rating among the top 200 players by OVR.
+// biggest movers against legacy, the traits (and docs/TRAITS.md), every
+// correction applied, and every low-confidence rating among the top 200
+// players by OVR.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { PHYSICAL_BY_POS, SKILL_ATTRS, attrLabel } from '../../src/engine/ratings/attributes/index.ts';
@@ -15,6 +16,7 @@ import { OVR_WEIGHTS } from '../../src/engine/ratings/ovrWeights.ts';
 import { TRAIT_LABELS } from '../../src/engine/ratings/traits/index.ts';
 import type { RatedEntry, RatedPos } from '../../src/engine/ratings/types.ts';
 import { loadSources, ROOT } from './sources.ts';
+import { traitsDoc, traitsSection } from './traitsReport.ts';
 import { byPosition, capPileups, crossStintViolations, eraParity, evaluateAnchors, legacyCorrelation, movers } from './validate.ts';
 
 const POS_ORDER: RatedPos[] = ['QB', 'RB', 'WR', 'TE', 'OL', 'DE', 'DT', 'LB', 'CB', 'S'];
@@ -171,6 +173,11 @@ for (const p of POS_ORDER) {
   }
   out('', '_* low confidence_', '', '</details>', '');
 }
+
+// ------------------------------------------------------------------ traits
+
+out(...traitsSection(run));
+writeFileSync(ROOT + 'docs/TRAITS.md', traitsDoc());
 
 // ------------------------------------------------------------------ corrections
 
