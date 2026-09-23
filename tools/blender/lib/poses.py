@@ -68,7 +68,7 @@ class Pose:
     feet: dict = field(default_factory=dict)  # side -> Foot
     hands: dict = field(default_factory=dict)  # side -> (x, y, z) wrist target; IK on
     arms: dict = field(default_factory=dict)  # side -> Arm (aimed after the spine is posed)
-    # Head held to a world gaze: (pitch down deg, yaw deg); neck takes `share`.
+    # Head held to a world gaze: (pitch down deg, yaw deg[, neck share]).
     gaze: tuple | None = None
 
 
@@ -274,36 +274,64 @@ LOOSE_FIST = FIST
 
 STANCES: dict[str, Pose] = {}
 
-# Standing idle: weight even, knees soft, arms relaxed.
+# Standing idle: weight on the left leg (the right knee soft and the foot
+# turned out), hip dropped a touch on the relaxed side, shoulders level;
+# arms hang loose with the elbows bent and the hands in a soft curl, the
+# right a little forward. Not a mannequin's symmetric A-pose.
 STANCES["idle"] = Pose(
-    pelvis={"up": -0.015},
-    joints={"spine_02": (2, 0, 0), "neck_01": (4, 0, 0), "head": (-2, 0, 0), **OPEN},
-    feet={"l": Foot(0.14, -0.10, out=10), "r": Foot(-0.14, -0.11, out=10)},
+    pelvis={"up": -0.02, "side": 0.022, "lateral": 2.5, "twist": 3},
+    joints={"spine_01": (1, -1.5, 0), "spine_02": (2, -1.0, -1), "neck_01": (3, 0, 0), "head": (-2, 1, 0), **RELAXED},
+    feet={"l": Foot(0.13, -0.10, out=9), "r": Foot(-0.17, -0.15, heel=5, out=15)},
+    arms={"l": Arm(flex=3, elbow=17, abd=11, inward=0.1), "r": Arm(flex=9, elbow=27, abd=9, inward=0.15)},
 )
 
-# Offensive/defensive lineman three-point (right hand down).
+# Offensive lineman, three-point (right hand down). Coaching: feet a little
+# wider than the shoulders, the down-hand-side foot back heel-to-toe; hips
+# up (~0.78 m here, 0.80-0.85 for a 6'4" tackle), back flat with the head
+# up; the down hand light on the fingertips, just inside the back foot and
+# under the shoulder, so he can fire out or pass-set straight back (~25% of
+# the weight on the hand). The off forearm rests on the thigh. The pelvis
+# and hand were searched against those targets (hip height, back angle,
+# hand load, balance: build_anims.py STANCE_TARGETS).
 STANCES["ol_3pt"] = Pose(
-    pelvis={"forward": 0.12, "up": -0.36, "flex": 84},  # flat back: hips ~0.65 m, shoulders ~0.64 m
+    pelvis={"forward": -0.24, "up": -0.21, "flex": 88},
     joints={
-        "spine_01": (4, 0, 0), "spine_02": (6, 0, 0), "spine_03": (4, 0, 0), "spine_04": (-2, 0, 0),
-        "neck_01": (-30, 0, 0), "neck_02": (-18, 0, 0), "head": (-16, 0, 0),
-        # Off arm: forearm resting across the left thigh.
+        "spine_01": (3, 0, 0), "spine_02": (3, 0, 0), "spine_03": (2, 0, 0),
+        "clavicle_r": (0, -6, 0),
         "upperarm_l": (40, -30, 10), "forearm_l": (70, 0, 0), "hand_l": (-10, 0, 0),
-        **FIST,
+        **FIST, **{k: v for k, v in SPREAD.items() if k.endswith("_r")},
     },
-    feet={"l": Foot(0.23, -0.10, heel=12, out=6), "r": Foot(-0.21, 0.06, heel=24, out=4)},
-    hands={"r": (-0.13, -0.62, 0.075)},
+    feet={"l": Foot(0.25, -0.06, heel=14, out=6), "r": Foot(-0.24, 0.08, heel=22, out=4)},
+    hands={"r": (-0.16, -0.36, 0.165)},
+    gaze=(-4.0, 0.0, 0.85),  # the neck extends to lift the head over the shoulders
 )
 
-# Defensive lineman four-point (both hands down, hips higher, weight forward).
-STANCES["dl_4pt"] = Pose(
-    pelvis={"forward": 0.12, "up": -0.35, "flex": 84},  # hips just above the shoulders
+# Defensive lineman, three-point (right hand down): lower than the O-line,
+# heels up and the weight forward over a loaded fist (~45% on the hand), a
+# wider stagger to launch off the back foot.
+STANCES["dl_3pt"] = Pose(
+    pelvis={"forward": 0.04, "up": -0.315, "flex": 88},
     joints={
-        "spine_01": (4, 0, 0), "spine_02": (6, 0, 0), "spine_03": (6, 0, 0),
-        "neck_01": (-32, 0, 0), "neck_02": (-18, 0, 0), "head": (-18, 0, 0), **FIST,
+        "spine_01": (4, 0, 0), "spine_02": (5, 0, 0), "spine_03": (3, 0, 0),
+        "clavicle_r": (0, -8, 0),
+        "upperarm_l": (30, -20, 0), "forearm_l": (60, 0, 0), **FIST,
     },
-    feet={"l": Foot(0.24, -0.02, heel=26, out=4), "r": Foot(-0.24, 0.06, heel=28, out=4)},
-    hands={"l": (0.16, -0.70, 0.075), "r": (-0.16, -0.70, 0.075)},
+    feet={"l": Foot(0.23, -0.04, heel=26, out=4), "r": Foot(-0.23, 0.14, heel=32, out=4)},
+    hands={"r": (-0.15, -0.72, 0.075)},
+    gaze=(-4.0, 0.0, 0.85),  # the neck extends to lift the head over the shoulders
+)
+
+# Defensive lineman four-point (both fists down): hips at or above the
+# shoulders, heels up, half the weight on the hands.
+STANCES["dl_4pt"] = Pose(
+    pelvis={"forward": 0.04, "up": -0.29, "flex": 90},
+    joints={
+        "spine_01": (4, 0, 0), "spine_02": (6, 0, 0), "spine_03": (4, 0, 0),
+        "clavicle_l": (0, -6, 0), "clavicle_r": (0, -6, 0), **FIST,
+    },
+    feet={"l": Foot(0.24, 0.0, heel=28, out=4), "r": Foot(-0.24, 0.06, heel=30, out=4)},
+    hands={"l": (0.17, -0.70, 0.075), "r": (-0.17, -0.70, 0.075)},
+    gaze=(-4.0, 0.0, 0.85),  # the neck extends to lift the head over the shoulders
 )
 
 # Receiver's two-point stance: staggered, outside foot back, chest over the front knee.
@@ -315,6 +343,7 @@ STANCES["wr_2pt"] = Pose(
         "upperarm_r": (10, -30, 0), "forearm_r": (55, 0, 0), **OPEN,
     },
     feet={"l": Foot(0.10, -0.22, heel=10, out=0), "r": Foot(-0.13, 0.28, heel=34, out=6)},
+    gaze=(2.0, 30.0),  # eyes inside on the ball, not the turf
 )
 
 # Linebacker ready: square, feet a bit wider than the shoulders, hips down, hands up.
@@ -326,6 +355,7 @@ STANCES["lb_ready"] = Pose(
         "upperarm_r": (40, -26, 0), "forearm_r": (78, 0, 0), **OPEN,
     },
     feet={"l": Foot(0.26, -0.08, heel=14, out=8), "r": Foot(-0.26, -0.06, heel=14, out=8)},
+    gaze=(4.0, 0.0),  # reading the backfield
 )
 
 # Defensive back (off coverage): on the balls of the feet, one foot back, chest over the toes.
@@ -337,6 +367,7 @@ STANCES["db_ready"] = Pose(
         "upperarm_r": (24, -32, 0), "forearm_r": (70, 0, 0), **OPEN,
     },
     feet={"l": Foot(0.17, -0.18, heel=24, out=2), "r": Foot(-0.17, 0.10, heel=30, out=4)},
+    gaze=(2.0, 0.0),  # eyes on the quarterback
 )
 
 # Running back (I-formation / offset): hands on the thighs, eyes up.
@@ -345,6 +376,7 @@ STANCES["rb_2pt"] = Pose(
     joints={"spine_02": (10, 0, 0), "spine_03": (8, 0, 0), "neck_01": (-24, 0, 0), "head": (-16, 0, 0), **OPEN},
     feet={"l": Foot(0.19, -0.10, heel=12, out=6), "r": Foot(-0.19, -0.10, heel=12, out=6)},
     hands={"l": (0.16, -0.14, 0.66), "r": (-0.16, -0.14, 0.66)},
+    gaze=(4.0, 0.0),  # eyes up on the defense
 )
 
 # Quarterback under center: knees bent, hands under the center (at his crotch height).
@@ -353,17 +385,24 @@ STANCES["qb_center"] = Pose(
     joints={"spine_02": (12, 0, 0), "spine_03": (8, 0, 0), "neck_01": (-14, 0, 0), "head": (-12, 0, 0), **OPEN},
     feet={"l": Foot(0.20, -0.06, heel=8, out=8), "r": Foot(-0.20, -0.04, heel=8, out=8)},
     hands={"l": (0.03, -0.31, 0.66), "r": (-0.03, -0.3, 0.63)},
+    gaze=(4.0, 0.0),  # surveying the defense
 )
 
-# Quarterback in the shotgun: upright, knees soft, hands out for the snap.
+# Quarterback in the shotgun: feet shoulder width on the balls of the
+# feet, knees bent, a slight forward lean; hands out at the waist with the
+# fingers spread and the palms turned toward the center, thumbs in, a target
+# for the snap (not held flat in front).
 STANCES["qb_gun"] = Pose(
-    pelvis={"up": -0.07, "flex": 14},
+    pelvis={"forward": -0.05, "up": -0.10, "flex": 16},
     joints={
-        "spine_02": (6, 0, 0), "neck_01": (-6, 0, 0),
-        "upperarm_l": (36, -34, 0), "forearm_l": (50, 0, 0),
-        "upperarm_r": (36, -34, 0), "forearm_r": (50, 0, 0), **OPEN,
+        "spine_02": (5, 0, 0), "spine_03": (3, 0, 0),
+        # Wrists back, turned so the palms face the center, fingers up and out.
+        "hand_l": (-55, 0, 20), "hand_r": (-55, 0, 20),
+        **SPREAD,
     },
-    feet={"l": Foot(0.18, -0.10, heel=6, out=6), "r": Foot(-0.18, -0.08, heel=6, out=6)},
+    feet={"l": Foot(0.19, -0.10, heel=10, out=6), "r": Foot(-0.19, -0.08, heel=10, out=6)},
+    hands={"l": (0.11, -0.34, 0.97), "r": (-0.11, -0.34, 0.97)},
+    gaze=(2.0, 0.0),
 )
 
 # The huddle: bent at the waist, hands on the knees, listening.
@@ -373,4 +412,5 @@ STANCES["huddle"] = Pose(
     feet={"l": Foot(0.20, -0.10, out=10), "r": Foot(-0.20, -0.10, out=10)},
     # Hands on the lower thighs, just above the knees (knees at ~0.47 m).
     hands={"l": (0.16, -0.1, 0.57), "r": (-0.16, -0.1, 0.57)},
+    gaze=(24.0, 0.0),  # listening, eyes on the play caller inside the huddle
 )

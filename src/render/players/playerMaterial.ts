@@ -113,13 +113,14 @@ vec3 lettering(vec3 c, vec3 p) {
   }
   return c;
 }
-// Arm frames in the rest pose (skeleton.py: A-pose, arms 45 deg down).
+// Arm frames in the rest pose (skeleton.py: A-pose, arms 45 deg down,
+// upper arm 0.32 m, forearm 0.28 m).
 const vec3 ARM_DIR = vec3(0.7071, -0.7071, 0.0);
 vec3 armDir(vec3 p) { return vec3(sign(p.x) * ARM_DIR.x, ARM_DIR.y, 0.0); }
 // Along the forearm, 0 at the elbow and 1 at the wrist.
 float forearmT(vec3 p) {
-  vec3 el = vec3(sign(p.x) * 0.407, 1.293, -0.035);
-  return dot(p - el, armDir(p)) / 0.268;
+  vec3 el = vec3(sign(p.x) * 0.4213, 1.2787, -0.035);
+  return dot(p - el, armDir(p)) / 0.28;
 }
 // Cheap value noise for skin variation.
 float pHash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
@@ -138,7 +139,7 @@ float muscleHeight(vec3 p) {
   if (abs(p.x) < 0.2) return 0.0;
   vec3 d = armDir(p);
   vec3 sh = vec3(sign(p.x) * 0.195, 1.505, -0.015);
-  float t = dot(p - sh, d) / 0.30;
+  float t = dot(p - sh, d) / 0.32;
   vec3 r = p - sh - d * dot(p - sh, d);
   float front = r.z, lateral = dot(r, normalize(vec3(sign(p.x) * 0.7071, 0.7071, 0.0)));
   float h = 0.0035 * gauss(t, 0.18, 0.12) * smoothstep(-0.02, 0.03, lateral);
@@ -166,7 +167,7 @@ int playerPart() { return int(floor(vPart + 0.001)); }
 float sleeveT(vec3 p) {
   vec3 sh = vec3(sign(p.x) * 0.195, 1.505, -0.015);
   vec3 dir = normalize(vec3(sign(p.x) * 0.7071, -0.7071, 0.0));
-  return dot(p - sh, dir) / 0.30;
+  return dot(p - sh, dir) / 0.32;
 }
 // Sleeve (TV) number on the outside of the sleeve (arm frame, rest pose).
 vec3 sleeveNumber(vec3 c, vec3 p) {
@@ -174,7 +175,7 @@ vec3 sleeveNumber(vec3 c, vec3 p) {
   vec3 d = armDir(p);
   vec3 sh = vec3(sign(p.x) * 0.195, 1.505, -0.015);
   vec3 lat = normalize(vec3(sign(p.x) * 0.7071, 0.7071, 0.0));
-  vec3 center = sh + d * (0.30 * ${SLEEVE_NUMBER.t.toFixed(2)});
+  vec3 center = sh + d * (0.32 * ${SLEEVE_NUMBER.t.toFixed(2)});
   if (dot(p - center, lat) < 0.02) return c; // the outer face only
   float em = ${SLEEVE_NUMBER.cap.toFixed(3)} / ${CAP.toFixed(3)};
   // Read from the side: front to back across, shoulder to elbow down.
@@ -200,7 +201,7 @@ vec3 playerAlbedo(int part, vec3 p, out float stripe, out float rough) {
     bool arm = abs(p.x) > 0.22;
     vec3 d = armDir(p);
     vec3 sh = vec3(side * 0.195, 1.505, -0.015);
-    float t = dot(p - sh, d) / 0.30;
+    float t = dot(p - sh, d) / 0.32;
     float tf = forearmT(p);
     // Compression sleeve from under the jersey sleeve to the glove cuff.
     float on = side > 0.0 ? uSleeves.x : uSleeves.y;

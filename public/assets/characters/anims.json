@@ -26,10 +26,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.96,
+          "trunk": 88.92,
+          "eyes": -3.87
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 21.8,
-        "com_cm": 11.1,
+        "clear_cm": 23.8,
+        "com_cm": 10.3,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -59,10 +64,55 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.78,
+          "trunk": -2.24,
+          "eyes": 4.0,
+          "load": 0.25
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 43.1,
-        "com_cm": 5.9,
+        "clear_cm": 37.6,
+        "com_cm": 19.7,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "stance_dl_3pt": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "stance": {
+          "hip": 0.69,
+          "trunk": -4.77,
+          "eyes": 4.0,
+          "load": 0.47
+        },
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 46.0,
+        "com_cm": 10.4,
         "reach_cm": 0.01,
         "pass": true
       }
@@ -92,11 +142,17 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.71,
+          "trunk": -7.83,
+          "eyes": 4.0,
+          "load": 0.5
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 46.0,
-        "com_cm": 20.7,
-        "reach_cm": 0.01,
+        "clear_cm": 44.0,
+        "com_cm": 22.5,
+        "reach_cm": 0.0,
         "pass": true
       }
     },
@@ -125,10 +181,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.83,
+          "trunk": 57.34,
+          "eyes": -2.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
         "clear_cm": 35.7,
-        "com_cm": 1.0,
+        "com_cm": 1.3,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -158,10 +219,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.78,
+          "trunk": 54.21,
+          "eyes": -4.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
         "clear_cm": 40.3,
-        "com_cm": 1.1,
+        "com_cm": 1.3,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -191,10 +257,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.8,
+          "trunk": 50.08,
+          "eyes": -2.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
         "clear_cm": 35.1,
-        "com_cm": 1.5,
+        "com_cm": 1.8,
         "reach_cm": 0.01,
         "pass": true
       }
@@ -224,10 +295,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.8,
+          "trunk": 41.23,
+          "eyes": -4.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
         "clear_cm": 33.2,
-        "com_cm": 1.2,
+        "com_cm": 1.6,
         "reach_cm": 0.01,
         "pass": true
       }
@@ -257,10 +333,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.81,
+          "trunk": 45.95,
+          "eyes": -4.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
         "clear_cm": 33.6,
-        "com_cm": 1.3,
+        "com_cm": 1.9,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -290,11 +371,16 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.87,
+          "trunk": 70.54,
+          "eyes": -2.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 30.3,
-        "com_cm": 5.8,
-        "reach_cm": 0.0,
+        "clear_cm": 32.1,
+        "com_cm": 8.8,
+        "reach_cm": 0.01,
         "pass": true
       }
     },
@@ -323,10 +409,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.86,
+          "trunk": 23.35,
+          "eyes": -24.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
         "clear_cm": 31.7,
-        "com_cm": 1.2,
+        "com_cm": 1.8,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -368,8 +459,8 @@
           "knee_drive": 36.8,
           "heel_rec": 60.4,
           "strike": 16.0,
-          "hand_front": -49.2,
-          "hand_back": 6.1
+          "hand_front": -51.8,
+          "hand_back": 6.4
         },
         "slide_cm": 0.03,
         "loop_deg": 0.0,
@@ -416,8 +507,8 @@
           "knee_drive": 47.9,
           "heel_rec": 97.5,
           "strike": 6.0,
-          "hand_front": -5.3,
-          "hand_back": -11.5
+          "hand_front": -6.1,
+          "hand_back": -11.4
         },
         "slide_cm": 0.31,
         "loop_deg": 0.0,
@@ -464,8 +555,8 @@
           "knee_drive": 65.8,
           "heel_rec": 115.1,
           "strike": -3.0,
-          "hand_front": 3.9,
-          "hand_back": 5.2
+          "hand_front": 3.5,
+          "hand_back": 6.3
         },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
@@ -512,8 +603,8 @@
           "knee_drive": 79.8,
           "heel_rec": 127.1,
           "strike": -12.0,
-          "hand_front": 11.7,
-          "hand_back": 19.2
+          "hand_front": 11.6,
+          "hand_back": 21.0
         },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
@@ -560,8 +651,8 @@
           "knee_drive": 65.2,
           "heel_rec": 84.5,
           "strike": -22.0,
-          "hand_front": -20.3,
-          "hand_back": -34.3
+          "hand_front": -21.9,
+          "hand_back": -34.7
         },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
@@ -572,5 +663,5 @@
       }
     }
   },
-  "bytes": 649200
+  "bytes": 730124
 }

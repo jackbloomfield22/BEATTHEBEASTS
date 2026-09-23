@@ -62,7 +62,22 @@ MECH_TARGETS = {
 }
 
 # Stances that bear weight on a hand (it joins the support polygon).
-HAND_SUPPORT = {"ol_3pt": ["r"], "dl_4pt": ["l", "r"]}
+HAND_SUPPORT = {"ol_3pt": ["r"], "dl_3pt": ["r"], "dl_4pt": ["l", "r"]}
+# Coaching targets for the stances (M4.5; lib/poses.py cites them): hip
+# height (m, base 1.88 m rig), back angle (deg above horizontal, pelvis to
+# the base of the neck), share of the weight on the down hands, and the
+# eyes (deg above horizontal; linemen look up the field, not at the turf).
+STANCE_TARGETS = {
+    "ol_3pt": {"hip": (0.76, 0.81), "trunk": (-6, 12), "load": (0.15, 0.32), "eyes": (-15, 15)},
+    "dl_3pt": {"hip": (0.64, 0.73), "trunk": (-10, 4), "load": (0.35, 0.55), "eyes": (-20, 15)},
+    "dl_4pt": {"hip": (0.66, 0.76), "trunk": (-12, 2), "load": (0.40, 0.60), "eyes": (-20, 15)},
+    "qb_gun": {"hip": (0.86, 0.94), "trunk": (60, 80), "eyes": (-10, 10)},
+    "qb_center": {"eyes": (-15, 10)},
+    "wr_2pt": {"eyes": (-15, 10)},
+    "lb_ready": {"eyes": (-15, 10)},
+    "db_ready": {"eyes": (-15, 10)},
+    "rb_2pt": {"eyes": (-15, 10)},
+}
 STANCE_FRAMES = 60  # 2 s breathing loop
 
 
@@ -225,6 +240,34 @@ def measure(rig, mech, f, clip):
         mech["strike"].append(pitch)
 
 
+def measure_stance(rig, stance, cm) -> dict:
+    hip = (world(rig, "thigh_l") + world(rig, "thigh_r")) / 2
+    neck = world(rig, "neck_01")
+    v = neck - world(rig, "pelvis")
+    out = {"hip": hip.z, "trunk": math.degrees(math.atan2(v.z, math.hypot(v.x, v.y)))}
+    face = rig.pose.bones["head"].matrix.to_3x3().col[2]
+    out["eyes"] = math.degrees(math.atan2(face.z, math.hypot(face.x, face.y)))
+    hands = HAND_SUPPORT.get(stance, [])
+    if hands:
+        feet = (world(rig, "toe_l") + world(rig, "toe_r") + world(rig, "foot_l") + world(rig, "foot_r")) / 4
+        hand = sum((world(rig, f"hand_{s}") for s in hands), Vector()) / len(hands)
+        a, b = Vector((feet.x, feet.y)), Vector((hand.x, hand.y))
+        out["load"] = (Vector((cm.x, cm.y)) - a).dot(b - a) / (b - a).length_squared
+    return out
+
+
+def stance_gates(clip, m) -> dict:
+    tgt = STANCE_TARGETS.get(clip.get("stance"))
+    if not m:
+        return {}
+    out = {"stance": {k: round(v, 2) for k, v in m.items()}}
+    if tgt:
+        fails = [k for k, (lo, hi) in tgt.items() if k in m and not lo <= m[k] <= hi]
+        if fails:
+            out["mech_fail"] = fails
+    return out
+
+
 def mech_gates(clip, mech) -> dict:
     tgt = MECH_TARGETS.get(clip["name"])
     if not tgt:
@@ -268,6 +311,7 @@ def bake(rig, c, clip):
     clearance = math.inf
     com_margin = math.inf
     reach = 0.0  # worst distance between an IK target and where the limb got to
+    stance_metrics = {}
     mech = {k: [] for k in ("lean", "pz", "px", "pyaw", "tyaw", "elbow", "shoulder", "thigh", "knee", "hand_up", "hand_back", "strike")}
     for f in range(frames + 1):
         apply_pose(rig, c, clip["pose"](f))
@@ -288,6 +332,8 @@ def bake(rig, c, clip):
             if clip["kind"] == "stance":
                 cm = com(rig)
                 com_margin = min(com_margin, inside_margin((cm.x, cm.y), support(rig, HAND_SUPPORT.get(clip.get("stance"), []))))
+                if f == 0:
+                    stance_metrics = measure_stance(rig, clip.get("stance"), cm)
 
     # Foot slide: while planted, a foot's ball plus the distance the body
     # travels should stay put (in-place clips: the ground moves under us).
@@ -338,6 +384,7 @@ def bake(rig, c, clip):
         con.mute = m
     gates = {
         **mech_gates(clip, mech),
+        **stance_gates(clip, stance_metrics),
         "slide_cm": round(slide * 100, 2),
         "loop_deg": round(loop_err, 2),
         "clear_cm": round(clearance * 100, 1),

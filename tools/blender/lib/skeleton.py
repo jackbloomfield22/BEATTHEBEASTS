@@ -26,8 +26,12 @@ HEIGHT = 1.88
 # Joint positions (x, y, z). Left side only; the right side mirrors x.
 _A = math.radians(45.0)  # A-pose: upper arm 45 degrees below horizontal
 _SHOULDER = (0.195, 0.015, 1.505)
-_UPPER_ARM = 0.30
-_FOREARM = 0.268
+# Arms: NFL players are long-armed (wingspan ~1.03-1.06 x height at the
+# combine); 0.32 + 0.28 m gives this 1.88 m athlete a ~1.97 m wingspan
+# (1.05x). Shorter arms (0.30 + 0.268) couldn't put a lineman's hand on the
+# turf with his hips at stance height.
+_UPPER_ARM = 0.32
+_FOREARM = 0.28
 _ELBOW = (_SHOULDER[0] + _UPPER_ARM * math.cos(_A), 0.035, _SHOULDER[2] - _UPPER_ARM * math.sin(_A))
 _WRIST = (_ELBOW[0] + _FOREARM * math.cos(_A), 0.02, _ELBOW[2] - _FOREARM * math.sin(_A))
 
