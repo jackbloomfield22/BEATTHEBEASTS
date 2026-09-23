@@ -67,16 +67,30 @@ void main() {
     col += uSunDiscColor * limb * smoothstep(1.0, 0.92, x);
   }
 
-  // Stars + moon at night.
+  // Stars at night: one jittered point per cell of a direction grid, drawn
+  // as a soft round dot with a little twinkle, fading into the horizon haze.
   if (uNight > 0.0 && d.y > 0.0) {
-    vec2 sp = vec2(atan(d.x, d.z) * 180.0, d.y * 400.0);
-    float s = hash12(floor(sp));
-    float star = step(0.9965, s) * smoothstep(0.0, 0.2, d.y) * (0.6 + 0.4 * sin(uTime * 2.0 + s * 100.0));
-    col += vec3(0.8, 0.85, 1.0) * star * 0.25 * uNight;
-    vec3 moonDir = normalize(vec3(0.45, 0.32, -0.6));
-    float m = dot(d, moonDir);
-    col += vec3(0.75, 0.8, 0.9) * smoothstep(0.99985, 0.99992, m) * 1.4 * uNight;
-    col += vec3(0.1, 0.12, 0.18) * pow(max(m, 0.0), 400.0) * 0.4 * uNight;
+    vec3 g = d * 260.0;
+    vec3 cell = floor(g);
+    float s = hash12(cell.xy + cell.z * 17.13);
+    vec3 jitter = vec3(hash12(cell.yz + 3.1), hash12(cell.zx + 7.7), hash12(cell.xy + 1.9));
+    float r = length(g - cell - jitter);
+    float bright = step(0.93, s) * (0.3 + 3.0 * pow(hash12(cell.xz + 5.3), 6.0));
+    float star = bright * smoothstep(0.22, 0.0, r) * smoothstep(0.02, 0.25, d.y) * (0.75 + 0.25 * sin(uTime * 1.7 + s * 90.0));
+    // Stars wash out near the moon.
+    star *= smoothstep(0.985, 0.9, dot(d, uSunDir));
+    col += vec3(0.8, 0.86, 1.0) * star * 0.05 * uNight;
+  }
+
+  // Light dome over the floodlit bowl: warm glow low in the sky toward the
+  // stadium (everywhere around the horizon when the camera is inside it).
+  if (uStadiumGlow > 0.0) {
+    vec3 sc = vec3(0.0, 30.0, -10.0) - cameraPosition; // bowl center, above the field
+    float dS = length(sc.xz);
+    vec3 toS = normalize(vec3(sc.x, sc.y + 40.0 + dS * 0.04, sc.z));
+    float lobe = mix(1.0, pow(max(dot(d, toS), 0.0), 5.0), smoothstep(120.0, 600.0, dS));
+    float fall = exp(-max(d.y, 0.0) * 3.0) * exp(-dS / 2500.0);
+    col += vec3(1.0, 0.78, 0.55) * uStadiumGlow * 0.035 * lobe * fall;
   }
 
   // Cloud layer on a plane at ~1.8 km, with long streaks at golden hour.

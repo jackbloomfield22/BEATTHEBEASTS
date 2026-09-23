@@ -88,7 +88,15 @@ uniform float uFogDensity;
 uniform float uFogFalloff;
 uniform float uFogBrightness;
 uniform float uSeaLevel;
+uniform float uStadiumGlow;
 ${SKY_UV_GLSL}
+// Warm light from the floodlights scattered in the haze around the bowl
+// (night and storm presets). Radiance added to the fog color near the stadium.
+vec3 stadiumHaze(vec3 wp) {
+  float d = length(wp.xz - vec2(0.0, -10.0));
+  float h = max(wp.y - uSeaLevel, 0.0);
+  return vec3(1.0, 0.8, 0.58) * uStadiumGlow * 0.05 * exp(-d / 420.0) * exp(-h / 260.0);
+}
 vec3 skyRadiance(vec3 d) { return texture2D(uSkyLUT, skyUV(d)).rgb; }
 
 // Aerial perspective: exponential height fog, analytically integrated along
@@ -109,7 +117,7 @@ vec3 applyAtmosphere(vec3 col, vec3 wp) {
   vec3 sky = skyRadiance(dh3);
   float mu = max(dot(dir, uSunDir), 0.0);
   vec3 glow = uSunColor * (pow(mu, 12.0) * 0.06 + pow(mu, 3.0) * 0.015);
-  return mix(col, (sky + glow) * uFogBrightness, f);
+  return mix(col, (sky + glow + stadiumHaze(mix(cameraPosition, wp, 0.5))) * uFogBrightness, f);
 }
 `;
 
@@ -121,6 +129,7 @@ export const atmosphereUniforms = {
   uFogFalloff: { value: 0.004 },
   uFogBrightness: { value: 1 },
   uSeaLevel: { value: SEA_LEVEL },
+  uStadiumGlow: { value: 0 },
   uTime: { value: 0 },
 };
 
@@ -165,6 +174,7 @@ uniform vec3 uSunDir;
 uniform float uMieScale;
 uniform float uSunIlluminance;
 uniform float uViewAlt;
+uniform vec3 uTint;
 const float Rg = ${EARTH_RADIUS.toFixed(1)};
 const float Rt = ${ATMOSPHERE_RADIUS.toFixed(1)};
 const vec3 betaR = vec3(${BETA_R.map((b) => b.toExponential(4)).join(',')});
@@ -238,7 +248,7 @@ void main() {
     L += T * (inS - inS * stepT) / max(ext, vec3(1e-9));
     T *= stepT;
   }
-  gl_FragColor = vec4(L * uSunIlluminance, 1.0);
+  gl_FragColor = vec4(L * uSunIlluminance * uTint, 1.0);
 }
 `;
 
@@ -268,6 +278,7 @@ export class SkyLUT {
         uMieScale: { value: 1 },
         uSunIlluminance: { value: 20 },
         uViewAlt: { value: VIEW_ALTITUDE },
+        uTint: { value: new THREE.Vector3(1, 1, 1) },
       },
       depthTest: false,
       depthWrite: false,
@@ -282,6 +293,7 @@ export class SkyLUT {
     u.uSunDir!.value.copy(sunDirection(p));
     u.uMieScale!.value = p.mieScale;
     u.uSunIlluminance!.value = p.sunIlluminance;
+    u.uTint!.value.set(...(p.keyTint ?? [1, 1, 1]));
     const prev = gl.getRenderTarget();
     gl.setRenderTarget(this.target);
     gl.render(this.scene, this.cam);

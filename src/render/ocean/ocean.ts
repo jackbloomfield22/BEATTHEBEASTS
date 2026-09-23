@@ -171,7 +171,14 @@ void main() {
 
   // Stadium light reflections at night (a soft warm sheen near the cliff).
   vec3 col = mix(scatter, refl, fres) + sun;
-  col += vec3(1.0, 0.85, 0.6) * uStadiumLights * 0.015 * exp(-length(vWorld.xz - vec2(0.0, 40.0)) / 180.0) * fres * 4.0;
+  // The floodlit bowl on the cliff: its glow reflects in the water below and
+  // around the promontory (a broad warm sheen, strongest at grazing angles),
+  // plus scattered light in the water body near the cliff foot.
+  float dBowl = length(vWorld.xz - vec2(0.0, 40.0));
+  vec3 warm = vec3(1.0, 0.8, 0.58);
+  col += warm * uStadiumGlow * (0.22 * exp(-dBowl / 260.0) + 0.05 * exp(-dBowl / 900.0)) * fres;
+  col += warm * shallow * uStadiumGlow * 0.12 * exp(-dBowl / 200.0);
+  col += warm * uStadiumLights * 0.015 * exp(-dBowl / 180.0) * fres * 4.0 * (1.0 - uStadiumGlow);
 
   // Shoreline foam where the swell meets rock.
   float foamBand = smoothstep(2.2, 0.0, depth) * step(0.001, depth + 0.5);

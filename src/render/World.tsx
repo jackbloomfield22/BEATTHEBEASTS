@@ -85,11 +85,18 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       m.uniforms.uSunDiscColor!.value.copy(trans).multiplyScalar(preset.sunIlluminance * 45);
       m.uniforms.uNight!.value = preset.moon ? 1 : 0;
     }
+    atmosphereUniforms.uStadiumGlow.value = preset.stadiumGlow ?? 0;
     stadiumUniforms.uLights.value = preset.stadiumLights;
     assets.ocean.material.uniforms.uStadiumLights!.value = preset.stadiumLights;
 
     const sun = sunRef.current;
     sun.color.copy(trans).multiplyScalar(1 / Math.max(trans.r, trans.g, trans.b, 1e-4));
+    if (preset.keyTint) {
+      const [tr, tg, tb] = preset.keyTint;
+      sun.color.multiply(new THREE.Color(tr, tg, tb));
+      sunColor.multiply(new THREE.Color(tr, tg, tb));
+      atmosphereUniforms.uSunColor.value.copy(sunColor);
+    }
     sun.intensity = preset.sunIlluminance * Math.max(trans.r, trans.g, trans.b) * (dir.y > 0 ? 1 : 0);
     sun.position.copy(dir).multiplyScalar(600);
     sun.target.position.set(0, 0, 0);
@@ -179,9 +186,11 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     });
   }, []);
   useEffect(() => {
-    const factor = preset.stadiumLights * (preset.sunElevationDeg < 0 ? 1 : preset.id === 'rain' || preset.id === 'snow' ? 0.35 : 0);
+    const factor = preset.stadiumLights * (preset.moon ? 1 : preset.id === 'rain' || preset.id === 'snow' ? 0.35 : 0);
     for (const l of flood) {
-      l.intensity = 17000 * factor;
+      // Divided by the preset exposure so the field reads the same under the
+      // brighter night exposure that lets the moonlit sky and sea show.
+      l.intensity = (17000 * factor) / preset.exposure;
       l.target.updateMatrixWorld();
     }
   }, [preset, flood]);
