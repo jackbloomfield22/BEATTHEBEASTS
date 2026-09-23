@@ -98,46 +98,46 @@
  },
  "WR": {
   "sep": {
-   "b0": 57.7823,
+   "b0": 57.9512,
    "w": {
-    "shortRoute": 0.061,
-    "deepRoute": 0.21103,
-    "speed": 0.03959
+    "shortRoute": 0.06082,
+    "deepRoute": 0.20871,
+    "speed": 0.03966
    },
    "lo": 35,
    "hi": 97,
-   "r2": 0.302
+   "r2": 0.297
   },
   "big": {
-   "b0": 52.6805,
+   "b0": 52.4114,
    "w": {
-    "deepRoute": 0.90434,
-    "speed": -0.76144,
-    "rac": 0.25748
+    "deepRoute": 0.90708,
+    "speed": -0.76092,
+    "rac": 0.25865
    },
    "lo": 35,
    "hi": 97,
    "r2": 0.601
   },
   "hands": {
-   "b0": 36.5825,
+   "b0": 36.5501,
    "w": {
-    "catching": 0.34771,
-    "catchInTraffic": 0.02349
+    "catching": 0.34865,
+    "catchInTraffic": 0.02324
    },
    "lo": 30,
    "hi": 97,
-   "r2": 0.279
+   "r2": 0.28
   },
   "score": {
-   "b0": 11.7094,
+   "b0": 10.9683,
    "w": {
-    "catchInTraffic": 0.26166,
-    "spectacular": 0.45793
+    "catchInTraffic": 0.2667,
+    "spectacular": 0.46416
    },
    "lo": 35,
    "hi": 97,
-   "r2": 0.487
+   "r2": 0.492
   }
  },
  "TE": {
@@ -220,46 +220,46 @@
  },
  "DEF": {
   "rush": {
-   "b0": 53.3878,
+   "b0": 53.5188,
    "w": {
-    "powerMoves": 0.11314,
-    "finesseMoves": 0.14556
+    "powerMoves": 0.11292,
+    "finesseMoves": 0.14431
    },
    "lo": 45,
    "hi": 92,
    "r2": 0.694
   },
   "cover": {
-   "b0": 55.9837,
+   "b0": 56.0759,
    "w": {
-    "manCov": 0.03919,
-    "zoneCov": 0.09179,
-    "ballSkills": 0.08154
+    "manCov": 0.03056,
+    "zoneCov": 0.10228,
+    "ballSkills": 0.07619
    },
    "lo": 45,
    "hi": 90,
-   "r2": 0.705
+   "r2": 0.699
   },
   "runD": {
-   "b0": 52.7297,
+   "b0": 52.581,
    "w": {
-    "tackle": 0.10468,
-    "blockShed": 0.07162,
-    "playRec": 0.03375
+    "tackle": 0.10341,
+    "blockShed": 0.07007,
+    "playRec": 0.03821
    },
    "lo": 45,
    "hi": 94,
    "r2": 0.439
   },
   "tackle": {
-   "b0": 48.0226,
+   "b0": 47.9631,
    "w": {
-    "tackle": 0.06079,
-    "pursuit": 0.14746
+    "tackle": 0.06113,
+    "pursuit": 0.14818
    },
    "lo": 40,
    "hi": 90,
-   "r2": 0.653
+   "r2": 0.655
   }
  }
 }
