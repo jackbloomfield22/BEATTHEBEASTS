@@ -72,12 +72,16 @@ Measured here (SwiftShader, 1080p; this measures geometry, not GPU time):
 Frame times can't be measured here (software rendering), so the 60 fps at 100% target on your M1 Pro is still unconfirmed. **Re-test:** open the PR #4 preview with `?perf`, and set Medium (or reset to auto). For each of the three menu views, send fps / average / p99, the dynamic resolution %, and the "Canvas / internal res" line.
 
 **Preview fixes** (your M3 feedback)
-- **How to Play → The Draft went black and dead.** It doesn't reproduce here. Whatever threw, R3F passes errors inside the 3D canvas up into the React tree, and with no error boundary React unmounts the whole app: a black page. The likely triggers are a GPU context loss or an error during a dynamic-resolution resize. Now:
-  - the 3D stage sits in its own error boundary and remounts after an error;
-  - a lost WebGL context rebuilds the stage on a fresh canvas;
-  - repeated failures within a minute step the preset down one tier;
-  - anything else shows an error screen with the message and a Reload button, never a black page.
-  - Browser tests (`e2e/howto.spec.ts`) open every How to Play page by click, Q/E and arrow keys, check the renderer is alive after each one, force a context loss on the Draft page, and check the stage comes back and the menus still answer. If it happens again, the error screen shows the message. Please send it to me.
+- **How to Play → The Draft went black and dead.** Root cause (found after your re-test still showed the error screen):
+  - `HowToScreen` reset the page's scroll with `useEffect(() => scroller.current?.scrollTo({ top: 0 }), [page])`. That arrow returns whatever `scrollTo` returns.
+  - Current Chrome implements the updated CSSOM View spec, where `scrollTo` returns a Promise. React kept that Promise as the effect's cleanup and called it on the first page change, and it isn't a function. So the click on The Draft threw.
+  - My tests passed because the test browser's older Chromium returns `undefined` from `scrollTo`.
+  - Fixed with a block body. An ESLint rule now rejects any concise-arrow effect in the codebase; it found four more, all harmless.
+  - `e2e/howto.spec.ts` now emulates current Chrome's Promise-returning scroll methods. It checks that each page's own content is visible and that no error screen is up. It fails on the old code.
+  - The crash-recovery work from the first report stays:
+    - the 3D stage remounts after an error or a lost WebGL context;
+    - repeated failures step the preset down one tier;
+    - anything else shows an error screen with the message and a Reload button, never a black page.
 - **Preset switch glitches.** Root cause found: the shadow rig's `dispose()` left each material flagged as attached, so the next rig (after the switch) skipped every material. They rendered with the old rig's cascade defines and no working shadows. The rig now records the materials it patched and restores them exactly. Browser tests (`e2e/presets.spec.ts`):
   - walk all 12 directed transitions between Low, Medium, High and Ultra;
   - after each switch, check the cascade count, that no material carries another rig's cascades, and that the plain sun is hidden;

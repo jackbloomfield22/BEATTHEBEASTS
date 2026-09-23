@@ -100,7 +100,9 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   }, [crowd, quality.crowdDensity]);
   const plaza = useMemo(() => buildPlazaGeometry(), []);
   const grass = useMemo(() => createGrassShells(assets.paint), [assets.paint]);
-  useEffect(() => grass.setShells(GRASS_SHELLS[quality.grassDetail]), [grass, quality.grassDetail]);
+  useEffect(() => {
+    grass.setShells(GRASS_SHELLS[quality.grassDetail]);
+  }, [grass, quality.grassDetail]);
   // Plaza lamp posts: 6 m poles with a luminaire head (pools painted by the paving shader).
   const lamps = useMemo(() => {
     const at = plazaLampPositions();
@@ -314,7 +316,9 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     chunked.group.name = 'vegetation';
     return chunked;
   }, [assets.cliff]);
-  useEffect(() => vegetation.setDensity(quality.vegetationDensity), [vegetation, quality.vegetationDensity]);
+  useEffect(() => {
+    vegetation.setDensity(quality.vegetationDensity);
+  }, [vegetation, quality.vegetationDensity]);
   useFrame(({ camera }) => vegetation.update(camera.position));
 
   const boulders = useMemo(() => {
@@ -336,7 +340,9 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   );
   useEffect(() => () => terrainGeo.dispose(), [terrainGeo]);
 
-  useEffect(() => boulders.setDensity(quality.terrainSegments >= 320 ? 1 : 0.5), [boulders, quality.terrainSegments]);
+  useEffect(() => {
+    boulders.setDensity(quality.terrainSegments >= 320 ? 1 : 0.5);
+  }, [boulders, quality.terrainSegments]);
   // Boulder shadows are a few pixels at broadcast distance: High only.
   useEffect(() => {
     boulders.group.traverse((o) => void (o.castShadow = quality.shadows === 'high'));
