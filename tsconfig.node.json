@@ -16,7 +16,16 @@
     "resolveJsonModule": true,
     "types": [
       "node"
-    ]
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@data/*": [
+        "./data/*"
+      ]
+    },
+    "noUncheckedIndexedAccess": true
   },
   "include": [
     "vite.config.ts",

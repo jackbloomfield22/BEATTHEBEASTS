@@ -25,3 +25,4 @@ html, body, #root {
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 button:focus { outline: none; }
 .stage { position: fixed !important; inset: 0; }
+.rx-boot { position: fixed; inset: 0; display: grid; place-items: center; color: var(--ink-2); font-size: 1rem; }

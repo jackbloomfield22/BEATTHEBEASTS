@@ -17,8 +17,12 @@
     "e2e": "playwright test",
     "shots": "playwright test -c tools/shots/playwright.config.ts",
     "extract": "node --experimental-strip-types tools/extract/extract-legacy.ts",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run extract -- --check && npm run validate-data -- --check",
-    "validate-data": "node --experimental-strip-types tools/reports/validate-data.ts"
+    "check": "npm run typecheck && npm run lint && npm run test && npm run extract -- --check && npm run validate-data -- --check && node --experimental-strip-types tools/ratings/merge-baselines.ts --check && node tools/run-ts.mjs tools/ratings/build.ts --check && node tools/run-ts.mjs tools/ratings/fit-adapter.ts --check",
+    "validate-data": "node --experimental-strip-types tools/reports/validate-data.ts",
+    "ratings": "node --experimental-strip-types tools/ratings/merge-baselines.ts && node tools/run-ts.mjs tools/ratings/build.ts && node tools/run-ts.mjs tools/ratings/fit-adapter.ts && node tools/run-ts.mjs tools/ratings/report.ts",
+    "augment": "node --experimental-strip-types tools/augment/build.ts",
+    "predev": "node tools/run-ts.mjs tools/ratings/build.ts --inputs-only",
+    "prebuild": "node tools/run-ts.mjs tools/ratings/build.ts --inputs-only"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
