@@ -125,7 +125,7 @@ export function RatingsExplorer() {
         </div>
       </header>
 
-      <div className="rx-body">
+      <div className={`rx-body ${cmp ? 'is-compare' : ''}`}>
         <section className="rx-pool">
           <div className="rx-filters">
             <input className="rx-search" placeholder="Search player, team code or id…" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
@@ -163,15 +163,18 @@ export function RatingsExplorer() {
         </section>
 
         <section className={`rx-detail ${cmp ? 'is-compare' : ''}`}>
-          {sel ? <PlayerCard model={model} e={sel} other={cmp} /> : <div className="rx-center">Select a player.</div>}
           {cmp && sel && (
-            <div className="rx-compare-col">
-              <button className="rx-btn rx-close" onClick={() => setCompare(null)}>
+            <div className="rx-compare-bar">
+              <span>
+                Comparing <b>{sel.name}</b> ({sel.team} {sel.decade}) with <b>{cmp.name}</b> ({cmp.team} {cmp.decade})
+              </span>
+              <button className="rx-btn" onClick={() => setCompare(null)}>
                 Close compare
               </button>
-              <PlayerCard model={model} e={cmp} other={sel} />
             </div>
           )}
+          {sel ? <PlayerCard model={model} e={sel} other={cmp} /> : <div className="rx-center">Select a player.</div>}
+          {cmp && sel && <PlayerCard model={model} e={cmp} other={sel} />}
         </section>
       </div>
     </div>
@@ -192,6 +195,8 @@ function PoolTable(props: {
   const ref = useRef<HTMLDivElement>(null);
   const [scroll, setScroll] = useState(0);
   const [height, setHeight] = useState(800);
+  // Header row height (the scroll container holds the sticky header too).
+  const HEAD = 34;
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -199,11 +204,11 @@ function PoolTable(props: {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const first = Math.max(0, Math.floor(scroll / ROW_H) - 10);
+  const first = Math.max(0, Math.floor((scroll - HEAD) / ROW_H) - 10);
   const last = Math.min(list.length, Math.ceil((scroll + height) / ROW_H) + 10);
   const gridCols = `minmax(11rem, 1.6fr) 3rem 3.2rem 3.6rem 3rem 3.4rem ${columns.map(() => '3.4rem').join(' ')} 2.2rem`;
   return (
-    <div className="rx-table">
+    <div className="rx-table" ref={ref} onScroll={(e) => setScroll(e.currentTarget.scrollTop)}>
       <div className="rx-tr rx-thead" style={{ gridTemplateColumns: gridCols }}>
         {th('name', 'Player', 'is-left')}
         {th('pos', 'Pos')}
@@ -216,7 +221,7 @@ function PoolTable(props: {
         ))}
         <span className="rx-th" title="Pin for side-by-side compare">⇄</span>
       </div>
-      <div className="rx-tbody" ref={ref} onScroll={(e) => setScroll(e.currentTarget.scrollTop)}>
+      <div className="rx-tbody">
         <div style={{ height: list.length * ROW_H, position: 'relative' }}>
           {list.slice(first, last).map((e, i) => (
             <div

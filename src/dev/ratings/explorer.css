@@ -22,6 +22,7 @@
 .rx-btn { padding: .45rem .9rem; border: 1px solid var(--line); border-radius: .35rem; color: var(--ink); text-decoration: none; font-weight: 600; background: rgba(255,255,255,.03); }
 .rx-btn:hover { border-color: var(--lime); color: var(--lime); }
 .rx-body { flex: 1; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); min-height: 0; }
+.rx-body.is-compare { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.5fr); }
 .rx-pool { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
 .rx-filters { padding: .8rem 1.2rem; display: flex; flex-direction: column; gap: .5rem; border-bottom: 1px solid var(--line); }
 .rx-search { font: inherit; font-size: .95rem; padding: .55rem .8rem; border-radius: .35rem; border: 1px solid var(--line); background: rgba(0,0,0,.35); color: var(--ink); outline: none; }
@@ -30,14 +31,17 @@
 .rx-chip { padding: .22rem .6rem; border: 1px solid var(--line); border-radius: 1rem; color: var(--ink-2); font-size: .74rem; font-weight: 600; }
 .rx-chip:hover { color: var(--ink); }
 .rx-chip.is-on { background: var(--lime); color: #0a0a0a; border-color: var(--lime); }
-.rx-table { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.rx-table { flex: 1; min-height: 0; overflow: auto; position: relative; }
 .rx-tr { display: grid; align-items: center; column-gap: .3rem; padding: 0 1rem; }
-.rx-thead { height: 2.1rem; border-bottom: 1px solid var(--line); background: rgba(0,0,0,.25); overflow: hidden; }
-.rx-tbody { flex: 1; overflow-y: auto; overflow-x: hidden; }
-.rx-tbody .rx-tr { position: absolute; left: 0; right: 0; cursor: pointer; border-bottom: 1px solid rgba(244,240,255,.04); }
-.rx-tbody .rx-tr:hover { background: rgba(255,255,255,.04); }
-.rx-tbody .rx-tr.is-selected { background: rgba(170,255,0,.1); box-shadow: inset 3px 0 0 var(--lime); }
-.rx-tbody .rx-tr.is-compare { background: rgba(79,179,255,.1); box-shadow: inset 3px 0 0 var(--rx-stat); }
+.rx-thead { height: 34px; border-bottom: 1px solid var(--line); background: #0c0a16; position: sticky; top: 0; z-index: 2; width: max-content; min-width: 100%; }
+.rx-tbody { position: relative; width: max-content; min-width: 100%; }
+.rx-tr > :first-child { position: sticky; left: 0; z-index: 1; background: inherit; padding-left: 1rem; margin-left: -1rem; }
+.rx-thead > :first-child { background: #0c0a16; }
+.rx-tbody .rx-tr { background: var(--bg); }
+.rx-tbody .rx-tr { position: absolute; left: 0; min-width: 100%; width: max-content; cursor: pointer; border-bottom: 1px solid rgba(244,240,255,.04); }
+.rx-tbody .rx-tr:hover { background: #141122; }
+.rx-tbody .rx-tr.is-selected { background: #17201a; box-shadow: inset 3px 0 0 var(--lime); }
+.rx-tbody .rx-tr.is-compare { background: #121b26; box-shadow: inset 3px 0 0 var(--rx-stat); }
 .rx-th { color: var(--ink-3); font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; text-align: center; white-space: nowrap; overflow: hidden; }
 .rx-th.is-left { text-align: left; }
 .rx-th.is-sorted { color: var(--lime); }
@@ -56,8 +60,8 @@
 .rx-t50 { color: #ff8a80; }
 .rx-detail { overflow-y: auto; padding: 1.1rem 1.4rem 3rem; display: grid; grid-template-columns: 1fr; gap: 1.4rem; align-content: start; }
 .rx-detail.is-compare { grid-template-columns: 1fr 1fr; font-size: .76rem; }
-.rx-compare-col { position: relative; }
-.rx-close { position: absolute; right: 0; top: -.2rem; z-index: 1; font-size: .7rem; }
+.rx-compare-bar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .5rem .8rem; border: 1px solid rgba(79,179,255,.35); border-radius: .35rem; background: rgba(79,179,255,.07); color: var(--ink-2); }
+.rx-compare-bar b { color: var(--ink); }
 .rx-card-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; padding-bottom: .9rem; border-bottom: 1px solid var(--line); }
 .rx-kicker { color: var(--lime); font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
 .rx-name-big { font-family: var(--font-display); font-weight: 400; font-size: 1.9rem; margin: .25rem 0 .35rem; line-height: 1.05; }
