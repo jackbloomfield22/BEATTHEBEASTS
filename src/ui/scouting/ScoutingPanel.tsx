@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { attrLabel } from '@/engine/ratings/attributes';
 import { CARD_ATTRS } from '@/engine/ratings/ovrWeights';
-import { TRAIT_LABELS } from '@/engine/ratings/traits';
 import type { RatedEntry } from '@/engine/ratings/types';
 import { ContributionBars } from './ContributionBars';
+import { TraitList } from './TraitBadge';
 
 // The in-game Scouting panel (BRIEF "Draft screen display"): OVR, the 4–6
 // attributes that matter most for the position, traits, and how each rating
 // was derived from the player's real stats. A trimmed Ratings Explorer card:
-// only contributions of half a point or more, no source ids. Film Room hides
-// the numbers (`hideNumbers`), as legacy did.
+// only contributions of half a point or more, no source ids. Traits show their
+// icon, label and the one-line reason he earned them. Film Room hides the
+// numbers (`hideNumbers`), as legacy did, including the numbers in the why
+// lines (the badge and its gameplay effect stay).
 
 export function ScoutingPanel({ e, hideNumbers = false }: { e: RatedEntry; hideNumbers?: boolean }) {
   const [open, setOpen] = useState<string | null>(null);
@@ -30,11 +32,7 @@ export function ScoutingPanel({ e, hideNumbers = false }: { e: RatedEntry; hideN
         )}
       </div>
       <div className="scout-traits">
-        {e.traits.map((t) => (
-          <span key={t.id} className="scout-trait" title={t.reasons.join('\n')}>
-            {TRAIT_LABELS[t.id]}
-          </span>
-        ))}
+        {hideNumbers ? <TraitList traits={e.traits.map((t) => ({ id: t.id, why: '' }))} showWhy={false} size="sm" /> : <TraitList traits={e.traits} size="sm" />}
       </div>
       {!hideNumbers &&
         keys.map((k) => {

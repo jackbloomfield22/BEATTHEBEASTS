@@ -9,11 +9,15 @@
   --rx-aging: #ff7a59;
   --rx-prior: #5a5570;
   --rx-unit: #57c7ff;
+  /* Right-edge gutter kept clear of content. Preview deployments (Vercel) float
+     a round toolbar button over the page's right edge; the OVR block and the
+     header actions must never sit under it. */
+  --rx-edge-guard: 4rem;
   position: fixed; inset: 0; display: flex; flex-direction: column; background: radial-gradient(120% 90% at 80% -10%, #1a1530 0%, var(--bg) 60%);
   color: var(--ink); font-size: .82rem; user-select: text; -webkit-user-select: text;
 }
 .rx-center { display: grid; place-items: center; height: 100%; color: var(--ink-2); font-size: 1rem; }
-.rx-head { display: flex; align-items: center; justify-content: space-between; padding: .9rem 1.4rem; border-bottom: 1px solid var(--line); }
+.rx-head { display: flex; align-items: center; justify-content: space-between; padding: .9rem calc(1.4rem + var(--rx-edge-guard)) .9rem 1.4rem; border-bottom: 1px solid var(--line); }
 .rx-brand { display: flex; gap: .9rem; align-items: center; }
 .rx-mark { width: 2.4rem; height: 2.4rem; display: grid; place-items: center; background: var(--lime); color: #0a0a0a; font-family: var(--font-display); font-size: .8rem; border-radius: .35rem; }
 .rx-title { font-family: var(--font-display); font-size: 1.35rem; }
@@ -58,22 +62,39 @@
 .rx-t70 { color: var(--ink); }
 .rx-t60 { color: var(--ink-2); }
 .rx-t50 { color: #ff8a80; }
-.rx-detail { overflow-y: auto; padding: 1.1rem 1.4rem 3rem; display: grid; grid-template-columns: 1fr; gap: 1.4rem; align-content: start; }
+.rx-detail { overflow-y: auto; padding: 1.1rem calc(1.4rem + var(--rx-edge-guard)) 3rem 1.4rem; display: grid; grid-template-columns: 1fr; gap: 1.4rem; align-content: start; }
 .rx-detail.is-compare { grid-template-columns: 1fr 1fr; font-size: .76rem; }
 .rx-compare-bar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .5rem .8rem; border: 1px solid rgba(79,179,255,.35); border-radius: .35rem; background: rgba(79,179,255,.07); color: var(--ink-2); }
 .rx-compare-bar b { color: var(--ink); }
 .rx-card-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; padding-bottom: .9rem; border-bottom: 1px solid var(--line); }
+.rx-card-head > :first-child { flex: 1; min-width: 0; }
+.rx-card { min-width: 0; }
 .rx-kicker { color: var(--lime); font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
 .rx-name-big { font-family: var(--font-display); font-weight: 400; font-size: 1.9rem; margin: .25rem 0 .35rem; line-height: 1.05; }
 .rx-meta { color: var(--ink-2); font-size: .76rem; }
-.rx-traits { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .55rem; }
-.rx-trait { padding: .18rem .55rem; border-radius: .25rem; background: rgba(255,201,74,.12); color: var(--rx-acc); font-weight: 700; font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; cursor: help; }
-.rx-ovr { text-align: center; min-width: 5rem; }
+.rx-traits { margin-top: .65rem; }
+.rx-unit-traits { margin-top: .6rem; display: flex; flex-direction: column; gap: .35rem; font-size: .74rem; }
+.rx-tone-elite { color: var(--lime); }
+.rx-tone-standard { color: #ffc94a; }
+.rx-tone-combo { color: #57d7ff; }
+.rx-tone-negative { color: #ff7a70; }
+.rx-trait-chips { max-height: 4.9rem; overflow-y: auto; }
+.rx-trait-chip { display: inline-flex; align-items: center; gap: .3rem; }
+.rx-trait-chip.is-on { color: #0a0a0a; }
+.rx-chip-n { opacity: .6; font-weight: 500; }
+.rx-chip-hint { font-size: .72rem; align-self: center; margin-left: .3rem; }
+.rx-trait-icons { display: flex; gap: .25rem; justify-content: flex-start; }
+.rx-synergies { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr)); gap: .45rem; }
+.rx-synergies h3 { grid-column: 1 / -1; font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
+.rx-synergies p { grid-column: 1 / -1; }
+.rx-detail.is-compare .trait-list li { grid-template-columns: 1fr; gap: .15rem; }
+.rx-synergies p { margin: 0; font-size: .76rem; }
+.rx-ovr { flex: none; text-align: center; min-width: 5rem; padding: .15rem .25rem 0; }
 .rx-ovr-num { font-family: var(--font-display); font-size: 3.2rem; line-height: 1; color: var(--lime); text-shadow: 0 0 1.4rem rgba(170,255,0,.3); }
 .rx-ovr-lbl { color: var(--ink-3); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; }
 .rx-attrs { margin-top: .6rem; }
 .rx-attr-head, .rx-attr-row { display: grid; grid-template-columns: minmax(8rem, 1.4fr) minmax(8rem, 1.6fr) 3.4rem 3rem 4.6rem auto; gap: .5rem; align-items: center; }
-.rx-detail.is-compare .rx-attr-head, .rx-detail.is-compare .rx-attr-row { grid-template-columns: minmax(7rem, 1.4fr) minmax(5rem, 1.2fr) 2.6rem 2.4rem 4rem 2.6rem; }
+.rx-detail.is-compare .rx-attr-head, .rx-detail.is-compare .rx-attr-row { grid-template-columns: minmax(7rem, 1.4fr) minmax(5rem, 1.2fr) 2.6rem 2.4rem 4rem 3.6rem; }
 .rx-attr-head { color: var(--ink-3); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; padding: .3rem .4rem; }
 .rx-attr-row { width: 100%; text-align: left; padding: .32rem .4rem; border-radius: .25rem; }
 .rx-attr-row:hover { background: rgba(255,255,255,.04); }
@@ -118,8 +139,9 @@
 .scout-kicker { color: var(--lime); font-size: .66rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
 .scout-name { font-family: var(--font-display); font-size: 1.3rem; margin-top: .15rem; }
 .scout-ovr { font-family: var(--font-display); font-size: 2.2rem; color: var(--lime); line-height: 1; }
-.scout-traits { display: flex; flex-wrap: wrap; gap: .25rem; margin: .5rem 0 .7rem; }
-.scout-trait { font-size: .62rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: .12rem .45rem; border-radius: .2rem; background: rgba(255,201,74,.12); color: var(--rx-acc); }
+.scout-traits { margin: .6rem 0 .8rem; }
+.scout-traits .trait-why { font-size: .68rem; }
+.scout-traits .trait-list li { grid-template-columns: 1fr; gap: .15rem; }
 .scout-attr-row { display: grid; grid-template-columns: 8.5rem 1fr 2rem; gap: .5rem; align-items: center; width: 100%; padding: .28rem 0; text-align: left; font-size: .78rem; }
 .scout-bar { height: .35rem; background: rgba(255,255,255,.08); border-radius: .2rem; overflow: hidden; }
 .scout-bar span { display: block; height: 100%; background: var(--lime); }
