@@ -1,0 +1,312 @@
+{
+ "_meta": {
+  "description": "40-yard dash times for players predating the nflverse combine data (2000+) or who never ran it. Keyed like accolades.json (name|group|firstDecade). A missing player means no basis: use position priors.",
+  "generatedBy": "tools/reference/build_physical.py",
+  "generated": "2026-09-23T00:59:03Z",
+  "conf": {
+   "reference": "Wikipedia pre-draft measurables table (url, retrieved)",
+   "estimated": "typed from knowledge: 'commonly cited' = a widely repeated specific time (often hand-timed or pro day); 'estimate' = no documented time, inferred from sprint results or reputation"
+  },
+  "counts": {
+   "reference": 0,
+   "estimated": 24
+  },
+  "notInLegacy": [
+   "Bob Hayes",
+   "Jim Brown",
+   "Jevon Kearse"
+  ]
+ },
+ "people": {
+  "Barry Sanders|RB|1990s": {
+   "name": "Barry Sanders",
+   "entries": [
+    "players:barry-sanders:DET:1990s"
+   ],
+   "forty": 4.37,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1989 pre-draft (4.27 hand-timed version also circulates)",
+   "basis": "commonly cited"
+  },
+  "Bo Jackson|RB|1980s": {
+   "name": "Bo Jackson",
+   "entries": [
+    "players:bo-jackson:LV:1980s"
+   ],
+   "forty": 4.12,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1986 pre-draft workout at Auburn, hand-timed; figures 4.12-4.18 are repeated and disputed",
+   "basis": "commonly cited"
+  },
+  "Champ Bailey|DB|2000s": {
+   "name": "Champ Bailey",
+   "entries": [
+    "defense:champ-bailey:DEN:2000s"
+   ],
+   "forty": 4.28,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1999 NFL Combine",
+   "basis": "commonly cited"
+  },
+  "Cliff Branch|WR|1970s": {
+   "name": "Cliff Branch",
+   "entries": [
+    "players:cliff-branch:LV:1970s",
+    "players:cliff-branch:LV:1980s"
+   ],
+   "forty": 4.3,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "estimate: no recorded 40; NCAA-level sprinter (10.0 s 100 m) at Colorado",
+   "basis": "estimate"
+  },
+  "Darrell Green|DB|1990s": {
+   "name": "Darrell Green",
+   "entries": [
+    "defense:darrell-green:WAS:1990s"
+   ],
+   "forty": 4.25,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "estimate: world-class sprinter; hand times in the 4.1-4.3 range are cited from 1983, none official",
+   "basis": "estimate"
+  },
+  "Deion Sanders|DB|1980s": {
+   "name": "Deion Sanders",
+   "entries": [
+    "defense:deion-sanders:ATL:1980s",
+    "defense:deion-sanders:DAL:1990s"
+   ],
+   "forty": 4.27,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1989 NFL Combine, hand-timed (4.19-4.29 versions circulate)",
+   "basis": "commonly cited"
+  },
+  "Emmitt Smith|RB|1990s": {
+   "name": "Emmitt Smith",
+   "entries": [
+    "players:emmitt-smith:ARI:2000s",
+    "players:emmitt-smith:DAL:1990s"
+   ],
+   "forty": 4.55,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1990 pre-draft, famously 'slow' time (4.55-4.7 cited)",
+   "basis": "commonly cited"
+  },
+  "Eric Dickerson|RB|1980s": {
+   "name": "Eric Dickerson",
+   "entries": [
+    "players:eric-dickerson:IND:1980s",
+    "players:eric-dickerson:LAR:1980s"
+   ],
+   "forty": 4.35,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "estimate: consistently described as a 4.3-speed back at 220 lb; no electronic combine time (1983)",
+   "basis": "estimate"
+  },
+  "Herschel Walker|RB|1980s": {
+   "name": "Herschel Walker",
+   "entries": [
+    "players:herschel-walker:DAL:1980s",
+    "players:herschel-walker:MIN:1980s"
+   ],
+   "forty": 4.35,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "estimate: no NFL combine time (USFL, 1983); 10.2 s 100 m sprinter",
+   "basis": "estimate"
+  },
+  "Ja'Marr Chase|WR|2020s": {
+   "name": "Ja'Marr Chase",
+   "entries": [
+    "players:ja-marr-chase:CIN:2020s"
+   ],
+   "forty": 4.38,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 2021 LSU pro day (no Combine held in 2021)",
+   "basis": "commonly cited"
+  },
+  "Jerry Rice|WR|1980s": {
+   "name": "Jerry Rice",
+   "entries": [
+    "players:jerry-rice:LV:2000s",
+    "players:jerry-rice:SEA:2000s",
+    "players:jerry-rice:SF:1980s",
+    "players:jerry-rice:SF:1990s"
+   ],
+   "forty": 4.65,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1985 pre-draft; times of 4.6-4.7 are the ones repeated",
+   "basis": "commonly cited"
+  },
+  "Joey Galloway|WR|1990s": {
+   "name": "Joey Galloway",
+   "entries": [
+    "players:joey-galloway:DAL:2000s",
+    "players:joey-galloway:NE:2000s",
+    "players:joey-galloway:SEA:1990s",
+    "players:joey-galloway:TB:2000s"
+   ],
+   "forty": 4.18,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1995 pre-draft (hand-timed)",
+   "basis": "commonly cited"
+  },
+  "Kyle Pitts|TE|2020s": {
+   "name": "Kyle Pitts",
+   "entries": [
+    "players:kyle-pitts:ATL:2020s"
+   ],
+   "forty": 4.44,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 2021 Florida pro day (no Combine held in 2021)",
+   "basis": "commonly cited"
+  },
+  "Lamar Jackson|QB|2010s": {
+   "name": "Lamar Jackson",
+   "entries": [
+    "players:lamar-jackson:BAL:2010s",
+    "players:lamar-jackson:BAL:2020s"
+   ],
+   "forty": 4.34,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "estimate: never timed at the 2018 Combine or a pro day; 4.34 is the self-reported figure",
+   "basis": "estimate"
+  },
+  "Larry Fitzgerald|WR|2000s": {
+   "name": "Larry Fitzgerald",
+   "entries": [
+    "players:larry-fitzgerald:ARI:2000s",
+    "players:larry-fitzgerald:ARI:2010s",
+    "players:larry-fitzgerald:ARI:2020s"
+   ],
+   "forty": 4.48,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 2004 Pitt pro day (did not run at the Combine)",
+   "basis": "commonly cited"
+  },
+  "Marshall Faulk|RB|1990s": {
+   "name": "Marshall Faulk",
+   "entries": [
+    "players:marshall-faulk:IND:1990s",
+    "players:marshall-faulk:LAR:1990s",
+    "players:marshall-faulk:LAR:2000s"
+   ],
+   "forty": 4.29,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1994 pre-draft (4.28-4.35 cited)",
+   "basis": "commonly cited"
+  },
+  "Micah Parsons|LB|2020s": {
+   "name": "Micah Parsons",
+   "entries": [
+    "defense:micah-parsons:DAL:2020s"
+   ],
+   "forty": 4.39,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 2021 Penn State pro day (no Combine held in 2021)",
+   "basis": "commonly cited"
+  },
+  "Michael Vick|QB|2000s": {
+   "name": "Michael Vick",
+   "entries": [
+    "players:michael-vick:ATL:2000s",
+    "players:michael-vick:NYJ:2010s",
+    "players:michael-vick:PHI:2010s",
+    "players:michael-vick:PIT:2010s"
+   ],
+   "forty": 4.33,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 2001 pre-draft workout (did not run at the Combine)",
+   "basis": "commonly cited"
+  },
+  "O.J. Simpson|RB|1970s": {
+   "name": "O.J. Simpson",
+   "entries": [
+    "players:o-j-simpson:BUF:1970s",
+    "players:o-j-simpson:SF:1970s"
+   ],
+   "forty": 4.4,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "estimate: no recorded 40; member of USC's 1967 world-record 4x110 yd relay",
+   "basis": "estimate"
+  },
+  "Randy Moss|WR|1990s": {
+   "name": "Randy Moss",
+   "entries": [
+    "players:randy-moss:LV:2000s",
+    "players:randy-moss:MIN:1990s",
+    "players:randy-moss:NE:2000s",
+    "players:randy-moss:SF:2010s",
+    "players:randy-moss:TEN:2000s",
+    "players:randy-moss:TEN:2010s"
+   ],
+   "forty": 4.25,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1998 Marshall pro day",
+   "basis": "commonly cited"
+  },
+  "Rocket Ismail|?|legacy": {
+   "name": "Rocket Ismail",
+   "entries": [
+    "players:rocket-ismail:DAL:1990s"
+   ],
+   "forty": 4.28,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1991 pre-draft (went to the CFL)",
+   "basis": "commonly cited"
+  },
+  "Rod Woodson|DB|1990s": {
+   "name": "Rod Woodson",
+   "entries": [
+    "defense:rod-woodson:PIT:1990s"
+   ],
+   "forty": 4.29,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 1987 pre-draft; world-class hurdler",
+   "basis": "commonly cited"
+  },
+  "Tyreek Hill|WR|2010s": {
+   "name": "Tyreek Hill",
+   "entries": [
+    "players:tyreek-hill:KC:2010s",
+    "players:tyreek-hill:MIA:2020s"
+   ],
+   "forty": 4.29,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "commonly cited: 2016 West Alabama pro day (4.24-4.29 reported); did not attend the Combine",
+   "basis": "commonly cited"
+  },
+  "Willie Gault|WR|1980s": {
+   "name": "Willie Gault",
+   "entries": [
+    "players:willie-gault:CHI:1980s"
+   ],
+   "forty": 4.25,
+   "src": "estimated:knowledge",
+   "conf": "estimated",
+   "note": "estimate: no recorded 40 widely documented; world-class hurdler/sprinter",
+   "basis": "estimate"
+  }
+ }
+}
