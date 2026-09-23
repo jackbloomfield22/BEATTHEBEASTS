@@ -2507,6 +2507,13 @@
    "conf": "verified"
   },
   {
+   "id": "players:anthony-munoz:CIN:1980s",
+   "op": "exclude",
+   "reason": "Anthony Munoz was the Bengals' left tackle (OL), not a tight end: the legacy TE row (30 yards, block grade 88) rated about 97 at TE on his block grade and body. He stays in the CIN OL units. Ratings follow-up: user-approved exclusion.",
+   "source": "nflverse rosters (CIN 1980–1989, OL/OT; data/augment/people.json flags position-mismatch; data/augment/ol_rosters.json)",
+   "conf": "verified"
+  },
+  {
    "id": "defense:deion-sanders:ATL:1980s",
    "op": "set",
    "field": "s.pb",

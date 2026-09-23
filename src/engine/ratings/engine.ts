@@ -1,9 +1,9 @@
 import { OVR_WEIGHTS } from './ovrWeights';
-import { IMP_MAX_SHARE, MISSING_REWEIGHT, PHYSICAL_BY_POS, SKILL_ATTRS, type SkillAttrDef } from './attributes';
+import { MISSING_REWEIGHT, PLAYER_CAPPED_SIGNALS, PHYSICAL_BY_POS, SKILL_ATTRS, type SkillAttrDef } from './attributes';
 import { computePhysicals, type PhysicalResult } from './physical';
 import { composeFromZ, CONF_WEIGHT, confLabel, normInv, POOL_BEST_RATING, poolScale, shrink, zToRating } from './scale';
 import { SIGNALS, type PhysicalSnapshot, type SignalValue } from './signals';
-import { deriveTraits } from './traits';
+import { deriveAllTraits, type OlUnitTraits } from './traits';
 import type { AttributeResult, Contribution, RatedEntry, RatedPos, RatingInputs } from './types';
 
 // The rating pass (TECH_PLAN §7):
@@ -12,7 +12,9 @@ import type { AttributeResult, Contribution, RatedEntry, RatedPos, RatingInputs 
 //   3. pool statistics of the physical signals
 //   4. every skill attribute from its declarative definition
 //   5. OVR from the position weights, standardized within the position pool
-//   6. traits from attribute thresholds and stat signatures
+//   6. pool calibration of the curated defensive pools
+//   7. traits: percentile tables per position pool, then gates, combinations
+//      and the four-trait cap (traits/derive.ts); OL unit traits
 
 /** Standardized scores are clipped here so one freak value can't swamp an attribute. */
 const Z_CLIP = 4.5;
@@ -77,6 +79,10 @@ export interface RatingRun {
   bodies: Record<string, { heightIn: number; weightLb: number; weightEq: number }>;
   /** Pool calibration per position (see calibratePools). */
   calibration: Record<string, { medianHonors: number; center: number }>;
+  /** OL units: the five linemen, the unit aggregates and the unit traits. */
+  olUnits: Record<string, OlUnitTraits>;
+  /** Every trait each entry passes the gates for, before combinations and the four-trait cap. */
+  traitsEarned: Record<string, RatedEntry['traits']>;
 }
 
 type PoolKey = `${RatedPos}|${string}`;
@@ -110,9 +116,12 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
   }
 
   const zFrom = (e: RatingInputs, key: string, v: SignalValue | undefined): number | undefined => {
-    const m = pools.get(`${e.pos}|${key}`);
-    if (!v || !m || !Number.isFinite(v.x)) return undefined;
+    if (!v || !Number.isFinite(v.x)) return undefined;
     const def = SIGNALS[key]!;
+    // Already on the z scale (signals.ts `absolute`): not standardized in the pool.
+    if (def.absolute) return Math.max(-Z_CLIP, Math.min(Z_CLIP, def.dir * v.x)) * shrink(v.games, def.k);
+    const m = pools.get(`${e.pos}|${key}`);
+    if (!m) return undefined;
     const z = Math.max(-Z_CLIP, Math.min(Z_CLIP, (def.dir * (v.x - m.mean)) / m.sd));
     return z * shrink(v.games, def.k);
   };
@@ -175,12 +184,12 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
       return { key: keys[0]!, label: `${sd.label} (no data: position average)`, z: 0, kind: 'prior' as const, conf: 'prior' as const, src: undefined, input: undefined, weight: t.w / wSum, present: false };
     });
     // Partly move missing evidence weight onto the present evidence (stats,
-    // honors, unit results; types.ts MISSING_REWEIGHT). Body, physical and
+    // honors, sourced scouting grades, unit results; types.ts MISSING_REWEIGHT). Body, physical and
     // reputation terms are priors, not evidence of the skill, so they are
     // never scaled up to stand in for missing stats.
     const isEvidence = (key: string) => {
       const k = SIGNALS[key]!.kind;
-      return k === 'stat' || k === 'accolade' || k === 'unit';
+      return k === 'stat' || k === 'accolade' || k === 'scouting' || k === 'unit';
     };
     const ev = raw.filter((t) => isEvidence(t.key));
     const wAll = ev.reduce((a, t) => a + t.weight, 0);
@@ -188,19 +197,21 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
     const boost = wHave > 0 && wHave < wAll ? (wAll / wHave) ** MISSING_REWEIGHT : 1;
     const out = raw.map((t) => ({ key: t.key, label: t.label, z: t.weight * t.z * (isEvidence(t.key) && t.present ? boost : 1), kind: t.kind, input: t.input, conf: t.conf, src: t.src, weight: t.weight }));
     // BRIEF: imp is "worth no more than 20% of any attribute", for every
-    // player. Reputation may only amplify what the other inputs say, by at
-    // most a quarter of the evidence pointing the same way (so ≤ 20% of the
-    // total); it can't create a rating on its own or overturn the evidence.
-    // Counting only same-direction evidence keeps the cap monotone: better
-    // stats never shrink a positive imp term or grow a negative one.
-    const imp = out.find((t) => t.key === 'imp');
-    if (imp) {
-      const dir = Math.sign(imp.z);
-      const others = out.reduce((a, t) => a + (t === imp ? 0 : Math.max(0, dir * t.z)), 0);
-      const cap = (IMP_MAX_SHARE / (1 - IMP_MAX_SHARE)) * others;
-      if (Math.abs(imp.z) > cap) {
-        imp.z = Math.sign(imp.z) * cap;
-        imp.label = `${imp.label} (capped at 20%)`;
+    // player (attributes/types.ts PLAYER_CAPPED_SIGNALS). Reputation may only
+    // amplify what the other inputs say, by at most a quarter of the evidence
+    // pointing the same way (so ≤ 20% of the total); it can't create a rating
+    // on its own or overturn the evidence. Counting only same-direction
+    // evidence keeps the cap monotone: better stats never shrink a positive
+    // imp term or grow a negative one.
+    const capped = out.filter((t) => t.key in PLAYER_CAPPED_SIGNALS);
+    for (const c of capped) {
+      const share = PLAYER_CAPPED_SIGNALS[c.key]!;
+      const dir = Math.sign(c.z);
+      const others = out.reduce((a, t) => a + (t.key in PLAYER_CAPPED_SIGNALS ? 0 : Math.max(0, dir * t.z)), 0);
+      const cap = (share / (1 - share)) * others;
+      if (Math.abs(c.z) > cap) {
+        c.z = Math.sign(c.z) * cap;
+        c.label = `${c.label} (capped at ${Math.round(share * 100)}%)`;
       }
     }
     return out.map(({ key: _key, ...t }) => t);
@@ -277,8 +288,15 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
   // 6. Pool calibration: re-center curated elite pools on the shared scale.
   const calibration = calibratePools(entries, byPos);
 
-  // 7. Traits (after calibration: thresholds read final values).
-  for (const r of entries) r.traits = deriveTraits(r.inputs, r.attrs, (key) => zFrom(r.inputs, key, signal(r.inputs, key)));
+  // 7. Traits (after calibration: gates read final values). Percentile
+  // tables of every metric are built per position pool first, then each
+  // entry's traits are derived against them.
+  const traitRun = deriveAllTraits(entries, {
+    z: (e, key) => zFrom(e.inputs, key, signal(e.inputs, key)),
+    sig: (e, key) => signal(e.inputs, key),
+    phys: (e) => physicals.get(e.id)!,
+  });
+  for (const r of entries) r.traits = traitRun.byEntry.get(r.id) ?? [];
 
   const poolsOut: RatingRun['pools'] = {};
   for (const [k, m] of pools) {
@@ -292,7 +310,7 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
   }
   const bodies: RatingRun['bodies'] = {};
   for (const [id, p] of physicals) bodies[id] = { heightIn: p.heightIn, weightLb: p.weightLb, weightEq: p.weightEq };
-  return { entries, pools: poolsOut, composites: compOut, bodies, calibration };
+  return { entries, pools: poolsOut, composites: compOut, bodies, calibration, olUnits: traitRun.units, traitsEarned: Object.fromEntries(traitRun.earned) };
 }
 
 function labelOf(pos: RatedPos, key: string): string {

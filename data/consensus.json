@@ -1,0 +1,839 @@
+{
+ "_meta": {
+  "purpose": "Consensus sanity check on top of the statistical ratings (ratings follow-up, user-approved). Per position, the players a knowledgeable fan would accept in an all-time top 3, and two consensus OVR anchors. tools/ratings/consensus.ts compares the statistical top 3 with these lists and writes the 'Consensus check' section of docs/RATINGS_REPORT.md.",
+  "rule": "The statistical ratings are primary and win every conflict. Nothing in this file changes a rating: the engine (src/engine/ratings) never reads it. When stats and consensus disagree, the stats result is kept and the disagreement is flagged in the report.",
+  "tiers": {
+   "all-time": "Default. The NFL 100th Anniversary All-Time Team (2019, 26-voter panel of coaches, executives, former players and media) at the player's position. The team was 'voted in no order' within each position group, so every member counts equally.",
+   "modern": "Careers that matured after the 2019 vote cannot be on that team. Such a player is added only when he has a public, countable record that only All-Time Team members otherwise share at his position (a third Super Bowl MVP, a third AP Defensive Player of the Year). Kept deliberately short; everyone else outside the All-Time Team is a disagreement to flag, not a failure."
+  },
+  "positions": "Pool positions: QB, RB, WR, TE, DE, DT, LB, CB, S; the OL pool is split by slot (tackles LT/RT, guards LG/RG, center C) the way the All-Time Team splits OT/OG/C. The team's OLB and MLB groups are both LB. An offensive lineman on the team at another OL spot (e.g. Larry Allen, listed at guard, slotted at tackle in his unit) is accepted at any OL slot and the report says where he was listed.",
+  "matching": "By name within the position (accents, punctuation and spaces folded, so 'Anthony Muñoz' = 'Anthony Munoz' and 'O. J. Simpson' = 'O.J. Simpson'), any stint. Players from before the 1960s (Baugh, Graham, Hutson, ...) are not in the legacy pool and never match.",
+  "fetched": "Wikipedia pages read once each with action=raw (User-Agent BeatTheBeasts-DataBuilder/0.1), 2026-09-23, serially with pauses. NFL.com articles are cited as the Wikipedia article cites them; they were not fetched. Pro-Football-Reference was not used."
+ },
+ "sources": {
+  "nfl100": {
+   "title": "Wikipedia: National Football League 100th Anniversary All-Time Team",
+   "url": "https://en.wikipedia.org/wiki/NFL_100th_Anniversary_All-Time_Team",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=NFL_100th_Anniversary_All-Time_Team&oldid=1336863422",
+   "retrieved": "2026-09-23",
+   "note": "Players were selected at each position group, and were voted in no order.",
+   "license": "CC BY-SA 4.0 (facts and a short quote only)"
+  },
+  "nfl100-roster": {
+   "title": "NFL.com: NFL 100 All-Time Team roster (cited by the Wikipedia article)",
+   "url": "https://www.nfl.com/100/all-time-team/roster"
+  },
+  "nfl-qb": {
+   "title": "NFL.com: NFL's All-Time Team: Tom Brady, Joe Montana top quarterbacks (cited by Wikipedia)",
+   "url": "http://www.nfl.com/news/story/0ap3000001091999/article/nfls-alltime-team-tom-brady-joe-montana-top-quarterbacks"
+  },
+  "nfl-rb": {
+   "title": "NFL.com: NFL's All-Time Team: Jim Brown tops RBs (cited by Wikipedia)",
+   "url": "https://www.nfl.com/news/nfl-s-all-time-team-jim-brown-tops-rbs-bill-belichick-a-coach-0ap3000001079453"
+  },
+  "nfl-wr": {
+   "title": "NFL.com: NFL's All-Time Team: Jerry Rice headlines wide receivers (cited by Wikipedia)",
+   "url": "https://www.nfl.com/news/nfl-s-all-time-team-jerry-rice-headlines-wide-receivers-0ap3000001089883"
+  },
+  "nfl-te-ol": {
+   "title": "NFL.com: NFL's All-Time Team: tight ends, offensive linemen revealed (cited by Wikipedia)",
+   "url": "http://www.nfl.com/news/story/0ap3000001087422/article/nfls-alltime-team-tight-ends-offensive-linemen-revealed"
+  },
+  "nfl-front": {
+   "title": "NFL.com: NFL's All-Time Team: Lawrence Taylor headlines defensive front (cited by Wikipedia)",
+   "url": "https://www.nfl.com/news/nfl-s-all-time-team-lawrence-taylor-headlines-defensive-front-0ap3000001081870"
+  },
+  "nfl-db": {
+   "title": "NFL.com: NFL's All-Time Team: defensive backs, special teams revealed (cited by Wikipedia)",
+   "url": "https://www.nfl.com/news/nfl-s-all-time-team-defensive-backs-special-teams-revealed-0ap3000001084661"
+  },
+  "top100-2010": {
+   "title": "Wikipedia: The Top 100: NFL's Greatest Players (NFL Network, 2010)",
+   "url": "https://en.wikipedia.org/wiki/The_Top_100:_NFL%27s_Greatest_Players",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=The_Top_100:_NFL%27s_Greatest_Players&oldid=1371771135",
+   "retrieved": "2026-09-23",
+   "note": "Jerry Rice was chosen as the top player of all time"
+  },
+  "dpoy": {
+   "title": "Wikipedia: AP NFL Defensive Player of the Year",
+   "url": "https://en.wikipedia.org/wiki/AP_NFL_Defensive_Player_of_the_Year",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=AP_NFL_Defensive_Player_of_the_Year&oldid=1370823390",
+   "retrieved": "2026-09-23",
+   "note": "Lawrence Taylor, J. J. Watt, and Aaron Donald are the only three-time winners of the award."
+  },
+  "mahomes": {
+   "title": "Wikipedia: Patrick Mahomes",
+   "url": "https://en.wikipedia.org/wiki/Patrick_Mahomes",
+   "permalink": "https://en.wikipedia.org/w/index.php?title=Patrick_Mahomes&oldid=1376106666",
+   "retrieved": "2026-09-23",
+   "note": "He won his third Super Bowl MVP after winning Super Bowl LVIII the following year"
+  }
+ },
+ "anchors": [
+  {
+   "id": "players:jerry-rice:SF:1980s",
+   "name": "Jerry Rice (1980s SF)",
+   "ovr": 99,
+   "sources": [
+    "top100-2010",
+    "nfl100"
+   ],
+   "basis": "Ranked the greatest player of all time by the NFL Network's 2010 panel; a unanimous selection to the NFL 100th Anniversary All-Time Team (bold in the article's table). The 1980s stint is his peak stint, as in tools/ratings/anchors.ts."
+  },
+  {
+   "id": "defense:lawrence-taylor:NYG:1980s",
+   "name": "Lawrence Taylor (1980s NYG)",
+   "ovr": 99,
+   "sources": [
+    "nfl100",
+    "nfl-front",
+    "dpoy"
+   ],
+   "basis": "A unanimous selection to the NFL 100th Anniversary All-Time Team, which NFL.com headlined with him; one of three three-time AP Defensive Players of the Year. His only stint in the pool."
+  }
+ ],
+ "positions": {
+  "QB": {
+   "label": "QB",
+   "players": [
+    {
+     "name": "Sammy Baugh",
+     "sources": [
+      "nfl100",
+      "nfl-qb"
+     ]
+    },
+    {
+     "name": "Tom Brady",
+     "sources": [
+      "nfl100",
+      "nfl-qb"
+     ]
+    },
+    {
+     "name": "John Elway",
+     "sources": [
+      "nfl100",
+      "nfl-qb"
+     ]
+    },
+    {
+     "name": "Brett Favre",
+     "sources": [
+      "nfl100",
+      "nfl-qb"
+     ]
+    },
+    {
+     "name": "Otto Graham",
+     "sources": [
+      "nfl100",
+      "nfl-qb"
+     ]
+    },
+    {
+     "name": "Peyton Manning",
+     "sources": [
+      "nfl100",
+      "nfl-qb"
+     ]
+    },
+    {
+     "name": "Dan Marino",
+     "sources": [
+      "nfl100",
+      "nfl-qb"
+     ]
+    },
+    {
+     "name": "Joe Montana",
+     "sources": [
+      "nfl100",
+      "nfl-qb"
+     ]
+    },
+    {
+     "name": "Roger Staubach",
+     "sources": [
+      "nfl100",
+      "nfl-qb"
+     ]
+    },
+    {
+     "name": "Johnny Unitas",
+     "sources": [
+      "nfl100",
+      "nfl-qb"
+     ]
+    },
+    {
+     "name": "Patrick Mahomes",
+     "sources": [
+      "mahomes"
+     ],
+     "tier": "modern",
+     "basis": "Three Super Bowl MVP awards (LIV, LVII, LVIII) and two AP MVPs (2018, 2022). Only Brady and Montana, both on the All-Time Team, also have three or more Super Bowl MVPs."
+    }
+   ]
+  },
+  "RB": {
+   "label": "RB",
+   "players": [
+    {
+     "name": "Jim Brown",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "Earl Campbell",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "Dutch Clark",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "Eric Dickerson",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "Lenny Moore",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "Marion Motley",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "Walter Payton",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "Barry Sanders",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "Gale Sayers",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "O. J. Simpson",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "Emmitt Smith",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    },
+    {
+     "name": "Steve Van Buren",
+     "sources": [
+      "nfl100",
+      "nfl-rb"
+     ]
+    }
+   ]
+  },
+  "WR": {
+   "label": "WR",
+   "players": [
+    {
+     "name": "Lance Alworth",
+     "sources": [
+      "nfl100",
+      "nfl-wr"
+     ]
+    },
+    {
+     "name": "Raymond Berry",
+     "sources": [
+      "nfl100",
+      "nfl-wr"
+     ]
+    },
+    {
+     "name": "Larry Fitzgerald",
+     "sources": [
+      "nfl100",
+      "nfl-wr"
+     ]
+    },
+    {
+     "name": "Marvin Harrison",
+     "sources": [
+      "nfl100",
+      "nfl-wr"
+     ]
+    },
+    {
+     "name": "Elroy Hirsch",
+     "sources": [
+      "nfl100",
+      "nfl-wr"
+     ]
+    },
+    {
+     "name": "Don Hutson",
+     "sources": [
+      "nfl100",
+      "nfl-wr"
+     ]
+    },
+    {
+     "name": "Steve Largent",
+     "sources": [
+      "nfl100",
+      "nfl-wr"
+     ]
+    },
+    {
+     "name": "Randy Moss",
+     "sources": [
+      "nfl100",
+      "nfl-wr"
+     ]
+    },
+    {
+     "name": "Jerry Rice",
+     "sources": [
+      "nfl100",
+      "nfl-wr"
+     ]
+    },
+    {
+     "name": "Paul Warfield",
+     "sources": [
+      "nfl100",
+      "nfl-wr"
+     ]
+    }
+   ]
+  },
+  "TE": {
+   "label": "TE",
+   "players": [
+    {
+     "name": "Mike Ditka",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Tony Gonzalez",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Rob Gronkowski",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "John Mackey",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Kellen Winslow",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    }
+   ]
+  },
+  "OL-T": {
+   "label": "Offensive tackle (OL pool, LT and RT slots)",
+   "players": [
+    {
+     "name": "Rosey Brown",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Forrest Gregg",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Cal Hubbard",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Walter Jones",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Anthony Muñoz",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Jonathan Ogden",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Art Shell",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    }
+   ]
+  },
+  "OL-G": {
+   "label": "Guard (OL pool, LG and RG slots)",
+   "players": [
+    {
+     "name": "Larry Allen",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Dan Fortmann",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "John Hannah",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Bruce Matthews",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Randall McDaniel",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Jim Parker",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Gene Upshaw",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    }
+   ]
+  },
+  "OL-C": {
+   "label": "Center (OL pool, C slot)",
+   "players": [
+    {
+     "name": "Mel Hein",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Jim Otto",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Dwight Stephenson",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    },
+    {
+     "name": "Mike Webster",
+     "sources": [
+      "nfl100",
+      "nfl-te-ol"
+     ]
+    }
+   ]
+  },
+  "DE": {
+   "label": "DE",
+   "players": [
+    {
+     "name": "Doug Atkins",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Bill Hewitt",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Deacon Jones",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Gino Marchetti",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Lee Roy Selmon",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Bruce Smith",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Reggie White",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "J. J. Watt",
+     "sources": [
+      "dpoy"
+     ],
+     "tier": "modern",
+     "basis": "Three-time AP Defensive Player of the Year; the only three-time winners are Lawrence Taylor, J. J. Watt and Aaron Donald."
+    }
+   ]
+  },
+  "DT": {
+   "label": "DT",
+   "players": [
+    {
+     "name": "Buck Buchanan",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Joe Greene",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Bob Lilly",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Merlin Olsen",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Alan Page",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "John Randle",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Randy White",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Aaron Donald",
+     "sources": [
+      "dpoy"
+     ],
+     "tier": "modern",
+     "basis": "Three-time AP Defensive Player of the Year; the only three-time winners are Lawrence Taylor, J. J. Watt and Aaron Donald."
+    }
+   ]
+  },
+  "LB": {
+   "label": "LB",
+   "players": [
+    {
+     "name": "Chuck Bednarik",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Bobby Bell",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Derrick Brooks",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Jack Ham",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Ted Hendricks",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Lawrence Taylor",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Dick Butkus",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Jack Lambert",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Willie Lanier",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Ray Lewis",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Joe Schmidt",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    },
+    {
+     "name": "Junior Seau",
+     "sources": [
+      "nfl100",
+      "nfl-front"
+     ]
+    }
+   ]
+  },
+  "CB": {
+   "label": "CB",
+   "players": [
+    {
+     "name": "Mel Blount",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Willie Brown",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Darrell Green",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Mike Haynes",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Dick \"Night Train\" Lane",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Deion Sanders",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Rod Woodson",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    }
+   ]
+  },
+  "S": {
+   "label": "S",
+   "players": [
+    {
+     "name": "Jack Christiansen",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Ken Houston",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Ronnie Lott",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Ed Reed",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Emlen Tunnell",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    },
+    {
+     "name": "Larry Wilson",
+     "sources": [
+      "nfl100",
+      "nfl-db"
+     ]
+    }
+   ]
+  }
+ }
+}

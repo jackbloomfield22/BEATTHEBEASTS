@@ -5,7 +5,8 @@
   "doc": "League-wide per-season averages. Percentages are 0–100. *PerTeamGame = league total / team games. 1960–1969 rows are the NFL; `afl` holds the AFL. 1970+ is the merged NFL.",
   "sources": {
    "1960–1998": "data/augment/era_baselines_pre1999.json (estimated from knowledge of published league averages; flagged, verify)",
-   "1999+": "data/augment/era_baselines_1999plus.json (computed from nflverse player stats, CC-BY-4.0)"
+   "1999+": "data/augment/era_baselines_1999plus.json (computed from nflverse player stats, CC-BY-4.0)",
+   "rbFumblesPerTouch": "data/augment/league_fumbles.json (tools/augment/fumbles.ts): RBs with 100+ touches; nflverse 1999+, Fantasy Index table 1970–1998, estimated 1960s; per-season source in fumbleSrc"
   },
   "targetsGap": {
    "catchRate": 1.358,
@@ -38,6 +39,8 @@
    "yardsPerReception": 14.15,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
    "conf": "estimated",
+   "rbFumblesPerTouch": 0.02458,
+   "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
    "afl": {
     "cmpPct": 48,
     "ypa": 7,
@@ -58,6 +61,8 @@
     "rushTdPerTeamGame": 0.95,
     "yardsPerReception": 14.58,
     "gamesPerTeam": 14,
+    "rbFumblesPerTouch": 0.02458,
+    "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
     "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
     "conf": "estimated"
    }
@@ -87,6 +92,8 @@
    "yardsPerReception": 14.27,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
    "conf": "estimated",
+   "rbFumblesPerTouch": 0.02458,
+   "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
    "afl": {
     "cmpPct": 47.8,
     "ypa": 7.35,
@@ -107,6 +114,8 @@
     "rushTdPerTeamGame": 0.95,
     "yardsPerReception": 15.38,
     "gamesPerTeam": 14,
+    "rbFumblesPerTouch": 0.02458,
+    "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
     "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
     "conf": "estimated"
    }
@@ -136,6 +145,8 @@
    "yardsPerReception": 14.16,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
    "conf": "estimated",
+   "rbFumblesPerTouch": 0.02458,
+   "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
    "afl": {
     "cmpPct": 48.2,
     "ypa": 7.25,
@@ -156,6 +167,8 @@
     "rushTdPerTeamGame": 0.95,
     "yardsPerReception": 15.04,
     "gamesPerTeam": 14,
+    "rbFumblesPerTouch": 0.02458,
+    "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
     "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
     "conf": "estimated"
    }
@@ -185,6 +198,8 @@
    "yardsPerReception": 13.98,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
    "conf": "estimated",
+   "rbFumblesPerTouch": 0.02458,
+   "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
    "afl": {
     "cmpPct": 49,
     "ypa": 7.3,
@@ -205,6 +220,8 @@
     "rushTdPerTeamGame": 0.95,
     "yardsPerReception": 14.9,
     "gamesPerTeam": 14,
+    "rbFumblesPerTouch": 0.02458,
+    "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
     "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
     "conf": "estimated"
    }
@@ -234,6 +251,8 @@
    "yardsPerReception": 13.68,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
    "conf": "estimated",
+   "rbFumblesPerTouch": 0.02458,
+   "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
    "afl": {
     "cmpPct": 48.5,
     "ypa": 7.1,
@@ -254,6 +273,8 @@
     "rushTdPerTeamGame": 0.9,
     "yardsPerReception": 14.64,
     "gamesPerTeam": 14,
+    "rbFumblesPerTouch": 0.02458,
+    "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
     "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
     "conf": "estimated"
    }
@@ -283,6 +304,8 @@
    "yardsPerReception": 14.51,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
    "conf": "estimated",
+   "rbFumblesPerTouch": 0.02458,
+   "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
    "afl": {
     "cmpPct": 48,
     "ypa": 6.95,
@@ -303,6 +326,8 @@
     "rushTdPerTeamGame": 0.85,
     "yardsPerReception": 14.48,
     "gamesPerTeam": 14,
+    "rbFumblesPerTouch": 0.02458,
+    "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
     "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
     "conf": "estimated"
    }
@@ -332,6 +357,8 @@
    "yardsPerReception": 13.73,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
    "conf": "estimated",
+   "rbFumblesPerTouch": 0.02458,
+   "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
    "afl": {
     "cmpPct": 49.5,
     "ypa": 7.2,
@@ -352,6 +379,8 @@
     "rushTdPerTeamGame": 0.9,
     "yardsPerReception": 14.55,
     "gamesPerTeam": 14,
+    "rbFumblesPerTouch": 0.02458,
+    "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
     "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
     "conf": "estimated"
    }
@@ -381,6 +410,8 @@
    "yardsPerReception": 13.68,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
    "conf": "estimated",
+   "rbFumblesPerTouch": 0.02458,
+   "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
    "afl": {
     "cmpPct": 49,
     "ypa": 7.15,
@@ -401,6 +432,8 @@
     "rushTdPerTeamGame": 0.85,
     "yardsPerReception": 14.59,
     "gamesPerTeam": 14,
+    "rbFumblesPerTouch": 0.02458,
+    "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
     "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
     "conf": "estimated"
    }
@@ -430,6 +463,8 @@
    "yardsPerReception": 13.66,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
    "conf": "estimated",
+   "rbFumblesPerTouch": 0.02458,
+   "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
    "afl": {
     "cmpPct": 50.5,
     "ypa": 7.15,
@@ -450,6 +485,8 @@
     "rushTdPerTeamGame": 0.85,
     "yardsPerReception": 14.16,
     "gamesPerTeam": 14,
+    "rbFumblesPerTouch": 0.02458,
+    "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
     "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
     "conf": "estimated"
    }
@@ -479,6 +516,8 @@
    "yardsPerReception": 13.29,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
    "conf": "estimated",
+   "rbFumblesPerTouch": 0.02458,
+   "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
    "afl": {
     "cmpPct": 50,
     "ypa": 7.1,
@@ -499,6 +538,8 @@
     "rushTdPerTeamGame": 0.85,
     "yardsPerReception": 14.2,
     "gamesPerTeam": 14,
+    "rbFumblesPerTouch": 0.02458,
+    "fumbleSrc": "estimate: held at the pooled 1970–1972 rate (no cited 1960s figure) [estimated]",
     "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
     "conf": "estimated"
    }
@@ -527,7 +568,9 @@
    "rushTdPerTeamGame": 0.85,
    "yardsPerReception": 13.35,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02443,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1970 row: 199 fumbles / 8,147 touches) [reference]"
   },
   "1971": {
    "season": 1971,
@@ -553,7 +596,9 @@
    "rushTdPerTeamGame": 0.85,
    "yardsPerReception": 13.03,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02568,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1971 row: 243 fumbles / 9,462 touches) [reference]"
   },
   "1972": {
    "season": 1972,
@@ -579,7 +624,9 @@
    "rushTdPerTeamGame": 0.92,
    "yardsPerReception": 13.03,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02366,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1972 row: 239 fumbles / 10,102 touches) [reference]"
   },
   "1973": {
    "season": 1973,
@@ -605,7 +652,9 @@
    "rushTdPerTeamGame": 0.9,
    "yardsPerReception": 12.48,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02656,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1973 row: 290 fumbles / 10,918 touches) [reference]"
   },
   "1974": {
    "season": 1974,
@@ -631,7 +680,9 @@
    "rushTdPerTeamGame": 0.78,
    "yardsPerReception": 12.31,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02269,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1974 row: 223 fumbles / 9,827 touches) [reference]"
   },
   "1975": {
    "season": 1975,
@@ -657,7 +708,9 @@
    "rushTdPerTeamGame": 0.86,
    "yardsPerReception": 12.74,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02602,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1975 row: 287 fumbles / 11,031 touches) [reference]"
   },
   "1976": {
    "season": 1976,
@@ -683,7 +736,9 @@
    "rushTdPerTeamGame": 0.84,
    "yardsPerReception": 12.5,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02496,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1976 row: 296 fumbles / 11,861 touches) [reference]"
   },
   "1977": {
    "season": 1977,
@@ -709,7 +764,9 @@
    "rushTdPerTeamGame": 0.78,
    "yardsPerReception": 12.21,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02273,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1977 row: 270 fumbles / 11,878 touches) [reference]"
   },
   "1978": {
    "season": 1978,
@@ -735,7 +792,9 @@
    "rushTdPerTeamGame": 0.8,
    "yardsPerReception": 12.5,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02303,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1978 row: 308 fumbles / 13,371 touches) [reference]"
   },
   "1979": {
    "season": 1979,
@@ -761,7 +820,9 @@
    "rushTdPerTeamGame": 0.82,
    "yardsPerReception": 12.45,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02212,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1979 row: 286 fumbles / 12,927 touches) [reference]"
   },
   "1980": {
    "season": 1980,
@@ -787,7 +848,9 @@
    "rushTdPerTeamGame": 0.78,
    "yardsPerReception": 12.41,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02107,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1980 row: 259 fumbles / 12,293 touches) [reference]"
   },
   "1981": {
    "season": 1981,
@@ -813,7 +876,9 @@
    "rushTdPerTeamGame": 0.78,
    "yardsPerReception": 12.68,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02397,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1981 row: 287 fumbles / 11,974 touches) [reference]"
   },
   "1982": {
    "season": 1982,
@@ -839,7 +904,9 @@
    "rushTdPerTeamGame": 0.72,
    "yardsPerReception": 12.06,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02235,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1982 row: 113 fumbles / 5,056 touches) [reference]"
   },
   "1983": {
    "season": 1983,
@@ -865,7 +932,9 @@
    "rushTdPerTeamGame": 0.82,
    "yardsPerReception": 12.37,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02231,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1983 row: 275 fumbles / 12,328 touches) [reference]"
   },
   "1984": {
    "season": 1984,
@@ -891,7 +960,9 @@
    "rushTdPerTeamGame": 0.76,
    "yardsPerReception": 12.54,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02155,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1984 row: 256 fumbles / 11,877 touches) [reference]"
   },
   "1985": {
    "season": 1985,
@@ -917,7 +988,9 @@
    "rushTdPerTeamGame": 0.75,
    "yardsPerReception": 12.41,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.01983,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1985 row: 247 fumbles / 12,457 touches) [reference]"
   },
   "1986": {
    "season": 1986,
@@ -943,7 +1016,9 @@
    "rushTdPerTeamGame": 0.76,
    "yardsPerReception": 12.55,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02066,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1986 row: 232 fumbles / 11,229 touches) [reference]"
   },
   "1987": {
    "season": 1987,
@@ -969,7 +1044,9 @@
    "rushTdPerTeamGame": 0.78,
    "yardsPerReception": 12.57,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.01867,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1987 row: 149 fumbles / 7,982 touches) [reference]"
   },
   "1988": {
    "season": 1988,
@@ -995,7 +1072,9 @@
    "rushTdPerTeamGame": 0.8,
    "yardsPerReception": 12.68,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02051,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1988 row: 233 fumbles / 11,363 touches) [reference]"
   },
   "1989": {
    "season": 1989,
@@ -1021,7 +1100,9 @@
    "rushTdPerTeamGame": 0.77,
    "yardsPerReception": 12.46,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.01861,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1989 row: 198 fumbles / 10,640 touches) [reference]"
   },
   "1990": {
    "season": 1990,
@@ -1047,7 +1128,9 @@
    "rushTdPerTeamGame": 0.74,
    "yardsPerReception": 12.32,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.02109,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1990 row: 206 fumbles / 9,767 touches) [reference]"
   },
   "1991": {
    "season": 1991,
@@ -1073,7 +1156,9 @@
    "rushTdPerTeamGame": 0.68,
    "yardsPerReception": 11.78,
    "src": "estimate:knowledge (data/augment/era_baselines_pre1999.json)",
-   "conf": "estimated"
+   "conf": "estimated",
+   "rbFumblesPerTouch": 0.01622,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1991 row: 158 fumbles / 9,739 touches) [reference]"
   },
   "1992": {
    "season": 1992,
@@ -1102,7 +1187,9 @@
    "conf": "estimated",
    "catchRate": 58.16,
    "yardsPerTarget": 6.757,
-   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)"
+   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)",
+   "rbFumblesPerTouch": 0.01619,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1992 row: 165 fumbles / 10,189 touches) [reference]"
   },
   "1993": {
    "season": 1993,
@@ -1131,7 +1218,9 @@
    "conf": "estimated",
    "catchRate": 58.96,
    "yardsPerTarget": 6.807,
-   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)"
+   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)",
+   "rbFumblesPerTouch": 0.01419,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1993 row: 148 fumbles / 10,430 touches) [reference]"
   },
   "1994": {
    "season": 1994,
@@ -1160,7 +1249,9 @@
    "conf": "estimated",
    "catchRate": 59.76,
    "yardsPerTarget": 6.757,
-   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)"
+   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)",
+   "rbFumblesPerTouch": 0.01332,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1994 row: 147 fumbles / 11,039 touches) [reference]"
   },
   "1995": {
    "season": 1995,
@@ -1189,7 +1280,9 @@
    "conf": "estimated",
    "catchRate": 59.16,
    "yardsPerTarget": 6.907,
-   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)"
+   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)",
+   "rbFumblesPerTouch": 0.01453,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1995 row: 163 fumbles / 11,217 touches) [reference]"
   },
   "1996": {
    "season": 1996,
@@ -1218,7 +1311,9 @@
    "conf": "estimated",
    "catchRate": 58.26,
    "yardsPerTarget": 6.707,
-   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)"
+   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)",
+   "rbFumblesPerTouch": 0.01288,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1996 row: 142 fumbles / 11,024 touches) [reference]"
   },
   "1997": {
    "season": 1997,
@@ -1247,7 +1342,9 @@
    "conf": "estimated",
    "catchRate": 58.26,
    "yardsPerTarget": 6.807,
-   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)"
+   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)",
+   "rbFumblesPerTouch": 0.01312,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1997 row: 150 fumbles / 11,430 touches) [reference]"
   },
   "1998": {
    "season": 1998,
@@ -1276,7 +1373,9 @@
    "conf": "estimated",
    "catchRate": 58.06,
    "yardsPerTarget": 6.957,
-   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)"
+   "targetsNote": "catchRate and yardsPerTarget derived from cmpPct/ypa with the 1999–2002 and 2009 gaps (+1.36 pts, +0.157 yds)",
+   "rbFumblesPerTouch": 0.01125,
+   "fumbleSrc": "fantasyindex:rb-fumbles-2020 (1998 row: 124 fumbles / 11,021 touches) [reference]"
   },
   "1999": {
    "season": 1999,
@@ -1305,6 +1404,8 @@
    "catchRate": 58.87,
    "passDefendedPerTeamGame": 5.202,
    "tacklesPerTeamGame": 63.518,
+   "rbFumblesPerTouch": 0.01307,
+   "fumbleSrc": "nflverse:stats_player_week 1999 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1335,6 +1436,8 @@
    "catchRate": 59.64,
    "passDefendedPerTeamGame": 4.845,
    "tacklesPerTeamGame": 63.744,
+   "rbFumblesPerTouch": 0.01295,
+   "fumbleSrc": "nflverse:stats_player_week 2000 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1365,6 +1468,8 @@
    "catchRate": 60.31,
    "passDefendedPerTeamGame": 5.107,
    "tacklesPerTeamGame": 64.883,
+   "rbFumblesPerTouch": 0.01181,
+   "fumbleSrc": "nflverse:stats_player_week 2001 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1395,6 +1500,8 @@
    "catchRate": 61.2,
    "passDefendedPerTeamGame": 5.176,
    "tacklesPerTeamGame": 65.754,
+   "rbFumblesPerTouch": 0.01205,
+   "fumbleSrc": "nflverse:stats_player_week 2002 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1423,6 +1530,8 @@
    "yardsPerReception": 11.294,
    "passDefendedPerTeamGame": 5.09,
    "tacklesPerTeamGame": 65.613,
+   "rbFumblesPerTouch": 0.0125,
+   "fumbleSrc": "nflverse:stats_player_week 2003 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1451,6 +1560,8 @@
    "yardsPerReception": 11.802,
    "passDefendedPerTeamGame": 5.049,
    "tacklesPerTeamGame": 66.225,
+   "rbFumblesPerTouch": 0.01151,
+   "fumbleSrc": "nflverse:stats_player_week 2004 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1479,6 +1590,8 @@
    "yardsPerReception": 11.409,
    "passDefendedPerTeamGame": 5.061,
    "tacklesPerTeamGame": 66.189,
+   "rbFumblesPerTouch": 0.00966,
+   "fumbleSrc": "nflverse:stats_player_week 2005 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1507,6 +1620,8 @@
    "yardsPerReception": 11.453,
    "passDefendedPerTeamGame": 5.01,
    "tacklesPerTeamGame": 66.609,
+   "rbFumblesPerTouch": 0.01075,
+   "fumbleSrc": "nflverse:stats_player_week 2006 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1535,6 +1650,8 @@
    "yardsPerReception": 11.205,
    "passDefendedPerTeamGame": 4.67,
    "tacklesPerTeamGame": 64.826,
+   "rbFumblesPerTouch": 0.00988,
+   "fumbleSrc": "nflverse:stats_player_week 2007 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1563,6 +1680,8 @@
    "yardsPerReception": 11.377,
    "passDefendedPerTeamGame": 4.699,
    "tacklesPerTeamGame": 64.912,
+   "rbFumblesPerTouch": 0.01023,
+   "fumbleSrc": "nflverse:stats_player_week 2008 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1593,6 +1712,8 @@
    "catchRate": 61.72,
    "passDefendedPerTeamGame": 4.699,
    "tacklesPerTeamGame": 65.6,
+   "rbFumblesPerTouch": 0.01157,
+   "fumbleSrc": "nflverse:stats_player_week 2009 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1623,6 +1744,8 @@
    "catchRate": 61.63,
    "passDefendedPerTeamGame": 4.768,
    "tacklesPerTeamGame": 65.477,
+   "rbFumblesPerTouch": 0.01141,
+   "fumbleSrc": "nflverse:stats_player_week 2010 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1653,6 +1776,8 @@
    "catchRate": 60.89,
    "passDefendedPerTeamGame": 4.773,
    "tacklesPerTeamGame": 62.67,
+   "rbFumblesPerTouch": 0.00932,
+   "fumbleSrc": "nflverse:stats_player_week 2011 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1683,6 +1808,8 @@
    "catchRate": 61.7,
    "passDefendedPerTeamGame": 4.691,
    "tacklesPerTeamGame": 63.109,
+   "rbFumblesPerTouch": 0.01065,
+   "fumbleSrc": "nflverse:stats_player_week 2012 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1713,6 +1840,8 @@
    "catchRate": 62.2,
    "passDefendedPerTeamGame": 4.801,
    "tacklesPerTeamGame": 63.531,
+   "rbFumblesPerTouch": 0.00901,
+   "fumbleSrc": "nflverse:stats_player_week 2013 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1743,6 +1872,8 @@
    "catchRate": 63.55,
    "passDefendedPerTeamGame": 4.338,
    "tacklesPerTeamGame": 63.141,
+   "rbFumblesPerTouch": 0.00849,
+   "fumbleSrc": "nflverse:stats_player_week 2014 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1773,6 +1904,8 @@
    "catchRate": 63.76,
    "passDefendedPerTeamGame": 4.545,
    "tacklesPerTeamGame": 62.748,
+   "rbFumblesPerTouch": 0.01058,
+   "fumbleSrc": "nflverse:stats_player_week 2015 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1803,6 +1936,8 @@
    "catchRate": 64.03,
    "passDefendedPerTeamGame": 4.646,
    "tacklesPerTeamGame": 62.096,
+   "rbFumblesPerTouch": 0.00865,
+   "fumbleSrc": "nflverse:stats_player_week 2016 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1833,6 +1968,8 @@
    "catchRate": 63.2,
    "passDefendedPerTeamGame": 4.549,
    "tacklesPerTeamGame": 62.014,
+   "rbFumblesPerTouch": 0.00791,
+   "fumbleSrc": "nflverse:stats_player_week 2017 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1863,6 +2000,8 @@
    "catchRate": 66.74,
    "passDefendedPerTeamGame": 4.246,
    "tacklesPerTeamGame": 62.088,
+   "rbFumblesPerTouch": 0.00682,
+   "fumbleSrc": "nflverse:stats_player_week 2018 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1893,6 +2032,8 @@
    "catchRate": 66.1,
    "passDefendedPerTeamGame": 4.357,
    "tacklesPerTeamGame": 63.16,
+   "rbFumblesPerTouch": 0.00833,
+   "fumbleSrc": "nflverse:stats_player_week 2019 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1923,6 +2064,8 @@
    "catchRate": 67.92,
    "passDefendedPerTeamGame": 4.127,
    "tacklesPerTeamGame": 63.984,
+   "rbFumblesPerTouch": 0.00824,
+   "fumbleSrc": "nflverse:stats_player_week 2020 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1953,6 +2096,8 @@
    "catchRate": 67.12,
    "passDefendedPerTeamGame": 4.186,
    "tacklesPerTeamGame": 66.298,
+   "rbFumblesPerTouch": 0.00779,
+   "fumbleSrc": "nflverse:stats_player_week 2021 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -1983,6 +2128,8 @@
    "catchRate": 67.06,
    "passDefendedPerTeamGame": 4.231,
    "tacklesPerTeamGame": 66.624,
+   "rbFumblesPerTouch": 0.00825,
+   "fumbleSrc": "nflverse:stats_player_week 2022 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -2013,6 +2160,8 @@
    "catchRate": 67.54,
    "passDefendedPerTeamGame": 4.423,
    "tacklesPerTeamGame": 65.743,
+   "rbFumblesPerTouch": 0.00765,
+   "fumbleSrc": "nflverse:stats_player_week 2023 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -2043,6 +2192,8 @@
    "catchRate": 68.35,
    "passDefendedPerTeamGame": 4.202,
    "tacklesPerTeamGame": 66.107,
+   "rbFumblesPerTouch": 0.00853,
+   "fumbleSrc": "nflverse:stats_player_week 2024 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   },
@@ -2073,6 +2224,8 @@
    "catchRate": 67.54,
    "passDefendedPerTeamGame": 4.333,
    "tacklesPerTeamGame": 67.482,
+   "rbFumblesPerTouch": 0.00651,
+   "fumbleSrc": "nflverse:stats_player_week 2025 (REG, RB/FB with 100+ touches) [verified]",
    "src": "nflverse:stats_player_week+nflverse:schedules",
    "conf": "verified"
   }

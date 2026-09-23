@@ -1,0 +1,63 @@
+{
+ "_meta": {
+  "what": "Stints the legacy data never had, added as an augmentation layer (legacy data untouched). Loaded and validated by src/engine/data/addedStints.ts.",
+  "generatedBy": "tools/augment/added-stints.ts",
+  "rule": "Only notable players whose missing stint changes a top-25 list (user decision, PR #3 round 2). Season lines from the cited table, checked against the stated totals; imp from the same player's adjacent legacy stint (impFrom)."
+ },
+ "stints": [
+  {
+   "id": "defense:reggie-white:PHI:1990s",
+   "personOf": "defense:reggie-white:PHI:1980s",
+   "impFrom": "defense:reggie-white:PHI:1980s",
+   "entry": {
+    "n": "Reggie White",
+    "p": "DE",
+    "t": "PHI",
+    "d": "1990s"
+   },
+   "seasons": [
+    1990,
+    1991,
+    1992
+   ],
+   "bySeason": {
+    "1990": {
+     "games": 16,
+     "sk": 14,
+     "int": 1,
+     "fr": 1,
+     "td": 0
+    },
+    "1991": {
+     "games": 16,
+     "sk": 15,
+     "int": 1,
+     "fr": 3,
+     "td": 0
+    },
+    "1992": {
+     "games": 16,
+     "sk": 14,
+     "int": 0,
+     "fr": 1,
+     "td": 1
+    }
+   },
+   "totals": {
+    "games": 48,
+    "sk": 43,
+    "int": 2,
+    "fr": 5,
+    "td": 1
+   },
+   "source": {
+    "title": "Wikipedia: Reggie White, \"NFL career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Reggie_White",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Reggie_White&oldid=1375764807",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "why": "His 1990–92 Eagles seasons (43 sacks; first-team All-Pro 1990 and 1991, second-team 1992) belong to no stint: the legacy list has PHI 1980s and GB 1990s only. A stint at that level is a DE top-25 stint."
+  }
+ ]
+}

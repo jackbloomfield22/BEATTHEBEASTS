@@ -1,5 +1,5 @@
 import type { RatingRun } from './engine';
-import type { RatedPos, TraitId } from './types';
+import type { RatedPos, TraitId, TraitResult } from './types';
 
 // The compact ratings file the game ships (TECH_PLAN §7 "Versioning"). Values
 // are rounded to integers for display and play; the explorer recomputes the
@@ -16,18 +16,28 @@ export interface SnapshotEntry {
   /** OVR confidence: h(igh) / m(edium) / l(ow). */
   conf: 'h' | 'm' | 'l';
   attrs: Record<string, number>;
-  traits: TraitId[];
+  /** Shown traits (at most four), with the one-line reason he earned each. */
+  traits: SnapshotTrait[];
   heightIn: number;
   weightLb: number;
   /** Era-translated weight used for contact physics. */
   weightEq: number;
 }
 
+export interface SnapshotTrait {
+  id: TraitId;
+  why: string;
+  /** Combination traits: the two parts. */
+  combo?: [string, string];
+}
+
+const traitOut = (t: TraitResult): SnapshotTrait => ({ id: t.id, why: t.why, ...(t.combo ? { combo: t.combo } : {}) });
+
 export interface RatingsSnapshot {
   version: number;
   entries: SnapshotEntry[];
-  /** OL units: the five linemen and the unit OVR (mean of the five). */
-  units: { id: string; ovr: number; linemen: string[] }[];
+  /** OL units: the five linemen, the unit OVR (mean of the five), block aggregates and unit traits. */
+  units: { id: string; ovr: number; linemen: string[]; passBlock: number; runBlock: number; traits: SnapshotTrait[] }[];
 }
 
 export function snapshot(run: RatingRun, version: number): RatingsSnapshot {
@@ -45,7 +55,7 @@ export function snapshot(run: RatingRun, version: number): RatingsSnapshot {
       ovr: Math.round(e.ovr.value),
       conf: e.ovr.conf === 'high' ? 'h' : e.ovr.conf === 'medium' ? 'm' : 'l',
       attrs,
-      traits: e.traits.map((t) => t.id),
+      traits: e.traits.map(traitOut),
       heightIn: Math.round(body.heightIn),
       weightLb: Math.round(body.weightLb),
       weightEq: Math.round(body.weightEq),
@@ -63,6 +73,9 @@ export function snapshot(run: RatingRun, version: number): RatingsSnapshot {
   return {
     version,
     entries,
-    units: [...units].map(([id, x]) => ({ id, ovr: Math.round(x.sum / x.ids.length), linemen: x.ids })),
+    units: [...units].map(([id, x]) => {
+      const u = run.olUnits[id];
+      return { id, ovr: Math.round(x.sum / x.ids.length), linemen: x.ids, passBlock: Math.round(u?.attrs.passBlock ?? 0), runBlock: Math.round(u?.attrs.runBlock ?? 0), traits: (u?.traits ?? []).map(traitOut) };
+    }),
   };
 }

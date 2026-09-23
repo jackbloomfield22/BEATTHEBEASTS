@@ -27,7 +27,8 @@ export interface Contribution {
   /** Provenance of the input. */
   conf?: Conf;
   src?: string;
-  kind: 'base' | 'stat' | 'accolade' | 'reputation' | 'physical' | 'body' | 'aging' | 'prior' | 'unit';
+  /** `scouting`: a sourced description graded by us (e.g. the QB arm grade), evidence at `estimated` confidence. */
+  kind: 'base' | 'stat' | 'accolade' | 'scouting' | 'reputation' | 'physical' | 'body' | 'aging' | 'prior' | 'unit';
 }
 
 export interface AttributeResult {
@@ -39,33 +40,20 @@ export interface AttributeResult {
 }
 
 export interface TraitResult {
+  /** Trait id from the catalog (src/engine/ratings/traits). */
   id: TraitId;
+  /** One line: why he earned it, with his numbers and where they rank in the position. */
+  why: string;
+  /** Every gate he passed, with the gate. */
   reasons: string[];
+  /** Combination traits: the two parts it replaces. */
+  combo?: [string, string];
+  /** How far past its gates (0–1), used to rank a player's traits. */
+  strength?: number;
 }
 
-export type TraitId =
-  | 'deep-threat'
-  | 'route-technician'
-  | 'possession'
-  | 'contested-catch'
-  | 'yac-monster'
-  | 'elusive'
-  | 'bruiser'
-  | 'workhorse'
-  | 'receiving-back'
-  | 'pocket-passer'
-  | 'gunslinger'
-  | 'scrambler'
-  | 'field-general'
-  | 'speed-rusher'
-  | 'power-rusher'
-  | 'interior-wrecker'
-  | 'ballhawk'
-  | 'shutdown-corner'
-  | 'enforcer'
-  | 'run-stuffer'
-  | 'sideline-to-sideline'
-  | 'coverage-linebacker';
+/** Trait ids are the catalog's string ids (traits/catalog*.ts, traits/combos.ts). */
+export type TraitId = string;
 
 /** Stint-level rate stats the formulas read. All optional; provenance on each. */
 export interface StintStats {
@@ -139,6 +127,8 @@ export interface Baseline {
   yardsPerReception: number;
   yardsPerTarget?: number;
   catchRate?: number;
+  /** League RB fumbles per touch over the stint (Ball Security's era baseline). */
+  fumblesPerTouch?: number;
   src: string;
   conf: Conf;
 }
@@ -187,6 +177,43 @@ export interface RatingInputs {
   };
   /** Years in the league at the stint midpoint (experience). */
   experience?: Sourced;
+  /** QB only: arm-strength inputs from data/augment/arm_strength.json (Throw Power). */
+  arm?: ArmInputs;
+}
+
+export type ArmGrade = 'cannon' | 'strong' | 'average' | 'weak';
+export type ArmEvidence = 'pro' | 'pre-pro' | 'comparison';
+
+export interface ArmInputs {
+  /**
+   * Intended air yards per attempt vs the attempt-weighted league figure over
+   * the stint's 2006+ seasons (nflverse play-by-play, verified). Where the
+   * stint lands downfield, not how hard he throws: one Throw Power input.
+   */
+  air?: {
+    /** Player ÷ league intended air yards per attempt. */
+    ratio: number;
+    perAtt: number;
+    league: number;
+    attempts: number;
+    /** Sample in games (attempts / 30, as for the other QB rate stats). */
+    games: number;
+    /** Stint seasons with air yards, and all stint seasons. */
+    covered: number[];
+    stintSeasons: number;
+    src: string;
+    conf: Conf;
+  };
+  /** Our grade of cited arm descriptions (estimated), any era. */
+  grade?: {
+    grade: ArmGrade;
+    evidence: ArmEvidence;
+    basis: string;
+    /** Source URLs behind the grade. */
+    urls: string[];
+    src: string;
+    conf: Conf;
+  };
 }
 
 export interface RatedEntry {
