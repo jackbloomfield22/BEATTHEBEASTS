@@ -6,3 +6,7 @@ playwright-report
 *.tsbuildinfo
 .DS_Store
 tools/shots/out
+tools/augment/cache
+tools/reference/cache/
+data/ratings/inputs.v*.json
+tools/reference/__pycache__
