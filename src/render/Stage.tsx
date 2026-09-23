@@ -113,12 +113,13 @@ export function Stage() {
   const quality = currentQuality();
 
   const worldQuality: WorldQuality = {
-    shadowMapSize: { off: 0, low: 1024, medium: 2048, high: 4096 }[graphics.shadows],
+    shadows: graphics.shadows,
+    tier: quality,
     terrainSegments: quality === 'low' ? 240 : quality === 'medium' ? 320 : 400,
     crowdDensity: graphics.crowdDensity,
     grassDetail: graphics.grassDetail,
     // Vegetation follows the grass-detail setting (both are ground clutter).
-    vegetationDensity: { low: 0.4, medium: 0.7, high: 1, ultra: 1 }[graphics.grassDetail],
+    vegetationDensity: { low: 0.35, medium: 0.6, high: 1, ultra: 1 }[graphics.grassDetail],
     weatherParticles: graphics.weatherParticles,
   };
   const dpr = Math.min(window.devicePixelRatio || 1, 2) * display.resolutionScale;

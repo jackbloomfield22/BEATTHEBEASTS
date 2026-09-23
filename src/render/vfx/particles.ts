@@ -117,7 +117,9 @@ export function createParticlePool(size = POOL_SIZE): ParticlePool {
   g.setAttribute('aSize', aSize);
   g.setAttribute('aColor', aColor);
   g.setAttribute('aPhys', aPhys);
-  g.instanceCount = size;
+  // Draw only the slots ever written (0 until the first burst): an idle
+  // pool costs nothing.
+  g.instanceCount = 0;
   const uniforms = { uTime: atmosphereUniforms.uTime, uViewportH: { value: 1080 }, uSky: { value: new THREE.Color(0.3, 0.3, 0.3) }, uSun: { value: new THREE.Color(1, 1, 1) } };
   const material = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms, transparent: true, depthWrite: false });
   const mesh = new THREE.Mesh(g, material);
@@ -151,6 +153,7 @@ export function createParticlePool(size = POOL_SIZE): ParticlePool {
         aPhys.setXY(i, p.gravity, p.drag);
         head = (head + 1) % size;
       }
+      g.instanceCount = Math.min(size, Math.max(g.instanceCount, start + ps.length));
       // Upload only what changed (one range, or two when the ring wraps).
       // Ranges accumulate across bursts in the same frame; three uploads
       // them all and clears the list after the upload.

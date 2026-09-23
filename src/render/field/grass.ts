@@ -17,7 +17,10 @@ const TURF_H = 0.045;
 /** Shell patch size (m): turf blades are sub-pixel much beyond ~14 m anyway. */
 const PATCH = 32;
 
-export const GRASS_SHELLS = { low: 0, medium: 8, high: 14, ultra: 20 } as const;
+// Shell count per grass-detail tier. Off on Low and Medium: a full-screen
+// stack of alpha-tested layers at field level is too expensive for them
+// (CLAUDE.md rule 9); the flat field carries the same color and stripes.
+export const GRASS_SHELLS = { low: 0, medium: 0, high: 8, ultra: 12 } as const;
 
 export interface GrassShells {
   mesh: THREE.Mesh;

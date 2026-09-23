@@ -93,7 +93,7 @@ export function buildSeats(occupancy = 0.93): Seats {
 }
 
 /** Share of occupied seats drawn per crowd-density setting (the rest read as empty seats). */
-export const CROWD_DRAWN = { low: 0.55, medium: 0.8, high: 1, ultra: 1 } as const;
+export const CROWD_DRAWN = { low: 0.4, medium: 0.6, high: 0.85, ultra: 1 } as const;
 
 const VERT_PARS = /* glsl */ `
 attribute vec4 aSeat;
@@ -300,7 +300,10 @@ export function createCrowd(atlas: SpectatorAtlas, seats: Seats = buildSeats()):
   const mesh = new THREE.Mesh(g, createCrowdMaterial(atlas));
   mesh.name = 'crowd';
   mesh.receiveShadow = true;
-  mesh.castShadow = true;
+  // The crowd doesn't cast: at a packed ~8 cards deep it was the costliest
+  // caster in every cascade, and the seating steps already cast the row
+  // shadows that read at broadcast distance.
+  mesh.castShadow = false;
   mesh.customDepthMaterial = createCrowdDepthMaterial(atlas);
   return mesh;
 }

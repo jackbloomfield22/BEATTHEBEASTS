@@ -30,14 +30,14 @@ export interface ShadowRig {
   dispose(): void;
 }
 
-export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent: THREE.Object3D; mapSize: number; cascades: number }): ShadowRig {
+export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent: THREE.Object3D; mapSize: number; cascades: number; maxFar?: number; fade?: boolean }): ShadowRig {
   const csm = new CSM({
     camera: opts.camera,
     parent: opts.parent,
     cascades: opts.cascades,
     // Shadows to 700 m: the bowl, the cliff and the headland; beyond that the
     // aerial perspective carries the depth.
-    maxFar: 700,
+    maxFar: opts.maxFar ?? 700,
     mode: 'practical',
     shadowMapSize: opts.mapSize,
     shadowBias: -0.0003,
@@ -45,23 +45,28 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
     lightFar: 2500,
     lightMargin: 220,
   });
-  csm.fade = true;
+  // Fading between cascades samples two maps in the blend band: High only.
+  csm.fade = opts.fade ?? true;
   for (const l of csm.lights) {
     l.shadow.normalBias = 0.25;
     // Filter radius in texels: soft enough to hide texel steps on the far cascades.
     l.shadow.radius = 2;
   }
 
+  // Every material this rig patched, with its own hook, so dispose() can put
+  // it back exactly. (A quality change rebuilds the rig; materials still
+  // carrying the old rig's defines and hook render with stale cascades.)
+  const attached = new Map<THREE.Material, THREE.Material['onBeforeCompile']>();
   const attach = (mat: THREE.Material) => {
-    if (mat.userData.csm || !(mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) return;
+    if (attached.has(mat) || !(mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) return;
     const mine = mat.onBeforeCompile;
+    attached.set(mat, mine);
     csm.setupMaterial(mat);
     const theirs = mat.onBeforeCompile;
     mat.onBeforeCompile = (shader, renderer) => {
       mine.call(mat, shader, renderer);
       theirs.call(mat, shader, renderer);
     };
-    mat.userData.csm = true;
     mat.needsUpdate = true;
   };
 
@@ -87,6 +92,16 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
       csm.update();
     },
     dispose() {
+      for (const [mat, hook] of attached) {
+        mat.onBeforeCompile = hook;
+        if (mat.defines) {
+          delete mat.defines.USE_CSM;
+          delete mat.defines.CSM_CASCADES;
+          delete mat.defines.CSM_FADE;
+        }
+        mat.needsUpdate = true;
+      }
+      attached.clear();
       csm.remove();
       csm.dispose();
     },

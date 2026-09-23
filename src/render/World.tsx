@@ -11,7 +11,7 @@ import { buildBowl, PROFILE } from './stadium/bowl';
 import { bakeSpectatorAtlas } from './crowd/spectator';
 import { CROWD_DRAWN, createCrowd } from './crowd/crowd';
 import { crowdEnergy } from './crowd/reactions';
-import { createPrecipitation } from './weather/precip';
+import { createPrecipitation, PRECIP_COUNT } from './weather/precip';
 import { createParticlePool } from './vfx/particles';
 import type { EffectId } from './vfx/effects';
 import { urlFlags } from '@/app/platform';
@@ -24,8 +24,11 @@ import { createShadowRig, type ShadowRig } from './lighting/shadows';
 import { STAND } from './world/constants';
 
 export interface WorldQuality {
+  /** Shadow tier (graphics.shadows): cascades, map size, distance. */
+  shadows: 'off' | 'low' | 'medium' | 'high';
+  /** Overall tier: the floodlight count at night. */
+  tier: 'low' | 'medium' | 'high' | 'ultra';
   grassDetail: 'low' | 'medium' | 'high' | 'ultra';
-  shadowMapSize: number; // 0 = shadows off
   terrainSegments: number;
   /** Graphics settings that scale instance counts without rebuilding. */
   crowdDensity: 'low' | 'medium' | 'high' | 'ultra';
@@ -149,6 +152,8 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     // light: radiance ≈ irradiance / π.
     const p = preset.precipitation;
     precip.set(p && quality.weatherParticles ? p : null, trans.clone().multiplyScalar(preset.sunIlluminance / Math.PI));
+    // Particle budget per tier (each is a camera-facing, blended quad).
+    (precip.mesh.geometry as THREE.InstancedBufferGeometry).instanceCount = Math.round(PRECIP_COUNT * { low: 0.3, medium: 0.5, high: 1, ultra: 1 }[quality.tier]);
     // Particles: sky ambient from straight up, sun as the key.
     vfx.setLight(new THREE.Color(0.25, 0.28, 0.33).multiplyScalar(preset.envIntensity), sunColor.clone().multiplyScalar(0.25));
     stadiumUniforms.uLights.value = preset.stadiumLights;
@@ -175,38 +180,63 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     scene.environmentIntensity = import.meta.env.DEV && new URLSearchParams(location.search).has("envI") ? Number(new URLSearchParams(location.search).get("envI")) : preset.envIntensity;
     if (prev && prev !== rt.texture) prev.dispose();
     if (import.meta.env.DEV) Object.assign(window, { __btbVfx: vfx, __btbCrowd: crowdEnergy, __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
-  }, [preset, gl, lut, pmrem, envScene, env, assets, scene, precip, vfx, quality.weatherParticles]);
+  }, [preset, gl, lut, pmrem, envScene, env, assets, scene, precip, vfx, quality.weatherParticles, quality.tier]);
 
   // Shadows follow quality: cascaded shadow maps (lighting/shadows.ts), sized
-  // per tier; the plain key light never casts.
+  // per tier. With the rig on, its cascade lights carry the key light and the
+  // plain directional light leaves the scene (a zero-intensity light still
+  // costs every lit pixel a trip through the light loop).
   useEffect(() => {
-    sunRef.current.castShadow = false;
-    if (quality.shadowMapSize <= 0 || (import.meta.env.DEV && location.search.includes('noshadow'))) return;
-    const rig = createShadowRig({
-      camera: camera as THREE.PerspectiveCamera,
-      parent: scene,
-      // Per cascade: high 4 × 2048², medium 3 × 2048², low 3 × 1024².
-      mapSize: quality.shadowMapSize >= 2048 ? 2048 : 1024,
-      cascades: quality.shadowMapSize >= 4096 ? 4 : 3,
-    });
+    const sun = sunRef.current;
+    sun.castShadow = false;
+    sun.visible = true;
+    if (quality.shadows === 'off' || (import.meta.env.DEV && location.search.includes('noshadow'))) return;
+    // Per tier (shadow cost on the GPU is casters × cascades × map area):
+    // high 4 × 2048² to 700 m with cascade fades; medium 2 × 2048² to 350 m;
+    // low 2 × 1024² to 250 m. Beyond that, aerial perspective carries depth.
+    const cfg = { low: { mapSize: 1024, cascades: 2, maxFar: 250, fade: false }, medium: { mapSize: 2048, cascades: 2, maxFar: 350, fade: false }, high: { mapSize: 2048, cascades: 4, maxFar: 700, fade: true } }[quality.shadows];
+    const rig = createShadowRig({ camera: camera as THREE.PerspectiveCamera, parent: scene, ...cfg });
     rig.attachTree(scene);
     rigRef.current = rig;
+    sun.visible = false;
     return () => {
       rigRef.current = null;
+      sun.visible = true;
       rig.dispose();
     };
-  }, [quality.shadowMapSize, camera, scene]);
+  }, [quality.shadows, camera, scene]);
 
   useEffect(() => {
-    // Let the first frames compile shaders before announcing readiness.
+    // Compile every program before announcing readiness, including objects
+    // that start hidden (grass shells, precipitation, particles, the crowd's
+    // shadow material): a program compiled the first time a view shows it
+    // stalls the GPU for up to seconds on some drivers. Then let a few
+    // frames settle.
     let raf = 0;
     let frames = 0;
+    let cancelled = false;
     const tick = () => {
       if (++frames > 3) onReady?.();
       else raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    const hidden: THREE.Object3D[] = [];
+    scene.traverse((o) => {
+      if (!o.visible && (o as THREE.Mesh).isMesh) {
+        hidden.push(o);
+        o.visible = true;
+      }
+    });
+    gl.compileAsync(scene, camera)
+      .catch(() => undefined)
+      .finally(() => {
+        for (const o of hidden) o.visible = false;
+        if (!cancelled) raf = requestAnimationFrame(tick);
+      });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onReady]);
 
   const frameRef = useRef(0);
@@ -323,13 +353,18 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   }, []);
   useEffect(() => {
     const factor = preset.stadiumLights * (preset.moon ? 1 : preset.id === 'rain' || preset.id === 'snow' ? 0.35 : 0);
-    for (const l of flood) {
+    // Floodlights are only in the scene when they're on (every light in the
+    // scene is a pass through the light loop for every lit pixel, even at
+    // zero intensity). Low and Medium use every other bank at double power.
+    const every = quality.tier === 'high' || quality.tier === 'ultra' ? 1 : 2;
+    flood.forEach((l, i) => {
+      l.visible = factor > 0 && i % every === 0;
       // Divided by the preset exposure so the field reads the same under the
       // brighter night exposure that lets the moonlit sky and sea show.
-      l.intensity = (17000 * factor) / preset.exposure;
+      l.intensity = (17000 * factor * every) / preset.exposure;
       l.target.updateMatrixWorld();
-    }
-  }, [preset, flood]);
+    });
+  }, [preset, flood, quality.tier]);
 
   const boardZ = STAND.northZ + 6;
   const roofFrontH = PROFILE.roof.hFront;
