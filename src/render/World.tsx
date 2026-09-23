@@ -9,6 +9,7 @@ import { buildBowl, PROFILE } from './stadium/bowl';
 import { bakeSpectatorAtlas } from './crowd/spectator';
 import { createCrowd } from './crowd/crowd';
 import { crowdEnergy } from './crowd/reactions';
+import { createPrecipitation } from './weather/precip';
 import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, createRoofMaterial, createSeatingMaterial, stadiumUniforms } from './stadium/materials';
 import { createFieldMaterial, createFieldPaint } from './field/field';
 import { createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
@@ -66,6 +67,8 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   }, [gl]);
   useEffect(() => () => crowd.atlas.dispose(), [crowd]);
 
+  const precip = useMemo(() => createPrecipitation(), []);
+
   // Sky LUT + IBL, regenerated whenever the lighting preset changes.
   const lut = useMemo(() => new SkyLUT(512, 256), []);
   const pmrem = useMemo(() => new THREE.PMREMGenerator(gl), [gl]);
@@ -96,6 +99,11 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       m.uniforms.uNight!.value = preset.moon ? 1 : 0;
     }
     atmosphereUniforms.uStadiumGlow.value = preset.stadiumGlow ?? 0;
+    atmosphereUniforms.uWet.value = preset.wetness ?? 0;
+    atmosphereUniforms.uSnow.value = preset.snowCover ?? 0;
+    // Particles are lit like a white diffuse surface under the (clouded) key
+    // light: radiance ≈ irradiance / π.
+    precip.set(preset.precipitation ?? null, trans.clone().multiplyScalar(preset.sunIlluminance / Math.PI));
     stadiumUniforms.uLights.value = preset.stadiumLights;
     assets.ocean.material.uniforms.uStadiumLights!.value = preset.stadiumLights;
 
@@ -119,7 +127,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     scene.environmentIntensity = import.meta.env.DEV && new URLSearchParams(location.search).has("envI") ? Number(new URLSearchParams(location.search).get("envI")) : preset.envIntensity;
     if (prev && prev !== rt.texture) prev.dispose();
     if (import.meta.env.DEV) Object.assign(window, { __btbCrowd: crowdEnergy, __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
-  }, [preset, gl, lut, pmrem, envScene, env, assets, scene]);
+  }, [preset, gl, lut, pmrem, envScene, env, assets, scene, precip]);
 
   // Shadows follow quality.
   useEffect(() => {
@@ -224,6 +232,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       {/* Stadium bowl */}
       <mesh geometry={bowl.seating} material={assets.seatingMat} receiveShadow castShadow />
       <primitive object={crowd.mesh} />
+      <primitive object={precip.mesh} />
       <mesh geometry={bowl.concrete} material={assets.concreteMat} receiveShadow castShadow />
       <mesh geometry={bowl.glass} material={assets.glassMat} />
       <mesh geometry={bowl.roof} material={assets.roofMat} receiveShadow castShadow />

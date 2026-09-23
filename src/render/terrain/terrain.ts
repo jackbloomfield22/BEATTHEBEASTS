@@ -158,6 +158,7 @@ function mergeGeometries(geoms: THREE.BufferGeometry[]): THREE.BufferGeometry {
  */
 export function createTerrainMaterial(distant = false): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, metalness: 0 });
+  mat.userData.porosity = 0.75; // rock, soil and scrub
   return patchMaterial(
     mat,
     (shader) => {
@@ -278,6 +279,7 @@ export function buildBoulders(count = 700): { geometry: THREE.BufferGeometry; ma
 
 export function createBoulderMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+  mat.userData.porosity = 0.5; // weathered stone
   return patchMaterial(
     mat,
     (shader) => {

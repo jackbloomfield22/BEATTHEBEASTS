@@ -45,15 +45,19 @@ export function createVideoBoardTexture(): THREE.CanvasTexture {
 
 export function createScreenMaterial(tex: THREE.Texture): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 2.2, roughness: 0.35 });
+  mat.userData.noWeather = true;
   return patchMaterial(mat, undefined, 'screen');
 }
 
 export function createMetalMaterial(color = 0x2a2b2e): THREE.MeshStandardMaterial {
-  return patchMaterial(new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.7 }), undefined, 'metal');
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.7 });
+  mat.userData.porosity = 0.05;
+  return patchMaterial(mat, undefined, 'metal');
 }
 
 export function createPavingMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88 });
+  mat.userData.porosity = 0.45; // sealed pavers
   return patchMaterial(
     mat,
     (shader) => {
@@ -80,6 +84,7 @@ export function createPavingMaterial(): THREE.MeshStandardMaterial {
 
 export function createLightHeadMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: new THREE.Color(1, 0.94, 0.84), emissiveIntensity: 6, roughness: 0.3 });
+  mat.userData.noWeather = true;
   return patchMaterial(
     mat,
     (shader) => {

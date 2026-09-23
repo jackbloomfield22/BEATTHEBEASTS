@@ -84,6 +84,8 @@ attribute vec4 aRand;
 uniform float uTime;
 uniform float uCrowdEnergy;
 uniform float uLights;
+uniform float uWet;
+uniform float uSnow;
 varying vec2 vAtlasUv;
 varying vec2 vLocal;
 varying vec3 vShirt;
@@ -149,6 +151,19 @@ const VERT_BODY = /* glsl */ `
   float pp = fract(r2 * 3.3 + r1 * 1.7);
   vPants = pp < 0.55 ? mix(vec3(0.03, 0.045, 0.09), vec3(0.07, 0.1, 0.17), r3) : pp < 0.85 ? vec3(0.02) : vec3(0.22, 0.17, 0.1);
 
+  // Dressed for the weather. Rain (not snow): about a third in ponchos with
+  // the hood up (clear ones read pale gray, club ones crimson). Snow: coats
+  // go dark and most wear beanies.
+  float wx = fract(r3 * 7.7 + r1 * 3.9);
+  if (uWet > 0.5 && uSnow < 0.1 && wx < 0.35) {
+    vShirt = wx < 0.2 ? vec3(0.42, 0.44, 0.46) : crimson * 1.2;
+    vHair = vShirt;
+  }
+  if (uSnow > 0.3) {
+    vShirt *= wx < 0.6 ? 0.55 : 1.0;
+    if (wx < 0.7) vHair = wx < 0.3 ? crimson : wx < 0.5 ? vec3(0.02) : vec3(0.3);
+  }
+
   // Phone flashes after dark, held at the hands for the pose.
   float flashOn = step(0.9985, h11(floor(uTime * 1.3) + aRand.x * 1000.0)) * step(0.5, uLights);
   vec2 phone = pose == 2.0 ? vec2(0.34, 1.96) : pose == 3.0 ? vec2(0.0, 1.32) : pose == 1.0 ? vec2(0.22, 1.45) : vec2(0.18, 1.1);
@@ -173,6 +188,7 @@ varying vec3 vFlash;
 
 export function createCrowdMaterial(atlas: SpectatorAtlas): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
+  mat.userData.noWeather = true; // the crowd dresses for the weather instead
   const size = new THREE.Vector2(CELL_W * DIRS, CELL_H * POSES);
   return patchMaterial(
     mat,
@@ -237,7 +253,7 @@ export function createCrowdMaterial(atlas: SpectatorAtlas): THREE.MeshStandardMa
 export function createCrowdDepthMaterial(atlas: SpectatorAtlas): THREE.MeshDepthMaterial {
   const mat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   mat.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, stadiumUniforms, { uTime: atmosphereUniforms.uTime, uCrowdMask: { value: atlas.mask } });
+    Object.assign(shader.uniforms, stadiumUniforms, { uTime: atmosphereUniforms.uTime, uWet: atmosphereUniforms.uWet, uSnow: atmosphereUniforms.uSnow, uCrowdMask: { value: atlas.mask } });
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>\n${VERT_PARS}`)
       .replace('#include <begin_vertex>', VERT_BODY);

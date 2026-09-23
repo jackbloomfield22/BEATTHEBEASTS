@@ -128,6 +128,7 @@ export function createFieldPaint(): THREE.CanvasTexture {
 
 export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
+  mat.userData.porosity = 0.85; // natural grass over sand root zone
   return patchMaterial(
     mat,
     (shader) => {
@@ -203,6 +204,13 @@ export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMat
             col = mix(col, vec3(0.86, 0.86, 0.83), whiteAmt);
             diffuseColor.rgb = col;
             fieldRough = mix(0.92, 0.7, whiteAmt);
+            // Snow games: the crew sweeps the yard lines, goal lines and
+            // borders clear (about a foot either side), so they read as
+            // green-edged white lines through the snow; play scuffs the rest.
+            float swept = aaBand(yl, 0.3) * step(abs(f.y), 50.3) * step(abs(f.x), 26.667);
+            swept = max(swept, aaBand(abs(abs(f.y) - 50.0), 0.45) * step(abs(f.x), 26.667));
+            swept = max(swept, max(sideB, endB));
+            weatherSnowMask = (1.0 - swept) * mix(0.72, 0.9, n1);
           }`,
         )
         .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = fieldRough;')

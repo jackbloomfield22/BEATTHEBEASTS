@@ -12,6 +12,7 @@ export const stadiumUniforms = {
 
 export function createSeatingMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0, side: THREE.DoubleSide });
+  mat.userData.porosity = 0.1; // molded plastic seats
   return patchMaterial(
     mat,
     (shader) => {
@@ -62,6 +63,7 @@ export function createSeatingMaterial(): THREE.MeshStandardMaterial {
 /** Board-formed concrete with panel joints and weathering; the facade gets vertical fins. */
 export function createConcreteMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82, metalness: 0, side: THREE.DoubleSide });
+  mat.userData.porosity = 0.6; // board-formed concrete
   return patchMaterial(
     mat,
     (shader) => {
@@ -111,6 +113,7 @@ export function createConcreteMaterial(): THREE.MeshStandardMaterial {
 
 export function createGlassMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0x06080a, roughness: 0.12, metalness: 0.15, side: THREE.DoubleSide });
+  mat.userData.noWeather = true;
   return patchMaterial(
     mat,
     (shader) => {
@@ -137,6 +140,7 @@ export function createGlassMaterial(): THREE.MeshStandardMaterial {
 
 export function createRoofMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0x1b1c1f, roughness: 0.5, metalness: 0.6, side: THREE.DoubleSide });
+  mat.userData.porosity = 0.05; // painted steel
   return patchMaterial(
     mat,
     (shader) => {
@@ -168,6 +172,7 @@ export function createRoofMaterial(): THREE.MeshStandardMaterial {
 
 export function createLightBankMaterial(): THREE.MeshStandardMaterial {
   const mat = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: new THREE.Color(1, 0.93, 0.82), emissiveIntensity: 4, roughness: 0.4 });
+  mat.userData.noWeather = true;
   return patchMaterial(
     mat,
     (shader) => {

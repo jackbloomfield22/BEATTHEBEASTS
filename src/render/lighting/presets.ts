@@ -38,6 +38,12 @@ export interface LightingPreset {
   keyTint?: [number, number, number];
   /** Warm light scattered by the haze and reflected by the sea around the lit bowl (0..1). */
   stadiumGlow?: number;
+  /** Surface wetness 0..1 (darker, glossier, puddles on flat ground; none under the roofs). */
+  wetness?: number;
+  /** Snow cover 0..1 on upward-facing surfaces (the field's lines are swept clear). */
+  snowCover?: number;
+  /** Falling rain or snow around the camera; density 0..1 of the full particle budget. */
+  precipitation?: { kind: 'rain' | 'snow'; density: number };
 }
 
 const neutral: Grade = { lift: [0, 0, 0], gamma: [1, 1, 1], gain: [1, 1, 1], saturation: 1, contrast: 1 };
@@ -101,6 +107,7 @@ export const LIGHTING_PRESETS: Record<LightingPreset['id'], LightingPreset> = {
     stadiumLights: 0.3,
     bloom: { intensity: 0.3, threshold: 1 },
     grade: { lift: [0.005, 0.006, 0.008], gamma: [1, 1, 1], gain: [0.97, 1.0, 1.02], saturation: 0.88, contrast: 1.02 },
+    wetness: 0.15, // damp after a shower
   },
   rain: {
     id: 'rain',
@@ -119,6 +126,8 @@ export const LIGHTING_PRESETS: Record<LightingPreset['id'], LightingPreset> = {
     stadiumLights: 1,
     bloom: { intensity: 0.6, threshold: 0.85 },
     grade: { ...neutral, saturation: 0.82, gain: [0.95, 1.0, 1.04], contrast: 1.05 },
+    wetness: 1,
+    precipitation: { kind: 'rain', density: 1 },
   },
   snow: {
     id: 'snow',
@@ -137,5 +146,8 @@ export const LIGHTING_PRESETS: Record<LightingPreset['id'], LightingPreset> = {
     stadiumLights: 1,
     bloom: { intensity: 0.5, threshold: 0.9 },
     grade: { ...neutral, saturation: 0.8, gain: [0.97, 1.0, 1.05] },
+    wetness: 0.25,
+    snowCover: 0.85,
+    precipitation: { kind: 'snow', density: 0.8 },
   },
 };
