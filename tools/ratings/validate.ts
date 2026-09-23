@@ -5,6 +5,7 @@ import type { RatingRun } from '../../src/engine/ratings/engine.ts';
 import { OVR_WEIGHTS } from '../../src/engine/ratings/ovrWeights.ts';
 import { agingDelta } from '../../src/engine/ratings/physical.ts';
 import type { RatedEntry, RatedPos } from '../../src/engine/ratings/types.ts';
+import { COMBOS, heldTraitIds, TRAIT_DEFS } from '../../src/engine/ratings/traits/index.ts';
 import { ANCHORS, type Anchor, type Check } from './anchors.ts';
 
 type Entry = RatedEntry;
@@ -282,4 +283,126 @@ export function reasonFor(e: Entry, sign: number): string {
     .sort((a, b) => Math.abs(b[1].d) - Math.abs(a[1].d))
     .slice(0, 3);
   return top.map(([label, x]) => `${label}${x.input ? ` (${x.input})` : ''} ${x.d >= 0 ? '+' : ''}${x.d.toFixed(1)}`).join('; ');
+}
+
+// ------------------------------------------------------------------ traits
+// The trait rules (ratings follow-up): at most four per player, every kept
+// trait earned by at least five players, no trait that always appears
+// alongside another (≥ 95% of its holders also hold the other), and a healthy
+// share of every position with no trait at all.
+
+export const TRAIT_MIN_HOLDERS = 5;
+export const TRAIT_COOCCUR_MAX = 0.95;
+export const TRAIT_ZERO_SHARE_MIN = 0.4;
+
+export interface TraitRow {
+  id: string;
+  pos: RatedPos;
+  /** Players who pass its gates (before combinations and the cap). */
+  earned: number;
+  /** Players who hold it after combinations and the cap (a combination counts for its parts too). */
+  held: number;
+  /** Players who show it as its own badge. */
+  shown: number;
+  /** The trait its holders most often also hold, and the share. */
+  partner?: string;
+  partnerShare: number;
+}
+
+export interface TraitPosStats {
+  pos: RatedPos;
+  n: number;
+  zeroShare: number;
+  /** Players by number of traits shown (0–4). */
+  byCount: number[];
+  rows: TraitRow[];
+}
+
+export function traitStats(run: RatingRun): TraitPosStats[] {
+  const out: TraitPosStats[] = [];
+  const combos = new Map(COMBOS.map((c) => [c.id, c.parts as readonly string[]]));
+  const related = (a: string, b: string) => combos.get(a)?.includes(b) || combos.get(b)?.includes(a);
+  for (const [pos, list] of byPosition(run)) {
+    const held = new Map<string, Set<string>>();
+    const shown = new Map<string, number>();
+    const earned = new Map<string, number>();
+    const byCount = [0, 0, 0, 0, 0];
+    for (const e of list) {
+      byCount[Math.min(4, e.traits.length)]!++;
+      for (const t of e.traits) shown.set(t.id, (shown.get(t.id) ?? 0) + 1);
+      for (const id of heldTraitIds(e.traits)) (held.get(id) ?? held.set(id, new Set()).get(id)!).add(e.id);
+      for (const t of run.traitsEarned[e.id] ?? []) earned.set(t.id, (earned.get(t.id) ?? 0) + 1);
+    }
+    const ids = [...TRAIT_DEFS.filter((d) => d.pos.includes(pos)).map((d) => d.id), ...COMBOS.filter((c) => c.pos.includes(pos)).map((c) => c.id)];
+    const rows: TraitRow[] = ids.map((id) => {
+      const hs = held.get(id) ?? new Set<string>();
+      let partner: string | undefined;
+      let partnerShare = 0;
+      for (const [other, os] of held) {
+        if (other === id || related(id, other) || !hs.size) continue;
+        let both = 0;
+        for (const x of hs) if (os.has(x)) both++;
+        if (both / hs.size > partnerShare) {
+          partnerShare = both / hs.size;
+          partner = other;
+        }
+      }
+      return { id, pos, earned: earned.get(id) ?? 0, held: hs.size, shown: shown.get(id) ?? 0, partner, partnerShare };
+    });
+    out.push({ pos, n: list.length, zeroShare: byCount[0]! / list.length, byCount, rows });
+  }
+  return out;
+}
+
+export interface TraitTotal {
+  id: string;
+  /** Holders per position. */
+  byPos: Partial<Record<RatedPos, number>>;
+  earned: number;
+  held: number;
+  shown: number;
+  /** Most frequent other trait among its holders (combination parts excluded), after combinations and the cap. */
+  partner?: string;
+  partnerShare: number;
+  /** The same on the earned sets (before combinations and the cap). */
+  earnedPartner?: string;
+  earnedPartnerShare: number;
+}
+
+/** Trait counts over the whole pool (a trait used at several positions counts all its holders). */
+export function traitTotals(run: RatingRun): TraitTotal[] {
+  const combos = new Map(COMBOS.map((c) => [c.id, c.parts as readonly string[]]));
+  const related = (a: string, b: string) => !!(combos.get(a)?.includes(b) || combos.get(b)?.includes(a));
+  const held = new Map<string, Set<string>>();
+  const earned = new Map<string, Set<string>>();
+  const shown = new Map<string, number>();
+  const byPos = new Map<string, Partial<Record<RatedPos, number>>>();
+  for (const e of run.entries) {
+    for (const t of e.traits) shown.set(t.id, (shown.get(t.id) ?? 0) + 1);
+    for (const id of heldTraitIds(e.traits)) {
+      (held.get(id) ?? held.set(id, new Set()).get(id)!).add(e.id);
+      const bp = byPos.get(id) ?? byPos.set(id, {}).get(id)!;
+      bp[e.pos] = (bp[e.pos] ?? 0) + 1;
+    }
+    for (const t of run.traitsEarned[e.id] ?? []) (earned.get(t.id) ?? earned.set(t.id, new Set()).get(t.id)!).add(e.id);
+  }
+  const partnerOf = (id: string, sets: Map<string, Set<string>>): [string | undefined, number] => {
+    const hs = sets.get(id);
+    let best: string | undefined;
+    let share = 0;
+    if (!hs?.size) return [undefined, 0];
+    for (const [other, os] of sets) {
+      if (other === id || related(id, other)) continue;
+      let both = 0;
+      for (const x of hs) if (os.has(x)) both++;
+      if (both / hs.size > share) [best, share] = [other, both / hs.size];
+    }
+    return [best, share];
+  };
+  const ids = [...TRAIT_DEFS.map((d) => d.id), ...COMBOS.map((c) => c.id)];
+  return ids.map((id) => {
+    const [partner, partnerShare] = partnerOf(id, held);
+    const [earnedPartner, earnedPartnerShare] = partnerOf(id, earned);
+    return { id, byPos: byPos.get(id) ?? {}, earned: earned.get(id)?.size ?? 0, held: held.get(id)?.size ?? 0, shown: shown.get(id) ?? 0, partner, partnerShare, earnedPartner, earnedPartnerShare };
+  });
 }

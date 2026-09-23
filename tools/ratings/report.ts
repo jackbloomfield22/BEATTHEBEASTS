@@ -12,7 +12,7 @@ import { PHYSICAL_BY_POS, SKILL_ATTRS, attrLabel } from '../../src/engine/rating
 import { rateAll, type RatingRun } from '../../src/engine/ratings/engine.ts';
 import { buildInputs } from '../../src/engine/ratings/inputs.ts';
 import { OVR_WEIGHTS } from '../../src/engine/ratings/ovrWeights.ts';
-import { TRAIT_LABELS } from '../../src/engine/ratings/traits.ts';
+import { TRAIT_LABELS } from '../../src/engine/ratings/traits/index.ts';
 import type { RatedEntry, RatedPos } from '../../src/engine/ratings/types.ts';
 import { loadSources, ROOT } from './sources.ts';
 import { byPosition, capPileups, crossStintViolations, eraParity, evaluateAnchors, legacyCorrelation, movers } from './validate.ts';

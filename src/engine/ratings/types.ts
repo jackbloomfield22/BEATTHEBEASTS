@@ -39,33 +39,20 @@ export interface AttributeResult {
 }
 
 export interface TraitResult {
+  /** Trait id from the catalog (src/engine/ratings/traits). */
   id: TraitId;
+  /** One line: why he earned it, with his numbers and where they rank in the position. */
+  why: string;
+  /** Every gate he passed, with the gate. */
   reasons: string[];
+  /** Combination traits: the two parts it replaces. */
+  combo?: [string, string];
+  /** How far past its gates (0–1), used to rank a player's traits. */
+  strength?: number;
 }
 
-export type TraitId =
-  | 'deep-threat'
-  | 'route-technician'
-  | 'possession'
-  | 'contested-catch'
-  | 'yac-monster'
-  | 'elusive'
-  | 'bruiser'
-  | 'workhorse'
-  | 'receiving-back'
-  | 'pocket-passer'
-  | 'gunslinger'
-  | 'scrambler'
-  | 'field-general'
-  | 'speed-rusher'
-  | 'power-rusher'
-  | 'interior-wrecker'
-  | 'ballhawk'
-  | 'shutdown-corner'
-  | 'enforcer'
-  | 'run-stuffer'
-  | 'sideline-to-sideline'
-  | 'coverage-linebacker';
+/** Trait ids are the catalog's string ids (traits/catalog*.ts, traits/combos.ts). */
+export type TraitId = string;
 
 /** Stint-level rate stats the formulas read. All optional; provenance on each. */
 export interface StintStats {

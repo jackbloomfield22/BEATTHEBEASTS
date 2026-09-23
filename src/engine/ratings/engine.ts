@@ -3,7 +3,7 @@ import { IMP_MAX_SHARE, MISSING_REWEIGHT, PHYSICAL_BY_POS, SKILL_ATTRS, type Ski
 import { computePhysicals, type PhysicalResult } from './physical';
 import { composeFromZ, CONF_WEIGHT, confLabel, normInv, POOL_BEST_RATING, poolScale, shrink, zToRating } from './scale';
 import { SIGNALS, type PhysicalSnapshot, type SignalValue } from './signals';
-import { deriveTraits } from './traits';
+import { deriveAllTraits, type OlUnitTraits } from './traits';
 import type { AttributeResult, Contribution, RatedEntry, RatedPos, RatingInputs } from './types';
 
 // The rating pass (TECH_PLAN §7):
@@ -12,7 +12,9 @@ import type { AttributeResult, Contribution, RatedEntry, RatedPos, RatingInputs 
 //   3. pool statistics of the physical signals
 //   4. every skill attribute from its declarative definition
 //   5. OVR from the position weights, standardized within the position pool
-//   6. traits from attribute thresholds and stat signatures
+//   6. pool calibration of the curated defensive pools
+//   7. traits: percentile tables per position pool, then gates, combinations
+//      and the four-trait cap (traits/derive.ts); OL unit traits
 
 /** Standardized scores are clipped here so one freak value can't swamp an attribute. */
 const Z_CLIP = 4.5;
@@ -77,6 +79,10 @@ export interface RatingRun {
   bodies: Record<string, { heightIn: number; weightLb: number; weightEq: number }>;
   /** Pool calibration per position (see calibratePools). */
   calibration: Record<string, { medianHonors: number; center: number }>;
+  /** OL units: the five linemen, the unit aggregates and the unit traits. */
+  olUnits: Record<string, OlUnitTraits>;
+  /** Every trait each entry passes the gates for, before combinations and the four-trait cap. */
+  traitsEarned: Record<string, RatedEntry['traits']>;
 }
 
 type PoolKey = `${RatedPos}|${string}`;
@@ -277,8 +283,15 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
   // 6. Pool calibration: re-center curated elite pools on the shared scale.
   const calibration = calibratePools(entries, byPos);
 
-  // 7. Traits (after calibration: thresholds read final values).
-  for (const r of entries) r.traits = deriveTraits(r.inputs, r.attrs, (key) => zFrom(r.inputs, key, signal(r.inputs, key)));
+  // 7. Traits (after calibration: gates read final values). Percentile
+  // tables of every metric are built per position pool first, then each
+  // entry's traits are derived against them.
+  const traitRun = deriveAllTraits(entries, {
+    z: (e, key) => zFrom(e.inputs, key, signal(e.inputs, key)),
+    sig: (e, key) => signal(e.inputs, key),
+    phys: (e) => physicals.get(e.id)!,
+  });
+  for (const r of entries) r.traits = traitRun.byEntry.get(r.id) ?? [];
 
   const poolsOut: RatingRun['pools'] = {};
   for (const [k, m] of pools) {
@@ -292,7 +305,7 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
   }
   const bodies: RatingRun['bodies'] = {};
   for (const [id, p] of physicals) bodies[id] = { heightIn: p.heightIn, weightLb: p.weightLb, weightEq: p.weightEq };
-  return { entries, pools: poolsOut, composites: compOut, bodies, calibration };
+  return { entries, pools: poolsOut, composites: compOut, bodies, calibration, olUnits: traitRun.units, traitsEarned: Object.fromEntries(traitRun.earned) };
 }
 
 function labelOf(pos: RatedPos, key: string): string {
