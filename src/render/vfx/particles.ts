@@ -87,7 +87,7 @@ void main() {
 export interface ParticlePool {
   mesh: THREE.Mesh;
   /** Spawn an effect now (at the pool's clock). Returns the particle count. */
-  emit(id: EffectId, pos: [number, number, number], opts?: { dir?: [number, number, number]; scale?: number; seed?: number }): number;
+  emit(id: EffectId, pos: [number, number, number], opts?: { dir?: [number, number, number]; scale?: number; seed?: number; age?: number }): number;
   /** Sky ambient and sun radiance for lighting (from the preset). */
   setLight(sky: THREE.Color, sun: THREE.Color): void;
   /** Drawing-buffer height (px), for the minimum on-screen size. */
@@ -139,7 +139,8 @@ export function createParticlePool(size = POOL_SIZE): ParticlePool {
     },
     emit(id, pos, opts = {}) {
       const ps = burst(id, pos, opts.seed ?? seq++ * 2654435761, opts.dir, opts.scale);
-      const now = atmosphereUniforms.uTime.value;
+      // `age` backdates the burst (screenshots of an effect mid-flight).
+      const now = atmosphereUniforms.uTime.value - (opts.age ?? 0);
       const start = head;
       for (const p of ps) {
         const i = head;

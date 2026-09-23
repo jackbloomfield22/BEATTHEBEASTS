@@ -62,6 +62,7 @@ export const urlFlags = (() => {
     perf: p.has('perf'),
     seed: p.get('seed'),
     vfx: p.get('vfx'), // dev: loop an effect preview (render/vfx/effects.ts ids)
+    vfxAge: p.has('vfxAge') ? Number(p.get('vfxAge')) : 0, // backdate preview bursts (s)
     fly: p.has('fly'), // free flythrough camera (render/cameras/FlyCamera.tsx)
     shot: p.get('shot'), // screenshot harness: jump straight to a named state
     lighting: p.get('lighting'),

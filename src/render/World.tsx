@@ -208,6 +208,11 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   }, [onReady]);
 
   const frameRef = useRef(0);
+  // Shader time. In the screenshot harness it advances a fixed 1/60 s per
+  // rendered frame instead of wall time: the software renderer takes
+  // seconds per frame, and wall time would make every capture differ (and
+  // let short effects live and die between two frames).
+  const simTime = useRef(0);
   // Dev preview (?vfx=<id>): loop the effect around midfield every 3 s.
   const vfxLoop = useRef(-1e9);
   const previewVfx = (t: number) => {
@@ -216,10 +221,12 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     if (!id || t - vfxLoop.current < (id === 'pyro' ? 0.15 : id === 'confetti' ? 3 : 1)) return;
     vfxLoop.current = t;
     const at: [number, number, number][] = id === 'confetti' ? [[-15, 26, -20], [15, 26, -20], [0, 28, 10]] : id === 'pyro' ? [[-20, 0, 55], [20, 0, 55]] : [[0, id === 'breath' ? 1.75 : 0.02, 0], [2, id === 'breath' ? 1.8 : 0.02, 1]];
-    at.forEach((pos) => vfx.emit(id, pos, { dir: [0, 0, 1], scale: id === 'pyro' ? 0.15 : 1 }));
+    at.forEach((pos) => vfx.emit(id, pos, { dir: [0, 0, 1], scale: id === 'pyro' ? 0.15 : 1, age: urlFlags.vfxAge }));
   };
   useFrame(({ camera, clock, gl: r }) => {
-    atmosphereUniforms.uTime.value = clock.elapsedTime;
+    simTime.current = urlFlags.shot !== null ? simTime.current + 1 / 60 : clock.elapsedTime;
+    const now = simTime.current;
+    atmosphereUniforms.uTime.value = now;
     vfx.setViewportHeight(r.domElement.height);
     const key = keyRef.current;
     const rig = rigRef.current;
@@ -232,9 +239,9 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     } else {
       sunRef.current.intensity = key.intensity;
     }
-    stadiumUniforms.uCrowdEnergy.value = crowdEnergy.value(clock.elapsedTime);
+    stadiumUniforms.uCrowdEnergy.value = crowdEnergy.value(now);
     grass.update(camera);
-    if (import.meta.env.DEV) previewVfx(clock.elapsedTime);
+    if (import.meta.env.DEV) previewVfx(now);
     assets.sky.mesh.position.copy(camera.position);
   });
 
