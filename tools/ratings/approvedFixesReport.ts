@@ -81,7 +81,7 @@ export function approvedFixesSection(run: RatingRun): string[] {
 
   // 2. TE block grade
   out(
-    '2. **TE block-grade cap.** The legacy hand-set block grade `b` (`w_block`) now follows the `imp` rule (`src/engine/ratings/attributes/types.ts` CAPPED_SIGNALS): at most 20% of each TE blocking formula, and per player at most a quarter of the same-direction evidence from the uncapped terms (≤ 20% of the attribute\'s movement; `imp` and the block grade can\'t prop each other up). The weight it gave up went to the formula\'s other inputs in proportion; reputation gained nothing. Contributions show "(capped at 20%)" where the per-player cap binds. Tests: `tests/ratings-engine.test.ts` (weights) and `tests/ratings-validation.test.ts` (every TE, every attribute).',
+    '2. **TE block-grade cap.** The legacy hand-set block grade `b` (`w_block`) is capped at 20% of each TE blocking formula (`src/engine/ratings/attributes/types.ts` CAPPED_SIGNALS); the weight it gave up went to the formula\'s other inputs in proportion and reputation gained nothing. Round 1 also capped it per player like `imp`; round 2 dropped that (user decision, see "Approved fixes, round 2"), so the grade keeps its direction. Tests: `tests/ratings-engine.test.ts` (weights) and `tests/ratings-validation.test.ts` (the grade is never per-player capped).',
     '',
     ...(['runBlock', 'passBlock', 'impactBlock'] as const).map((k) => `   - ${attrLabel('TE', k)}: ${BEFORE_FORMULAS[`TE ${k}`]} → ${formula('TE', k)}`),
     '',
@@ -128,7 +128,7 @@ export function approvedFixesSection(run: RatingRun): string[] {
     .filter((e): e is RatedEntry => !!e && !!before[e.id]?.attrs);
   const grade = (e: RatedEntry) => e.inputs.stats.blockGrade?.v ?? '–';
   out(
-    '**Side effect of the block-grade cap, for review.** Most of the TE movement above is the block grade, not speed. Under the `imp` rule the hand-set grade can only amplify the other blocking evidence, which for a TE is body and strength (no stat measures TE blocking). Kittle\'s grade of 92 now can\'t lift him against a measured 18-rep bench (Strength 64), and Winslow\'s grade of 70 (the only input that says he was a weak blocker) can\'t pull him down against a 251 lb frame that translates to about 271 today. That is most of Kittle\'s drop and Winslow\'s rise to TE #1. The rule is applied as approved; if you want the grade to keep its direction, the alternative is the 20% weight cap without the per-player cap (the grade would then move blocking by at most its 20% share either way).',
+    '**The block-grade cap, round 1 vs now.** Round 1 capped the grade per player like `imp`, which let size and strength overrule it (Kittle\'s 92 couldn\'t lift him against a measured 18-rep bench; Winslow\'s 70 couldn\'t lower him against a 251 lb frame, about 271 today) and put Winslow at TE #1. Round 2 keeps only the 20% weight cap. Columns: before round 1 → now.',
     '',
     `| TE stint | Block grade | ${blk.map((k) => attrLabel('TE', k)).join(' | ')} | OVR |`,
     '|---|---|---|---|---|---|',

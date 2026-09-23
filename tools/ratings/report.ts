@@ -20,6 +20,7 @@ import type { RatedEntry, RatedPos } from '../../src/engine/ratings/types.ts';
 import { consensusCheck, consensusSection, loadConsensus } from './consensus.ts';
 import { loadSources, ROOT } from './sources.ts';
 import { approvedFixesSection } from './approvedFixesReport.ts';
+import { approvedFixes2Section } from './approvedFixes2Report.ts';
 import { diagnosisSection } from './diagnosisReport.ts';
 import { throwPowerSection } from './throwPowerReport.ts';
 import { traitsDoc, traitsSection } from './traitsReport.ts';
@@ -100,6 +101,7 @@ out('');
 
 out(...throwPowerSection(run));
 out(...approvedFixesSection(run));
+out(...approvedFixes2Section(run, S));
 
 // ------------------------------------------------------------------ consensus
 
