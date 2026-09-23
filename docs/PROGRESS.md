@@ -2,9 +2,9 @@
 
 ## Current status
 
-- **M1 Foundation:** merged (PR #1), live on production.
-- **M2 Ratings:** built and **stopped for your review** (PR to `main`). Review with `docs/RATINGS_REPORT.md` and the Ratings Explorer at `/#/dev/ratings` on the preview. No balance or attribute-to-gameplay calibration until you sign off.
-- **M3 The look:** starting while you review (it doesn't depend on ratings).
+- **M1 Foundation:** merged (PR #1).
+- **M2 Ratings:** merged (PR #2). The follow-up (traits overhaul, Throw Power, consensus check, anchor bands, Explorer fix) is PR #3, waiting on your review; four proposed fixes from the Rice/Kittle and Eli Manning diagnosis wait on your OK and are not applied.
+- **M3 The look:** built, PR to `main` (branch `claude/m3-the-look`). Screenshots in `docs/screenshots/m3/`, critique below. **One thing I need from you:** a real-hardware perf check (see "Performance").
 
 ## Known legacy issues (do not rebuild)
 
@@ -28,7 +28,40 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 
 ## Milestone log
 
-### M2 Ratings (built, stopped for review)
+### M3 The look (built, PR open)
+
+**What's in**
+- **Night** (your M1 request): the moon is the key light (a dim, cool physical sky with the same shape as day), stars, floodlights carrying the field, and the lit bowl glowing in the haze and on the sea.
+- **Crowd:** a procedural person (built here: head, hair, torso, arms, legs; seated, standing, arms-up and clapping poses) rendered at startup into mask and normal atlases from 8 directions; every one of ~40,000 seats gets a camera-facing card with its own palette (weighted to Beasts crimson and black), pose, and real lighting and shadows. One draw call. Reactions (touchdown, turnover, big play, stop, kickoff, groan) drive the crowd's energy through a pure, tested envelope; `__btbCrowd.trigger('touchdown', t)` in dev. Night phone flashes; ponchos and hoods in rain, coats and beanies in snow.
+- **Coastline:** a swept cliff-face mesh (the heightfield can't hold a near-vertical wall) with buttresses, columnar joints, bedding ledges and fractured blocks; dark basalt with lichen, algae, seepage streaks and a wet band; faceted boulders; procedural scrub, wind-sculpted cypress groves and ledge plants; surf keyed to distance from the rock (a new shore-distance channel in the seabed texture) with wash lines surging shoreward.
+- **Stadium kit:** banded exterior (basalt plinth with lit gates, glazed concourse ribbon, charcoal aluminum fins with a night uplight wash, crimson band with an LED line, the same cladding on the stands' south ends); plaza paving trimmed back from the cliff; plaza lamps with light pools; BLACKCLIFF in both end zones (GDD §12.4).
+- **Field:** grass shells near low cameras (turf depth, blades carry the paint, lean with the mowing bands), the field color shared between the surface and the shells.
+- **Sky:** a self-shadowed stratus deck under overcast; the sun hides behind cloud.
+- **Weather** (all five presets now complete): wet surfaces darken and gloss with puddles on flat ground, snow settles on upward faces (none under the roofs), the field's lines and paint are swept clear in snow, rain streaks and snowflakes around the camera, a darker, rougher sea in rain.
+- **Shadows:** cascaded shadow maps (4 cascades on High, 3 below), fixed-pattern PCF (the default per-pixel noise needs TAA we don't run).
+- **VFX base:** one GPU particle pool (ring buffer, closed-form motion in the vertex shader) with turf kick-up, hit dust, confetti, pyro and breath; bursts are pure and seeded (tested). Dev preview `?vfx=<id>&vfxAge=<s>`.
+- **Quality:** tiers now drive crowd density, vegetation, grass shells, weather particles and shadow cascades; dynamic resolution steps the render scale by frame time (probe up, back off; pure, tested); the first launch times the menu scene and moves the GPU-name guess one tier when the evidence is clear.
+- **Tools:** `?fly` free camera (P logs a `?cam=` pose), `?cam=`, `?crowd=`, `?noshadow`; the screenshot harness now advances shader time a fixed 1/60 s per frame, so captures are reproducible. The matrix gained field, crowd, cliff and exterior shots.
+
+**Critique against the references** (honest; `docs/screenshots/m3/`)
+- **ref-01 (golden-hour ocean):** the closest match. The flyover-sea frame has the warm gradient, the glitter path and headlands layering into haze. Gap: the swell is short-period chop; ref-01's long, slow swell lines aren't there. Next pass on the ocean.
+- **ref-02 (broadcast football):** the bowl now reads as a packed, noisy crowd from every broadcast angle, the turf has stripes and depth at field level, and the lighting presets hold together. Gaps: no players yet (M4); up close the spectators are clearly low-poly (faceted limbs, flat shirts, no faces), fine at broadcast distance but not in a tight crowd shot; the roof underside and light banks are still simple boxes; no depth-of-field softness on the stands.
+- **ref-03 (open-world coast):** the cliffs finally read as rock with structure, the rim has scrub and cypress, and the surf hugs the rock. Gaps, biggest first: (1) the rock reads warm brown under the golden sun instead of dark basalt, and it's smooth and painterly up close where ref-03 is crisp; (2) no turquoise shallows, because Blackcliff's walls plunge into deep water (a design choice, but a cove or reef shelf somewhere in the flyover would buy that color); (3) the vegetation is blobby at close range; (4) the headland grass has no blade detail (only the field does).
+- **Presets:** Night is the strongest frame after Golden; Overcast reads as a real stratus day; Rain reads (streaks, darker pitch and sea) but the wet sheen on the turf is subtle; Snow reads well (swept lines, patchy cover, flurries). Night's moon disc is a little too large and bright.
+
+**Performance**
+- Draw calls (High, menu): ~120 of the ~450 budget (§11).
+- Triangles per frame: were 13.3 M (High) / 8.0 M (Medium) because instanced scatter renders in full into every shadow cascade; now **4.6 M / 3.3 M** (only the cypress cast, the heightfield doesn't, lighter boulders and fewer scrub). Still the next thing to cut: chunk the scatter spatially so shadow cascades cull it, and a distance LOD for scrub.
+- FPS can't be measured here (software rendering, seconds per frame). **I need a real-hardware check from you:** open the preview with `?perf` on your Mac (High, then Medium) and send the numbers on the perf screen for the menu and the title flyover.
+
+**Known issues**
+- Rock color and close-up crispness (above). Moon size. Scrub and cypress up close. Ocean swell period.
+- Soft-particle depth fades wait for a depth prepass (M5); hit dust stays small until then.
+- The crowd atlas bakes at startup (~30 ms on a real GPU).
+
+**Next:** M4 Characters and animation.
+
+### M2 Ratings (merged)
 
 **How to review**
 - `docs/RATINGS_REPORT.md`: method, anchor pass/fail with my flags, era parity, legacy comparison with the 50 biggest risers and fallers and why, distribution charts, top 25 per attribute and OVR, every correction, low-confidence ratings among the top 200, and the legacy-sim adapter fit.
