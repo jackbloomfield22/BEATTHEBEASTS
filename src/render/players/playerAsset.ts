@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { createPlayerMaterial, setPlayerLook, type PlayerLook } from './playerMaterial';
 import { bodyShape, type BodyShape } from './bodyShape';
+import { loadGlyphAtlas } from './glyphAtlas';
 
 // The player asset (tools/blender/build_character.py → public/assets/
 // characters/player.glb): one armature and three LOD skinned meshes sharing
@@ -20,7 +21,7 @@ export interface PlayerAsset {
 let pending: Promise<PlayerAsset> | null = null;
 
 export function loadPlayerAsset(url = PLAYER_URL): Promise<PlayerAsset> {
-  pending ??= new GLTFLoader().loadAsync(url).then((gltf) => {
+  pending ??= Promise.all([new GLTFLoader().loadAsync(url), loadGlyphAtlas()]).then(([gltf]) => {
     gltf.scene.traverse((o) => {
       const m = o as THREE.SkinnedMesh;
       if (!m.isSkinnedMesh) return;

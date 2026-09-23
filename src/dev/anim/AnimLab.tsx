@@ -19,16 +19,18 @@ import './anim.css';
 // green on planted frames.
 //
 // Hash query: mode=lineup|single, clip, speed, t (freeze at time, s), rate
-// (playback rate), lock=0|1, kit, skin, lod, cam=x,y,z,tx,ty,tz.
+// (playback rate), lock=0|1, kit, skin, lod, num, name, cam=x,y,z,tx,ty,tz.
 
-const LINEUP: { label: string; h: number; w: number }[] = [
-  { label: 'CB 5\'10" 185', h: 70, w: 185 },
-  { label: 'WR 6\'1" 200', h: 73, w: 200 },
-  { label: 'QB 6\'3" 225', h: 75, w: 225 },
-  { label: 'LB 6\'3" 245', h: 75, w: 245 },
-  { label: 'TE 6\'5" 260', h: 77, w: 260 },
-  { label: 'OT 6\'6" 320', h: 78, w: 320 },
-  { label: 'DT 6\'3" 335', h: 75, w: 335 },
+// Numbers and names exercise the lettering: one and two digits, short,
+// long (squeezed) and accented names.
+const LINEUP: { label: string; h: number; w: number; num: number; name: string }[] = [
+  { label: 'CB 5\'10" 185', h: 70, w: 185, num: 2, name: 'Lott' },
+  { label: 'WR 6\'1" 200', h: 73, w: 200, num: 81, name: 'Houshmandzadeh' },
+  { label: 'QB 6\'3" 225', h: 75, w: 225, num: 16, name: 'Montana' },
+  { label: 'LB 6\'3" 245', h: 75, w: 245, num: 52, name: 'St. Brown' },
+  { label: 'TE 6\'5" 260', h: 77, w: 260, num: 87, name: 'Gronkowski' },
+  { label: 'OT 6\'6" 320', h: 78, w: 320, num: 75, name: 'Muñoz' },
+  { label: 'DT 6\'3" 335', h: 75, w: 335, num: 90, name: 'White' },
 ];
 
 const params = () => new URLSearchParams(location.hash.split('?')[1] ?? '');
@@ -44,6 +46,9 @@ interface LabState {
   skin: number;
   lod: string;
   freezeT: number | null;
+  /** Single mode's jersey number and name (lineup players carry their own). */
+  num: number;
+  name: string;
 }
 
 interface Readout {
@@ -80,6 +85,10 @@ function gridTexture(): THREE.CanvasTexture {
   return t;
 }
 
+function lettering(s: LabState, b: (typeof LINEUP)[number]): { number: number; name: string } {
+  return s.mode === 'lineup' ? { number: b.num, name: b.name } : { number: s.num, name: s.name };
+}
+
 /** Ground speed and direction (character frame: +z forward) for a clip. */
 function travel(lib: AnimLibrary, s: LabState): { speed: number; dir: [number, number] } {
   if (s.clip === 'blend') return { speed: s.speed, dir: [0, 1] };
@@ -93,7 +102,7 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
   const players = useMemo(
     () =>
       bodies.map((b, i) => {
-        const p = new Player(asset, { kit: KITS[s.kit]!, skin: SKIN_TONES[s.skin]!.hex, ...bodyFromImperial(b.h, b.w) });
+        const p = new Player(asset, { kit: KITS[s.kit]!, skin: SKIN_TONES[s.skin]!.hex, ...lettering(s, b), ...bodyFromImperial(b.h, b.w) });
         p.root.position.set((i - (bodies.length - 1) / 2) * 1.2, 0, 0);
         return p;
       }),
@@ -110,8 +119,9 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
     [players],
   );
   useEffect(() => {
-    for (const p of players) p.setLook({ kit: KITS[s.kit]!, skin: SKIN_TONES[s.skin]!.hex });
-  }, [players, s.kit, s.skin]);
+    players.forEach((p, i) => p.setLook({ kit: KITS[s.kit]!, skin: SKIN_TONES[s.skin]!.hex, ...lettering(s, bodies[i]!) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [players, s.kit, s.skin, s.num, s.name]);
 
   // Raw clip playback (everything except "blend").
   useEffect(() => {
@@ -213,6 +223,8 @@ export function AnimLab() {
     skin: Number(q.get('skin') ?? 2),
     lod: q.get('lod') ?? '0',
     freezeT: q.has('t') ? Number(q.get('t')) : null,
+    num: Number(q.get('num') ?? 16),
+    name: q.get('name') ?? 'Montana',
   });
   const [readout, setReadout] = useState<Readout | null>(null);
   const cam = (q.get('cam') ?? '3.6,1.3,0.4,0,0.95,0').split(',').map(Number);
@@ -283,6 +295,18 @@ export function AnimLab() {
             ))}
           </select>
         </label>
+        {s.mode === 'single' ? (
+          <div className="lab-row">
+            <label>
+              Number
+              <input type="number" min={0} max={99} value={s.num} onChange={(e) => set({ num: Number(e.target.value) })} />
+            </label>
+            <label>
+              Name
+              <input value={s.name} maxLength={20} onChange={(e) => set({ name: e.target.value })} />
+            </label>
+          </div>
+        ) : null}
         <label>
           Skin tone
           <select value={s.skin} onChange={(e) => set({ skin: Number(e.target.value) })}>
