@@ -258,7 +258,11 @@ export const SIGNALS: Record<string, SignalDef> = {
     kind: 'stat',
     get: (inp) => ratio(inp.stats.tdPerGame, inp.baseline.rushTdPerTeamGame + inp.baseline.passTdPerTeamGame, g(inp), f2),
   },
-  r_fum: { key: 'r_fum', label: 'Fumbles per touch', k: 20, dir: -1, kind: 'stat', get: (inp) => plain(inp.stats.fumblesPerTouch, g(inp), (x) => `${(x * 100).toFixed(2)}%`, (x) => ln(0.002 + Math.max(0, x))) },
+  // Era-adjusted like every other rate (user-approved, PR #3 round 2): fumbles
+  // per touch vs the league RB rate over the stint's seasons (the rate fell
+  // from about 2.4% in the 1970s to 0.8% in the 2020s). The 0.002 floor (0.2%
+  // of touches) keeps a fumble-free sample finite, as before the adjustment.
+  r_fum: { key: 'r_fum', label: 'Fumbles per touch vs league', k: 20, dir: -1, kind: 'stat', get: (inp) => ratio(inp.stats.fumblesPerTouch, inp.baseline.fumblesPerTouch, g(inp), (x) => `${(x * 100).toFixed(2)}%`, 0.002) },
 
   // ---------------------------------------------------------------- receivers
   w_yds: { key: 'w_yds', label: 'Receiving yards/game vs league team passing', k: 6, dir: 1, kind: 'stat', get: (inp) => ratio(inp.stats.recYdsPerGame, inp.baseline.passYdsPerTeamGame, g(inp), (x) => x.toFixed(0)) },

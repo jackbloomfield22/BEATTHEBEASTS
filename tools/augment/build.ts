@@ -26,7 +26,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFENSE, OL_UNITS, PLAYERS } from '../../data/legacy/index.ts';
 import { NAME_ALIASES, NOT_A_PERSON } from './aliases.ts';
-import { ARM_REPORT_BEGIN, ARM_REPORT_END } from './arm-report.ts';
+import { markedSections } from './report-sections.ts';
 import { FIRST_STATS_SEASON, LAST_SEASON, ROOT, SOURCES_PATH, type Manifest } from './fetch-nflverse.ts';
 import { decadeSeasons, type LegacyFranchise } from './franchises.ts';
 import { addLine, emptyLine, isRealGsis, loadAll, type NflData, type Person, type RosterRow, type StatLine } from './load.ts';
@@ -1294,12 +1294,9 @@ function writeReport(inp: ReportInput): void {
   L.push('| File | Size |', '|---|---:|');
   for (const [f, b] of Object.entries(inp.sizes)) L.push(`| data/augment/${f} | ${(b / 1024).toFixed(0)} KB |`);
   L.push('');
-  // Keep the arm-strength section that tools/augment/arm.ts maintains between its markers.
+  // Keep the sections other tools maintain between their markers (arm.ts, fumbles.ts, forty.ts, ...).
   const old = existsSync(REPORT) ? readFileSync(REPORT, 'utf8') : '';
-  const armA = old.indexOf(ARM_REPORT_BEGIN);
-  const armB = old.indexOf(ARM_REPORT_END);
-  const arm = armA >= 0 && armB > armA ? `${old.slice(armA, armB + ARM_REPORT_END.length)}\n` : '';
-  writeFileSync(REPORT, `${L.join('\n')}\n${arm}`);
+  writeFileSync(REPORT, `${L.join('\n')}\n${markedSections(old).join('')}`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();

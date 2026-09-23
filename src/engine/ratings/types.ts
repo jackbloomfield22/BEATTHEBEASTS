@@ -127,6 +127,8 @@ export interface Baseline {
   yardsPerReception: number;
   yardsPerTarget?: number;
   catchRate?: number;
+  /** League RB fumbles per touch over the stint (Ball Security's era baseline). */
+  fumblesPerTouch?: number;
   src: string;
   conf: Conf;
 }
