@@ -49,6 +49,8 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     const terrain = buildTerrain(quality.terrainSegments);
     const ocean = createOcean(terrain.heightTexture, terrain.heightTextureExtent);
     const sky = createSkyDome(true);
+    ocean.mesh.name = 'ocean';
+    sky.mesh.name = 'sky';
     const bowl = buildBowl();
     const paint = createFieldPaint();
     const boardTex = createVideoBoardTexture();
@@ -259,6 +261,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     const scatter = scatterVegetation();
     const ledges = ledgePlants(assets.cliff.geometry);
     const group = new THREE.Group();
+    group.name = 'vegetation';
     // Only the cypress cast shadows: an instanced mesh has one bounding
     // sphere for all its plants, so casters render in full into every
     // cascade (4 × 1.6 M triangles for the scrub), while scrub shadows are a
@@ -298,6 +301,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.computeBoundingSphere();
+    mesh.name = 'boulders';
     return mesh;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -339,21 +343,21 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       <primitive object={assets.sky.mesh} />
       {/* The heightfield receives but doesn't cast: 320 k triangles × 4 cascades,
           and the cliff face (its own mesh) casts the shadows that matter. */}
-      <mesh geometry={assets.terrain.geometry} material={assets.terrainMat} receiveShadow />
-      <mesh geometry={assets.cliff.geometry} material={assets.terrainMat} receiveShadow castShadow />
-      <mesh geometry={assets.headlands} material={assets.headlandMat} />
+      <mesh name="terrain" geometry={assets.terrain.geometry} material={assets.terrainMat} receiveShadow />
+      <mesh name="cliff" geometry={assets.cliff.geometry} material={assets.terrainMat} receiveShadow castShadow />
+      <mesh name="headlands" geometry={assets.headlands} material={assets.headlandMat} />
       <primitive object={assets.ocean.mesh} />
       <primitive object={boulders} />
       <primitive object={vegetation} />
 
       {/* Stadium bowl */}
-      <mesh geometry={bowl.seating} material={assets.seatingMat} receiveShadow castShadow />
+      <mesh name="seating" geometry={bowl.seating} material={assets.seatingMat} receiveShadow castShadow />
       <primitive object={crowd.mesh} />
       <primitive object={precip.mesh} />
       <primitive object={vfx.mesh} />
-      <mesh geometry={bowl.concrete} material={assets.concreteMat} receiveShadow castShadow />
+      <mesh name="concrete" geometry={bowl.concrete} material={assets.concreteMat} receiveShadow castShadow />
       <mesh geometry={bowl.glass} material={assets.glassMat} />
-      <mesh geometry={bowl.roof} material={assets.roofMat} receiveShadow castShadow />
+      <mesh name="roof" geometry={bowl.roof} material={assets.roofMat} receiveShadow castShadow />
       <primitive object={lightBanks} />
       {flood.map((l, i) => (
         <group key={i}>
@@ -364,12 +368,12 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
 
       <primitive object={grass.mesh} />
       {/* Playing surface and apron */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.02, -2]} material={assets.fieldMat} receiveShadow>
+      <mesh name="field" rotation-x={-Math.PI / 2} position={[0, 0.02, -2]} material={assets.fieldMat} receiveShadow>
         <planeGeometry args={[STAND.halfWidth * 2, 138, 1, 1]} />
       </mesh>
 
       {/* Plaza ring around the stadium and the open-end terrace */}
-      <mesh geometry={plaza} position={[0, 0.02, 0]} material={assets.pavingMat} receiveShadow />
+      <mesh name="plaza" geometry={plaza} position={[0, 0.02, 0]} material={assets.pavingMat} receiveShadow />
       <primitive object={lamps} />
       <mesh position={[0, 0.6, 71]} material={assets.concreteMat} receiveShadow castShadow>
         <boxGeometry args={[100, 1.2, 0.4]} />
