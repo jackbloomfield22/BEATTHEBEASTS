@@ -143,7 +143,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   // per tier; the plain key light never casts.
   useEffect(() => {
     sunRef.current.castShadow = false;
-    if (quality.shadowMapSize <= 0) return;
+    if (quality.shadowMapSize <= 0 || (import.meta.env.DEV && location.search.includes('noshadow'))) return;
     const rig = createShadowRig({
       camera: camera as THREE.PerspectiveCamera,
       parent: scene,

@@ -176,7 +176,7 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
           ${NOISE_GLSL}
           vec3 terrAlbedo;
           float terrRough;
-          float terrDetail(vec3 w) { vec3 n = normalize(vTerrNormal); vec3 tw = pow(abs(n), vec3(4.0)); tw /= (tw.x + tw.y + tw.z); float a = fbm(vec2(w.z, w.y) * vec2(0.16, 0.07), 5) + 0.35 * fbm(vec2(w.z, w.y) * 0.9, 3); float b = fbm(vec2(w.x, w.y) * vec2(0.16, 0.07), 5) + 0.35 * fbm(vec2(w.x, w.y) * 0.9, 3); float c = fbm(w.xz * 0.35, 4); return a * tw.x + b * tw.z + c * tw.y; }`,
+          float terrDetail(vec3 w) { vec3 n = normalize(vTerrNormal); vec3 tw = pow(abs(n), vec3(4.0)); tw /= (tw.x + tw.y + tw.z); float a = fbm(vec2(w.z, w.y) * vec2(0.16, 0.07), 3) + 0.25 * fbm(vec2(w.z, w.y) * 0.6, 1); float b = fbm(vec2(w.x, w.y) * vec2(0.16, 0.07), 3) + 0.25 * fbm(vec2(w.x, w.y) * 0.6, 1); float c = fbm(w.xz * 0.35, 2); return a * tw.x + b * tw.z + c * tw.y; }`,
         )
         .replace(
           '#include <color_fragment>',
@@ -246,7 +246,13 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
             vec3 r2 = cross(normal, dpx);
             float det = dot(dpx, r1);
             vec3 grad = sign(det) * (dhx * r1 + dhy * r2);
-            normal = normalize(abs(det) * normal - grad * 1.6);
+            // Surface gradient (Mikkelsen), clamped: at grazing view angles
+            // det -> 0 and the unclamped form flips normals per 2x2 pixel
+            // quad (a checkerboard). Also fade detail finer than a pixel.
+            float aa = 1.0 - smoothstep(0.04, 0.25, fwidth(hgt));
+            vec3 sg = grad / max(abs(det), 1e-8) * 1.0 * aa;
+            sg *= min(1.0, 0.7 / max(length(sg), 1e-6));
+            normal = normalize(normal - sg);
           }`,
         );
     },
@@ -264,9 +270,9 @@ export function buildBoulders(count = 700): { geometry: THREE.BufferGeometry; ma
   const cuts: { n: THREE.Vector3; d: number }[] = [];
   let cs = 77;
   const cr = () => ((cs = (cs * 1664525 + 1013904223) >>> 0) / 4294967296);
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 14; i++) {
     const n = new THREE.Vector3(cr() * 2 - 1, cr() * 2 - 1, cr() * 2 - 1).normalize();
-    cuts.push({ n, d: 0.62 + cr() * 0.3 });
+    cuts.push({ n, d: 0.45 + cr() * 0.3 });
   }
   for (let i = 0; i < p.count; i++) {
     const v = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i));
@@ -274,7 +280,7 @@ export function buildBoulders(count = 700): { geometry: THREE.BufferGeometry; ma
       const k = v.dot(c.n);
       if (k > c.d) v.addScaledVector(c.n, c.d - k);
     }
-    v.multiplyScalar(1 + fbm2(v.x * 2.3 + v.z, v.y * 2.3 - v.z, 3, 78) * 0.06);
+    v.multiplyScalar(1 + fbm2(v.x * 2.3 + v.z, v.y * 2.3 - v.z, 3, 78) * 0.03);
     v.y *= 0.7;
     p.setXYZ(i, v.x, v.y, v.z);
   }
@@ -332,7 +338,9 @@ export function createBoulderMaterial(): THREE.MeshStandardMaterial {
           '#include <normal_fragment_maps>',
           `#include <normal_fragment_maps>
           {
-            float hgt = fbm(vBWorld.xz * 1.1 + vBWorld.y * 0.9, 5) + 0.4 * fbm(vBWorld.zy * 3.0, 3);
+            // Two low octaves only: finer bump detail can't be filtered per
+            // pixel quad without TAA and stipples; albedo carries the grain.
+            float hgt = fbm(vBWorld.xz * 0.7 + vBWorld.y * 0.6, 2);
             vec3 dpx = dFdx(vViewPosition);
             vec3 dpy = dFdy(vViewPosition);
             float dhx = dFdx(hgt);
@@ -341,7 +349,10 @@ export function createBoulderMaterial(): THREE.MeshStandardMaterial {
             vec3 r2 = cross(normal, dpx);
             float det = dot(dpx, r1);
             vec3 grad = sign(det) * (dhx * r1 + dhy * r2);
-            normal = normalize(abs(det) * normal - grad * 0.5);
+            float aa = 1.0 - smoothstep(0.04, 0.25, fwidth(hgt));
+            vec3 sg = grad / max(abs(det), 1e-8) * 0.35 * aa;
+            sg *= min(1.0, 0.6 / max(length(sg), 1e-6));
+            normal = normalize(normal - sg);
           }`,
         );
     },

@@ -12,6 +12,12 @@ import { CSM } from 'three/examples/jsm/csm/CSM.js';
 // already patch their shaders (atmosphere, weather, crowd), so the addon's
 // onBeforeCompile hook is chained after ours rather than replacing it.
 
+// three r186 rotates its 5 PCF taps per pixel with interleaved gradient
+// noise, which only resolves under temporal anti-aliasing. We don't run TAA,
+// so on half-lit faces (a grazing sun on rock) the noise shows as a
+// checkerboard. A fixed tap pattern gives smooth hardware-filtered edges.
+THREE.ShaderChunk.shadowmap_pars_fragment = THREE.ShaderChunk.shadowmap_pars_fragment.replaceAll('interleavedGradientNoise( gl_FragCoord.xy ) * PI2', '0.0');
+
 export interface ShadowRig {
   csm: CSM;
   /** Make a material cascade-aware (idempotent). */
@@ -40,7 +46,11 @@ export function createShadowRig(opts: { camera: THREE.PerspectiveCamera; parent:
     lightMargin: 220,
   });
   csm.fade = true;
-  for (const l of csm.lights) l.shadow.normalBias = 0.25;
+  for (const l of csm.lights) {
+    l.shadow.normalBias = 0.25;
+    // Filter radius in texels: soft enough to hide texel steps on the far cascades.
+    l.shadow.radius = 2;
+  }
 
   const attach = (mat: THREE.Material) => {
     if (mat.userData.csm || !(mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) return;
