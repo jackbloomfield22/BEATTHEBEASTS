@@ -145,8 +145,8 @@ export function createLightHeadMaterial(): THREE.MeshStandardMaterial {
 }
 
 /**
- * The plaza ring around the stadium: a 250 m square of paving, minus
- * everything within 8 m of the cliff edge (the square's southern corners
+ * The plaza ring around the stadium: a 250 m square of paving, minus the
+ * playing surface's footprint and everything within 8 m of the cliff edge (the square's southern corners
  * would otherwise hang out over the sea). Built as a grid and trimmed per
  * cell, with the cut edge snapped to the setback line.
  */
@@ -168,6 +168,8 @@ export function buildPlazaGeometry(): THREE.BufferGeometry {
       const z0 = cz - half + (j / n) * 250;
       const z1 = cz - half + ((j + 1) / n) * 250;
       if (z0 >= setback(x0) && z0 >= setback(x1)) continue;
+      // No paving under the playing surface and apron (World: ±39 m, z −71..67).
+      if (x0 >= -40 && x1 <= 40 && z0 >= -72 && z1 <= 66) continue;
       v(x0, z0); v(x0, z1); v(x1, z0);
       v(x1, z0); v(x0, z1); v(x1, z1);
     }

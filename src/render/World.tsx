@@ -315,7 +315,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       </mesh>
 
       {/* Plaza ring around the stadium and the open-end terrace */}
-      <mesh geometry={plaza} position={[0, 0.005, 0]} material={assets.pavingMat} receiveShadow />
+      <mesh geometry={plaza} position={[0, 0.02, 0]} material={assets.pavingMat} receiveShadow />
       <primitive object={lamps} />
       <mesh position={[0, 0.6, 71]} material={assets.concreteMat} receiveShadow castShadow>
         <boxGeometry args={[100, 1.2, 0.4]} />

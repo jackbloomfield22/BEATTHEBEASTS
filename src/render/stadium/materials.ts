@@ -95,7 +95,9 @@ export function createConcreteMaterial(): THREE.MeshStandardMaterial {
               float top = smoothstep(2.05, 2.1, vCWorld.y) * smoothstep(2.3, 2.25, vCWorld.y);
               c = mix(c, vec3(0.45, 0.85, 0.05), top);
               concreteEmissive = vec3(0.35, 0.7, 0.02) * top * (0.2 + uLights);
-            } else if (part > 4.5 && part < 5.5) {
+            } else if ((part > 4.5 && part < 5.5) || part > 9.5) {
+              // Facade bands; the stands' south end caps (part 10) wear the
+              // same cladding, running along their depth (uv.x = d).
               float y = vCWorld.y;
               float s = vCUv.x;
               vec3 warm = vec3(1.0, 0.72, 0.42);
@@ -145,8 +147,6 @@ export function createConcreteMaterial(): THREE.MeshStandardMaterial {
               }
               // Weathering streaks below ledges.
               c *= 0.92 + 0.08 * fbm(vec2(s * 2.0, y * 0.05), 3);
-            } else if (part > 9.5) {
-              c *= 0.8;
             }
             // Horizontal pour joints.
             if (part < 4.5 || part > 5.5) c *= 1.0 - 0.18 * smoothstep(0.04, 0.0, abs(fract(vCWorld.y / 1.2) - 0.5) - 0.46);
