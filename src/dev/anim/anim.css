@@ -42,3 +42,34 @@
 .lab-view {
   position: relative;
 }
+.lab-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.lab-row button {
+  background: #1d2024;
+  color: #e6e6e6;
+  border: 1px solid #2c2f35;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.lab-check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+}
+.lab-readout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0;
+  color: #c9ccd1;
+  font-variant-numeric: tabular-nums;
+}
+.lab-readout dt {
+  color: #7d828b;
+}
+.lab-readout dd {
+  margin: 0;
+}

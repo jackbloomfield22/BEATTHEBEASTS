@@ -4,17 +4,17 @@
     {
       "lod": 0,
       "triangles": 19860,
-      "vertices": 10692
+      "vertices": 10677
     },
     {
       "lod": 1,
-      "triangles": 8977,
-      "vertices": 5079
+      "triangles": 8976,
+      "vertices": 5076
     },
     {
       "lod": 2,
       "triangles": 3461,
-      "vertices": 2066
+      "vertices": 2072
     }
   ],
   "bones": 52,
@@ -71,5 +71,5 @@
     "lean",
     "belly"
   ],
-  "bytes": 1549596
+  "bytes": 1546896
 }

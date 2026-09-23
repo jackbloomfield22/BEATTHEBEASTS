@@ -48,9 +48,10 @@ def covered(co: Vector) -> bool:
         return True  # inside the cleats
     if gear.PANTS_HEM_Z + 0.05 < co.z < 1.0 and abs(co.x) < 0.24:
         return True  # hips and thighs, under the pants
-    # Keep the neck and the top of the chest and back under the collar, so a
-    # look down the collar opening lands on skin, not through the jersey.
-    if co.z > 1.47 and math.hypot(co.x, co.y - 0.02) < 0.16:
+    # Keep only the neck under the collar. Chest skin kept here followed the
+    # neck bones and poked through the jersey when the head came up in a
+    # stance; the double-sided jersey covers a look down the collar.
+    if co.z > 1.50 and math.hypot(co.x, co.y - 0.02) < 0.085:
         return False
     if 0.95 <= co.z < 1.575:
         for s in ("l", "r"):
