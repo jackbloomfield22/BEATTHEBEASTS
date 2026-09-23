@@ -21,11 +21,12 @@
 // than the fetch dates recorded in data/augment/sources.json).
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFENSE, OL_UNITS, PLAYERS } from '../../data/legacy/index.ts';
 import { NAME_ALIASES, NOT_A_PERSON } from './aliases.ts';
+import { ARM_REPORT_BEGIN, ARM_REPORT_END } from './arm-report.ts';
 import { FIRST_STATS_SEASON, LAST_SEASON, ROOT, SOURCES_PATH, type Manifest } from './fetch-nflverse.ts';
 import { decadeSeasons, type LegacyFranchise } from './franchises.ts';
 import { addLine, emptyLine, isRealGsis, loadAll, type NflData, type Person, type RosterRow, type StatLine } from './load.ts';
@@ -1293,7 +1294,12 @@ function writeReport(inp: ReportInput): void {
   L.push('| File | Size |', '|---|---:|');
   for (const [f, b] of Object.entries(inp.sizes)) L.push(`| data/augment/${f} | ${(b / 1024).toFixed(0)} KB |`);
   L.push('');
-  writeFileSync(REPORT, `${L.join('\n')}\n`);
+  // Keep the arm-strength section that tools/augment/arm.ts maintains between its markers.
+  const old = existsSync(REPORT) ? readFileSync(REPORT, 'utf8') : '';
+  const armA = old.indexOf(ARM_REPORT_BEGIN);
+  const armB = old.indexOf(ARM_REPORT_END);
+  const arm = armA >= 0 && armB > armA ? `${old.slice(armA, armB + ARM_REPORT_END.length)}\n` : '';
+  writeFileSync(REPORT, `${L.join('\n')}\n${arm}`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();
