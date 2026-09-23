@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { patchMaterial } from '../sky/atmosphere';
-import { NOISE_GLSL } from '../sky/SkyDome';
 import { YARD } from '../world/constants';
+import { FIELD_NOISE_PARS_GLSL, fieldNoiseUniforms } from './fieldNoise';
 
 // The playing surface in one draw: grass albedo with color variation and wear,
 // mowing stripes with a view-dependent sheen (why stripes read on TV),
@@ -132,9 +132,11 @@ export function createFieldPaint(): THREE.CanvasTexture {
  * The field's albedo, roughness and paint coverage at a world point: grass,
  * mowing stripes, wear, analytic markings and painted decals. Shared by the
  * field surface and the grass shells (grass.ts) so blades carry the paint.
- * Needs NOISE_GLSL, uPaint and the atmosphere pars (for weatherSnowMask).
+ * Needs uPaint, the baked noise uniforms (fieldNoise.ts) and the atmosphere
+ * pars (for weatherSnowMask).
  */
 export const FIELD_SAMPLE_GLSL = /* glsl */ `
+${FIELD_NOISE_PARS_GLSL}
 struct FieldSample { vec3 col; float rough; float white; };
 float aaBand(float d, float halfW) {
   float fw = max(fwidth(d), 1e-4);
@@ -146,8 +148,9 @@ FieldSample fieldSample(vec3 w) {
             vec3 V = normalize(cameraPosition - w);
 
             // Grass base with multi-scale variation.
-            float n1 = fbm(w.xz * 0.08, 4);
-            float n2 = fbm(w.xz * 1.7, 3);
+            // Baked fbm (fieldNoise.ts): large scale over the field, fine scale tiling.
+            float n1 = texture2D(uFieldNoise, fieldNoiseUv(w.xz)).r;
+            float n2 = turfNoise(w.xz).r;
             vec3 grass = mix(vec3(0.045, 0.2, 0.03), vec3(0.085, 0.29, 0.04), n1);
             grass *= 0.88 + 0.24 * n2;
 
@@ -215,6 +218,7 @@ export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMat
     mat,
     (shader) => {
       shader.uniforms.uPaint = { value: paint };
+      Object.assign(shader.uniforms, fieldNoiseUniforms());
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nvarying vec3 vFWorld;')
         .replace('#include <project_vertex>', '#include <project_vertex>\nvFWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
@@ -224,7 +228,6 @@ export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMat
           `#include <common>
           varying vec3 vFWorld;
           uniform sampler2D uPaint;
-          ${NOISE_GLSL}
           float fieldRough;`,
         )
         // After the atmosphere pars (patchMaterial puts them right after <common>).
@@ -244,7 +247,7 @@ export function createFieldMaterial(paint: THREE.Texture): THREE.MeshStandardMat
           `#include <normal_fragment_maps>
           {
             // Turf detail normal (fine blades) from derivative bump.
-            float hgt = fbm(vFWorld.xz * 6.0, 3) * 0.6 + fbm(vFWorld.xz * 23.0, 2) * 0.4;
+            float hgt = turfNoise(vFWorld.xz).g;
             vec3 dpx = dFdx(vViewPosition);
             vec3 dpy = dFdy(vViewPosition);
             float dhx = dFdx(hgt);
