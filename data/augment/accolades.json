@@ -4,7 +4,7 @@
   "source": "Wikipedia (en) via the MediaWiki Action API, CC BY-SA 4.0; section 0 wikitext of each page",
   "api": "https://en.wikipedia.org/w/api.php",
   "generatedBy": "tools/reference/build_accolades.py",
-  "generated": "2026-09-23T01:02:54Z",
+  "generated": "2026-09-23T01:15:33Z",
   "fields": {
    "proBowl": "seasons with a Pro Bowl selection",
    "allPro1": "seasons first-team All-Pro (as listed by Wikipedia: AP or consensus)",
@@ -28,16 +28,15 @@
   "coverage": {
    "entries_all": {
     "ALL": {
-     "reference": 2198,
-     "missing": 3
+     "reference": 2199,
+     "missing": 2
     },
     "DB": {
      "reference": 125,
      "missing": 1
     },
     "DL": {
-     "reference": 152,
-     "missing": 1
+     "reference": 153
     },
     "LB": {
      "reference": 107
@@ -61,15 +60,13 @@
    },
    "entries_imp85": {
     "ALL": {
-     "reference": 356,
-     "missing": 1
+     "reference": 357
     },
     "DB": {
      "reference": 61
     },
     "DL": {
-     "reference": 71,
-     "missing": 1
+     "reference": 72
     },
     "LB": {
      "reference": 47
@@ -90,15 +87,14 @@
    "people": {
     "ALL": {
      "reference": 1474,
-     "missing": 3
+     "missing": 2
     },
     "DB": {
      "reference": 120,
      "missing": 1
     },
     "DL": {
-     "reference": 138,
-     "missing": 1
+     "reference": 139
     },
     "LB": {
      "reference": 101
@@ -110,7 +106,7 @@
      "reference": 143
     },
     "RB": {
-     "reference": 194,
+     "reference": 193,
      "missing": 1
     },
     "TE": {
@@ -122,15 +118,13 @@
    },
    "people_imp85": {
     "ALL": {
-     "reference": 300,
-     "missing": 1
+     "reference": 301
     },
     "DB": {
      "reference": 59
     },
     "DL": {
-     "reference": 64,
-     "missing": 1
+     "reference": 65
     },
     "LB": {
      "reference": 44
@@ -151,7 +145,7 @@
   },
   "wikipediaPass": {
    "networkRequests": 0,
-   "cacheHits": 33,
+   "cacheHits": 32,
    "backoffSeconds": 0,
    "elapsedSeconds": 3
   }
@@ -2347,7 +2341,7 @@
    ],
    "college": "UCLA",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Andre Johnson|WR|2000s": {
@@ -3723,7 +3717,7 @@
    "draftRound": 15,
    "draftPick": 384,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Art Monk|WR|1980s": {
@@ -6050,7 +6044,7 @@
    "draftRound": 4,
    "draftPick": 112,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Bobby Wagner|LB|2010s": {
@@ -6252,7 +6246,7 @@
    "draftRound": 5,
    "draftPick": 143,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Brad Edelman|OL|1980s": {
@@ -8316,7 +8310,7 @@
    ],
    "college": "Texas",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Bryant McKinnie|OL|2000s": {
@@ -9540,7 +9534,7 @@
    "draftRound": 13,
    "draftPick": 337,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Carl Nicks|OL|2000s": {
@@ -10524,7 +10518,7 @@
    "draftRound": 6,
    "draftPick": 174,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Charles Cross|OL|2020s": {
@@ -11106,7 +11100,7 @@
    "draftRound": 2,
    "draftPick": 50,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Chris Chambers|WR|2000s": {
@@ -11573,15 +11567,47 @@
    "entries": [
     "defense:chris-jones:KC:2020s"
    ],
-   "src": "none",
-   "conf": "missing",
-   "note": "no Wikipedia page with a matching team/decade found; candidates tried: Chris Jones (American football), Chris Jones (gridiron football), Chris Jones (defensive end), Chris Jones (defensive tackle), Chris Jones (defensive lineman), Chris Jones (defensive tackle, born 1994), Chris Jones (gridiron football coach), Chris Jones (punter)",
-   "proBowl": [],
-   "allPro1": [],
-   "allPro2": [],
+   "page": "Chris Jones (defensive tackle, born 1994)",
+   "src": "wikipedia:Chris Jones (defensive tackle, born 1994)",
+   "url": "https://en.wikipedia.org/wiki/Chris_Jones_(defensive_tackle,_born_1994)",
+   "retrieved": "2026-09-23T01:14:01Z",
+   "conf": "reference",
+   "match": [
+    "search"
+   ],
+   "proBowl": [
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "allPro1": [
+    2022,
+    2023,
+    2024
+   ],
+   "allPro2": [
+    2018,
+    2020,
+    2021
+   ],
    "mvp": [],
    "opoy": [],
-   "dpoy": []
+   "dpoy": [],
+   "teams": [
+    {
+     "franchise": "KC",
+     "from": 2016,
+     "to": 2026
+    }
+   ],
+   "college": "Mississippi State",
+   "draftYear": 2016,
+   "draftRound": 2,
+   "draftPick": 37
   },
   "Chris Lindstrom|OL|2020s": {
    "name": "Chris Lindstrom",
@@ -12726,7 +12752,7 @@
    "draftRound": 2,
    "draftPick": 43,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Colin Kaepernick|QB|2010s": {
@@ -12840,7 +12866,7 @@
    "draftRound": 5,
    "draftPick": 144,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Connor Williams|OL|2020s": {
@@ -14777,7 +14803,7 @@
    "draftRound": 8,
    "draftPick": 200,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Dan Dierdorf|OL|1970s": {
@@ -15053,7 +15079,7 @@
    "draftRound": 11,
    "draftPick": 270,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Dan Ross|TE|1970s": {
@@ -15220,7 +15246,7 @@
    ],
    "college": "San Diego State",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Daniel Jones|QB|2020s": {
@@ -15265,7 +15291,7 @@
    "draftRound": 1,
    "draftPick": 6,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Danielle Hunter|DL|2020s": {
@@ -16049,7 +16075,7 @@
    "draftRound": 2,
    "draftPick": 34,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Dave Robinson|LB|1960s": {
@@ -17585,7 +17611,7 @@
    ],
    "college": "Southern Mississippi",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Demario Davis|LB|2010s": {
@@ -19210,7 +19236,7 @@
    "draftRound": 4,
    "draftPick": 98,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Don Mosebar|OL|1980s": {
@@ -21368,7 +21394,7 @@
    "draftRound": 2,
    "draftPick": 57,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Edgerrin James|RB|1990s": {
@@ -23439,7 +23465,7 @@
    "draftRound": 2,
    "draftPick": 38,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Foyesade Oluokun|LB|2020s": {
@@ -25742,7 +25768,7 @@
    "draftRound": 1,
    "draftPick": 6,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Greg Skrepenak|OL|1990s": {
@@ -25868,7 +25894,7 @@
     }
    ],
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Haason Reddick|LB|2020s": {
@@ -26016,7 +26042,7 @@
    ],
    "college": "Robert Morris",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Hardy Nickerson|LB|1990s": {
@@ -28413,7 +28439,7 @@
    "draftRound": 3,
    "draftPick": 68,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Jake Scott|DB|1970s": {
@@ -28505,7 +28531,7 @@
    ],
    "college": "NC State",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Jalen Hurts|QB|2020s": {
@@ -28913,6 +28939,7 @@
    "aliases": [],
    "entries": [
     "players:james-conner:ARI:2020s",
+    "players:james-conner:ATL:2020s",
     "players:james-conner:PIT:2010s"
    ],
    "page": "James Conner (American football)",
@@ -28921,6 +28948,7 @@
    "retrieved": "2026-09-23T00:22:01Z",
    "conf": "reference",
    "match": [
+    "hand-checked",
     "search"
    ],
    "proBowl": [
@@ -28947,31 +28975,8 @@
    "college": "Pittsburgh",
    "draftYear": 2017,
    "draftRound": 3,
-   "draftPick": 105
-  },
-  "James Conner|RB|2020s": {
-   "name": "James Conner",
-   "aliases": [],
-   "entries": [
-    "players:james-conner:ATL:2020s"
-   ],
-   "page": "James Conner",
-   "src": "wikipedia:James Conner",
-   "url": "https://en.wikipedia.org/wiki/James_Conner",
-   "retrieved": "2026-09-23T00:11:08Z",
-   "conf": "reference",
-   "match": [
-    "hand-checked"
-   ],
-   "proBowl": [],
-   "allPro1": [],
-   "allPro2": [],
-   "mvp": [],
-   "opoy": [],
-   "dpoy": [],
-   "teams": [],
+   "draftPick": 105,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)",
     "team/decade matched loosely: players:james-conner:ATL:2020s (hand-checked)"
    ]
   },
@@ -33537,7 +33542,7 @@
    "draftRound": 7,
    "draftPick": 181,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Joe Washington|RB|1970s": {
@@ -34768,7 +34773,7 @@
    "draftRound": 1,
    "draftPick": 14,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "John Taylor|WR|1980s": {
@@ -35974,7 +35979,7 @@
    "draftRound": 1,
    "draftPick": 17,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Josh Gordon|WR|2010s": {
@@ -37294,7 +37299,7 @@
    "draftRound": 6,
    "draftPick": 143,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Karlos Dansby|LB|2000s": {
@@ -42210,7 +42215,7 @@
    "draftRound": 1,
    "draftPick": 19,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Levi Jones|OL|2000s": {
@@ -45047,7 +45052,7 @@
    "draftRound": 5,
    "draftPick": 166,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Marvin Powell|OL|1980s": {
@@ -47456,7 +47461,7 @@
    "draftRound": 3,
    "draftPick": 68,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Mike Haynes|DB|1980s": {
@@ -48056,7 +48061,7 @@
    ],
    "college": "Oregon State",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Mike Singletary|LB|1980s": {
@@ -49494,7 +49499,7 @@
    "draftRound": 6,
    "draftPick": 142,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Nick Bolton|LB|2020s": {
@@ -49946,7 +49951,7 @@
    ],
    "college": "Tampa",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Nolan Cromwell|DB|1970s": {
@@ -50321,7 +50326,7 @@
    ],
    "college": "South Carolina State",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Orlando Pace|OL|1990s": {
@@ -51052,7 +51057,7 @@
    "draftRound": 12,
    "draftPick": 316,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Paul Gruber|OL|1990s": {
@@ -51122,7 +51127,7 @@
    "draftRound": 3,
    "draftPick": 54,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Paul Krause|DB|1960s": {
@@ -51517,7 +51522,7 @@
    "draftRound": 7,
    "draftPick": 227,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Peyton Manning|QB|2000s": {
@@ -53454,7 +53459,7 @@
    "draftRound": 6,
    "draftPick": 177,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Reggie White|DL|1980s": {
@@ -54293,7 +54298,7 @@
    ],
    "college": "South Carolina",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Riley Odoms|TE|1970s": {
@@ -54977,7 +54982,7 @@
    "draftRound": 4,
    "draftPick": 99,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Rocky Freitas|OL|1970s": {
@@ -55793,7 +55798,7 @@
    "draftRound": 10,
    "draftPick": 277,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Ron Hallstrom|OL|1980s": {
@@ -57515,7 +57520,7 @@
    ],
    "college": "Prairie View A&M",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Sam Bradford|QB|2010s": {
@@ -59295,7 +59300,7 @@
    ],
    "college": "Fresno State",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Sterling Sharpe|WR|1980s": {
@@ -60196,7 +60201,7 @@
    "draftRound": 5,
    "draftPick": 154,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Steve Wisniewski|OL|1990s": {
@@ -60289,7 +60294,7 @@
    ],
    "college": "Northern Iowa",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Steve Young|QB|1980s": {
@@ -65189,7 +65194,7 @@
    ],
    "college": "Western Oregon",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Tyrod Taylor|QB|2010s": {
@@ -65513,7 +65518,7 @@
    "draftRound": 1,
    "draftPick": 15,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Vernon Carey|OL|2000s": {
@@ -66202,7 +66207,7 @@
    ],
    "college": "Florida A&M",
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Walter Jones|OL|1990s": {
@@ -68498,7 +68503,7 @@
    "draftRound": 6,
    "draftPick": 180,
    "notes": [
-    "infobox has no highlights field (no honors listed on the page)"
+    "infobox lists no highlights (no honors on the page)"
    ]
   },
   "Zach Thomas|LB|1990s": {

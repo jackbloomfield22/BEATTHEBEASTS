@@ -196,7 +196,7 @@ PAGE_HINTS = {
     # legacy decade is wrong (Proehl was with CAR in 2002-03 and 2006); person not in doubt
     "players:ricky-proehl:CAR:1990s": "Ricky Proehl",
     # legacy team is wrong (Conner: PIT 2017-20, ARI 2021-); person not in doubt
-    "players:james-conner:ATL:2020s": "James Conner",
+    "players:james-conner:ATL:2020s": "James Conner (American football)",
 }
 
 TITLE_WORDS = {
@@ -352,8 +352,9 @@ def main() -> None:
                 # the legacy team/decade is wrong, the person is not in doubt
                 m, how = d_an, "name-only"
             if not m and e["id"] in PAGE_HINTS:
-                m = analyse(pages.get(PAGE_HINTS[e["id"]]))
-                how = "hand-checked"
+                h = analyse(pages.get(PAGE_HINTS[e["id"]]))
+                if h and h["football"]:
+                    m, how = h, "hand-checked"
             if m:
                 assign[e["id"] + "|" + n] = (m, how)
                 if how != "search":
@@ -407,7 +408,7 @@ def main() -> None:
         rec["teams"] = [{"franchise": t["franchise"], "from": t["from"], "to": t["to"]} for t in an["teams"] if t["franchise"]]
         rec.update(wp.draft_info(an["params"]))
         if not any(honors.values()) and not an["params"].get("highlights"):
-            notes.append("infobox has no highlights field (no honors listed on the page)")
+            notes.append("infobox lists no highlights (no honors on the page)")
         loose = sorted({loose_notes[e["id"]] for e in p["entries"] if e["id"] in loose_notes})
         if loose:
             notes.append("team/decade matched loosely: " + ", ".join(

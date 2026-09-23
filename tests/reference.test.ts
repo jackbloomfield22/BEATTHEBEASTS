@@ -127,11 +127,12 @@ describe('accolades.json provenance', () => {
     }
   });
 
-  it('keys people as name|group|firstDecade and never assigns an entry to two people', () => {
+  it('keys people as name|group|firstDecade and never assigns a player entry to two people', () => {
     const seen = new Map<string, string>();
     for (const [key, p] of Object.entries(acc.people)) {
       expect(key).toMatch(/^[^|]+\|(QB|RB|WR|TE|OL|DL|LB|DB)\|(19|20)\d0s(#\d+)?$/);
-      for (const e of p.entries) {
+      // OL unit ids are shared by the unit's key-list linemen; player and defender entries are not
+      for (const e of p.entries.filter((x) => !x.startsWith('ol-units:'))) {
         expect(seen.get(e), `${e} in ${key} and ${seen.get(e)}`).toBeUndefined();
         seen.set(e, key);
       }
@@ -144,7 +145,7 @@ describe('accolades.json provenance', () => {
         const v = p[f];
         expect(Array.isArray(v), `${p.name}.${f}`).toBe(true);
         expect([...new Set(v)].sort((a, b) => a - b), `${p.name}.${f}`).toEqual(v);
-        for (const y of v) expect(y >= 1950 && y <= 2026, `${p.name}.${f} ${y}`).toBe(true);
+        for (const y of v) expect(y >= 1940 && y <= 2026, `${p.name}.${f} ${y}`).toBe(true);
       }
     }
   });
@@ -186,6 +187,20 @@ describe('accolades.json spot facts', () => {
     const qb = byName('Alex Smith', 'players:alex-smith:KC:2010s');
     const te = byName('Alex Smith', 'players:alex-smith:TB:2000s');
     expect(qb.page).not.toBe(te.page);
+  });
+
+  it('keeps returner All-Pro selections apart from position All-Pros', () => {
+    const hill = byName('Tyreek Hill');
+    expect(hill.allProReturner).toEqual([2016]);
+    expect(hill.allPro1).not.toContain(2016);
+  });
+
+  it('reads multi-span team histories (retired, then returned)', () => {
+    const donald = byName('Aaron Donald');
+    expect(donald.teams).toEqual([
+      { franchise: 'LAR', from: 2014, to: 2023 },
+      { franchise: 'LAR', from: 2026, to: 2026 },
+    ]);
   });
 
   it('never counts conference or rookie awards as NFL awards', () => {

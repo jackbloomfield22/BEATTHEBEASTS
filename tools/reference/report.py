@@ -134,7 +134,7 @@ def main() -> None:
                 loose.append(f"- `{k}` -> {p.get('page')}: {n.split(': ', 1)[1]}")
             elif "count" in n and "parsed" in n:
                 counts.append(f"- `{k}`: {n}")
-            elif n.startswith("infobox has no highlights"):
+            elif n.startswith("infobox lists no highlights"):
                 nohl.append(k)
     missing = [f"- `{k}`: {', '.join(p['entries'])}" for k, p in sorted(people.items()) if p["conf"] == "missing"]
     sections["matching"] = "\n\n".join([
@@ -146,21 +146,30 @@ def main() -> None:
         "\n".join(counts) or "(none)",
         f"**Unmatched ({len(missing)})**: conf `missing`, honors unknown.",
         "\n".join(missing) or "(none)",
-        f"**Pages with no highlights field ({len(nohl)})**: honors stored as empty lists with conf `reference` "
+        f"**Pages whose infobox lists no highlights ({len(nohl)})**: honors stored as empty lists with conf `reference` "
         "(the page lists none, which for these role players almost always means none were won).",
     ])
 
     # ---------------------------------------------------------------- physical
     pc = phys["_meta"]["counts"]
-    ref_rows = sorted((p for p in phys["people"].values() if p["conf"] == "reference"), key=lambda p: p["forty"])
-    est_rows = sorted((p for p in phys["people"].values() if p["conf"] == "estimated"), key=lambda p: p["forty"])
+    rows_all = list(phys["people"].values())
+    est_rows = sorted((p for p in rows_all if p["conf"] == "estimated" or p.get("fieldConf")), key=lambda p: p["forty"])
+    cmp_rows = sorted((p for p in rows_all if p.get("alsoEstimated")), key=lambda p: p["forty"])
+    drafted = {k: acc["people"].get(k, {}).get("draftYear") for k in phys["people"]}
+    pre2000 = sum(1 for k, p in phys["people"].items() if p["conf"] == "reference" and (drafted[k] or 9999) < 2000)
     sections["physical"] = "\n\n".join([
-        f"{pc['reference']} reference times (Wikipedia pre-draft tables) and {pc['estimated']} estimates.",
-        "**Estimates from knowledge:**",
-        table([[p["name"], p["forty"], p["note"]] for p in est_rows], ["player", "40", "basis"]),
-        "**Where a reference exists, estimates kept for comparison:**",
-        table([[p["name"], p["forty"], p["alsoEstimated"]["forty"], p["timing"]] for p in ref_rows if p.get("alsoEstimated")],
-              ["player", "40 (Wikipedia)", "40 (estimate)", "timing"]),
+        f"{len(rows_all)} people: {pc['reference']} with a Wikipedia pre-draft table (conf `reference`; {pre2000} of them "
+        f"drafted before 2000, i.e. outside the nflverse combine data), {pc['estimated']} with only an estimated 40. "
+        "Table timing: " + ", ".join(f"{k} {v}" for k, v in pc["timing"].items()) + ".",
+        table([[f, c["reference"], c["estimated"]] for f, c in pc["fields"].items()], ["field", "reference", "estimated"]),
+        "Units: seconds (forty, tenSplit, shuttle, cone), inches (vertical, broad), reps of 225 lb (bench). "
+        "Out-of-range values are dropped and listed in `flags`; values the page marks 'citation needed' are kept and flagged.",
+        "**Estimated 40 times (from knowledge; only the 40 is ever estimated):**",
+        table([[p["name"], p["forty"], (p.get("fieldConf", {}).get("forty") or p)["note"]] for p in est_rows],
+              ["player", "40", "basis"]),
+        "**Where the Wikipedia table has a 40, my estimate is kept under `alsoEstimated` as a check on the estimates:**",
+        table([[p["name"], p["forty"], p["alsoEstimated"]["forty"], p["timing"]] for p in cmp_rows],
+              ["player", "40 (Wikipedia)", "40 (estimate)", "table timing"]),
     ])
 
     text = DOC.read_text("utf-8")
