@@ -78,7 +78,7 @@ export function createFieldPaint(): THREE.CanvasTexture {
       }
     }
 
-    // End-zone lettering: BLACKCLIFF (north), BEASTS (south), read from the field.
+    // End-zone lettering: BLACKCLIFF in both end zones (GDD §12.4), read from the field.
     const endText = (label: string, zCenter: number, north: boolean) => {
       const up: [number, number] = north ? [0, -1] : [0, 1];
       const right: [number, number] = north ? [1, 0] : [-1, 0];
@@ -95,7 +95,7 @@ export function createFieldPaint(): THREE.CanvasTexture {
       });
     };
     endText('BLACKCLIFF', -55, true);
-    endText('BEASTS', 55, false);
+    endText('BLACKCLIFF', 55, false);
 
     // Midfield claw: three raking slashes.
     ctx.save();

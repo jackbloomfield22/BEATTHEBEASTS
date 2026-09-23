@@ -82,7 +82,8 @@ export function buildPerson(pose: number): THREE.BufferGeometry {
   parts.push(part(new THREE.SphereGeometry(0.105, 14, 10), SKIN, M(0, shoulderY + 0.2, 0.01, 0, 0, 0, 1, 1.12, 1.02)));
   // Hair shell: crown, sides down to the ears and the back of the head,
   // framing the face from the front.
-  parts.push(part(new THREE.SphereGeometry(0.113, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), HAIR, M(0, shoulderY + 0.215, -0.004, -0.18, 0, 0, 1.06, 1.18, 1.1)));
+  // Tilted back so the front rim sits at the hairline (~6 cm above the eyes), not over them.
+  parts.push(part(new THREE.SphereGeometry(0.113, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), HAIR, M(0, shoulderY + 0.222, -0.006, -0.5, 0, 0, 1.06, 1.18, 1.1)));
   parts.push(part(new THREE.SphereGeometry(0.1, 12, 8), HAIR, M(0, shoulderY + 0.19, -0.035, 0, 0, 0, 1.04, 1.1, 0.9)));
   // Arms by pose.
   for (const side of [-1, 1]) {
