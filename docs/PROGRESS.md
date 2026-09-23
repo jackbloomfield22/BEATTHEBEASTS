@@ -186,6 +186,19 @@ Frame times can't be measured here (software rendering), so the 60 fps at 100% t
 
 The curve and calibration are unchanged. Formula changes, all user-approved: QB Throw Power (below), then four fixes after the consensus review (next paragraph), which also changed the WR/TE OVR weights. Anchors, traits, the Explorer and a consensus check moved too.
 
+**M4.5 added stints** (you: "from the 47 missing stints add only these: Deion Sanders ATL/SF 1990–94, Randy Moss MIN 2000–04, Terrell Owens SF 2000–03, Charles Woodson LV. Sourced like White's"; report: "Added in M4.5" under round 2 item 5):
+- *Added stints*: same file, tool and loader as White's, which now take offensive stints too. Season lines come from each player's Wikipedia career table (revision pinned). The build checks the table against its own Career row, the stated values, and nflverse roster seasons. Seasons from 1999 on are checked season by season against nflverse (all equal), and the ratings read nflverse's stats for them. `imp` comes from the same franchise's legacy stint in the adjacent decade, else the nearest one in time. Results:
+  - Deion Sanders ATL 1990s (1990–93: 3, 6, 3, 7 INT; imp from ATL 1980s): CB #11, 95.6.
+  - Deion Sanders SF 1990s (1994: 6 INT, 3 TD; imp from DAL 1990s, since he has no SF stint): CB #1, 98.2 (one season, medium confidence).
+  - Randy Moss MIN 2000s (2000–04: 425 rec, 6,416 yds, 62 TD; imp from MIN 1990s): WR #26, 93.1.
+  - Terrell Owens SF 2000s (2000–03: 370 rec, 5,265 yds, 51 TD; imp from SF 1990s): WR #3, 96.7.
+  - Charles Woodson LV 1990s (1998–99: 6 INT; imp from GB 2000s): CB #21, 93.4.
+  - Charles Woodson LV 2000s (2000–05: 11 INT): CB #44, 87.0.
+  
+  A stint is one franchise in one decade, so "ATL/SF" became two stints and Woodson's 1998–2005 Raiders run also became two. His 2013–15 return (safety, ages 37–39) is not added. 44 gaps are left in the report.
+  
+  Side effect: the larger WR pool moves Cris Carter's Catch in Traffic from 96.7 to 96.4 (anchor 97+, now flagged). Revis's NYJ 2000s Press reads 92.6 and passes (flag kept). Anchors: still 37 of 42. Lamar's flag and the six uncited M2 40 times are untouched.
+
 **Round 2 (your decisions on PR #3)** (report: "Approved fixes, round 2"; every stint before round 2 frozen in `data/ratings/round2.before.json` by `tools/ratings/round2-before.ts`):
 - *TE block grade*: the per-player cap is dropped, the 20% weight cap stays (`PLAYER_CAPPED_SIGNALS` is `imp` only; the test now checks the grade is never per-player capped). Kittle Run Block 77.7 → 93.6, TE 94.6 (#12) → 97.2 (#3); Winslow Run Block 95.7 → 91.5, TE 98.2 (#1) → 97.0 (#4). Winslow's Run Block stays high because round 1 moved the grade's lost weight onto size (0.361) and strength (0.217) and his 251 lb frame reads about 271 today; reported, not changed.
 - *Marino*: Release anchor band 97+ (97.9 passes); the anchor stays on Release.
