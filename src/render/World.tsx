@@ -149,7 +149,9 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
       cam.far = 1100;
       cam.updateProjectionMatrix();
       sun.shadow.bias = -0.0005;
-      sun.shadow.normalBias = 0.35;
+      // Wide map (±175 m) and a grazing golden-hour sun: a larger normal
+      // offset keeps faceted rock free of acne. Cascades replace this later.
+      sun.shadow.normalBias = 0.6;
     }
   }, [quality.shadowMapSize]);
 

@@ -154,7 +154,8 @@ void main() {
   // Body color: deep blue-green offshore, luminous turquoise over the shallows.
   vec3 skyAmb = skyRadiance(vec3(0.0, 1.0, 0.0));
   float sunUp = clamp(uSunDir.y * 4.0 + 0.2, 0.0, 1.0);
-  vec3 deep = vec3(0.004, 0.022, 0.032);
+  // Rain darkens the sea (overcast sky, stirred surface) - GDD §12.3.
+  vec3 deep = vec3(0.004, 0.022, 0.032) * (1.0 - 0.35 * uWet);
   vec3 shallow = vec3(0.03, 0.2, 0.19);
   float shallowAmt = exp(-depth / 5.5);
   vec3 body = mix(deep, shallow, shallowAmt);
@@ -165,7 +166,7 @@ void main() {
 
   // Sun glint: sharp near, widening with distance into the glitter path.
   vec3 H = normalize(uSunDir + V);
-  float rough = mix(0.035, 0.16, smoothstep(50.0, 4000.0, dist));
+  float rough = mix(0.035, 0.16, smoothstep(50.0, 4000.0, dist)) + 0.08 * uWet;
   float spec = D_GGX(max(dot(N, H), 0.0), rough) * fres;
   vec3 sun = uSunColor * spec * 0.9 * step(0.0, uSunDir.y);
 
@@ -180,10 +181,17 @@ void main() {
   col += warm * shallow * uStadiumGlow * 0.12 * exp(-dBowl / 200.0);
   col += warm * uStadiumLights * 0.015 * exp(-dBowl / 180.0) * fres * 4.0 * (1.0 - uStadiumGlow);
 
-  // Shoreline foam where the swell meets rock.
-  float foamBand = smoothstep(2.2, 0.0, depth) * step(0.001, depth + 0.5);
+  // Shoreline surf where the swell meets rock: a churned white band at the
+  // rocks, and wash lines that surge shoreward over the shallows (depth
+  // contours advect with the swell period, ~9 s) and break up as they go.
   float foamN = fbm(vWorld.xz * 0.35 + vec2(uTime * 0.2, -uTime * 0.3), 4);
-  float foam = foamBand * smoothstep(0.35, 0.75, foamN + foamBand * 0.4);
+  float foamF = fbm(vWorld.xz * 1.6 - vec2(uTime * 0.5, uTime * 0.35), 3);
+  float core = smoothstep(2.4, 0.2, depth) * step(0.001, depth + 0.5);
+  float surge = sin(depth * 1.1 + uTime * 0.7 + foamN * 4.0) * 0.5 + 0.5;
+  float wash = smoothstep(7.0, 1.0, depth) * smoothstep(0.72, 0.95, surge) * smoothstep(0.35, 0.6, foamF);
+  float foam = max(core * smoothstep(0.3, 0.7, foamN + core * 0.45), wash * 0.7);
+  // Lacy residue: foam thins to streaks, not a flat sheet.
+  foam *= mix(0.55, 1.0, smoothstep(0.3, 0.7, foamF));
   vec3 foamCol = (skyAmb * 1.2 + uSunColor * 0.08 * sunUp) * 0.9;
   col = mix(col, foamCol, foam * 0.85);
 

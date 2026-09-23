@@ -200,10 +200,10 @@ export function createTerrainMaterial(distant = false): THREE.MeshStandardMateri
             float crev = smoothstep(0.4, 0.27, joints) * 0.6 + smoothstep(0.5, 0.33, bedding) * 0.25;
             // Blackcliff is dark volcanic rock (basalt, albedo ~0.06-0.15),
             // paler where it weathers in bands.
-            vec3 rockA = vec3(0.05, 0.05, 0.055);
-            vec3 rockB = vec3(0.15, 0.14, 0.13);
+            vec3 rockA = vec3(0.03, 0.031, 0.034);
+            vec3 rockB = vec3(0.1, 0.1, 0.105);
             vec3 rock = mix(rockA, rockB, smoothstep(0.28, 0.72, joints * 0.55 + bedding * 0.3 + grain * 0.25));
-            rock = mix(rock, vec3(0.24, 0.22, 0.2), smoothstep(0.63, 0.82, bedding) * 0.4);
+            rock = mix(rock, vec3(0.19, 0.18, 0.17), smoothstep(0.63, 0.82, bedding) * 0.4);
             rock *= (1.0 - crev) * (0.85 + 0.3 * grain);
             // Orange-yellow lichen (Xanthoria) on the sunny upper faces above
             // the spray, gray-green lichen and moss on ledges.
@@ -321,7 +321,7 @@ export function createBoulderMaterial(): THREE.MeshStandardMaterial {
           `#include <color_fragment>
           {
             float n = fbm(vBWorld.xz * 0.4 + vBWorld.y * 0.3, 4);
-            vec3 c = mix(vec3(0.05, 0.05, 0.055), vec3(0.17, 0.16, 0.15), n) * (0.8 + 0.4 * fbm(vBWorld.xz * 2.5 + vBWorld.y, 3));
+            vec3 c = mix(vec3(0.03, 0.031, 0.034), vec3(0.12, 0.12, 0.125), n) * (0.8 + 0.4 * fbm(vBWorld.xz * 2.5 + vBWorld.y, 3));
             float wet = smoothstep(uSeaLevel + 2.5, uSeaLevel + 0.2, vBWorld.y);
             c = mix(c, c * 0.35, wet);
             c = mix(c, vec3(0.2, 0.26, 0.12), smoothstep(0.65, 0.8, fbm(vBWorld.xz * 1.3, 3)) * (1.0 - wet) * 0.5);
