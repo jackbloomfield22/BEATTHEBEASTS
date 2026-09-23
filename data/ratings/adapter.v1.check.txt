@@ -1,1 +1,1 @@
-Sim check over 379 random rosters (any player in the pool, backups included) against seeded Beasts: legacy ratings 2.7 points per game, adapted ratings 4.2.
+Sim check over 379 random rosters (any player in the pool, backups included) against seeded Beasts: legacy ratings 2.7 points per game, adapted ratings 4.3.
