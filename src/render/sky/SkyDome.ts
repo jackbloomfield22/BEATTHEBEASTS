@@ -58,14 +58,17 @@ void main() {
   vec3 d = normalize(vDir);
   vec3 col = skyRadiance(d);
 
-  // Sun disc with limb darkening (drawn larger than life, as games do).
+  // Sun disc with limb darkening (drawn larger than life, as games do);
+  // added after the clouds so they can hide it.
   float cosTheta = dot(d, uSunDir);
   float r = 0.0092;
   float x = sqrt(max(0.0, 1.0 - cosTheta * cosTheta)) / r;
+  vec3 disc = vec3(0.0);
   if (cosTheta > 0.0 && x < 1.0) {
     float limb = 0.4 + 0.6 * sqrt(1.0 - x * x);
-    col += uSunDiscColor * limb * smoothstep(1.0, 0.92, x);
+    disc = uSunDiscColor * limb * smoothstep(1.0, 0.92, x);
   }
+  float cloudDens = 0.0;
 
   // Stars at night: one jittered point per cell of a direction grid, drawn
   // as a soft round dot with a little twinkle, fading into the horizon haze.
@@ -100,17 +103,28 @@ void main() {
     vec2 q = p / vec2(mix(2600.0, 9000.0, uCloudStreak), 2600.0) + vec2(uTime * 0.0035, uTime * 0.0012);
     float n = fbm(q, 6);
     float n2 = fbm(q * 3.1 + 5.0, 4);
-    float dens = smoothstep(1.0 - uCloudCover, 1.0 - uCloudCover + 0.35, n * 0.8 + n2 * 0.25);
+    // Optical thickness above the coverage threshold: thick parts of the
+    // deck self-shadow (darker bases), thin parts glow, so an overcast sky
+    // reads as a structured stratus layer instead of flat haze.
+    float thick = n * 0.8 + n2 * 0.25 - (1.0 - uCloudCover);
+    float dens = smoothstep(0.0, 0.35, thick);
     dens *= smoothstep(0.002, 0.08, d.y); // thin out to the horizon
+    float shade = mix(1.0, 0.5, smoothstep(0.12, 0.75, thick));
     float mu = dot(d, uSunDir);
     float fwd = pow(max(mu, 0.0), 6.0);
-    vec3 base = skyRadiance(normalize(vec3(d.x, 0.25, d.z))) * 0.9;
-    vec3 lit = uSunColor * (0.035 + 0.45 * fwd) * (1.0 - 0.55 * dens) + base;
+    vec3 base = skyRadiance(normalize(vec3(d.x, 0.25, d.z))) * 0.9 * mix(1.0, 0.8, smoothstep(0.2, 0.8, thick));
+    vec3 lit = uSunColor * (0.035 + 0.45 * fwd) * (1.0 - 0.55 * dens) * shade + base;
     // Distance haze: far clouds melt into the horizon glow.
     float haze = 1.0 - exp(-t / 45000.0);
     vec3 cloudCol = mix(lit, col, haze);
     col = mix(col, cloudCol, dens * 0.92);
+    cloudDens = dens;
   }
+  // The sun shows through gaps and thin cloud only; under a full deck it is
+  // a soft bright patch, not a disc.
+  float deck = smoothstep(0.6, 0.92, uCloudCover);
+  col += disc * (1.0 - cloudDens) * (1.0 - deck);
+  col += uSunDiscColor * 0.0015 * pow(max(cosTheta, 0.0), 180.0) * deck;
 
   gl_FragColor = vec4(col, 1.0);
 }
