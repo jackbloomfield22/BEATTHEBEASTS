@@ -451,7 +451,7 @@ export function AnimLab() {
         <Canvas shadows dpr={[1, 2]} gl={{ preserveDrawingBuffer: true, antialias: true }} camera={{ fov: 35, position: [cam[0]!, cam[1]!, cam[2]!] }} onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}>
           <color attach="background" args={['#9aa3ad']} />
           <hemisphereLight args={[0xbfd4ff, 0x3a3228, 0.9]} />
-          <directionalLight position={[4, 8, 6]} intensity={2.4} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-6} shadow-camera-right={6} shadow-camera-top={4} shadow-camera-bottom={-1} />
+          <directionalLight position={[4, 8, 6]} intensity={2.4} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0004} shadow-normalBias={0.02} shadow-camera-left={-6} shadow-camera-right={6} shadow-camera-top={4} shadow-camera-bottom={-1} />
           {asset && lib ? <Scene key={s.mode} asset={asset} lib={lib} s={s} onReadout={setReadout} /> : null}
           <OrbitControls target={[cam[3]!, cam[4]!, cam[5]!]} makeDefault />
         </Canvas>

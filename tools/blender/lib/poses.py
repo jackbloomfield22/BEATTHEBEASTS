@@ -100,6 +100,8 @@ def mirror(p: Pose) -> Pose:
 
 FIST = {f"{f}_{i}_{s}": (70 if f != "thumb" else 30, 0, 0) for s in SIDES for f in ("index", "fingers", "thumb") for i in ("01", "02", "03")}
 OPEN = {f"{f}_{i}_{s}": (12 if f != "thumb" else 5, 0, 0) for s in SIDES for f in ("index", "fingers", "thumb") for i in ("01", "02", "03")}
+# A runner's hand: curled but not clenched (two thirds of a fist).
+LOOSE_FIST = {k: (x * 0.65, y, z) for k, (x, y, z) in FIST.items()}
 
 # --- Stances -----------------------------------------------------------------
 # Hips sit back to balance a forward trunk: each stance's pelvis offset was

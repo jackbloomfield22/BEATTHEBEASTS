@@ -23,7 +23,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from .poses import ARMS_DOWN, OPEN, Foot, Pose
+from .poses import ARMS_DOWN, LOOSE_FIST, OPEN, Foot, Pose
 
 FPS = 30
 
@@ -113,7 +113,9 @@ def gait_pose(g: Gait, frame: int) -> Pose:
         "upperarm_r": (6 + arm, -38, 0),
         "forearm_l": (g.elbow + 0.25 * g.arm_swing * max(0.0, -swing), 0, 0),
         "forearm_r": (g.elbow + 0.25 * g.arm_swing * max(0.0, swing), 0, 0),
-        **OPEN,
+        # Relaxed open hands walking; a loose fist once running (open, flat
+        # hands swinging at speed read as palms held up).
+        **(LOOSE_FIST if g.speed > 2 else OPEN),
         **g.extra,
     }
     return Pose(pelvis=pelvis, joints=joints, feet=feet)
