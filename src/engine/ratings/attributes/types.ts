@@ -49,6 +49,37 @@ export type PositionAttrs = Partial<Record<RatedPos, readonly SkillAttrDef[]>>;
 export const IMP_MAX_SHARE = 0.2;
 
 /**
+ * Hand-set legacy grades that may amplify the evidence but never make an
+ * attribute: each is at most this share of any attribute, as a weight in the
+ * definition (tests/ratings-engine.test.ts) and per player (engine.ts caps
+ * the term at a quarter of the same-direction evidence from the other,
+ * uncapped terms, so ≤ 20% of the total).
+ *   imp      legacy reputation score (BRIEF "Stats first, reputation second":
+ *            "worth no more than 20%").
+ *   w_block  legacy TE block grade `b` (ratings follow-up, user-approved:
+ *            "cap it at 20% of each TE blocking attribute, same rule as imp").
+ *            It was 40% of TE Run Block, 35% of Pass Block and 25% of Impact
+ *            Block, uncapped.
+ */
+export const CAPPED_SIGNALS: Readonly<Record<string, number>> = { imp: IMP_MAX_SHARE, w_block: 0.2 };
+
+/**
+ * Caps the weight of one term at `share` of the formula and moves the excess
+ * to the other terms in proportion to their weights, except the capped
+ * signals (reputation never gains weight). Keeps the formula summing to 1.
+ */
+export function capTermWeight(terms: readonly TermDef[], key: string, share: number): TermDef[] {
+  const keys = (t: TermDef) => (typeof t.s === 'string' ? [t.s] : t.s);
+  const total = terms.reduce((a, t) => a + t.w, 0);
+  const cur = terms.filter((t) => keys(t).includes(key)).reduce((a, t) => a + t.w, 0);
+  const excess = cur - share * total;
+  if (excess <= 0) return [...terms];
+  const gains = (t: TermDef) => !keys(t).some((k) => k in CAPPED_SIGNALS);
+  const pool = terms.filter(gains).reduce((a, t) => a + t.w, 0);
+  return terms.map((t) => (keys(t).includes(key) ? { s: t.s, w: (t.w * share * total) / cur } : gains(t) ? { s: t.s, w: t.w + (excess * t.w) / pool } : t));
+}
+
+/**
  * Missing inputs: a term with no data contributes 0 (the position average),
  * and part of its weight moves to the player's other evidence (stats, honors,
  * sourced scouting grades, unit results; never body, physical or reputation

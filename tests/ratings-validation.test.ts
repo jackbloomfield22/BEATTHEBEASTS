@@ -33,15 +33,21 @@ describe('ratings run', () => {
     }
   });
 
-  it('imp is at most 20% of every attribute for every player', () => {
+  it('imp and the TE block grade are each at most 20% of every attribute for every player', () => {
+    let blockTerms = 0;
     for (const e of run.entries) {
       for (const [k, a] of Object.entries(e.attrs)) {
-        const moves = a.contributions.filter((c) => c.kind !== 'base' && !c.label.startsWith('Pool-shape') && !c.label.startsWith('Clamped'));
+        const moves = a.contributions.filter((c) => c.kind !== 'base' && !c.label.startsWith('Pool-shape') && !c.label.startsWith('Clamped') && !c.label.startsWith('Pool calibration'));
         const total = moves.reduce((s, c) => s + Math.abs(c.delta), 0);
         const imp = moves.filter((c) => c.kind === 'reputation' && c.src === 'legacy:imp').reduce((s, c) => s + Math.abs(c.delta), 0);
         expect(imp, `${e.id} ${k}`).toBeLessThanOrEqual(0.2 * total + 1e-9);
+        const block = moves.filter((c) => c.kind === 'reputation' && c.label.startsWith('Legacy block grade'));
+        blockTerms += block.length;
+        const b = block.reduce((s, c) => s + Math.abs(c.delta), 0);
+        expect(b, `${e.id} ${k} block grade`).toBeLessThanOrEqual(0.2 * total + 1e-9);
       }
     }
+    expect(blockTerms).toBeGreaterThan(1000);
   });
 
   it('no pileups: at most 6 players at 99 in any attribute of any position', () => {
