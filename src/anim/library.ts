@@ -10,7 +10,7 @@ import type { GaitClip } from './blend';
 const BASE = `${import.meta.env.BASE_URL}assets/characters/`;
 
 export interface ClipMeta {
-  kind: 'stance' | 'locomotion';
+  kind: 'stance' | 'locomotion' | 'transition';
   frames: number;
   duration: number;
   loop: boolean;
@@ -19,6 +19,11 @@ export interface ClipMeta {
   dir: [number, number];
   /** Planted frame ranges per foot, [start, end) (end may wrap past the loop). */
   contacts: { l: [number, number][]; r: [number, number][] };
+  /** Transitions: metres travelled along `dir` by each frame (the clip plays in place). */
+  travel?: number[];
+  /** Transitions: the clips it leaves and hands over to. */
+  from?: string;
+  to?: string;
 }
 
 export interface AnimLibrary {
@@ -70,4 +75,14 @@ export function planted(meta: ClipMeta, foot: 'l' | 'r', phase: number): boolean
     if (b > a ? f >= a && f < b : f >= a || f < b % meta.frames) return true;
   }
   return false;
+}
+
+/** Distance a transition has travelled at time t (s), linear between frames. */
+export function travelAt(meta: ClipMeta, fps: number, t: number): number {
+  const tr = meta.travel;
+  if (!tr || tr.length === 0) return 0;
+  const f = Math.min(Math.max(t * fps, 0), tr.length - 1);
+  const i = Math.min(Math.floor(f), tr.length - 2);
+  if (i < 0) return tr[0]!;
+  return tr[i]! + (tr[i + 1]! - tr[i]!) * (f - i);
 }

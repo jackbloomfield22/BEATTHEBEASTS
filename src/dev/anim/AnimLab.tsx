@@ -6,9 +6,10 @@ import { SKIN_TONES } from '@data/legacy';
 import { KITS } from '@/render/players/kits';
 import { loadPlayerAsset, Player, type PlayerAsset } from '@/render/players/playerAsset';
 import { bodyFromImperial } from '@/render/players/bodyShape';
-import { loadAnimLibrary, planted, type AnimLibrary } from '@/anim/library';
+import { loadAnimLibrary, planted, travelAt, type AnimLibrary } from '@/anim/library';
 import { PlayerAnimator } from '@/anim/animator';
 import { playerVariety, type Position, type Variety } from '@/render/players/variety';
+import { SEQUENCE_STANCES, SequenceDirector, sequenceSteps, type SequenceStance } from './sequence';
 import './anim.css';
 
 // Animation Lab (TECH_PLAN §9.3), #/dev/anim.
@@ -19,11 +20,13 @@ import './anim.css';
 //   Onion: the clip with ghosts a few frames either side of now.
 //   Sheet: a contact sheet, eight evenly spaced moments of one cycle in a
 //   row (Playwright captures these: tools/shots/contact.spec.ts).
+//   Sequence: a play's worth of movement through the runtime animator,
+//   transitions and all (sequence.ts), for one position.
 // The floor is a treadmill: it scrolls at the clip's ground speed, so a
 // planted foot visibly sticks to the grid (or slides). Contact markers turn
 // green on planted frames.
 //
-// Hash query: mode=lineup|single, clip, speed, t (freeze at time, s), rate
+// Hash query: mode=lineup|single|compare|onion|sheet|sequence, pos (sequence stance), clip, speed, t (freeze at time, s), rate
 // (playback rate), lock=0|1, kit, skin, lod, num, name, seed, clip2, yaw, look=1,
 // cam=x,y,z,tx,ty,tz.
 
@@ -42,7 +45,9 @@ const LINEUP: { label: string; pos: Position; h: number; w: number; num: number;
 const params = () => new URLSearchParams(location.hash.split('?')[1] ?? '');
 
 interface LabState {
-  mode: 'lineup' | 'single' | 'compare' | 'onion' | 'sheet';
+  mode: 'lineup' | 'single' | 'compare' | 'onion' | 'sheet' | 'sequence';
+  /** Sequence mode's position (its stance). */
+  pos: SequenceStance;
   clip: string; // clip name or 'blend'
   clip2: string; // compare mode's second clip
   speed: number;
@@ -68,6 +73,7 @@ interface Readout {
   time: number;
   planted: { l: boolean; r: boolean };
   correction: { l: number; r: number };
+  step?: string;
 }
 
 function gridTexture(): THREE.CanvasTexture {
@@ -122,9 +128,17 @@ const SHEET_FRAMES = 8;
 const ONION_STEP = 0.1; // s between ghosts
 const ONION_GHOSTS = 2; // each side
 
-function actorsFor(mode: LabState['mode']): Actor[] {
+/** The lineup body that plays a sequence stance. */
+function bodyFor(pos: SequenceStance): (typeof LINEUP)[number] {
+  const want: Position = pos.startsWith('ol') ? 'OL' : pos.startsWith('dl') ? 'DL' : pos.startsWith('wr') ? 'WR' : pos.startsWith('lb') ? 'LB' : pos.startsWith('db') ? 'CB' : pos.startsWith('rb') ? 'CB' : 'QB';
+  return LINEUP.find((b) => b.pos === want) ?? LINEUP[2]!;
+}
+
+function actorsFor(mode: LabState['mode'], pos: SequenceStance): Actor[] {
   const qb = LINEUP[2]!;
   switch (mode) {
+    case 'sequence':
+      return [{ body: bodyFor(pos), x: 0, offset: 0 }];
     case 'lineup':
       return LINEUP.map((body, i) => ({ body, x: (i - (LINEUP.length - 1) / 2) * 1.2, offset: 0 }));
     case 'compare':
@@ -161,7 +175,7 @@ function travel(lib: AnimLibrary, s: LabState): { speed: number; dir: [number, n
 
 function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibrary; s: LabState; onReadout: (r: Readout) => void }) {
   const camera = useThree((st) => st.camera);
-  const actors = useMemo(() => actorsFor(s.mode), [s.mode]);
+  const actors = useMemo(() => actorsFor(s.mode, s.pos), [s.mode, s.pos]);
   const bodies = actors.map((a) => a.body);
   const players = useMemo(
     () =>
@@ -177,7 +191,7 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
         return p;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [asset, s.mode],
+    [asset, s.mode, s.pos],
   );
   const animators = useMemo(() => players.map((p) => new PlayerAnimator(p, lib)), [players, lib]);
   // Dev console access: __labAnimators[0].player.bones.get(...)
@@ -205,6 +219,8 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [raw, lib, actors, s.clip, s.clip2]);
 
+  const director = useMemo(() => new SequenceDirector(sequenceSteps(s.pos, (c) => lib.clips.has(c))), [s.pos, lib]);
+  const walked = useRef(0);
   const floor = useMemo(() => gridTexture(), []);
   const markers = useRef<THREE.Mesh[]>([]);
   const clock = useRef(0);
@@ -216,13 +232,37 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
     const { speed, dir } = travel(lib, s);
     // Treadmill: the floor moves backward under the runner.
     // (the floor's +v axis is world -Z; one texture tile is 1 m).
-    floor.offset.set(dir[0] * speed * clock.current, -dir[1] * speed * clock.current);
+    const tm = s.clip !== 'blend' ? lib.meta[s.clip] : undefined;
+    const dist = tm?.travel ? travelAt(tm, lib.fps, clock.current % tm.duration) : speed * clock.current;
+    floor.offset.set(dir[0] * dist, -dir[1] * dist);
     ground.set(-dir[0] * speed, 0, -dir[1] * speed);
     let readout: Readout | null = null;
     players.forEach((p, i) => {
       const actor = actors[i]!;
       const clipName = clipOf(s, actor);
-      if (clipName === 'blend') {
+      if (s.mode === 'sequence') {
+        const an = animators[i]!;
+        an.footLock = s.lock;
+        // Treadmill at the body's speed: the loops' ground speed, or the
+        // active transition's root motion.
+        const tick = (h: number) => {
+          const speed = director.step(an, h);
+          const v = an.busy && !an.waiting ? an.transitionSpeed() : speed;
+          ground.set(0, 0, -v);
+          an.update(h, { speed, groundVelocity: ground, lookAt: s.look ? camera.position : null });
+          walked.current += v * h;
+        };
+        if (s.freezeT !== null) {
+          // Deterministic: replay the chain from the start at 60 Hz.
+          an.reset();
+          director.reset();
+          walked.current = 0;
+          const steps = Math.round(s.freezeT * 60);
+          for (let k = 0; k < steps; k++) tick(1 / 60);
+        } else if (dt > 0) tick(dt);
+        floor.offset.set(0, -walked.current);
+        readout = { phase: an.phase, time: clock.current, planted: { l: false, r: false }, correction: { ...an.correction }, step: director.label };
+      } else if (clipName === 'blend') {
         const an = animators[i]!;
         const input = { speed, groundVelocity: ground, yawRate: s.yaw, lookAt: s.look ? camera.position : null };
         an.footLock = s.lock;
@@ -290,6 +330,7 @@ export function AnimLab() {
   const [error, setError] = useState<string | null>(null);
   const [s, setS] = useState<LabState>({
     mode: (q.get('mode') as LabState['mode']) ?? 'single',
+    pos: (q.get('pos') as SequenceStance) ?? 'ol_3pt',
     clip: q.get('clip') ?? 'blend',
     clip2: q.get('clip2') ?? 'loco_jog',
     speed: Number(q.get('speed') ?? 3.5),
@@ -339,8 +380,21 @@ export function AnimLab() {
             <option value="compare">Compare two clips</option>
             <option value="onion">Onion skin</option>
             <option value="sheet">Contact sheet</option>
+            <option value="sequence">Sequence (huddle to stop)</option>
           </select>
         </label>
+        {s.mode === 'sequence' ? (
+          <label>
+            Position
+            <select value={s.pos} onChange={(e) => set({ pos: e.target.value as SequenceStance })}>
+              {SEQUENCE_STANCES.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label>
           Motion
           <select value={s.clip} onChange={(e) => set({ clip: e.target.value })}>
@@ -438,6 +492,12 @@ export function AnimLab() {
         </label>
         {readout ? (
           <dl className="lab-readout">
+            {readout.step ? (
+              <>
+                <dt>Step</dt>
+                <dd>{readout.step}</dd>
+              </>
+            ) : null}
             <dt>Phase</dt>
             <dd>{readout.phase.toFixed(3)}</dd>
             <dt>Planted</dt>
@@ -462,7 +522,7 @@ export function AnimLab() {
           <color attach="background" args={['#9aa3ad']} />
           <hemisphereLight args={[0xbfd4ff, 0x3a3228, 0.9]} />
           <directionalLight position={[4, 8, 6]} intensity={2.4} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0004} shadow-normalBias={0.02} shadow-camera-left={-6} shadow-camera-right={6} shadow-camera-top={4} shadow-camera-bottom={-1} />
-          {asset && lib ? <Scene key={s.mode} asset={asset} lib={lib} s={s} onReadout={setReadout} /> : null}
+          {asset && lib ? <Scene key={`${s.mode}-${s.pos}`} asset={asset} lib={lib} s={s} onReadout={setReadout} /> : null}
           <OrbitControls target={[cam[3]!, cam[4]!, cam[5]!]} makeDefault />
         </Canvas>
       </div>

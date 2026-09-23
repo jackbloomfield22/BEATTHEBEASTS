@@ -32,9 +32,9 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `set_rb_2pt` | transition | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `set_qb_center` | transition | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `set_qb_gun` | transition | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `getoff_ol_3pt` | transition | 19 | 0.0 | 0.00 | 0.00 | 25.9 | — | pass |
-| `getoff_dl_3pt` | transition | 19 | 0.0 | 0.00 | 0.00 | 23.9 | — | pass |
-| `getoff_dl_4pt` | transition | 19 | 0.0 | 0.00 | 0.00 | 23.9 | — | pass |
+| `getoff_ol_3pt` | transition | 19 | 0.0 | 0.00 | 0.00 | 26.2 | — | pass |
+| `getoff_dl_3pt` | transition | 19 | 0.0 | 0.00 | 0.00 | 25.8 | — | pass |
+| `getoff_dl_4pt` | transition | 19 | 0.0 | 0.00 | 0.00 | 25.8 | — | pass |
 | `getoff_wr_2pt` | transition | 15 | 0.0 | 0.00 | 0.00 | 25.9 | — | pass |
 | `getoff_lb_ready` | transition | 15 | 0.0 | 0.00 | 0.00 | 26.2 | — | pass |
 | `getoff_db_ready` | transition | 15 | 0.0 | 0.00 | 0.00 | 26.0 | — | pass |

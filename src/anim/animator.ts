@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Player } from '@/render/players/playerAsset';
 import { advancePhase, MIN_LOCO_SPEED, sampleGait, warpPhase } from './blend';
 import { rotateBoneWorld, solveTwoBone } from './ik';
-import { planted, type AnimLibrary } from './library';
+import { planted, travelAt, type AnimLibrary } from './library';
 
 // The per-player animation runtime (TECH_PLAN §9.2), layered:
 //   1. clips: a settled stance, or locomotion (the two gait clips that
@@ -13,6 +13,10 @@ import { planted, type AnimLibrary } from './library';
 //   3. body lean into turns and with acceleration, pivoting at the feet;
 //   4. look-at for the neck and head, clamped and spring-smoothed;
 //   5. shoulder-pad springs driven by the chest's vertical acceleration.
+// One-shot transitions (huddle break, set, get-off, stop) play over the
+// loops: they fade in, drive the feet from their own contacts, report root
+// motion from their travel curve, and hand over to the clip they end on
+// (a stance, or the run at phase 0).
 // Render-side only: it reads the sim's state (speed, heading) and never
 // feeds anything back (CLAUDE.md rule 4).
 
@@ -44,8 +48,20 @@ interface FootState {
   locked: boolean;
   pos: THREE.Vector3;
   /** What planted it: standing, or locomotion. A change re-captures the lock. */
-  source: 'stand' | 'loco' | null;
+  source: 'stand' | 'loco' | 'trans' | null;
 }
+
+interface TransitionState {
+  name: string;
+  t: number;
+  /** Layer weight: fades in over TRANS_IN, out over TRANS_OUT after the hand-over. */
+  w: number;
+  done: boolean;
+  travel: number;
+}
+
+const TRANS_IN = 0.08; // s: each transition starts from the pose it leaves, so a short fade
+const TRANS_OUT = 0.1;
 
 export class PlayerAnimator {
   readonly mixer: THREE.AnimationMixer;
@@ -70,6 +86,12 @@ export class PlayerAnimator {
    * compound. Each update puts this pose back before the mixer runs.
    */
   private animPose: [THREE.Bone, THREE.Quaternion][] = [];
+  private trans: TransitionState | null = null;
+  /** A stop waiting for the left foot's touch-down (the clip starts there). */
+  private queued: string | null = null;
+  /** Root motion this update (m along the facing, body-scaled) and its rate (m/s). */
+  rootMotion = 0;
+  rootSpeed = 0;
   footLock = true;
   /** Last frame's foot-lock correction per foot (m): how much slide the lock removed. */
   readonly correction = { l: 0, r: 0 };
@@ -103,6 +125,75 @@ export class PlayerAnimator {
     this.look.identity();
     this.padSpring = { x: 0, v: 0 };
     this.chestY = [];
+    this.trans = null;
+    this.queued = null;
+    this.rootMotion = 0;
+    this.rootSpeed = 0;
+  }
+
+  /**
+   * Play a transition clip. Stops (from a gait) wait for the next left
+   * touch-down, which is where they were authored from; everything else
+   * starts now. The caller keeps feeding the speed it wants after the clip:
+   * the run speed through a get-off, zero through a stop.
+   */
+  play(name: string): void {
+    const m = this.lib.meta[name];
+    if (!m || m.kind !== 'transition') return;
+    if (m.from?.startsWith('loco_') && this.loco > 0.5) this.queued = name;
+    else this.start(name);
+  }
+
+  /** The stop for the gait nearest a speed. */
+  stopFor(speed: number): string {
+    let best = 'stop_walk';
+    let d = Infinity;
+    for (const g of this.lib.gaits) {
+      const n = `stop_${g.name.slice(5)}`;
+      if (this.lib.meta[n] && Math.abs(g.speed - speed) < d) {
+        d = Math.abs(g.speed - speed);
+        best = n;
+      }
+    }
+    return best;
+  }
+
+  /** A stop is waiting for the next left touch-down. */
+  get waiting(): boolean {
+    return this.queued !== null;
+  }
+
+  /** A transition is playing or waiting to start. */
+  get busy(): boolean {
+    return this.queued !== null || (this.trans !== null && !this.trans.done);
+  }
+
+  /** Metres per second of root motion the active transition would make now (0 if none). */
+  transitionSpeed(): number {
+    const tr = this.trans;
+    if (!tr || tr.done) return 0;
+    const m = this.lib.meta[tr.name]!;
+    const h = 1 / this.lib.fps;
+    return ((travelAt(m, this.lib.fps, tr.t + h) - travelAt(m, this.lib.fps, tr.t)) / h) * this.player.shape.scale;
+  }
+
+  private start(name: string): void {
+    this.queued = null;
+    this.trans = { name, t: 0, w: this.trans && !this.trans.done ? this.trans.w : 0, done: false, travel: 0 };
+  }
+
+  /** The transition finished: its last frame is the first of the clip it hands to. */
+  private handOver(to: string): void {
+    if (to.startsWith('loco_')) {
+      this.loco = 1;
+      this.phase = 0;
+    } else {
+      this.loco = 0;
+      this.stance = to;
+      this.stanceWeights.clear();
+      this.stanceWeights.set(to, 1);
+      this.stanceTime = 0;
+    }
   }
 
   /** Settle into a stance (crossfades from whatever is playing). */
@@ -125,7 +216,36 @@ export class PlayerAnimator {
     const k = 1 - Math.exp(-dt * 8); // ~0.12 s fades
     this.loco += ((speed > MIN_LOCO_SPEED ? 1 : 0) - this.loco) * k;
     const g = sampleGait(this.lib.gaits, speed, scale);
+    const lastPhase = this.phase;
     this.phase = advancePhase(this.phase, speed, dt, g.stride);
+    // A queued stop starts at the left touch-down (the phase wrapping).
+    if (this.queued && (this.phase < lastPhase || this.loco < 0.5)) {
+      this.start(this.queued);
+      this.phase = 0;
+    }
+    this.rootMotion = 0;
+    this.rootSpeed = 0;
+    const tr = this.trans;
+    let trMeta = tr ? this.lib.meta[tr.name] : undefined;
+    if (tr && trMeta) {
+      const before = travelAt(trMeta, this.lib.fps, tr.t);
+      if (!tr.done) {
+        tr.t += dt;
+        if (tr.t >= trMeta.duration) {
+          tr.t = trMeta.duration;
+          tr.done = true;
+          if (trMeta.to) this.handOver(trMeta.to);
+        }
+      }
+      this.rootMotion = (travelAt(trMeta, this.lib.fps, tr.t) - before) * scale;
+      this.rootSpeed = dt > 0 ? this.rootMotion / dt : 0;
+      tr.w = tr.done ? Math.max(0, tr.w - dt / TRANS_OUT) : Math.min(1, tr.w + dt / TRANS_IN);
+      if (tr.done && tr.w <= 0) {
+        this.trans = null;
+        trMeta = undefined;
+      }
+    }
+    const tw = this.trans ? this.trans.w : 0;
     // Both clips plant and lift each foot on the same frame (warped phases),
     // so the blended foot is either planted in both or swinging in both.
     const duty = g.a.duty + (g.b.duty - g.a.duty) * g.w;
@@ -135,7 +255,7 @@ export class PlayerAnimator {
       const w = gait === g.a ? 1 - g.w : gait === g.b ? g.w : 0;
       const p = warpPhase(this.phase, gait.duty, duty);
       clipPhase.set(gait.name, p);
-      a.setEffectiveWeight(this.loco * w);
+      a.setEffectiveWeight(this.loco * w * (1 - tw));
       a.time = p * gait.duration;
     }
     this.stanceTime += dt;
@@ -147,8 +267,15 @@ export class PlayerAnimator {
     }
     for (const [name, w] of this.stanceWeights) {
       const a = this.actions.get(name)!;
-      a.setEffectiveWeight((1 - this.loco) * (total > 0 ? w / total : 0));
+      a.setEffectiveWeight((1 - this.loco) * (total > 0 ? w / total : 0) * (1 - tw));
       a.time = this.stanceTime % a.getClip().duration;
+    }
+    for (const [name, a] of this.actions) {
+      if (this.lib.meta[name]?.kind !== 'transition') continue;
+      const on = this.trans?.name === name;
+      a.setEffectiveWeight(on ? tw : 0);
+      // Just inside the end: at exactly the duration a repeating action wraps to frame 0.
+      if (on) a.time = Math.min(this.trans!.t, a.getClip().duration - 1e-4);
     }
     // Everything else (the backpedal, future clips) stays silent unless driven.
     for (const [bone, q] of this.animPose) bone.quaternion.copy(q);
@@ -163,6 +290,12 @@ export class PlayerAnimator {
     // warp can't align them, e.g. walk against jog, the stricter of the two).
     for (const s of FEET) {
       let down: boolean;
+      if (this.trans && trMeta && tw > 0.5) {
+        // The transition's own contacts (its frames are absolute, not a cycle).
+        down = planted(trMeta, s, Math.min(this.trans.t, trMeta.duration - 1e-4) / trMeta.duration);
+        this.lockFoot(s, 'trans', down, dt, input.groundVelocity);
+        continue;
+      }
       if (this.loco > 0.5) {
         down = true;
         for (const [gait, w] of [[g.a, 1 - g.w], [g.b, g.w]] as const) {
@@ -196,7 +329,7 @@ export class PlayerAnimator {
 
   private lockFoot(
     s: 'l' | 'r',
-    source: 'loco' | 'stand',
+    source: 'loco' | 'stand' | 'trans',
     isDown: boolean,
     dt: number,
     ground?: THREE.Vector3,

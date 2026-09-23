@@ -298,7 +298,7 @@ def getoff(stance: str) -> Transition:
     line = stance in ("ol_3pt", "dl_3pt", "dl_4pt")
     g = GAITS["run"]
     cyc = g.frames / FPS
-    T = 0.62 if line else 0.5
+    T = 19 / FPS if line else 15 / FPS  # ~0.63 s / 0.5 s, whole frames
     t1 = 0.4 * T  # the first step lands
     st = _stance(stance)
     run0 = gait_pose(g, 0)
@@ -308,8 +308,12 @@ def getoff(stance: str) -> Transition:
     x0 = st.pelvis.get("forward", 0.0)
     fwd_end = target.pelvis["forward"] - x0
 
+    # From rest to run speed: x = d (t/T)^n reaches speed v at T for
+    # n = vT/d, and never runs backward (a cubic would for vT > 3d).
+    n = max(1.0, g.speed * T / fwd_end)
+
     def travel(t):
-        return _hermite(0.0, fwd_end, 0.0, g.speed, T, min(t, T))
+        return fwd_end * (min(t, T) / T) ** n
 
     # The right foot lifts from the run's own swing timing so the hand-over
     # is seamless: at run frame 0 it has been in the air (0.5 - duty) cycles.
