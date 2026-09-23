@@ -216,7 +216,8 @@ export const RB_ATTRS: readonly SkillAttrDef[] = [
 
 /**
  * TE blocking formulas as set, with the legacy block grade capped at 20%
- * (types.ts CAPPED_SIGNALS; ratings follow-up, user-approved). The weight it
+ * (types.ts CAPPED_SIGNALS; ratings follow-up, user-approved; a weight cap
+ * only: round 2 dropped the per-player cap). The weight it
  * gives up goes to the formula's other inputs (size, strength, experience,
  * honors) in proportion; reputation doesn't gain. Resulting weights:
  *   Run Block    w_block 0.40 → 0.20; weight 0.361, strength 0.217, honors 0.072, imp 0.15

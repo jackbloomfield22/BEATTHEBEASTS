@@ -49,19 +49,27 @@ export type PositionAttrs = Partial<Record<RatedPos, readonly SkillAttrDef[]>>;
 export const IMP_MAX_SHARE = 0.2;
 
 /**
- * Hand-set legacy grades that may amplify the evidence but never make an
- * attribute: each is at most this share of any attribute, as a weight in the
- * definition (tests/ratings-engine.test.ts) and per player (engine.ts caps
- * the term at a quarter of the same-direction evidence from the other,
- * uncapped terms, so ≤ 20% of the total).
+ * Hand-set legacy grades whose weight in any attribute definition is capped
+ * at this share (tests/ratings-engine.test.ts checks every definition).
  *   imp      legacy reputation score (BRIEF "Stats first, reputation second":
  *            "worth no more than 20%").
- *   w_block  legacy TE block grade `b` (ratings follow-up, user-approved:
- *            "cap it at 20% of each TE blocking attribute, same rule as imp").
- *            It was 40% of TE Run Block, 35% of Pass Block and 25% of Impact
- *            Block, uncapped.
+ *   w_block  legacy TE block grade `b` (ratings follow-up, user-approved: cap
+ *            it at 20% of each TE blocking attribute). It was 40% of TE Run
+ *            Block, 35% of Pass Block and 25% of Impact Block.
  */
 export const CAPPED_SIGNALS: Readonly<Record<string, number>> = { imp: IMP_MAX_SHARE, w_block: 0.2 };
+
+/**
+ * Grades that are also capped per player (engine.ts): the term may amplify
+ * the other evidence by at most a quarter of what points the same way (so
+ * ≤ 20% of the attribute's movement), and can't make or overturn a rating.
+ * Only `imp`. The TE block grade had this cap for one round and the user
+ * dropped it (PR #3 round 2): TE blocking has no stat, so its other inputs
+ * are body and strength, and the per-player cap let a big frame overrule the
+ * grades of a known great blocker (Kittle) and a known poor one (Winslow).
+ * The block grade keeps its 20% weight cap and its direction.
+ */
+export const PLAYER_CAPPED_SIGNALS: Readonly<Record<string, number>> = { imp: IMP_MAX_SHARE };
 
 /**
  * Caps the weight of one term at `share` of the formula and moves the excess
