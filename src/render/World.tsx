@@ -365,7 +365,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
 
   return (
     <>
-      <directionalLight ref={sunRef} castShadow>
+      <directionalLight ref={sunRef} name="sun" castShadow>
         <object3D attach="target" />
       </directionalLight>
 

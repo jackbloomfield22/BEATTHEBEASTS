@@ -4,7 +4,7 @@
 
 - **M1 Foundation:** merged (PR #1).
 - **M2 Ratings:** merged (PR #2). The follow-up (traits overhaul, Throw Power, consensus check, anchor bands, Explorer fix) is PR #3, waiting on your review; four proposed fixes from the Rice/Kittle and Eli Manning diagnosis wait on your OK and are not applied.
-- **M3 The look:** built, PR to `main` (branch `claude/m3-the-look`). Screenshots in `docs/screenshots/m3/`, critique below. **One thing I need from you:** a real-hardware perf check (see "Performance").
+- **M3 The look:** built, PR #4 (branch `claude/m3-the-look`). Screenshots in `docs/screenshots/m3/`, critique below. Perf pass and the fixes from your preview feedback are in (see "Performance pass" and "Preview fixes"). **Waiting on your re-test** of the three menu views on Medium.
 
 ## Known legacy issues (do not rebuild)
 
@@ -34,11 +34,11 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 - **Night** (your M1 request): the moon is the key light (a dim, cool physical sky with the same shape as day), stars, floodlights carrying the field, and the lit bowl glowing in the haze and on the sea.
 - **Crowd:** a procedural person (built here: head, hair, torso, arms, legs; seated, standing, arms-up and clapping poses) rendered at startup into mask and normal atlases from 8 directions; every one of ~40,000 seats gets a camera-facing card with its own palette (weighted to Beasts crimson and black), pose, and real lighting and shadows. One draw call. Reactions (touchdown, turnover, big play, stop, kickoff, groan) drive the crowd's energy through a pure, tested envelope; `__btbCrowd.trigger('touchdown', t)` in dev. Night phone flashes; ponchos and hoods in rain, coats and beanies in snow.
 - **Coastline:** a swept cliff-face mesh (the heightfield can't hold a near-vertical wall) with buttresses, columnar joints, bedding ledges and fractured blocks; dark basalt with lichen, algae, seepage streaks and a wet band; faceted boulders; procedural scrub, wind-sculpted cypress groves and ledge plants; surf keyed to distance from the rock (a new shore-distance channel in the seabed texture) with wash lines surging shoreward.
-- **Stadium kit:** banded exterior (basalt plinth with lit gates, glazed concourse ribbon, charcoal aluminum fins with a night uplight wash, crimson band with an LED line, the same cladding on the stands' south ends); plaza paving trimmed back from the cliff; plaza lamps with light pools; BLACKCLIFF in both end zones (GDD §12.4).
-- **Field:** grass shells near low cameras (turf depth, blades carry the paint, lean with the mowing bands), the field color shared between the surface and the shells.
+- **Stadium kit:** banded exterior (basalt plinth with lit gates, glazed concourse ribbon, charcoal aluminum fins with a night uplight wash, crimson band with an LED line, the same cladding on the stands' south ends); plaza paving trimmed back from the cliff; plaza lamps with light pools; BEASTS in both end zones and on the video board (GDD §12.4; Blackcliff is only the venue name on the intro title card).
+- **Field:** grass shells near low cameras on High and Ultra (turf depth, blades carry the paint, lean with the mowing bands), the field color shared between the surface and the shells.
 - **Sky:** a self-shadowed stratus deck under overcast; the sun hides behind cloud.
 - **Weather** (all five presets now complete): wet surfaces darken and gloss with puddles on flat ground, snow settles on upward faces (none under the roofs), the field's lines and paint are swept clear in snow, rain streaks and snowflakes around the camera, a darker, rougher sea in rain.
-- **Shadows:** cascaded shadow maps (4 cascades on High, 3 below), fixed-pattern PCF (the default per-pixel noise needs TAA we don't run).
+- **Shadows:** cascaded shadow maps (High: 4 × 2048² to 700 m with cascade blending; Medium: 2 × 2048² to 350 m; Low: 2 × 1024² to 250 m), fixed-pattern PCF (the default per-pixel noise needs TAA we don't run).
 - **VFX base:** one GPU particle pool (ring buffer, closed-form motion in the vertex shader) with turf kick-up, hit dust, confetti, pyro and breath; bursts are pure and seeded (tested). Dev preview `?vfx=<id>&vfxAge=<s>`.
 - **Quality:** tiers now drive crowd density, vegetation, grass shells, weather particles and shadow cascades; dynamic resolution steps the render scale by frame time (probe up, back off; pure, tested); the first launch times the menu scene and moves the GPU-name guess one tier when the evidence is clear.
 - **Tools:** `?fly` free camera (P logs a `?cam=` pose), `?cam=`, `?crowd=`, `?noshadow`; the screenshot harness now advances shader time a fixed 1/60 s per frame, so captures are reproducible. The matrix gained field, crowd, cliff and exterior shots.
@@ -49,15 +49,49 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 - **ref-03 (open-world coast):** the cliffs finally read as rock with structure, the rim has scrub and cypress, and the surf hugs the rock. Gaps, biggest first: (1) the rock reads warm brown under the golden sun instead of dark basalt, and it's smooth and painterly up close where ref-03 is crisp; (2) no turquoise shallows, because Blackcliff's walls plunge into deep water (a design choice, but a cove or reef shelf somewhere in the flyover would buy that color); (3) the vegetation is blobby at close range; (4) the headland grass has no blade detail (only the field does).
 - **Presets:** Night is the strongest frame after Golden; Overcast reads as a real stratus day; Rain reads (streaks, darker pitch and sea) but the wet sheen on the turf is subtle; Snow reads well (swept lines, patchy cover, flurries). Night's moon disc is a little too large and bright.
 
-**Performance**
-- Draw calls (High, menu): ~120 of the ~450 budget (§11).
-- Triangles per frame: were 13.3 M (High) / 8.0 M (Medium) because instanced scatter renders in full into every shadow cascade; now **4.6 M / 3.3 M** (only the cypress cast, the heightfield doesn't, lighter boulders and fewer scrub). Still the next thing to cut: chunk the scatter spatially so shadow cascades cull it, and a distance LOD for scrub.
-- FPS can't be measured here (software rendering, seconds per frame). **I need a real-hardware check from you:** open the preview with `?perf` on your Mac (High, then Medium) and send the numbers on the perf screen for the menu and the title flyover.
+**Performance pass** (your M1 Pro report: Medium, Golden Hour, 28-60 fps with dynamic resolution at 60%)
+
+What made it slow, biggest first:
+1. **Render size.** "100%" meant the display's own pixel density. A 1920×1080 window at DPR 2 renders 3840×2160: four times the pixels of 1080p. Every per-pixel cost (lighting, shadows, AO, bloom, the crowd) scaled with it, and 60% of that is still 1.4× 1080p. Each tier now has a pixel budget: Medium renders at most 1920×1080 worth of pixels, High 2560×1440, Ultra the display's own density (DPR capped at 2). The HTML menus stay at full density. The perf screen's "Canvas / internal res" line shows the actual render size.
+2. **Why the field-level views (Practice Field, How to Play) cost about twice the bowl view:** they look straight into the stands at close range. Crowd cards were full 1.1 × 2.2 m quads, alpha-tested, overlapping many rows deep, and every covered pixel ran the full lit shader (the alpha test turns off early depth rejection). Grass shells added 8 more alpha-tested layers over the turf in the bottom half of the frame. The bowl view sees both from far away and small. Fixes: each card now shrinks to its atlas cell's person (bounds computed from the same geometry the atlas is baked from; a seated fan fills about a third of the old card), and grass shells are High/Ultra only.
+3. **Lights.** Every light in the scene is a pass through the per-pixel light loop, even at zero intensity. The six floodlights now exist only when lit (every other bank at double power on Low/Medium), and the plain sun is hidden while the cascade rig carries it.
+4. **Shadows.** Medium drops from 3 cascades to 2 (2048², out to 350 m, no blend band), and the crowd no longer casts (it was the costliest caster in every cascade; the seating steps already cast the row shadows).
+5. **Geometry.** Vegetation and boulders are split into 180 m chunks, so the camera and each cascade draw only what they can see. Scrub switches to an 80-triangle LOD (from 220) past 50 m, and boulders cast only on High. Crowd density on Medium went from 80% to 60% of seats (High 100% → 85%), and precipitation and vegetation are budgeted per tier.
+6. **Startup spike (1.8 s).** It was almost certainly a first-use shader compile: anything hidden at the first frame, such as effects that appear later or the far vegetation LOD, compiled mid-frame on first sight. The whole scene, hidden meshes included, now compiles with `compileAsync` before the menu shows.
+7. **Dynamic resolution** no longer goes below 75% (it was 60%, which you saw as blurry and washed out). With the budget, Medium should rarely need it.
+
+Measured here (SwiftShader, 1080p; this measures geometry, not GPU time):
+
+| Medium, Golden Hour | Draw calls | Triangles (before → now) |
+|---|---|---|
+| Menu (bowl) | 90 | 4.55 M (your report) → 1.22 M |
+| Practice Field | 118 | → 1.39 M |
+| How to Play | 134 | → 1.51 M |
+
+Frame times can't be measured here (software rendering), so the 60 fps at 100% target on your M1 Pro is still unconfirmed. **Re-test:** open the PR #4 preview with `?perf`, and set Medium (or reset to auto). For each of the three menu views, send fps / average / p99, the dynamic resolution %, and the "Canvas / internal res" line.
+
+**Preview fixes** (your M3 feedback)
+- **How to Play → The Draft went black and dead.** It doesn't reproduce here. Whatever threw, R3F passes errors inside the 3D canvas up into the React tree, and with no error boundary React unmounts the whole app: a black page. The likely triggers are a GPU context loss or an error during a dynamic-resolution resize. Now:
+  - the 3D stage sits in its own error boundary and remounts after an error;
+  - a lost WebGL context rebuilds the stage on a fresh canvas;
+  - repeated failures within a minute step the preset down one tier;
+  - anything else shows an error screen with the message and a Reload button, never a black page.
+  - Browser tests (`e2e/howto.spec.ts`) open every How to Play page by click, Q/E and arrow keys, check the renderer is alive after each one, force a context loss on the Draft page, and check the stage comes back and the menus still answer. If it happens again, the error screen shows the message. Please send it to me.
+- **Preset switch glitches.** Root cause found: the shadow rig's `dispose()` left each material flagged as attached, so the next rig (after the switch) skipped every material. They rendered with the old rig's cascade defines and no working shadows. The rig now records the materials it patched and restores them exactly. Browser tests (`e2e/presets.spec.ts`):
+  - walk all 12 directed transitions between Low, Medium, High and Ultra;
+  - after each switch, check the cascade count, that no material carries another rig's cascades, and that the plain sun is hidden;
+  - compare a thumbnail of the frame to a fresh load at that preset;
+  - repeat your exact path (Settings → Graphics → Quality preset, High → Medium → High).
+  With the old `shadows.ts` restored, the Settings test fails exactly as you saw it.
+- **Fullscreen** is a Display setting, off by default (existing saves are migrated to off), toggled with F11 or Alt+Enter. The title keypress enters fullscreen only if the setting is on. Shortcut capture (Tab, F1-F3, arrows, Backspace) works the same in a window.
+- **Branding:** BEASTS in both end zones and on the video board; the studio is Comfortable Cave Interactive on the intro, in the page metadata, `package.json` and `CREDITS.md`.
+- **CLAUDE.md rule 9:** stability and frame rate beat visual fidelity.
 
 **Known issues**
 - Rock color and close-up crispness (above). Moon size. Scrub and cypress up close. Ocean swell period.
 - Soft-particle depth fades wait for a depth prepass (M5); hit dust stays small until then.
 - The crowd atlas bakes at startup (~30 ms on a real GPU).
+- Medium is now plainer at field level (no grass shells, 60% crowd, 2 cascades). If your re-test shows headroom, grass shells are the first thing to bring back.
 
 **Next:** M4 Characters and animation.
 

@@ -114,7 +114,7 @@ export function currentQuality(): QualityPreset {
   return (urlFlags.quality as QualityPreset | null) ?? (s.graphics.preset === 'custom' ? 'high' : s.graphics.preset);
 }
 
-export function Stage() {
+export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasElement) => void } = {}) {
   const preset = useLightingPreset();
   const shot = useApp((s) => s.shot);
   const setSceneReady = useApp((s) => s.setSceneReady);
@@ -146,6 +146,10 @@ export function Stage() {
       camera={{ fov: 40, near: 0.5, far: 16000, position: [-420, -8, 520] }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x05040a);
+        // three already preventDefault()s the loss so the context can come
+        // back; the app remounts the stage on a fresh canvas (App.tsx).
+        gl.domElement.addEventListener('webglcontextlost', () => onContextLost?.(gl.domElement), { once: true });
+        if (import.meta.env.DEV) Object.assign(window, { __btbLoseContext: () => gl.getContext().getExtension('WEBGL_lose_context')?.loseContext() });
         perfStats.quality = quality;
         // First launch: pick a preset from the GPU name.
         const st = useSettings.getState();
