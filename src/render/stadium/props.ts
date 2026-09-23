@@ -27,7 +27,7 @@ export function createVideoBoardTexture(): THREE.CanvasTexture {
     ctx.textBaseline = 'middle';
     ctx.font = '96px Bungee, "Arial Black", sans-serif';
     ctx.fillStyle = '#c8102e';
-    ctx.fillText('BLACKCLIFF', c.width / 2, 170);
+    ctx.fillText('HOME OF THE BEASTS', c.width / 2, 170);
     ctx.font = '230px Bungee, "Arial Black", sans-serif';
     ctx.fillStyle = '#aaff00';
     ctx.shadowColor = '#aaff00';

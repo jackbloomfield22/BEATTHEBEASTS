@@ -78,7 +78,9 @@ export function createFieldPaint(): THREE.CanvasTexture {
       }
     }
 
-    // End-zone lettering: BLACKCLIFF in both end zones (GDD §12.4), read from the field.
+    // End-zone lettering: BEASTS in both end zones, read from the field. The
+    // stadium is the Beasts' home; Blackcliff is only the venue name on the
+    // intro title card (owner's call, GDD §12.4).
     const endText = (label: string, zCenter: number, north: boolean) => {
       const up: [number, number] = north ? [0, -1] : [0, 1];
       const right: [number, number] = north ? [1, 0] : [-1, 0];
@@ -94,8 +96,8 @@ export function createFieldPaint(): THREE.CanvasTexture {
         ctx.fillText(label, 0, 0.3);
       });
     };
-    endText('BLACKCLIFF', -55, true);
-    endText('BLACKCLIFF', 55, false);
+    endText('BEASTS', -55, true);
+    endText('BEASTS', 55, false);
 
     // Midfield claw: three raking slashes.
     ctx.save();

@@ -40,7 +40,7 @@ export function StudioIntro() {
             <path key={i} d={`M${34 + i * 22} 18 C ${46 + i * 22} 46, ${44 + i * 22} 78, ${30 + i * 22} 104`} style={{ animationDelay: `${0.25 + i * 0.18}s` }} />
           ))}
         </svg>
-        <div className="studio-name">BLACKCLIFF</div>
+        <div className="studio-name">COMFORTABLE CAVE</div>
         <div className="studio-sub">Interactive</div>
       </div>
       <div className="boot-bar">
