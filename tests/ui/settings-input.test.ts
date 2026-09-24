@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, defaultBindings, findConflicts, inputLabel, KB_DEFAULTS_V2 } from '@/input/actions';
+import { ACTIONS, defaultBindings, findConflicts, inputLabel, KB_DEFAULTS_V2, KB_DEFAULTS_V3 } from '@/input/actions';
 import { defaultSettings, migrate } from '@/app/settings';
 import { validateCharacterization } from '@/engine/data/characterizationSchema';
 import bundled from '@data/characterization.json';
@@ -47,12 +47,23 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V2, 'carrier.spin': ['KeyX'] }, defaultBindings('pad'));
     (old as { version: number }).version = 2;
     const m = migrate(old);
-    expect(m.version).toBe(3);
+    expect(m.version).toBe(4);
     // Still on the old default: dropped, so the merge with the defaults fills in the new one.
     expect(m.controls.keyboard['carrier.up']).toBeUndefined();
     expect(m.controls.keyboard['air.possession']).toBeUndefined();
     // Rebound by the player: kept.
     expect(m.controls.keyboard['carrier.spin']).toEqual(['KeyX']);
+  });
+
+  it('v3 settings free Tab for the route preview (flip moves to F), keeping a rebound flip', () => {
+    const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V3 }, defaultBindings('pad'));
+    (old as { version: number }).version = 3;
+    expect(migrate(old).controls.keyboard['preSnap.flip']).toBeUndefined();
+    const rebound = defaultSettings({ ...defaultBindings('kb'), 'preSnap.flip': ['KeyL'] }, defaultBindings('pad'));
+    (rebound as { version: number }).version = 3;
+    expect(migrate(rebound).controls.keyboard['preSnap.flip']).toEqual(['KeyL']);
+    expect(defaultBindings('kb')['preSnap.routes']).toEqual(['Tab']);
+    expect(defaultBindings('pad')['preSnap.routes']).toEqual(['Pad:RT']);
   });
 
   it('labels inputs readably', () => {

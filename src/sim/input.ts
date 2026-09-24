@@ -3,6 +3,7 @@
 // directions before recording). This is exactly what gets recorded, so a
 // play replays from its seed plus these frames.
 
+import type { RouteName } from './plays';
 import type { V2 } from './vec';
 
 export type CatchType = 'aggressive' | 'rac' | 'possession';
@@ -40,6 +41,8 @@ export interface InputFrame {
   dive: boolean;
   /** Protect the ball (held). */
   protect: boolean;
+  /** Pre-snap: change a receiver's route (icon 1..5 and one of HOT_ROUTES). Applied before the snap. */
+  hotRoute: { icon: number; route: RouteName } | null;
 }
 
 export const NEUTRAL: InputFrame = Object.freeze({
@@ -59,6 +62,7 @@ export const NEUTRAL: InputFrame = Object.freeze({
   truck: false,
   dive: false,
   protect: false,
+  hotRoute: null,
 }) as InputFrame;
 
 export const input = (patch: Partial<InputFrame>): InputFrame => ({ ...NEUTRAL, ...patch });

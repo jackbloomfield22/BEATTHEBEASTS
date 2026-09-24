@@ -33,7 +33,9 @@ export type RouteName =
   | 'wheel'
   | 'checkdown'
   | 'swing'
-  | 'sit';
+  | 'sit'
+  | 'in'
+  | 'comeback';
 
 export const ROUTES: Record<RouteName, RoutePoint[]> = {
   go: [{ d: 45, o: 1 }],
@@ -53,6 +55,36 @@ export const ROUTES: Record<RouteName, RoutePoint[]> = {
   checkdown: [{ d: 1, o: 2.5 }, { d: 3.5, o: 5, sit: true }],
   swing: [{ d: -1, o: 4 }, { d: 1, o: 10 }, { d: 4, o: 14 }],
   sit: [{ d: 10, o: -1, sit: true }],
+  // The mirror of the out: a 10-yard square-in toward the middle.
+  in: [{ d: 10, o: 0 }, { d: 10, o: -12 }],
+  // Stem 15, snap back to 12 toward the sideline, and sit on it.
+  comeback: [{ d: 15, o: 0 }, { d: 12, o: 2.5, sit: true }],
+};
+
+/** The routes a receiver can be hot-routed to at the line (the picker's order). */
+export const HOT_ROUTES: RouteName[] = ['go', 'out', 'in', 'slant', 'curl', 'comeback', 'flat', 'hitch'];
+
+/** Display names for routes (the hot-route picker, the play call). */
+export const ROUTE_LABEL: Record<RouteName, string> = {
+  go: 'Go',
+  fade: 'Fade',
+  seam: 'Seam',
+  hitch: 'Hitch',
+  stick: 'Stick',
+  slant: 'Slant',
+  out: 'Out',
+  dig: 'Dig',
+  corner: 'Corner',
+  post: 'Post',
+  flat: 'Flat',
+  curl: 'Curl',
+  drag: 'Drag',
+  wheel: 'Wheel',
+  checkdown: 'Check-down',
+  swing: 'Swing',
+  sit: 'Sit',
+  in: 'In',
+  comeback: 'Comeback',
 };
 
 export type Assignment =

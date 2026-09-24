@@ -10,8 +10,8 @@ import { trackErrors, waitReady } from './helpers';
 // rendered browser that draws one frame a second.
 
 type P = {
-  __btbPractice: { runner: { paused: boolean; state: S } | null; tick(n: number): void };
-  __btbPracticeUi: { getState(): { stage: string; result: { headline: string } | null; catchType: string | null } };
+  __btbPractice: { runner: { paused: boolean; state: S & { hot: Record<string, string>; agents: { slot: string }[] } } | null; tick(n: number): void };
+  __btbPracticeUi: { getState(): { stage: string; result: { headline: string } | null; catchType: string | null; hot: { stage: string } | null; tutorial: string | null } };
   __btbGameReady?: boolean;
   __btbSimHashes(): Promise<{ key: string; hash: number; ticks: number; reason: string }[]>;
 };
@@ -93,6 +93,31 @@ test('the catch call: 1–3 while the ball is in the air, and the called one lig
   expect(await page.evaluate(() => (window as unknown as P).__btbPracticeUi.getState().catchType)).toBe('possession');
   await expect(page.locator('.catch-opt.on')).toContainText('Secure it');
   await expect(page.locator('.catch-opt.off')).toHaveCount(2);
+});
+
+test('pre-snap: the prompts, the route preview key, and a hot route the sim runs', async ({ page }) => {
+  await open(page, 5, 0); // Stick
+  // First play: the tutorial's first step and the snap prompt with the route and hot-route keys.
+  await expect(page.locator('.tutorial-card')).toContainText('snap');
+  await expect(page.locator('.snap-call')).toContainText('Tab');
+  await expect(page.locator('.snap-call')).toContainText('Hot route');
+  // H, then receiver 1, then route 3 (In).
+  await page.keyboard.press('KeyH');
+  await expect(page.locator('.hot-picker')).toContainText('Which receiver');
+  await page.keyboard.press('Digit1');
+  await expect(page.locator('.hot-item')).toHaveCount(8);
+  await page.keyboard.press('Digit3');
+  await expect(page.locator('.hot-picker')).toHaveCount(0);
+  await tick(page, 1);
+  const hot = await page.evaluate(() => {
+    const s = (window as unknown as P).__btbPractice.runner!.state;
+    return { hot: s.hot, slot: s.agents[s.icons[0]!]!.slot };
+  });
+  expect(hot.hot[hot.slot]).toBe('in');
+  // The snap still works afterwards, and the play runs the new route.
+  await page.keyboard.press('Space');
+  await tick(page, 2);
+  expect((await state(page)).phase).not.toBe('presnap');
 });
 
 test('a tackle: the carrier goes down and the next snap is at the new spot', async ({ page }) => {

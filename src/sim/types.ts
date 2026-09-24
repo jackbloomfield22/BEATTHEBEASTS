@@ -149,6 +149,7 @@ export interface SimEvent {
     | 'touchdown'
     | 'outOfBounds'
     | 'catchOutOfBounds'
+    | 'hotRoute'
     | 'whistle';
   /** Agents involved (actor first). */
   who?: number[];

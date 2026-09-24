@@ -31,7 +31,8 @@ import { remember, steer } from './movement';
 import { planThrow, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import type { PlayState } from './state';
-import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type PlayResult, type WhistleReason } from './types';
+import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
+import { HOT_ROUTES } from './plays';
 import { dist, len, norm, sub, v2, type V2 } from './vec';
 
 /** Seconds the play keeps animating after the whistle. */
@@ -672,6 +673,13 @@ export function stepPlay(s: PlayState, inp: InputFrame): void {
   s.t = s.tick * TICK;
   for (const a of s.agents) tickMoves(a);
   if (s.phase === 'presnap') {
+    // A hot route called at the line: that receiver runs the new route from the snap.
+    const h = inp.hotRoute;
+    if (h && HOT_ROUTES.includes(h.route) && h.icon >= 1 && h.icon <= s.icons.length) {
+      const a = s.agents[s.icons[h.icon - 1]!]!;
+      s.hot[a.slot as OffSlot] = h.route;
+      s.events.push({ t: s.t, type: 'hotRoute', who: [a.i], data: { route: h.route } });
+    }
     if (inp.snap || (!s.setup.user && (s.setup.autoSnap ?? true))) doSnap(s);
     for (const a of s.agents) remember(a);
     return;

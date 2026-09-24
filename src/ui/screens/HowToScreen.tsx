@@ -106,7 +106,7 @@ function ControlsPage() {
   const kb = useSettings((s) => s.settings.controls.keyboard);
   const pad = useSettings((s) => s.settings.controls.gamepad);
   const device = useDevice();
-  const contexts: InputContext[] = ['preSnap', 'pocket', 'ballInAir', 'carrier', 'kick', 'replay', 'global'];
+  const contexts: InputContext[] = ['preSnap', 'hotRoute', 'pocket', 'ballInAir', 'carrier', 'kick', 'replay', 'global'];
   return (
     <div className="controls-ref">
       {contexts.map((ctx) => (

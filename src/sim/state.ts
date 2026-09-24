@@ -4,7 +4,7 @@
 import { deriveStream } from '@/engine/rng';
 import { effects } from './effects';
 import { type Streams, streams } from './rand';
-import { DEF_SLOTS, OFF_SLOTS, type DefCall, type OffPlay, type ZoneName, ZONES } from './plays';
+import { DEF_SLOTS, OFF_SLOTS, type DefCall, type OffPlay, type RouteName, type ZoneName, ZONES } from './plays';
 import type { CatchType } from './input';
 import { FIELD_HALF_W, type Agent, type Ball, type DefSlot, type OffSlot, type Phase, type PlayResult, type SimEvent, type SimPlayer } from './types';
 import { v2, type V2 } from './vec';
@@ -76,6 +76,8 @@ export interface PlayState {
   /** A throw wound up: released at `at` (play time). */
   windup: { at: number; icon: number; charge: number; aim: V2; away: boolean } | null;
   catchType: CatchType | null;
+  /** Hot routes called at the line, by offensive slot (they replace the play's route at the snap). */
+  hot: Partial<Record<OffSlot, RouteName>>;
   /** Agents that already tried to play the ball on this throw. */
   touched: number[];
   /** Forward progress (x) of the ball carrier. */
@@ -233,6 +235,7 @@ export function createPlay(s: PlaySetup): PlayState {
     hold: { icon: 0, ticks: 0 },
     windup: null,
     catchType: null,
+    hot: {},
     touched: [],
     maxX: -Infinity,
     whistleT: -1,

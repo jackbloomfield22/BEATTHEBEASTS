@@ -99,3 +99,15 @@
 .tutorial-card { position: absolute; top: 6.2rem; left: 50%; transform: translateX(-50%); max-width: 46rem; display: flex; align-items: baseline; gap: .8rem; padding: .7rem 1.1rem; border-left: 3px solid var(--lime); background: var(--panel-strong); font-size: .95rem; line-height: 1.5; color: var(--ink); animation: catch-in .18s ease-out; }
 .tutorial-step { font-weight: 800; font-size: .75rem; letter-spacing: .14em; color: var(--lime); white-space: nowrap; }
 .tutorial-text kbd { margin: 0 .15rem; }
+.snap-more { display: flex; gap: 1.4rem; font-size: .82rem; color: var(--ink-2); }
+.snap-more span { display: flex; align-items: center; gap: .35rem; }
+/* The hot-route picker: bottom centre, over the play, keys on every line. */
+.hot-picker { position: absolute; bottom: 3.5rem; left: 50%; transform: translateX(-50%); min-width: 20rem; padding: .9rem 1.1rem; background: var(--panel-strong); border-top: 3px solid var(--lime); display: flex; flex-direction: column; gap: .55rem; animation: catch-in .12s ease-out; }
+.hot-head { font-weight: 800; font-size: 1.05rem; letter-spacing: .06em; }
+.hot-now { font-weight: 600; font-size: .8rem; color: var(--ink-2); margin-left: .5rem; }
+.hot-sub { font-size: .95rem; color: var(--ink); }
+.hot-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: .35rem; }
+.hot-item { display: flex; align-items: center; gap: .45rem; padding: .35rem .5rem; border: 1px solid var(--line); border-radius: .3rem; cursor: pointer; font-weight: 700; font-size: .9rem; }
+.hot-item.current { color: var(--ink-2); }
+.hot-item.focus { border-color: var(--lime); background: color-mix(in srgb, var(--lime) 18%, transparent); color: var(--ink); }
+.hot-foot { display: flex; gap: .5rem; align-items: center; font-size: .78rem; color: var(--ink-2); }

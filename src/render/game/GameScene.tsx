@@ -6,12 +6,14 @@ import { PlayerAnimator } from '@/anim/animator';
 import { Ragdoll } from '@/anim/ragdoll';
 import { skinHexFor } from '@/app/characterization';
 import { urlFlags } from '@/app/platform';
-import { practice } from '@/game/practice';
+import { practice, usePractice } from '@/game/practice';
+import { Input } from '@/input/InputManager';
+import { createRouteArt } from './routeArt';
 import { lerpAngle, type AgentSnap } from '@/game/snapshot';
 import { latency } from '@/game/latency';
 import { view } from '@/game/view';
 import { worldX, worldY, worldZ, yawOf } from '@/game/coords';
-import { BULLET_CHARGE, DEF_SLOTS, OFF_SLOTS, TAP_MAX, TICK, type SimPlayer } from '@/sim';
+import { BULLET_CHARGE, DEF_SLOTS, HOT_ROUTES, OFF_SLOTS, TAP_MAX, TICK, type SimPlayer } from '@/sim';
 import { openness } from '@/sim/ai';
 import { previewThrow } from '@/sim/passing';
 import { openState } from '@/game/view';
@@ -91,6 +93,7 @@ export function GameScene() {
   const [bodies, setBodies] = useState<Body[] | null>(null);
   const [marks] = useState(createFieldMarks);
   const [ball] = useState(createFootball);
+  const [routeArt] = useState(createRouteArt);
   const shownPlay = useRef(-1);
   const lastSimT = useRef(0);
   const snapped = useRef(false);
@@ -120,13 +123,13 @@ export function GameScene() {
       setBodies(all);
       (window as unknown as { __btbGameReady?: boolean }).__btbGameReady = true;
     }, console.error);
-    scene.add(marks.group, ball);
+    scene.add(marks.group, ball, routeArt.group);
     return () => {
       alive = false;
       if (group) scene.remove(group);
-      scene.remove(marks.group, ball);
+      scene.remove(marks.group, ball, routeArt.group);
     };
-  }, [scene, gl, camera, marks, ball]);
+  }, [scene, gl, camera, marks, ball, routeArt]);
 
   useFrame(({ camera, gl, clock }, dt) => {
     const step = urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
@@ -219,6 +222,11 @@ export function GameScene() {
 
     placeBall(s.snapT, s.t);
     placeMarks(s.setup.los, s.setup.toGo);
+    // The route preview: held key, the hot-route picker, or just after a hot route is called.
+    const ui = usePractice.getState();
+    const hot = ui.hot;
+    const showRoutes = cur.phase === 'presnap' && (Input.isHeld('preSnap.routes') || !!hot || performance.now() < practice.routeFlashUntil);
+    routeArt.update(s, showRoutes, step, hot && hot.stage === 'route' ? { icon: hot.icon, candidate: HOT_ROUTES[hot.focus]! } : null);
   }, -100);
 
   // The HUD goes on after the camera has moved this frame (GameCamera runs

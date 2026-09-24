@@ -8,11 +8,12 @@ import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
 import { loadJSON, saveJSON } from '@/app/storage';
 import type { InputContext } from '@/input/actions';
-import { createPlay, DEAD_HOLD, DEF_CALLS, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayState, type SimPlayer } from '@/sim';
+import { createPlay, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayState, type SimPlayer } from '@/sim';
 import { Controls } from './controls';
 import { describe, type ResultCard } from './describe';
 import { loadPracticeRosters } from './rosters';
 import { SimRunner } from './runner';
+import { routeOf } from '@/sim/ai';
 import { nextSituation, startSituation, type Situation } from './situation';
 
 export type PracticeStage = 'loading' | 'call' | 'presnap' | 'live' | 'result' | 'paused';
@@ -35,6 +36,8 @@ export interface PracticeUi {
   catchType: CatchType | null;
   /** The first-play tutorial's step, or null when it's off (done once, or skipped). */
   tutorial: TutorialStep | null;
+  /** The hot-route picker, when open: choosing the receiver, then his route. */
+  hot: HotPicker | null;
   result: ResultCard | null;
   /** The coverage the Beasts played on the last snap (revealed with the result). */
   lastCover: string | null;
@@ -55,6 +58,7 @@ export const usePractice = create<PracticeUi>(() => ({
   carrier: null,
   catchType: null,
   tutorial: null,
+  hot: null,
   result: null,
   lastCover: null,
   seriesOver: false,
@@ -67,6 +71,8 @@ export const usePractice = create<PracticeUi>(() => ({
  * for (pause menu). Each step shows while it applies and moves on with the
  * play; it never waits for the player.
  */
+export type HotPicker = { stage: 'receiver' } | { stage: 'route'; icon: number; focus: number };
+
 export type TutorialStep = 'snap' | 'read' | 'throw' | 'catch' | 'run';
 const TUTORIAL_KEY = 'practice.tutorialDone';
 /** Seconds of the read step before it hands to the throw step (sooner if he picks a receiver). */
@@ -109,6 +115,7 @@ class PracticeSession {
   private seedBase = 0;
   private snaps = 0;
   private offPause: (() => void) | null = null;
+  private offHot: (() => void) | null = null;
   private resuming = false;
   private stageBeforePause: PracticeStage = 'presnap';
   /** The situation of the last snap (Run It Back replays from here). */
@@ -118,6 +125,9 @@ class PracticeSession {
   /** The tutorial runs on the next play. */
   private tutorialNext = !loadJSON<boolean>(TUTORIAL_KEY);
   private readSince = -1;
+  private hotPop: (() => void) | null = null;
+  /** The route art stays up this long after a hot route is called (performance.now() ms). */
+  routeFlashUntil = 0;
   /** The session's first catch is still to come (it plays slowed). */
   private firstCatch = true;
   private sawAir = false;
@@ -134,6 +144,9 @@ class PracticeSession {
       // The same Esc that just resumed (menu.back fires first) doesn't pause again.
       if ((st === 'presnap' || st === 'live') && !this.resuming) this.pause();
     });
+    this.offHot ??= Input.onAction((id, info) => {
+      if (!info.repeat) this.onHot(id, info.device);
+    });
     try {
       this.rosters ??= await loadPracticeRosters();
       set({ stage: 'call', situation: startSituation(get().startSpot, get().startDowns) });
@@ -143,9 +156,12 @@ class PracticeSession {
   }
 
   leave(): void {
+    this.closeHot();
     this.setContext(null);
     this.offPause?.();
     this.offPause = null;
+    this.offHot?.();
+    this.offHot = null;
     this.runner = null;
     this.playId++;
     this.controls.clear();
@@ -160,6 +176,7 @@ class PracticeSession {
     this.snaps++;
     const def = ui.cover === 'random' ? DEF_CALLS[(seed >>> 4) % DEF_CALLS.length]! : defById(ui.cover);
     const sit = ui.seriesOver ? startSituation(ui.startSpot, ui.startDowns) : ui.situation;
+    this.closeHot();
     const state = createPlay({
       seed,
       offense: this.rosters.offense,
@@ -180,6 +197,58 @@ class PracticeSession {
     this.readSince = -1;
     this.sawAir = false;
     set({ stage: 'presnap', playId, situation: sit, playSit: sit, phase: 'presnap', carrier: null, result: null, lastCover: def.name, seriesOver: false, tutorial: this.tutorialNext ? 'snap' : null });
+  }
+
+  /**
+   * The hot-route picker (pre-snap): the hot-route key opens it; a
+   * receiver's number picks him; a route's number (or up/down and confirm)
+   * calls it. The call goes to the sim with the next tick, so a replay has it.
+   */
+  private onHot(id: string, device: string): void {
+    const ui = get();
+    if (ui.stage !== 'presnap' || !this.runner) return;
+    const s = this.runner.state;
+    const hot = ui.hot;
+    if (!hot) {
+      if (id === 'preSnap.hotRoute') {
+        this.hotPop = Input.pushContext('hotRoute');
+        set({ hot: { stage: 'receiver' } });
+      }
+      return;
+    }
+    if (id === 'hot.cancel') return this.closeHot();
+    const n = id.startsWith('hot.n') ? Number(id.slice(5)) : 0;
+    if (hot.stage === 'receiver') {
+      if (n >= 1 && n <= s.icons.length) {
+        const cur = routeOf(s, s.agents[s.icons[n - 1]!]!);
+        set({ hot: { stage: 'route', icon: n, focus: Math.max(0, HOT_ROUTES.indexOf(cur as RouteName)) } });
+      }
+      return;
+    }
+    const pad = device === 'gamepad';
+    if (id === 'hot.up' || id === 'hot.down') {
+      const k = HOT_ROUTES.length;
+      set({ hot: { ...hot, focus: (hot.focus + (id === 'hot.up' ? k - 1 : 1)) % k } });
+    } else if (id === 'hot.confirm' || (pad && n === 1)) this.callHot(hot.icon, HOT_ROUTES[hot.focus]!);
+    else if (pad && n === 2) set({ hot: { stage: 'receiver' } });
+    else if (!pad && n >= 1 && n <= HOT_ROUTES.length) this.callHot(hot.icon, HOT_ROUTES[n - 1]!);
+  }
+
+  /** A route clicked in the picker. */
+  pickHot(icon: number, route: RouteName): void {
+    if (get().hot) this.callHot(icon, route);
+  }
+
+  private callHot(icon: number, route: RouteName): void {
+    this.controls.queueHot(icon, route);
+    this.routeFlashUntil = performance.now() + 1600;
+    this.closeHot();
+  }
+
+  closeHot(): void {
+    this.hotPop?.();
+    this.hotPop = null;
+    if (get().hot) set({ hot: null });
   }
 
   /** Stop the tutorial now and don't show it again. */
@@ -212,6 +281,7 @@ class PracticeSession {
 
   pause(): void {
     if (!this.runner) return;
+    this.closeHot();
     this.stageBeforePause = get().stage;
     this.runner.paused = true;
     this.setContext(null);
@@ -291,6 +361,7 @@ class PracticeSession {
   }
 
   private stepTutorial(s: PlayState): void {
+    if (s.phase !== 'presnap' && get().hot) this.closeHot();
     const step = get().tutorial;
     if (!step) return;
     let next: TutorialStep | null = step;

@@ -5,7 +5,7 @@
 // are read live.
 
 import { Input } from '@/input/InputManager';
-import { NEUTRAL, type CatchType, type InputFrame } from '@/sim';
+import { NEUTRAL, type CatchType, type InputFrame, type RouteName } from '@/sim';
 import type { V2 } from '@/sim/vec';
 import { latency, type LatKind } from './latency';
 import { AIM_RADIUS, view } from './view';
@@ -84,6 +84,8 @@ export class Controls {
   /** The placement being chosen for the held icon (lead/back shoulder, high/low). */
   aim: V2 = { x: 0, y: 0 };
   private off: () => void;
+  /** A hot route to send with the next tick (pre-snap). */
+  private pendingHot: { icon: number; route: RouteName } | null = null;
   /** The reticle's offset from the held icon (CSS px), for the HUD. */
   readonly reticle = { x: 0, y: 0, icon: 0 };
 
@@ -100,8 +102,14 @@ export class Controls {
     this.off();
   }
 
+  /** Call a hot route: it goes to the sim with the next tick. */
+  queueHot(icon: number, route: RouteName): void {
+    this.pendingHot = { icon, route };
+  }
+
   /** Forget latched presses and holds (a new play, or leaving a pause). */
   clear(): void {
+    this.pendingHot = null;
     this.edges.clear();
     this.hold = null;
     this.aim = { x: 0, y: 0 };
@@ -171,6 +179,10 @@ export class Controls {
     const carrier = ctx === 'carrier';
     f.sprint = Input.isHeld('carrier.sprint');
     f.snap = e.has('preSnap.snap');
+    if (this.pendingHot) {
+      f.hotRoute = this.pendingHot;
+      this.pendingHot = null;
+    }
 
     if (pocket) {
       // Start a hold: a receiver key or button, or a click near an icon.

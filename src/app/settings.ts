@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { loadJSON, saveJSON } from './storage';
-import { KB_DEFAULTS_V2, type Bindings } from '@/input/actions';
+import { KB_DEFAULTS_V2, KB_DEFAULTS_V3, type Bindings } from '@/input/actions';
 
 export type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
 export type Difficulty = 'rookie' | 'pro' | 'legend' | 'beast';
@@ -21,7 +21,7 @@ export interface GraphicsSettings {
 }
 
 export interface Settings {
-  version: 3;
+  version: 4;
   display: {
     fullscreen: boolean;
     resolutionScale: number; // 0.5 .. 1.0
@@ -109,7 +109,7 @@ export function renderDpr(cssW: number, cssH: number, deviceDpr: number, preset:
 
 export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings {
   return {
-    version: 3,
+    version: 4,
     display: { fullscreen: false, resolutionScale: 1, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 200, ballInAir: 'assist', keyboard, gamepad },
@@ -189,7 +189,18 @@ export function migrate(stored: Settings): Settings {
         if (cur && cur.length === old.length && cur.every((c, i) => c === old[i])) delete kb[id];
       }
     }
-    s.version = 3;
+    (s as { version: number }).version = 3;
+  }
+  if ((s.version as number) === 3) {
+    // v4: Tab shows every route pre-snap; flip play moved to F.
+    const kb = s.controls?.keyboard;
+    if (kb) {
+      for (const [id, old] of Object.entries(KB_DEFAULTS_V3)) {
+        const cur = kb[id];
+        if (cur && cur.length === old.length && cur.every((c, i) => c === old[i])) delete kb[id];
+      }
+    }
+    (s as { version: number }).version = 4;
   }
   return s;
 }

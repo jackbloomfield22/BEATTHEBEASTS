@@ -9,9 +9,9 @@ import { blockOf, engage } from './blocks';
 import { arrive, CRUISE, seen, steer } from './movement';
 import { maxThrowSpeed, releaseTime } from './effects';
 import { lead } from './passing';
-import { ROUTES, ZONES, type OffPlay } from './plays';
+import { ROUTES, ZONES, type OffPlay, type RouteName } from './plays';
 import { DIFFICULTY, zoneSpot, type PlayState } from './state';
-import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, type Agent } from './types';
+import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, type Agent, type OffSlot } from './types';
 
 /** Room a route keeps from the sideline and the end line (yd): a catchable spot, in bounds. */
 const ROUTE_ROOM = 1.5;
@@ -37,19 +37,34 @@ export function jitter(s: PlayState, d: Agent): number {
 
 // ---- Offense ----------------------------------------------------------------
 
+/** The route a receiver runs: the play's, unless it was hot-routed at the line. Null for non-receivers. */
+export function routeOf(s: PlayState, a: Agent): RouteName | null {
+  const as = s.setup.play.assign[a.slot as keyof OffPlay['assign']];
+  if (as.kind !== 'route') return null;
+  return s.hot[a.slot as OffSlot] ?? as.route;
+}
+
+/**
+ * A receiver's route in world space from where he stands (the snap uses it;
+ * so does the pre-snap route preview, which draws exactly what he'll run).
+ * Every point is inside the field with room to catch: 1.5 yd off the
+ * sideline (a route near the boundary stems back inside) and short of the
+ * end line.
+ */
+export function routePoints(s: PlayState, a: Agent, as: RouteName | null = routeOf(s, a)): { pts: V2[]; sit: boolean[]; name: RouteName } | null {
+  const name = as;
+  if (!name) return null;
+  const out = a.pos.y >= (s.setup.ballY ?? 0) ? 1 : -1;
+  const pts = ROUTES[name].map((q) => v2(Math.min(END_X - ROUTE_ROOM, a.pos.x + q.d), Math.max(-FIELD_HALF_W + ROUTE_ROOM, Math.min(FIELD_HALF_W - ROUTE_ROOM, a.pos.y + q.o * out))));
+  return { pts, sit: ROUTES[name].map((q) => !!q.sit), name };
+}
+
 /** Build each receiver's route in world space at the snap. */
 export function setRoutes(s: PlayState): void {
-  const by = s.setup.ballY ?? 0;
   for (const i of s.off) {
     const a = s.agents[i]!;
-    const as = s.setup.play.assign[a.slot as keyof OffPlay['assign']];
-    if (as.kind !== 'route') continue;
-    const out = a.pos.y >= by ? 1 : -1;
-    // Every point inside the field with room to catch: 1.5 yd off the
-    // sideline (a route near the boundary stems back inside) and short of
-    // the end line.
-    const pts = ROUTES[as.route].map((q) => v2(Math.min(END_X - ROUTE_ROOM, a.pos.x + q.d), Math.max(-FIELD_HALF_W + ROUTE_ROOM, Math.min(FIELD_HALF_W - ROUTE_ROOM, a.pos.y + q.o * out))));
-    a.route = { pts, sit: ROUTES[as.route].map((q) => !!q.sit), idx: 0 };
+    const r = routePoints(s, a);
+    if (r) a.route = { pts: r.pts, sit: r.sit, idx: 0 };
   }
 }
 

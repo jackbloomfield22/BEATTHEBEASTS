@@ -7,6 +7,7 @@ export type InputContext =
   | 'menu'
   | 'playCall'
   | 'preSnap'
+  | 'hotRoute'
   | 'pocket'
   | 'ballInAir'
   | 'carrier'
@@ -46,11 +47,28 @@ export const ACTIONS: ActionDef[] = [
 
   // Pre-snap
   a('preSnap.snap', 'preSnap', 'Snap', ['Space'], ['Pad:A']),
+  a('preSnap.routes', 'preSnap', 'Show every route (hold)', ['Tab'], ['Pad:RT']),
   a('preSnap.hotRoute', 'preSnap', 'Hot route', ['KeyH'], ['Pad:Y']),
   a('preSnap.audible', 'preSnap', 'Audible', ['KeyZ'], ['Pad:X']),
   a('preSnap.motion', 'preSnap', 'Motion', ['KeyM'], ['Pad:LB']),
-  a('preSnap.flip', 'preSnap', 'Flip play', ['Tab'], ['Pad:RB']),
+  a('preSnap.flip', 'preSnap', 'Flip play', ['KeyF'], ['Pad:RB']),
   a('preSnap.reads', 'preSnap', 'Show reads / coverage shell', ['AltLeft'], ['Pad:LT']),
+
+  // Hot route picker (pre-snap, after the hot-route key): a receiver's
+  // number, then his new route by its number (or up/down and confirm).
+  // On a gamepad: his button, then the D-pad and A (B goes back).
+  a('hot.n1', 'hotRoute', 'Receiver 1 / route 1', ['Digit1'], ['Pad:A']),
+  a('hot.n2', 'hotRoute', 'Receiver 2 / route 2', ['Digit2'], ['Pad:B']),
+  a('hot.n3', 'hotRoute', 'Receiver 3 / route 3', ['Digit3'], ['Pad:X']),
+  a('hot.n4', 'hotRoute', 'Receiver 4 / route 4', ['Digit4'], ['Pad:Y']),
+  a('hot.n5', 'hotRoute', 'Receiver 5 / route 5', ['Digit5'], ['Pad:RB']),
+  a('hot.n6', 'hotRoute', 'Route 6', ['Digit6'], []),
+  a('hot.n7', 'hotRoute', 'Route 7', ['Digit7'], []),
+  a('hot.n8', 'hotRoute', 'Route 8', ['Digit8'], []),
+  a('hot.up', 'hotRoute', 'Previous route', ['ArrowUp'], ['Pad:Up']),
+  a('hot.down', 'hotRoute', 'Next route', ['ArrowDown'], ['Pad:Down']),
+  a('hot.confirm', 'hotRoute', 'Choose route', ['Enter', 'Space'], []),
+  a('hot.cancel', 'hotRoute', 'Close the picker', ['KeyH'], ['Pad:LB']),
 
   // Pocket (QB)
   // Movement is on the arrows so the left hand stays on the number row
@@ -140,12 +158,18 @@ export const KB_DEFAULTS_V2: Record<string, string[]> = {
   'carrier.protect': ['KeyV'],
 };
 
+/** Keyboard defaults that changed in settings v4 (route preview on Tab), with their v3 values. */
+export const KB_DEFAULTS_V3: Record<string, string[]> = {
+  'preSnap.flip': ['Tab'],
+};
+
 export const ACTIONS_BY_ID = new Map(ACTIONS.map((d) => [d.id, d]));
 
 export const CONTEXT_LABELS: Record<InputContext, string> = {
   menu: 'Menus',
   playCall: 'Play Call',
   preSnap: 'Pre-Snap',
+  hotRoute: 'Hot Route',
   pocket: 'Passing',
   ballInAir: 'Ball in the Air',
   carrier: 'Ball Carrier',

@@ -7,7 +7,8 @@ import { inputLabel } from '@/input/actions';
 import { practice, usePractice } from '@/game/practice';
 import { latency } from '@/game/latency';
 import { downLabel, spotLabel, START_DOWNS, START_SPOTS, startSituation } from '@/game/situation';
-import { DEF_CALLS, playById, PLAYS } from '@/sim';
+import { DEF_CALLS, HOT_ROUTES, playById, PLAYS, ROUTE_LABEL } from '@/sim';
+import { routeOf } from '@/sim/ai';
 import { useMenuNav } from '../nav';
 import { Choice, Hints, MenuItem, SettingRow, useDevice } from '../components/controls';
 import { PlayArt } from '../game/PlayArt';
@@ -201,7 +202,7 @@ function PlayHud() {
           </div>
         </div>
       </div>
-      {ui.stage === 'presnap' ? (
+      {ui.stage === 'presnap' && !ui.hot ? (
         <div className="snap-call">
           <div className="snap-key">
             <kbd>{key('preSnap.snap')}</kbd> Snap
@@ -209,8 +210,17 @@ function PlayHud() {
           <div className="snap-sub">
             {pad ? 'A B X Y RB' : `${key('pocket.throw1')}–${key('pocket.throw5')}`} are your receivers, in read order
           </div>
+          <div className="snap-more">
+            <span>
+              Hold <kbd>{key('preSnap.routes')}</kbd> to see the routes
+            </span>
+            <span>
+              <kbd>{key('preSnap.hotRoute')}</kbd> Hot route
+            </span>
+          </div>
         </div>
       ) : null}
+      {ui.stage === 'presnap' && ui.hot ? <HotRoutePicker /> : null}
       {live && inPocket ? (
         <div className="prompt-row">
           <span><kbd>{moveKeys('pocket.move')}</kbd> Move</span>
@@ -280,6 +290,62 @@ function Tutorial() {
         {order.indexOf(step) + 1}/{order.length}
       </span>
       <span className="tutorial-text">{body[step]}</span>
+    </div>
+  );
+}
+
+/**
+ * The hot-route picker: first which receiver (his number), then his new
+ * route from the list (its number, or up/down and confirm; on a gamepad the
+ * D-pad and A). The route art on the field previews the focused route.
+ */
+function HotRoutePicker() {
+  const hot = usePractice((s) => s.hot);
+  const device = useDevice();
+  const key = useKey();
+  const runner = practice.runner;
+  if (!hot || !runner) return null;
+  const s = runner.state;
+  const pad = device === 'gamepad';
+  if (hot.stage === 'receiver') {
+    return (
+      <div className="hot-picker">
+        <div className="hot-head">Hot route</div>
+        <div className="hot-sub">
+          Which receiver? {pad ? 'His button' : <kbd>{`${key('hot.n1')}–${key(`hot.n${s.icons.length}`)}`}</kbd>}
+        </div>
+        <div className="hot-foot">
+          <kbd>{key('hot.cancel')}</kbd> Close
+        </div>
+      </div>
+    );
+  }
+  const a = s.agents[s.icons[hot.icon - 1]!]!;
+  const current = routeOf(s, a);
+  return (
+    <div className="hot-picker">
+      <div className="hot-head">
+        {a.p.name} <span className="hot-now">now: {current ? ROUTE_LABEL[current] : ''}</span>
+      </div>
+      <ol className="hot-list">
+        {HOT_ROUTES.map((r, i) => (
+          <li key={r} className={`hot-item${i === hot.focus ? ' focus' : ''}${r === current ? ' current' : ''}`} onMouseEnter={() => usePractice.setState({ hot: { ...hot, focus: i } })} onClick={() => practice.pickHot(hot.icon, r)}>
+            {pad ? null : <kbd>{key(`hot.n${i + 1}`)}</kbd>}
+            <span>{ROUTE_LABEL[r]}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="hot-foot">
+        {pad ? (
+          <>
+            <kbd>D-Pad</kbd> choose <kbd>A</kbd> call <kbd>B</kbd> back
+          </>
+        ) : (
+          <>
+            <kbd>{key('hot.confirm')}</kbd> call <kbd>{key('hot.cancel')}</kbd> close
+          </>
+        )}
+      </div>
     </div>
   );
 }

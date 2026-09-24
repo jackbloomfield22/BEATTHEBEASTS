@@ -6,11 +6,13 @@ import {
   defById,
   effects,
   hashPlay,
+  HOT_ROUTES,
   input,
   NEUTRAL,
   PLAYS,
   playById,
   practiceRosters,
+  ROUTES,
   runToWhistle,
   solveSprint,
   speedToForty,
@@ -18,6 +20,7 @@ import {
   stepPlay,
   TICK,
   type InputFrame,
+  type OffSlot,
   type PlayState,
   type SimPlayer,
   type SnapshotLike,
@@ -425,5 +428,33 @@ describe('sim: the field has edges (M5.5)', () => {
       }
     }
     expect(deep).toBeGreaterThan(0);
+  });
+});
+
+describe('sim: hot routes (M5.5)', () => {
+  it('a hot route at the line replaces the play route from the snap, and replays exactly', () => {
+    for (const route of HOT_ROUTES) {
+      const make = () => setup(41, playById('trips-stick'), defById('cover3'), true);
+      const script = (st: PlayState) => input({ hotRoute: st.tick === 0 ? { icon: 1, route } : null, snap: st.tick === 2, throwHeld: st.tick >= 90 && st.tick < 94 ? 1 : 0 });
+      const s = make();
+      stepPlay(s, script(s));
+      stepPlay(s, script(s));
+      stepPlay(s, script(s));
+      const r = s.agents[s.icons[0]!]!;
+      expect(s.hot[r.slot as OffSlot]).toBe(route);
+      expect(r.route!.pts.length).toBe(ROUTES[route].length);
+      expect(s.events.some((e) => e.type === 'hotRoute')).toBe(true);
+      runToWhistle(s, script);
+      const again = runToWhistle(make(), script);
+      expect(hashPlay(again)).toBe(hashPlay(s));
+      // Every hot route stays on the field.
+      for (const q of r.route!.pts) expect(Math.abs(q.y)).toBeLessThan(FIELD_HALF_W);
+    }
+  });
+  it('ignores a hot route that is not on the list or for an icon that does not exist', () => {
+    const s = setup(41, playById('trips-stick'), defById('cover3'), true);
+    stepPlay(s, input({ hotRoute: { icon: 9, route: 'go' } }));
+    stepPlay(s, input({ hotRoute: { icon: 1, route: 'wheel' } }));
+    expect(Object.keys(s.hot)).toEqual([]);
   });
 });
