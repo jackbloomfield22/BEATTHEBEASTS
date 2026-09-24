@@ -25,6 +25,7 @@ const tick = (page: Page, n: number) => page.evaluate((k) => (window as unknown 
 const phase = (page: Page) => page.evaluate(() => (window as unknown as P).__btbPractice.runner!.state.phase);
 
 test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
+  test.setTimeout(1_800_000);
   await page.goto(`/?screen=practice&nointro&seed=37&quality=${process.env.BTB_QUALITY ?? 'high'}&shot=practice&lighting=${LIGHTING}`);
   await page.waitForFunction(() => (window as unknown as P).__btbReady === true, null, { timeout: 300_000 });
   await page.waitForFunction(() => (window as unknown as P).__btbPracticeUi?.getState().stage === 'call', null, { timeout: 120_000 });

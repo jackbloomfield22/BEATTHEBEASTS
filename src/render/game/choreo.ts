@@ -25,6 +25,10 @@ export interface Body {
   catchFor: number;
   /** After a fall: where he lies (world x, z) and his yaw, instead of the sim's spot. */
   lie: { x: number; z: number; yaw: number; prone: boolean; up?: boolean } | null;
+  /** He has gone down this play (a fall, a tackle or a dive clip): never twice. */
+  fallen: boolean;
+  /** A clip that ends with him lying down (the tackle, the dive) is playing. */
+  lyingClip: boolean;
 }
 
 /** Upper body, for a throw on the run (the legs keep running). */
@@ -36,7 +40,6 @@ export const THROW_MASK = [
 const RELEASE_FRAME = 11 / 30;
 const SECURE = 0.2;
 const TACKLE_CONTACT = 8 / 30;
-const LYING = new Set(['tackle', 'dive']);
 
 const _v = new THREE.Vector3();
 const _w = new THREE.Vector3();
@@ -47,6 +50,21 @@ export function resetBody(b: Body): void {
   b.throwAt = -1;
   b.catchFor = -1;
   b.lie = null;
+  b.fallen = false;
+  b.lyingClip = false;
+}
+
+function lyingClip(b: Body, name: string, t0 = 0): void {
+  b.animator.play(name, { now: true, t0 });
+  b.fallen = true;
+  b.lyingClip = true;
+}
+
+function fall(b: Body, vel: THREE.Vector3, push: THREE.Vector3): void {
+  if (b.fallen && !b.lyingClip) return;
+  b.lyingClip = false;
+  b.fallen = true;
+  b.ragdoll.start(vel, push);
 }
 
 /** The snap: get-offs out of the stances, the QB's drop. */
@@ -82,7 +100,7 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         if (mv === 'jukeL') a.animator.play('juke_l', { now: true });
         else if (mv === 'jukeR') a.animator.play('juke_r', { now: true });
         else if (mv === 'spin') a.animator.play('spin', { now: true });
-        else if (mv === 'dive') a.animator.play('dive', { now: true });
+        else if (mv === 'dive') lyingClip(a, 'dive');
         else if (mv === 'stiffArm') a.animator.playOverlay('ovl_stiff_arm');
         else if (mv === 'truck') a.animator.playOverlay('ovl_truck');
         else if (mv === 'pumpFake') a.animator.playOverlay('ovl_pump');
@@ -94,12 +112,12 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         if (a && a.animator.overlayAction?.name.startsWith('ovl_catch') !== true) a.animator.playOverlay('ovl_catch', { t0: SECURE });
         break;
       case 'missedTackle':
-        if (a && e.data?.dive) a.animator.play('dive', { now: true });
+        if (a && e.data?.dive) lyingClip(a, 'dive');
         break;
       case 'hit': {
         const t = a;
         const c = who[1] !== undefined ? bodies[who[1]] : undefined;
-        if (t) t.animator.play('tackle', { now: true, t0: TACKLE_CONTACT });
+        if (t && !t.fallen) lyingClip(t, 'tackle', TACKLE_CONTACT);
         if (c && who[1] !== undefined && who[0] !== undefined) {
           // The fall: the carrier's run plus the hit's push, along the tackler's line.
           const vel = worldVel(s, who[1]).clone();
@@ -109,7 +127,7 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
           if (push.lengthSq() < 1e-4) push.subVectors(c.player.root.position, t!.player.root.position).setY(0);
           push.normalize().multiplyScalar(1.5 + Math.min(4, force * 0.35) * (e.data?.big ? 1.5 : 1));
           push.y = 0.6;
-          c.ragdoll.start(vel.multiplyScalar(0.8), push);
+          fall(c, vel.multiplyScalar(0.8), push);
         }
         break;
       }
@@ -170,11 +188,14 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     const pocket = i === s.qb && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket');
     anim.setHold(pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' ? 'ovl_protect' : 'ovl_carry_r');
   } else anim.setHold(null);
-  // Down without a clip that lies him down: he falls (a dove-and-missed
-  // tackler whose clip ended, a player knocked over).
-  const lying = tr !== null && LYING.has(tr.name);
-  if (a.down && !b.ragdoll.active && !lying && !tr?.name.startsWith('getup')) {
-    b.ragdoll.start(worldVel(s, i).clone().multiplyScalar(0.8), _w.set(0, 0.3, 0));
+  // Down without a clip that lies him down: he falls, once (a dove-and-
+  // missed tackler whose clip ended, a player knocked over).
+  if (a.down && !b.fallen) fall(b, worldVel(s, i).clone().multiplyScalar(0.8), _w.set(0, 0.3, 0));
+  // A lying clip that finished: he lies where it left him.
+  if (b.lyingClip && (!tr || tr.done) && !b.lie) {
+    const r = b.player.root;
+    b.lie = { x: r.position.x, z: r.position.z, yaw: r.rotation.y, prone: true };
+    b.lyingClip = false;
   }
   // The fall hands over to lying on the turf once he's down (the ragdoll
   // has no muscles to straighten out with; the lying clips do).
@@ -183,14 +204,12 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     anim.reset();
     anim.setStance(b.lie.prone ? 'stance_down_prone' : 'stance_down_supine');
   }
-  if (a.down || b.ragdoll.active || lying || b.lie) out.speed = 0;
-  // After the whistle, a player lying down gets up.
-  if (s.phase === 'dead' && simT - s.whistleT > 1.3) {
-    if (lying && tr!.done) anim.play('getup_prone', { now: true });
-    else if (b.lie && !b.lie.up && !b.ragdoll.active && !tr) {
-      b.lie.up = true;
-      anim.play(b.lie.prone ? 'getup_prone' : 'getup_supine', { now: true });
-    }
+  const gettingUp = tr?.name.startsWith('getup') ?? false;
+  if (b.fallen && !gettingUp && !(b.lie?.up && !tr)) out.speed = 0;
+  // After the whistle, a player lying down gets up (once).
+  if (s.phase === 'dead' && simT - s.whistleT > 1.3 && b.lie && !b.lie.up && !b.ragdoll.active && (!tr || tr.done)) {
+    b.lie.up = true;
+    anim.play(b.lie.prone ? 'getup_prone' : 'getup_supine', { now: true });
   }
   // Eyes: the QB on his read, everyone on a ball in the air.
   if (ball.mode === 'air') out.look = _look.set(-ball.pos.y * YARD, Math.max(ball.pos.z, 1.2) * YARD, (50 - ball.pos.x) * YARD);

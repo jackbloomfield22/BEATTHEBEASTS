@@ -92,8 +92,9 @@ function targetPose(mode: Mode): Pose | null {
     const long = dir > 0 && c.x - los > 18 && sp > 6.5 && cur.phase !== 'dead';
     if (long) {
       // High sideline angle, from the sideline he's farther from (the play runs away from the camera less).
+      // 24 yd off him across the field, looking straight at him and his lane.
       const side = c.y >= 0 ? -1 : 1;
-      return { ex: c.x - 3, ey: side * 34, eh: 15, lx: lx + 3, ly: ly * 0.6, lh: 0, fov: 44 };
+      return { ex: c.x - 5, ey: c.y + side * 24, eh: 10, lx: lx + 2, ly, lh: 0.5, fov: 40 };
     }
     return { ex: c.x - dir * 13, ey: c.y * 0.75, eh: 6.8, lx, ly, lh: 0.6, fov: 52 };
   }

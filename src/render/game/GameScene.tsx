@@ -68,7 +68,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: 'royal' | 'beasts
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null };
+    return { player, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false };
   });
 }
 
@@ -193,6 +193,7 @@ export function GameScene() {
         // Lying where the fall left him (the lying clip's root is at his hips, his head along +Z).
         root.position.set(b.lie.x, 0, b.lie.z);
         root.rotation.y = b.lie.prone ? b.lie.yaw : b.lie.yaw + Math.PI;
+        // A clip that lay him down keeps the yaw it had (its root already faces along him).
       }
       const yawRate = animDt > 0 ? lerpAngle(0, yaw - b.lastYaw, 1) / Math.max(animDt, 1 / 120) : 0;
       const accel = animDt > 0 ? (d.speed - b.lastSpeed) / Math.max(animDt, 1 / 120) : 0;
