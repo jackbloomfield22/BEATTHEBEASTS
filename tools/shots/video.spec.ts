@@ -21,6 +21,8 @@ const LEAD_IN = 36;
 const TAIL = 75;
 const W = 1280;
 const H = 720;
+/** Quality tier for the recording (Low renders fastest here; the look is judged on the screenshots). */
+const QUALITY = process.env.BTB_VIDEO_QUALITY ?? 'medium';
 
 type Clip = { id: string; title: string };
 type Win = {
@@ -39,8 +41,8 @@ function ffmpeg(): string {
   throw new Error('No ffmpeg: install it, set $FFMPEG, or `pip install imageio-ffmpeg`.');
 }
 
-// Let the page draw the new state (the camera and animation step by game time, so extra frames change nothing).
-const frame = (page: Page) => page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
+// Draw exactly one frame of the new state (in video mode the page only draws when asked).
+const frame = (page: Page) => page.evaluate(() => (window as unknown as { __btbRenderFrame(): void }).__btbRenderFrame());
 
 async function record(page: Page, clip: Clip) {
   const dir = `tools/shots/out/video/${clip.id}`;
@@ -48,14 +50,24 @@ async function record(page: Page, clip: Clip) {
   mkdirSync(dir, { recursive: true });
   // No tutorial card in the videos.
   await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
-  await page.goto(`/?screen=practice&nointro&quality=medium&video=${FPS}&pops&seed=1`);
-  await page.waitForFunction(() => (window as unknown as Win).__btbPracticeUi?.getState().stage === 'call', null, { timeout: 180_000 });
+  await page.goto(`/?screen=practice&nointro&quality=${QUALITY}&video=${FPS}&pops&seed=1`);
+  // The page only draws when asked: keep it drawing while it loads.
+  const pump = (pred: string) =>
+    page.waitForFunction(
+      (p) => {
+        (window as unknown as { __btbRenderFrame?: () => void }).__btbRenderFrame?.();
+        return new Function(`return (${p})`)() as boolean;
+      },
+      pred,
+      { timeout: 300_000, polling: 250 },
+    );
+  await pump(`window.__btbPracticeUi?.getState().stage === 'call'`);
   await page.evaluate(async (id) => {
     const w = window as unknown as Win;
     const c = (await w.__btbClips()).find((x) => x.id === id)!;
     w.__btbPractice.callClip(c);
   }, clip.id);
-  await page.waitForFunction(() => (window as unknown as Win).__btbGameReady === true, null, { timeout: 180_000 });
+  await pump('window.__btbGameReady === true');
   await page.evaluate(() => void ((window as unknown as Win).__btbPractice.runner!.paused = true));
   let n = 0;
   const shot = async () => {

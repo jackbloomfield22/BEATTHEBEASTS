@@ -104,6 +104,13 @@ function FrameDriver({ cap }: { cap: number }) {
   const setFrameloop = useThree((s) => s.setFrameloop);
   const last = useRef(0);
   useEffect(() => {
+    if (urlFlags.video) {
+      // Video recording: draw a frame only when the recorder asks for one
+      // (tools/shots/video.spec.ts), so no time goes on frames nobody keeps.
+      setFrameloop('never');
+      Object.assign(window, { __btbRenderFrame: () => advance(performance.now()) });
+      return;
+    }
     if (!cap) {
       setFrameloop('always');
       return;
@@ -160,7 +167,7 @@ export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasEl
       flat
       dpr={dpr}
       shadows={{ type: THREE.PCFShadowMap }}
-      gl={{ antialias: false, powerPreference: 'high-performance', stencil: false, alpha: false, preserveDrawingBuffer: urlFlags.shot !== null }}
+      gl={{ antialias: false, powerPreference: 'high-performance', stencil: false, alpha: false, preserveDrawingBuffer: urlFlags.shot !== null || urlFlags.video !== null }}
       camera={{ fov: 40, near: 0.5, far: 16000, position: [-420, -8, 520] }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x05040a);
@@ -183,7 +190,7 @@ export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasEl
       }}
     >
       <FrameDriver cap={display.frameCap} />
-      <DynamicResolution baseDpr={dpr} enabled={display.dynamicResolution} targetFps={display.frameCap || 60} />
+      <DynamicResolution baseDpr={dpr} enabled={display.dynamicResolution && !urlFlags.video} targetFps={display.frameCap || 60} />
       <FirstLaunchBenchmark targetFps={display.frameCap || 60} />
       <World preset={preset} quality={worldQuality} onReady={setSceneReady} />
       {urlFlags.lineup ? <Lineup /> : null}
