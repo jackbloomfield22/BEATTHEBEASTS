@@ -46,6 +46,8 @@ export interface Block {
   kind: 'pass' | 'run';
   move: 'bull' | 'speed' | 'swim' | 'spin' | 'drive';
   t: number;
+  /** This rep's edge at contact (hands, pad level, footwork): the same matchup doesn't play out the same every snap. */
+  bias: number;
 }
 
 export interface PlayState {
@@ -84,8 +86,15 @@ export interface PlayState {
   maxX: number;
   /** Whistle time (play keeps animating the dead ball after). */
   whistleT: number;
-  /** The run read: time the defense diagnosed a run (−1 before). */
+  /** The handoff (play time; −1 before one). */
   runReadT: number;
+  /**
+   * When the offense showed run (the line firing out, a handoff, a fake) and
+   * pass (the line setting, the QB's drop, the ball pulled out of a fake);
+   * −1 if it hasn't. Each defender believes the latest he has read (runs.ts).
+   */
+  runShow: number;
+  passShow: number;
   /** Throw bookkeeping for the result. */
   pass: PlayResult['pass'];
   sack: boolean;
@@ -240,6 +249,8 @@ export function createPlay(s: PlaySetup): PlayState {
     maxX: -Infinity,
     whistleT: -1,
     runReadT: -1,
+    runShow: -1,
+    passShow: -1,
     pass: undefined,
     sack: false,
     read: { idx: 0, since: 0 },

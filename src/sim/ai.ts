@@ -9,7 +9,7 @@ import { blockOf, engage } from './blocks';
 import { arrive, CRUISE, seen, steer } from './movement';
 import { maxThrowSpeed, releaseTime } from './effects';
 import { lead } from './passing';
-import { ROUTES, ZONES, type OffPlay, type RouteName } from './plays';
+import { ROUTE_DELAY, ROUTES, ZONES, type OffPlay, type RouteName } from './plays';
 import { DIFFICULTY, zoneSpot, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, type Agent, type OffSlot } from './types';
 
@@ -94,6 +94,14 @@ export function runRoute(s: PlayState, a: Agent): void {
     steer(a, { x: 0, y: 0 });
     return;
   }
+  // A late release (the slip screen's back): show pass protection first.
+  const name = routeOf(s, a);
+  const delay = name ? ROUTE_DELAY[name] : undefined;
+  if (delay !== undefined && s.t - s.snapT < delay) {
+    steer(a, { x: 0, y: 0 }, { face: 0 });
+    a.anim = 'block';
+    return;
+  }
   const rr = Math.max(a.fx.a('shortRoute'), a.fx.a('deepRoute'), a.fx.a('routeRunning'));
   if (rt.idx < rt.pts.length) {
     const q = rt.pts[rt.idx]!;
@@ -125,63 +133,15 @@ export function runRoute(s: PlayState, a: Agent): void {
   steer(a, { x: dir.x * a.fx.vmax, y: dir.y * a.fx.vmax });
 }
 
-/**
- * Zone run blocking at the snap (GDD §9.4): each lineman takes the defender
- * in his play-side gap (one per defender); an uncovered lineman climbs to the
- * nearest linebacker. Tight end and receivers take the nearest edge player or
- * defensive back on their side.
- */
-export function assignRunBlocks(s: PlayState): void {
-  const run = s.setup.play.run;
-  if (!run) return;
-  const side = Math.sign(run.aim) || -1;
-  const front = s.def.filter((i) => s.agents[i]!.pos.x < s.setup.los + 2.5);
-  const second = s.def.filter((i) => {
-    const d = s.agents[i]!;
-    return d.pos.x >= s.setup.los + 2.5 && d.pos.x < s.setup.los + 7;
-  });
-  const taken = new Set<number>();
-  const pick = (pool: number[], at: V2) => {
-    let best = -1;
-    let bd = Infinity;
-    for (const i of pool) {
-      if (taken.has(i)) continue;
-      const k = dist(s.agents[i]!.pos, at);
-      if (k < bd) {
-        bd = k;
-        best = i;
-      }
-    }
-    return { best, bd };
-  };
-  const line = ['LT', 'LG', 'C', 'RG', 'RT'].map((k) => s.agents[s.slot[k]!]!).sort((p, q) => (q.pos.y - p.pos.y) * -side);
-  for (const b of line) {
-    // Play-side gap: a yard and a bit toward the play from him.
-    const gap = v2(b.pos.x + 1.2, b.pos.y + side * 1.1);
-    const first = pick(front, gap);
-    let best = first.best;
-    if (best < 0 || first.bd > 2.2) best = pick(second, v2(b.pos.x + 5, b.pos.y + side * 1.5)).best;
-    if (best >= 0) {
-      taken.add(best);
-      b.mem.target = best;
-    }
-  }
-  for (const k of ['TE', 'X', 'Z', 'SLOT']) {
-    const b = s.agents[s.slot[k]!]!;
-    const { best } = pick(s.def, v2(b.pos.x + 3, b.pos.y));
-    if (best >= 0) {
-      taken.add(best);
-      b.mem.target = best;
-    }
-  }
-}
-
 /** Rushers the protection is responsible for (defenders coming), nearest-lateral assignment. */
 export function assignProtection(s: PlayState): void {
   const rushers = s.def.filter((i) => s.setup.def.assign[s.agents[i]!.slot as keyof typeof s.setup.def.assign].kind === 'rush');
+  // The draw's line pass-sets too (it's the look that sells it).
+  const draw = s.setup.play.run?.scheme === 'draw';
   const blockers = s.off.filter((i) => {
     const a = s.agents[i]!;
-    return s.setup.play.assign[a.slot as keyof OffPlay['assign']].kind === 'passBlock';
+    const k = s.setup.play.assign[a.slot as keyof OffPlay['assign']].kind;
+    return k === 'passBlock' || (draw && k === 'runBlock' && a.p.pos === 'OL');
   });
   const taken = new Set<number>();
   // Each rusher gets the nearest free blocker by lateral position.
@@ -297,15 +257,36 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, 
     return;
   }
   const d = s.agents[tgt]!;
-  // Get between him and the ball carrier.
-  const mid = v2(d.pos.x - 0.4, d.pos.y + (toward.y - d.pos.y) * 0.15);
+  // Get between him and the ball carrier, where he's going (lead a flowing
+  // linebacker by the time it takes to get to him, not chase him from behind).
+  const lead = Math.min(0.6, dist(b.pos, d.pos) / Math.max(4, b.fx.vmax));
+  const px = d.pos.x + d.vel.x * lead;
+  const py = d.pos.y + d.vel.y * lead;
+  const mid = v2(px - 0.4, py + (toward.y - py) * 0.15);
   steer(b, arrive(b, mid, 0.95));
   // Downfield, a block only lands from between him and the ball (else it's a block in the back).
   const between = !downfield || (b.pos.x - d.pos.x) * (toward.x - d.pos.x) + (b.pos.y - d.pos.y) * (toward.y - d.pos.y) > 0;
   if (engageOk && between && blockable(s, d) && dist(b.pos, d.pos) < b.fx.radius + d.fx.radius + 0.25) {
-    const blk = engage(s, b, d, 'run');
-    b.mem.driveY = Math.sign(d.pos.y - toward.y) * 0.4;
-    void blk;
+    // Getting a hat on a man moving in space: the faster he's going across
+    // the blocker and the quicker he is than the blocker, the likelier the
+    // whiff (a lineman climbing to a flowing linebacker, a receiver on a
+    // corner coming downhill). Square-on at the line it always fits.
+    const u = norm(sub(d.pos, b.pos));
+    const rx = d.vel.x - b.vel.x;
+    const ry = d.vel.y - b.vel.y;
+    const across = Math.abs(rx * u.y - ry * u.x);
+    const inSpace = downfield || d.pos.x > s.setup.los + 1.5;
+    const fit = Math.max(0.3, Math.min(1, 1.05 - 0.12 * Math.max(0, across - 1) + 0.35 * (b.fx.a('agility') - d.fx.a('agility'))));
+    if (inSpace && s.rng.block() > fit) {
+      // Whiffed: he lunges and loses a beat; the defender runs past.
+      b.busy = Math.max(b.busy, 16);
+      b.mem.target = -1;
+      d.mem.shedAt = s.t - 0.6;
+      s.events.push({ t: s.t, type: 'shed', who: [d.i, b.i], data: { whiff: true } });
+      return;
+    }
+    engage(s, b, d, 'run');
+    b.mem.driveY = (b.mem.drive as number | undefined) ?? Math.sign(d.pos.y - toward.y) * 0.4;
   }
 }
 
@@ -393,7 +374,10 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
   // a small misread costs (NFL QBs throw ~12% of attempts 20+ air yards and
   // complete ~35–45% of them). About a yard more margin per 20 yd downfield.
   const risk = Math.max(0, o.at.x - s.setup.los - 10) * 0.05;
-  if (o.sep + noise > need + risk) return cur;
+  // A screen goes to its man on schedule unless a defender is on him (it's
+  // built on blockers in front of him, not on separation).
+  const screen = s.setup.play.type === 'screen' && cur === 0 && s.t - s.snapT >= s.setup.play.drop.set;
+  if (screen ? o.sep + noise > -0.5 : o.sep + noise > need + risk) return cur;
   if (since > readTime) {
     s.read.idx++;
     s.read.since = s.t;
@@ -445,16 +429,22 @@ export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
     if (behind && aimY !== null) score -= Math.abs(c.pos.y + dir.y * 3 - aimY) * 0.35;
     for (const i of attack > 0 ? s.def : s.off) {
       const d = s.agents[i]!;
-      if (d.down || blockOf(s, i)) continue;
+      if (d.down) continue;
       const rel = sub(d.pos, c.pos);
       const along = rel.x * dir.x + rel.y * dir.y;
       if (along < -1) continue;
       const perp = Math.abs(rel.x * dir.y - rel.y * dir.x);
       const reachT = Math.max(0.1, along / Math.max(1, len(c.vel)));
-      const threat = Math.max(0, d.fx.vmax * reachT * 0.9 + 1.2 - perp) / (1 + along * 0.15);
+      // How far he can get to the lane: a free man by his speed; a man
+      // engaged with a blocker only his arms, until he's about to shed
+      // (leverage past 0). A back with Vision sees the blocks for what they
+      // are; a poor one runs from them as if they were free.
+      const free = d.fx.vmax * reachT * 0.9;
+      const blk = blockOf(s, i);
+      const held = blk ? 0.9 + Math.max(0, blk.lev) * free * 0.6 : free;
+      const reach = held + (free - held) * (1 - c.fx.a('vision')) * 0.6;
+      const threat = Math.max(0, reach + 1.2 - perp) / (1 + along * 0.15);
       score -= threat * 1.1;
-      // Blocked defenders are less of a threat, if he sees the block develop (Vision).
-      if (blockOf(s, i)) score += threat * 0.5 * c.fx.a('vision');
     }
     const side = c.pos.y + dir.y * 5;
     if (Math.abs(side) > FIELD_HALF_W - 1.5) score -= 3;
@@ -529,9 +519,12 @@ export function pursue(s: PlayState, d: Agent, t: Agent): void {
   // Close in: attack him (a small lead), don't aim at a point he can cut under.
   const close = dist(d.pos, seenT.pos);
   if (close < 3.5) {
-    // Lead him by about the time it takes to get there (not a fixed step).
-    const lead = Math.max(0.1, Math.min(0.5, close / Math.max(4, d.fx.vmax)));
-    const at = { x: seenT.pos.x + seenT.vel.x * lead, y: seenT.pos.y + seenT.vel.y * lead };
+    // Close in: attack where he's going. Where the two of us meet at my
+    // speed and his current run (the intercept point); a runner I can't
+    // head off, lead by the time it takes to get to him.
+    const meet = intercept(d.pos, d.fx.vmax, seenT.pos, seenT.vel);
+    const lead = Math.max(0.1, Math.min(0.6, close / Math.max(4, d.fx.vmax)));
+    const at = meet ?? { x: seenT.pos.x + seenT.vel.x * lead, y: seenT.pos.y + seenT.vel.y * lead };
     const dir = norm(sub(at, d.pos));
     steer(d, { x: dir.x * d.fx.vmax, y: dir.y * d.fx.vmax });
     return;

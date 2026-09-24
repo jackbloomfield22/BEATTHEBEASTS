@@ -20,8 +20,15 @@ const LEV0 = -0.35;
  * ~10% (tackles) to ~25% (elite rushers); ESPN/NGS pass-rush win rate).
  */
 const DRIFT = 0.55;
-/** The rusher's base drift in a run block (per second, doubled: a drive block is a shorter fight). */
-const BASE = 0.55;
+/**
+ * The defender's base drift in a run block (per second, doubled in the
+ * update). M5.5 (feedback item 6) lowered it from 0.55: an even run block
+ * sheds at ~2.5 s, a clear mismatch at ~1.5 s. On an NFL inside run the back
+ * reaches the line ~1.3–1.5 s after the snap (handoff ~0.7–0.9 s, NGS time to
+ * line of scrimmage), so blocks have to sustain about that long for the
+ * scheme to open a hole; at 0.55 every block was shed by ~1.2 s.
+ */
+const BASE = 0.28;
 /**
  * The rusher's base drift against a pass set. M5.5 lowered it from 0.55 so a
  * QB who never throws goes down at a median ~4.5 s at Pro against the
@@ -82,7 +89,11 @@ function edge(b: Agent, d: Agent, blk: Block): number {
 export function engage(s: PlayState, b: Agent, d: Agent, kind: Block['kind']): Block {
   // A lineman's block starts with him set; a stalk block in space starts even.
   const lev0 = kind === 'run' && b.p.pos !== 'OL' ? 0 : LEV0;
-  const blk: Block = { b: b.i, d: d.i, lev: lev0, kind, move: kind === 'run' ? 'drive' : pickMove(s, d), t: 0 };
+  // A run block's rep-to-rep spread (σ 0.3 of skill edge, about the gap
+  // between an average and a Pro Bowl run blocker): who gets his hands inside
+  // first. Pass sets keep their calibrated spread (sacktime.ts), so none there.
+  const bias = kind === 'run' ? gauss(s.rng.block) * 0.3 : 0;
+  const blk: Block = { b: b.i, d: d.i, lev: lev0, kind, move: kind === 'run' ? 'drive' : pickMove(s, d), t: 0, bias };
   s.blocks.push(blk);
   b.anim = 'block';
   d.anim = 'engaged';
@@ -102,7 +113,17 @@ export function stepBlocks(s: PlayState, goal: V2): void {
     const b = s.agents[blk.b]!;
     const d = s.agents[blk.d]!;
     blk.t += TICK;
-    const e = edge(b, d, blk);
+    let e = edge(b, d, blk) + blk.bias;
+    if (blk.kind === 'run') {
+      // Leverage is position too: a blocker squarely between his man and the
+      // ball holds him; once the ball is on the other side of the defender
+      // (a back bouncing outside the edge man, cutting back behind a down
+      // block), he comes off the block to make the play.
+      const toB = norm(sub(b.pos, d.pos));
+      const toC = norm(sub(goal, d.pos));
+      const cover = toB.x * toC.x + toB.y * toC.y;
+      if (dist(d.pos, goal) < 4) e += Math.max(0, 0.4 - cover) * 1.5;
+    }
     // Drift toward whoever has the edge, plus a base drift for the rusher
     // (blocks don't hold forever), plus matchup noise.
     // Run blocks resolve faster than pass sets (a drive block is a shorter fight).
@@ -130,6 +151,11 @@ export function stepBlocks(s: PlayState, goal: V2): void {
       const push = (1 - win) * 2.2 - win * 1.2;
       vx = drive.x * push;
       vy = drive.y * push;
+      // The edge man's technique: work to the blocker's outside shoulder and
+      // keep it (set the edge), harder the more he's winning; a reach block
+      // that has him beat (win near 0) still runs him wide.
+      const k = d.mem.contain as number | undefined;
+      if (k !== undefined) vy += k * (0.3 + 1.4 * win);
     } else if (blk.move === 'bull') {
       // Bull rush: straight back into the pocket.
       const push = Math.max(0, win - 0.25) * 2.8;

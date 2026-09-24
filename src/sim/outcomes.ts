@@ -1,7 +1,8 @@
-// Passing distribution (feedback item 7): what the AI-vs-AI passing game
-// produces, as a football person would read it. The headless harness prints
-// it, and a test holds the shape (completion rate, the explosive tail, YAC,
-// contested catches) inside believable bands.
+// Play outcomes as a football person reads them (feedback items 6 and 7):
+// the passing and running distributions the AI-vs-AI sim produces. The
+// headless harness prints them, and tests hold their shape (completion rate,
+// the explosive tail, YAC, contested catches; yards per carry, stuffs,
+// explosive runs, fumbles) inside believable bands.
 //
 // Bands: NFL league-wide completion runs ~62–66%; ~10–12% of completions
 // gain 20+ yd and ~2–4% gain 40+; YAC on short throws (under 10 air yards)
@@ -11,7 +12,7 @@
 import { routeOf } from './ai';
 import { NEUTRAL } from './input';
 import { stepPlay } from './play';
-import { DEF_CALLS, PLAYS, type DefCall, type OffPlay, type RouteName } from './plays';
+import { DEF_CALLS, PASS_PLAYS, RUN_PLAYS, type DefCall, type OffPlay, type RouteName } from './plays';
 import { createPlay, type PlayState } from './state';
 import type { DefSlot, OffSlot, SimPlayer } from './types';
 import { dist } from './vec';
@@ -78,7 +79,7 @@ function arrivalSep(s: PlayState): number {
   return k;
 }
 
-export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> }, n: number, plays: OffPlay[] = PLAYS, defs: DefCall[] = DEF_CALLS): PassDist {
+export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> }, n: number, plays: OffPlay[] = PASS_PLAYS, defs: DefCall[] = DEF_CALLS): PassDist {
   const samples: PassSample[] = [];
   let playsRun = 0;
   let sacks = 0;
@@ -167,5 +168,83 @@ export function formatPassDist(d: PassDist): string {
     `YAC short routes ${d.yacShort.toFixed(1)}  all ${d.yacAll.toFixed(1)}`,
     `in phase (< ${IN_PHASE} yd) ${p(d.contestedShare)} of targets, caught ${p(d.contestedCatch)}; 2+ yd open caught ${p(d.openCatch)}`,
     `completions by gain  <0 ${d.buckets[0]}  0-4 ${d.buckets[1]}  5-9 ${d.buckets[2]}  10-19 ${d.buckets[3]}  20-39 ${d.buckets[4]}  40+ ${d.buckets[5]}`,
+  ].join('\n');
+}
+
+// ---- The run game --------------------------------------------------------------
+//
+// Bands (NFL, 2015–2023 league-wide): ~4.2–4.5 yards per carry; ~17–20% of
+// carries stuffed (no gain or a loss); ~10–12% gain 10+ and ~2–3% gain 20+;
+// fumbles on ~1% of carries, about half lost.
+
+export interface RunSample {
+  play: string;
+  def: string;
+  yards: number;
+  fumble: boolean;
+  lost: boolean;
+  /** Where the first defender got a hand on him, from the line (yd); the whistle spot if nobody did. */
+  contact: number;
+  /** Tackles he broke or made miss. */
+  broken: number;
+}
+
+export interface RunDist {
+  carries: number;
+  ypc: number;
+  /** Share of carries for no gain or a loss. */
+  stuff: number;
+  /** Share gaining 10+ and 20+. */
+  exp10: number;
+  exp20: number;
+  fumbles: number;
+  lost: number;
+  /** Median gain. */
+  median: number;
+  /** Average yards before first contact, and broken or missed tackles per carry. */
+  ybc: number;
+  brokenPer: number;
+  samples: RunSample[];
+}
+
+export function runDistribution(rosters: { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> }, n: number, plays: OffPlay[] = RUN_PLAYS, defs: DefCall[] = DEF_CALLS): RunDist {
+  const samples: RunSample[] = [];
+  for (const play of plays) {
+    for (const def of defs) {
+      for (let k = 0; k < n; k++) {
+        const s = createPlay({ seed: 1000 + k * 7919, offense: rosters.offense, defense: rosters.defense, play, def, los: 35, toGo: 10, user: false });
+        for (let t = 0; t < 60 * 40 && !s.result; t++) stepPlay(s, NEUTRAL);
+        const r = s.result!;
+        const fumble = s.events.some((e) => e.type === 'fumble');
+        const first = s.events.find((e) => (e.type === 'hit' || e.type === 'brokenTackle' || e.type === 'missedTackle') && e.t > s.runReadT);
+        const at = first ? (first.at?.x ?? s.agents[s.carrier >= 0 ? s.carrier : s.slot.RB!]!.pos.x) : r.spot;
+        const broken = s.events.filter((e) => e.type === 'brokenTackle' || e.type === 'missedTackle').length;
+        samples.push({ play: play.id, def: def.id, yards: r.offenseBall ? r.yards : 0, fumble, lost: !r.offenseBall, contact: at - s.setup.los, broken });
+      }
+    }
+  }
+  const ys = samples.map((p) => p.yards).sort((a, b) => a - b);
+  const share = (f: (p: RunSample) => boolean) => (samples.length ? samples.filter(f).length / samples.length : 0);
+  return {
+    carries: samples.length,
+    ypc: ys.reduce((a, b) => a + b, 0) / Math.max(1, ys.length),
+    stuff: share((p) => p.yards <= 0),
+    exp10: share((p) => p.yards >= 10),
+    exp20: share((p) => p.yards >= 20),
+    fumbles: samples.filter((p) => p.fumble).length,
+    lost: samples.filter((p) => p.lost).length,
+    median: ys[Math.floor(ys.length / 2)] ?? 0,
+    ybc: samples.reduce((a, p) => a + p.contact, 0) / Math.max(1, samples.length),
+    brokenPer: samples.reduce((a, p) => a + p.broken, 0) / Math.max(1, samples.length),
+    samples,
+  };
+}
+
+export function formatRunDist(d: RunDist): string {
+  const p = (x: number) => `${(100 * x).toFixed(1)}%`;
+  return [
+    `carries ${d.carries}  ypc ${d.ypc.toFixed(2)}  median ${d.median.toFixed(1)}`,
+    `stuffed ${p(d.stuff)}  10+ ${p(d.exp10)}  20+ ${p(d.exp20)}  fumbles ${d.fumbles} (lost ${d.lost})`,
+    `yards before contact ${d.ybc.toFixed(2)}  broken/missed tackles per carry ${d.brokenPer.toFixed(2)}`,
   ].join('\n');
 }

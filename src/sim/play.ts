@@ -4,9 +4,9 @@
 // appended to `state.events` for the render, audio and commentary layers.
 
 import { atan2 } from '@/engine/math/detmath';
+import { assignRunBlocks, assignRunFits, backToMesh, belief, qbMesh, runFit, schemeBlock, stalk } from './runs';
 import {
   assignProtection,
-  assignRunBlocks,
   breakOnBall,
   carrierAI,
   manCover,
@@ -34,6 +34,7 @@ import type { PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
 import { HOT_ROUTES } from './plays';
 import { dist, len, norm, sub, v2, type V2 } from './vec';
+import { routePoints } from './ai';
 
 /** Seconds the play keeps animating after the whistle. */
 export const DEAD_HOLD = 1.6;
@@ -74,6 +75,19 @@ function doSnap(s: PlayState): void {
   setRoutes(s);
   assignProtection(s);
   assignRunBlocks(s);
+  assignRunFits(s);
+  // What the offense shows the defense, and when (runs.ts belief): a run
+  // fires out at the snap; the draw shows pass first (its run show is the
+  // handoff); play action shows run, then pass when the ball comes out of
+  // the fake; everything else is a pass from the first step.
+  const play = s.setup.play;
+  if (play.run && play.run.scheme !== 'draw') s.runShow = s.t + 0.05;
+  else if (play.pa) {
+    s.runShow = s.t + 0.05;
+    s.passShow = s.t + 0.25 + play.pa.fake;
+  } else s.passShow = s.t;
+  // The play-action back carries out his fake before his route (set when the fake ends).
+  if (play.pa) off(s, 'RB').route = null;
   for (const a of s.agents) a.anim = a.side === 'off' && a.slot !== 'QB' ? 'run' : a.anim;
   s.ball.holder = s.qb;
   s.events.push({ t: s.t, type: 'snap', who: [s.slot.C!, s.qb] });
@@ -90,6 +104,19 @@ function doSnap(s: PlayState): void {
   }
 }
 
+/**
+ * The play-action fake: from under center a reverse pivot back toward the
+ * back's path, the ball extended to his belly, then pulled out (the drop
+ * continues from there).
+ */
+function paFake(s: PlayState, qb: Agent): void {
+  const pa = s.setup.play.pa!;
+  const rb = off(s, 'RB');
+  const mesh = v2(s.setup.los - 3.2, (s.setup.ballY ?? 0) + pa.aim * 0.3);
+  steer(qb, arrive(qb, mesh, 0.6, 1), { face: atan2(rb.pos.y - qb.pos.y, rb.pos.x - qb.pos.x) });
+  qb.anim = 'handoff';
+}
+
 /** Snap ball from the center to the QB (shotgun) and the QB's drop or mesh. */
 function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
   const qb = s.agents[s.qb]!;
@@ -97,18 +124,27 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
   const since = s.t - s.snapT;
   const by = s.setup.ballY ?? 0;
   if (play.run) {
-    // Mesh: step toward the back, hand it off.
+    // Mesh: the reverse pivot or the slide to the back, and the handoff.
     const rb = off(s, 'RB');
-    steer(qb, s.phase === 'carrier' ? { x: 0, y: 0 } : { x: 0, y: (rb.pos.y - qb.pos.y) * 1.5 }, { pace: 0.4, face: atan2(rb.pos.y - qb.pos.y, rb.pos.x - qb.pos.x) });
-    qb.anim = 'handoff';
+    qbMesh(s, qb, rb);
     if (since >= play.run.mesh && s.phase !== 'carrier' && dist(qb.pos, rb.pos) < 1.8) {
       s.ball.holder = rb.i;
       s.carrier = rb.i;
       s.phase = 'carrier';
       s.runReadT = s.t;
+      // The draw's run show is the handoff itself.
+      if (s.runShow < 0) s.runShow = s.t;
       rb.anim = 'carry';
       s.events.push({ t: s.t, type: 'handoff', who: [qb.i, rb.i] });
     }
+    return;
+  }
+  if (play.pa && since < 0.2 + play.pa.fake && !s.setup.user) {
+    paFake(s, qb);
+    return;
+  }
+  if (play.pa && since < 0.2 + play.pa.fake && s.setup.user && inp.move.x === 0 && inp.move.y === 0) {
+    paFake(s, qb);
     return;
   }
   const dropX = s.setup.los - play.drop.depth;
@@ -356,6 +392,23 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
   }
 }
 
+/** The smallest distance between two agents over this tick's moves (their last recorded positions to now). */
+function sweptGap(o: Agent, c: Agent): number {
+  const o0 = o.hist[o.hist.length - 1]?.pos ?? o.pos;
+  const c0 = c.hist[c.hist.length - 1]?.pos ?? c.pos;
+  const ax = o0.x - c0.x;
+  const ay = o0.y - c0.y;
+  const bx = o.pos.x - c.pos.x;
+  const by = o.pos.y - c.pos.y;
+  const dx = bx - ax;
+  const dy = by - ay;
+  const dd = dx * dx + dy * dy;
+  const u = dd > 1e-9 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / dd)) : 1;
+  const ex = ax + dx * u;
+  const ey = ay + dy * u;
+  return Math.sqrt(ex * ex + ey * ey);
+}
+
 /** Tackles on the ball carrier (or the QB in the pocket). */
 function contactStep(s: PlayState): void {
   const holder = s.ball.mode === 'held' ? s.ball.holder : -1;
@@ -370,7 +423,10 @@ function contactStep(s: PlayState): void {
     const engaged = blockOf(s, o.i);
     if (engaged && (dist(o.pos, c.pos) > o.fx.radius + c.fx.radius + 0.35 || s.rng.contact() > 0.25)) continue;
     if (((o.mem.tackleCd as number | undefined) ?? -1) > s.t) continue;
-    const k = dist(o.pos, c.pos);
+    // Closest they came during this tick (both moving: at 18 yd/s closing a
+    // pair covers 0.3 yd a tick, so the end-of-tick gap alone lets a runner
+    // slip through a tackler's reach).
+    const k = sweptGap(o, c);
     // Arms reach ~0.45 yd past the bodies; a diving tackle ~1 yd more when he
     // can't close on a runner pulling away (lower odds, and he's on the ground after).
     const armReach = o.fx.radius + c.fx.radius + 0.6;
@@ -394,7 +450,7 @@ function contactStep(s: PlayState): void {
       if (out !== 'tackle' && out !== 'bigHit') {
         o.down = true;
         o.anim = 'down';
-        s.events.push({ t: s.t, type: 'missedTackle', who: [o.i, c.i], data: { dive: true } });
+        s.events.push({ t: s.t, type: 'missedTackle', who: [o.i, c.i], at: { ...c.pos }, data: { dive: true } });
         continue;
       }
     }
@@ -403,7 +459,7 @@ function contactStep(s: PlayState): void {
       o.vel.x *= 0.3;
       o.vel.y *= 0.3;
       o.mem.tackleCd = s.t + 1;
-      s.events.push({ t: s.t, type: 'missedTackle', who: [o.i, c.i] });
+      s.events.push({ t: s.t, type: 'missedTackle', who: [o.i, c.i], at: { ...c.pos } });
       continue;
     }
     if (out === 'broken') {
@@ -411,7 +467,7 @@ function contactStep(s: PlayState): void {
       c.vel.y *= 0.62;
       o.busy = 28;
       o.mem.tackleCd = s.t + 0.9;
-      s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], data: { force: Math.round(force * 10) / 10 } });
+      s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10 } });
       continue;
     }
     // Down he goes (or the ball comes out).
@@ -451,7 +507,8 @@ function ballStep(s: PlayState): void {
   if (b.mode === 'held') {
     const h = s.agents[b.holder]!;
     // The snap travels from the center to the QB's hands (shotgun, ~0.3 s).
-    const snapT = s.snapT < 0 ? 0 : Math.min(1, (s.t - s.snapT) / 0.33);
+    // (Under center the exchange is a hand-to-hand ~0.1 s.)
+    const snapT = s.snapT < 0 ? 0 : Math.min(1, (s.t - s.snapT) / (s.setup.play.formation.center ? 0.1 : 0.33));
     const c = off(s, 'C');
     // Carried a quarter-yard ahead of his body, the way he's running (ballNose reads the same offset).
     const hx = h.pos.x + 0.25 * (h.side === 'off' ? 1 : -1);
@@ -585,7 +642,27 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
       steer(a, { x: (s.ball.pos.x - a.pos.x) * 3, y: (s.ball.pos.y - a.pos.y) * 3 });
       continue;
     }
+    // The play-action back: carry out the fake through the mesh toward the hole, then run his route or pick up a rusher.
+    if (play.pa && a.slot === 'RB' && s.t - s.snapT < 0.3 + play.pa.fake) {
+      const hole = v2(s.setup.los + 0.5, (s.setup.ballY ?? 0) + play.pa.aim);
+      steer(a, arrive(a, hole, 0.75), {});
+      a.anim = 'carry';
+      if (s.t - s.snapT >= 0.3 + play.pa.fake - TICK && as.kind === 'route') {
+        const r = routePoints(s, a);
+        if (r) a.route = { pts: r.pts, sit: r.sit, idx: 0 };
+      }
+      continue;
+    }
+    // Screens: the line pass-sets, then releases to lead the screen.
+    if (play.screen && as.kind === 'passBlock' && a.p.pos === 'OL' && s.t - s.snapT >= play.screen.release) {
+      const to = s.agents[s.icons[0]!]!;
+      if (s.phase === 'air' || s.ball.mode === 'held') runBlock(s, a, to.pos, true, s.phase !== 'air');
+      continue;
+    }
     switch (as.kind) {
+      case 'stalk':
+        stalk(s, a, s.agents[s.icons[0]!]!.pos);
+        break;
       case 'route':
         if (s.phase === 'air' && s.ball.target === i) runToBall(s, a);
         // The ball's thrown to someone else: work to the nearest threat to
@@ -598,15 +675,14 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
         passBlock(s, a);
         break;
       case 'runBlock':
-        runBlock(s, a, v2(s.setup.los + 3, (s.setup.ballY ?? 0) + (play.run?.aim ?? 0)));
+        // The draw's line shows pass until the handoff.
+        if (play.run?.scheme === 'draw' && a.p.pos === 'OL') passBlock(s, a);
+        else schemeBlock(s, a);
         break;
-      case 'carry': {
-        // Before the handoff: to the mesh point beside the QB.
-        const qb = s.agents[s.qb]!;
-        const mesh = v2(qb.pos.x + 0.3, qb.pos.y + (play.run?.aim ?? 0) * 0.25);
-        steer(a, { x: (mesh.x - a.pos.x) * 3, y: (mesh.y - a.pos.y) * 3 }, { pace: 0.7 });
+      case 'carry':
+        // Before the handoff: his path to the mesh, by scheme.
+        if (play.run) backToMesh(s, a);
         break;
-      }
       default:
         break;
     }
@@ -614,7 +690,10 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
   if (carrier && carrier.side === 'off' && s.carrier === carrier.i) {
     // A handoff: first hit the aiming point, then read it.
     const freeNear = s.def.some((i) => !blockOf(s, i) && !s.agents[i]!.down && dist(s.agents[i]!.pos, carrier.pos) < 3);
-    if (play.run && carrier.slot === 'RB' && carrier.pos.x < s.setup.los - 0.8 && s.t - s.runReadT < 1.2 && !freeNear) {
+    // (He presses the aiming point for a beat after the mesh, then reads it: the lanes are carrierAI's.)
+    // Gap schemes press the aiming point all the way to the line (the puller clears it); zone presses for a beat, then reads.
+    const gapRun = play.run?.scheme === 'power' || play.run?.scheme === 'counter';
+    if (play.run && carrier.slot === 'RB' && carrier.pos.x < s.setup.los - 0.8 && (gapRun || s.t - s.runReadT < 0.35) && !freeNear) {
       const aim = v2(s.setup.los + 1, (s.setup.ballY ?? 0) + play.run.aim);
       steer(carrier, { x: (aim.x - carrier.pos.x) * 3, y: (aim.y - carrier.pos.y) * 3 });
       carrier.anim = 'carry';
@@ -680,10 +759,19 @@ function defenseRoles(s: PlayState): void {
       steer(d, { x: (s.ball.pos.x - d.pos.x) * 3, y: (s.ball.pos.y - d.pos.y) * 3 });
       continue;
     }
+    if (carrier && carrier.side === 'off' && !s.setup.play.run) {
+      // After a catch (or a scramble) everyone pursues.
+      pursueTackle(s, d, carrier);
+      continue;
+    }
+    // A run (or a run fake) he has read: his fit. Until he reads it he plays pass.
+    if ((s.setup.play.run || (s.setup.play.pa && s.phase !== 'air')) && belief(s, d) === 'run') {
+      runFit(s, d);
+      continue;
+    }
     if (carrier && carrier.side === 'off') {
-      // Run read: the front reacts first; after a catch everyone pursues.
-      const readT = s.runReadT >= 0 ? s.runReadT + reaction(s, d) : -1;
-      if (s.runReadT < 0 || s.t >= readT) {
+      // A run he hasn't read yet but that's on him: tackle what's in front of him.
+      if (dist(d.pos, carrier.pos) < 2.5) {
         pursueTackle(s, d, carrier);
         continue;
       }

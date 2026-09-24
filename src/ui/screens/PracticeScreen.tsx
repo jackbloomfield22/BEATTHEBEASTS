@@ -7,7 +7,7 @@ import { inputLabel } from '@/input/actions';
 import { practice, usePractice } from '@/game/practice';
 import { latency } from '@/game/latency';
 import { downLabel, spotLabel, START_DOWNS, START_SPOTS, startSituation } from '@/game/situation';
-import { DEF_CALLS, HOT_ROUTES, playById, PLAYS, ROUTE_LABEL } from '@/sim';
+import { DEF_CALLS, HOT_ROUTES, PLAY_TYPE_LABEL, playById, PLAYS, ROUTE_LABEL, type PlayType } from '@/sim';
 import { routeOf } from '@/sim/ai';
 import { useMenuNav } from '../nav';
 import { Choice, Hints, MenuItem, SettingRow, useDevice } from '../components/controls';
@@ -49,16 +49,30 @@ export function PracticeScreen() {
 
 const COVERS = [{ value: 'random', label: 'Beasts choose' }, ...DEF_CALLS.map((d) => ({ value: d.id, label: d.name }))];
 
+/** The play call's groups, in tab order (Q/E or LB/RB to switch). */
+const GROUPS: PlayType[] = ['quick', 'dropback', 'shot', 'playAction', 'screen', 'run'];
+
 function PlayCall() {
   const ui = usePractice();
   const back = useApp((s) => s.back);
-  const n = PLAYS.length;
-  const [focus, setFocus] = useState(Math.max(0, PLAYS.findIndex((p) => p.id === ui.playId)));
+  const current = playById(ui.playId);
+  const [group, setGroup] = useState(Math.max(0, GROUPS.indexOf(current.type)));
+  const plays = PLAYS.filter((p) => p.type === GROUPS[group]);
+  const n = plays.length;
+  const [focus, setFocus] = useState(Math.max(0, plays.findIndex((p) => p.id === ui.playId)));
   const [artPlay, setArtPlay] = useState(ui.playId);
   const rows = n + 3;
   const focusRow = (i: number) => {
     setFocus(i);
-    if (i < n) setArtPlay(PLAYS[i]!.id);
+    if (i < n) setArtPlay(plays[i]!.id);
+  };
+  const switchGroup = (d: number) => {
+    Audio.uiTick();
+    const g = (group + d + GROUPS.length) % GROUPS.length;
+    setGroup(g);
+    const first = PLAYS.find((p) => p.type === GROUPS[g]);
+    setFocus(0);
+    if (first) setArtPlay(first.id);
   };
   const setStart = (spot: number, downs: number) => usePractice.setState({ startSpot: spot, startDowns: downs, situation: startSituation(spot, downs), seriesOver: false });
   const change = (i: number, d: number) => {
@@ -73,18 +87,26 @@ function PlayCall() {
   const confirm = (i: number) => {
     if (i < n) {
       Audio.uiSelect();
-      practice.callPlay(PLAYS[i]!.id);
+      practice.callPlay(plays[i]!.id);
     } else change(i, 1);
   };
-  useMenuNav({ count: rows, focus, setFocus: focusRow, onConfirm: confirm, onBack: back, onLeft: (i) => change(i, -1), onRight: (i) => change(i, 1) });
+  useMenuNav({ count: rows, focus, setFocus: focusRow, onConfirm: confirm, onBack: back, onLeft: (i) => change(i, -1), onRight: (i) => change(i, 1), onTabPrev: () => switchGroup(-1), onTabNext: () => switchGroup(1) });
   const sit = ui.seriesOver ? startSituation(ui.startSpot, ui.startDowns) : ui.situation;
   const play = playById(artPlay);
-  let lastFormation = '';
   return (
     <div className="menu-screen play-call">
       <div className="menu-scrim strong" />
       <header className="screen-head">
         <h1 className="screen-title">Practice Field</h1>
+        <div className="tabs">
+          <span className="tab-key">Q</span>
+          {GROUPS.map((g, i) => (
+            <button key={g} className={`tab ${i === group ? 'is-active' : ''}`} onClick={() => switchGroup(i - group)} tabIndex={-1}>
+              {PLAY_TYPE_LABEL[g]}
+            </button>
+          ))}
+          <span className="tab-key">E</span>
+        </div>
         <div className="call-sit">
           <span className="call-down">{downLabel(sit)}</span>
           <span className="call-spot">Ball on the {spotLabel(sit.los)}</span>
@@ -92,15 +114,10 @@ function PlayCall() {
       </header>
       <div className="call-body">
         <div className="call-list">
-          {PLAYS.map((p, i) => {
-            const head = p.formation.name !== lastFormation ? (lastFormation = p.formation.name) : null;
-            return (
-              <div key={p.id}>
-                {head ? <div className="setting-header">{head}</div> : null}
-                <MenuItem size="md" label={p.name} focused={focus === i} onHover={() => focusRow(i)} onClick={() => confirm(i)} />
-              </div>
-            );
-          })}
+          <div className="setting-header">{PLAY_TYPE_LABEL[GROUPS[group]!]}</div>
+          {plays.map((p, i) => (
+            <MenuItem key={p.id} size="md" label={p.name} tag={p.formation.name} focused={focus === i} onHover={() => focusRow(i)} onClick={() => confirm(i)} />
+          ))}
           <div className="setting-header">Situation</div>
           <SettingRow label="Start at" focused={focus === n} onHover={() => focusRow(n)}>
             <Choice value={ui.startSpot} options={START_SPOTS.map((s, k) => ({ value: k, label: s.label }))} onChange={(v) => setStart(v, ui.startDowns)} />
@@ -116,11 +133,12 @@ function PlayCall() {
           <div className="detail-kicker">{play.formation.name}</div>
           <h2 className="detail-title">{play.name}</h2>
           <PlayArt play={play} />
-          <p className="call-note">Numbers are the reads in order: the icon you press to throw to each receiver.</p>
+          <p className="call-note">{play.run ? 'A designed run: the back takes the handoff; you run it from there.' : 'Numbers are the reads in order: the key you press to throw to each receiver.'}</p>
         </aside>
       </div>
       <Hints
         items={[
+          { kb: 'Q / E', pad: 'LB / RB', label: 'Play type' },
           { kb: '↑↓', pad: 'D-Pad', label: 'Choose' },
           { kb: '←→', pad: 'D-Pad', label: 'Change' },
           { kb: 'Enter', pad: 'A', label: 'Call play' },
