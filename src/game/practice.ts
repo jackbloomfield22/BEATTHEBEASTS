@@ -7,7 +7,7 @@
 import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
 import type { InputContext } from '@/input/actions';
-import { createPlay, DEAD_HOLD, DEF_CALLS, defById, playById, PLAYS, type DefSlot, type Difficulty, type OffSlot, type Phase, type SimPlayer } from '@/sim';
+import { createPlay, DEAD_HOLD, DEF_CALLS, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type SimPlayer } from '@/sim';
 import { Controls } from './controls';
 import { describe, type ResultCard } from './describe';
 import { loadPracticeRosters } from './rosters';
@@ -30,6 +30,8 @@ export interface PracticeUi {
   phase: Phase;
   /** The user's ball carrier (offense) or null. */
   carrier: string | null;
+  /** The catch the user called while the ball is in the air (null = none yet). */
+  catchType: CatchType | null;
   result: ResultCard | null;
   /** The coverage the Beasts played on the last snap (revealed with the result). */
   lastCover: string | null;
@@ -48,6 +50,7 @@ export const usePractice = create<PracticeUi>(() => ({
   playId: PLAYS[0]!.id,
   phase: 'presnap',
   carrier: null,
+  catchType: null,
   result: null,
   lastCover: null,
   seriesOver: false,
@@ -224,6 +227,7 @@ class PracticeSession {
       set({ phase: s.phase, stage: s.phase === 'presnap' ? 'presnap' : stage === 'result' ? 'result' : 'live', carrier: c && c.side === 'off' ? c.p.name : null });
       this.syncContext(false);
     }
+    if (s.catchType !== get().catchType) set({ catchType: s.catchType });
     if (s.result && get().stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) {
       const ui = get();
       const next = nextSituation(ui.situation, s.result, s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y);

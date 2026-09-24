@@ -1,5 +1,5 @@
 // Keyboard, mouse and gamepad to the sim's InputFrame (TECH_PLAN §13). The
-// sticks and WASD are camera-relative and turned into the field frame here,
+// sticks and the arrow keys are camera-relative and turned into the field frame here,
 // so the recorded frames replay the same whatever the camera did. Presses
 // are latched between ticks (a tap shorter than a tick still counts); holds
 // are read live.
@@ -69,7 +69,7 @@ export class Controls {
     return this.hold?.icon ?? 0;
   }
 
-  /** Move stick in the field frame: gamepad left stick, else WASD. */
+  /** Move stick in the field frame: gamepad left stick, else the arrow keys. */
   private moveVector(carrier: boolean): V2 {
     const L = Input.sticks.left;
     let sx = L.x;
@@ -178,6 +178,7 @@ export class Controls {
       f.move = this.moveVector(true);
       f.jukeL = e.has('carrier.jukeLeft');
       f.jukeR = e.has('carrier.jukeRight');
+      f.juke = e.has('carrier.juke');
       f.spin = e.has('carrier.spin');
       f.stiffArm = e.has('carrier.stiffArm');
       f.truck = e.has('carrier.truck');

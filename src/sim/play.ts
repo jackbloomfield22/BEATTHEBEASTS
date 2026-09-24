@@ -207,6 +207,36 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
   }
 }
 
+/**
+ * The side of a one-button juke. jukeL steps to the carrier's left of his
+ * heading. Steering more than a little across the heading picks that side;
+ * otherwise he jukes away from the nearest free defender in front of him
+ * (to his right when nobody is there).
+ */
+export function jukeSide(s: PlayState, c: Agent, move: V2, attack: 1 | -1): 'jukeL' | 'jukeR' {
+  const sp = len(c.vel);
+  const hx = sp > 0.3 ? c.vel.x / sp : attack;
+  const hy = sp > 0.3 ? c.vel.y / sp : 0;
+  // Cross product of heading and stick: + is to his left.
+  const cross = hx * move.y - hy * move.x;
+  if (Math.abs(cross) > 0.25) return cross > 0 ? 'jukeL' : 'jukeR';
+  let best = Infinity;
+  let side = 0;
+  for (const i of c.side === 'off' ? s.def : s.off) {
+    const d = s.agents[i]!;
+    if (d.down || blockOf(s, i)) continue;
+    const rx = d.pos.x - c.pos.x;
+    const ry = d.pos.y - c.pos.y;
+    if (rx * hx + ry * hy < -0.5) continue;
+    const k = rx * rx + ry * ry;
+    if (k < best) {
+      best = k;
+      side = hx * ry - hy * rx;
+    }
+  }
+  return side > 0 ? 'jukeR' : 'jukeL';
+}
+
 /** The ball carrier: the user's stick and moves, or the AI. */
 function carrierStep(s: PlayState, inp: InputFrame): void {
   const c = s.agents[s.carrier]!;
@@ -219,6 +249,7 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     want = { x: inp.move.x * c.fx.vmax * sp, y: inp.move.y * c.fx.vmax * sp };
     if (inp.jukeL) startMove(s, c, 'jukeL');
     else if (inp.jukeR) startMove(s, c, 'jukeR');
+    else if (inp.juke) startMove(s, c, jukeSide(s, c, inp.move, attack));
     else if (inp.spin) startMove(s, c, 'spin');
     else if (inp.stiffArm) startMove(s, c, 'stiffArm');
     else if (inp.truck) startMove(s, c, 'truck');

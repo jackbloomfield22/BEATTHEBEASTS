@@ -46,6 +46,19 @@
 .prompt-row { position: absolute; bottom: 2.4rem; left: 50%; transform: translateX(-50%); display: flex; gap: 1.6rem; font-size: .85rem; color: var(--ink-2); white-space: nowrap; text-shadow: 0 .1rem .8rem rgba(0,0,0,.9); }
 .prompt-row span { display: flex; align-items: center; gap: .4rem; }
 .prompt-row.catch { font-size: 1rem; color: var(--ink); }
+/* The catch call: up the moment the ball is thrown; the called catch lights and the others fade. */
+.catch-call { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .6rem; text-shadow: 0 .1rem .8rem rgba(0,0,0,.9); animation: catch-in .12s ease-out; }
+.catch-head { font-size: .8rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-2); }
+.catch-opts { display: flex; gap: .9rem; }
+.catch-opt { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: .6rem; align-items: center; min-width: 12rem; padding: .6rem .9rem; border: 2px solid var(--line); border-radius: .5rem; background: var(--panel); transition: transform .1s ease-out, opacity .15s, border-color .1s, background .1s; }
+.catch-opt kbd { grid-row: 1 / span 2; font-size: 1.3rem; min-width: 2.2rem; text-align: center; }
+.catch-name { font-size: 1.05rem; color: var(--ink); font-weight: 700; }
+.catch-sub { font-size: .75rem; color: var(--ink-2); }
+.catch-opt.on { transform: scale(1.1); border-color: var(--lime); color: var(--lime); background: color-mix(in srgb, var(--lime) 28%, var(--panel-strong)); box-shadow: 0 0 1.4rem color-mix(in srgb, var(--lime) 55%, transparent); animation: catch-pop .18s ease-out; }
+.catch-opt.off { opacity: .35; }
+.catch-foot { font-size: .75rem; color: var(--ink-2); }
+@keyframes catch-in { from { opacity: 0; transform: translate(-50%, .6rem); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes catch-pop { 0% { transform: scale(1); } 60% { transform: scale(1.18); } 100% { transform: scale(1.1); } }
 .stamina { position: absolute; bottom: 5rem; left: 50%; width: 12rem; height: .35rem; margin-left: -6rem; background: rgba(8,7,15,.7); visibility: hidden; }
 .stamina-fill { display: block; height: 100%; background: var(--lime); transform-origin: left; box-shadow: 0 0 .6rem rgba(170,255,0,.5); }
 

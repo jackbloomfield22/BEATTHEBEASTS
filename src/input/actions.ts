@@ -53,10 +53,12 @@ export const ACTIONS: ActionDef[] = [
   a('preSnap.reads', 'preSnap', 'Show reads / coverage shell', ['AltLeft'], ['Pad:LT']),
 
   // Pocket (QB)
-  a('pocket.moveUp', 'pocket', 'Step up', ['KeyW'], ['Pad:LSUp']),
-  a('pocket.moveDown', 'pocket', 'Drift back', ['KeyS'], ['Pad:LSDown']),
-  a('pocket.moveLeft', 'pocket', 'Slide / roll left', ['KeyA'], ['Pad:LSLeft']),
-  a('pocket.moveRight', 'pocket', 'Slide / roll right', ['KeyD'], ['Pad:LSRight']),
+  // Movement is on the arrows so the left hand stays on the number row
+  // (receivers, then catches) and on Q–F (carrier moves).
+  a('pocket.moveUp', 'pocket', 'Step up', ['ArrowUp'], ['Pad:LSUp']),
+  a('pocket.moveDown', 'pocket', 'Drift back', ['ArrowDown'], ['Pad:LSDown']),
+  a('pocket.moveLeft', 'pocket', 'Slide / roll left', ['ArrowLeft'], ['Pad:LSLeft']),
+  a('pocket.moveRight', 'pocket', 'Slide / roll right', ['ArrowRight'], ['Pad:LSRight']),
   a('pocket.throw1', 'pocket', 'Throw to receiver 1', ['Digit1'], ['Pad:A']),
   a('pocket.throw2', 'pocket', 'Throw to receiver 2', ['Digit2'], ['Pad:B']),
   a('pocket.throw3', 'pocket', 'Throw to receiver 3', ['Digit3'], ['Pad:X']),
@@ -68,23 +70,24 @@ export const ACTIONS: ActionDef[] = [
 
   // Ball in air
   a('air.switch', 'ballInAir', 'Switch to target', ['Tab'], ['Pad:B']),
-  a('air.aggressive', 'ballInAir', 'Aggressive catch', ['Mouse0'], ['Pad:Y']),
-  a('air.rac', 'ballInAir', 'Run-after-catch catch', ['Mouse2'], ['Pad:X']),
-  a('air.possession', 'ballInAir', 'Possession catch', ['Space'], ['Pad:A']),
+  a('air.aggressive', 'ballInAir', 'Go up and get it (aggressive)', ['Digit1'], ['Pad:Y']),
+  a('air.possession', 'ballInAir', 'Secure it and go down (possession)', ['Digit2'], ['Pad:A']),
+  a('air.rac', 'ballInAir', 'Catch and run', ['Digit3'], ['Pad:X']),
 
   // Ball carrier
-  a('carrier.up', 'carrier', 'Run forward', ['KeyW'], ['Pad:LSUp']),
-  a('carrier.down', 'carrier', 'Run back', ['KeyS'], ['Pad:LSDown']),
-  a('carrier.left', 'carrier', 'Run left', ['KeyA'], ['Pad:LSLeft']),
-  a('carrier.right', 'carrier', 'Run right', ['KeyD'], ['Pad:LSRight']),
-  a('carrier.sprint', 'carrier', 'Sprint', ['ShiftLeft'], ['Pad:RT']),
-  a('carrier.jukeLeft', 'carrier', 'Juke left', ['KeyQ'], ['Pad:RSLeft']),
-  a('carrier.jukeRight', 'carrier', 'Juke right', ['KeyE'], ['Pad:RSRight']),
-  a('carrier.spin', 'carrier', 'Spin', ['Space'], ['Pad:B']),
-  a('carrier.stiffArm', 'carrier', 'Stiff arm', ['KeyF'], ['Pad:X']),
+  a('carrier.up', 'carrier', 'Run forward', ['ArrowUp'], ['Pad:LSUp']),
+  a('carrier.down', 'carrier', 'Run back', ['ArrowDown'], ['Pad:LSDown']),
+  a('carrier.left', 'carrier', 'Run left', ['ArrowLeft'], ['Pad:LSLeft']),
+  a('carrier.right', 'carrier', 'Run right', ['ArrowRight'], ['Pad:LSRight']),
+  a('carrier.sprint', 'carrier', 'Sprint', ['ShiftRight', 'ShiftLeft'], ['Pad:RT']),
+  a('carrier.juke', 'carrier', 'Juke (toward the side you steer, else away from the tackler)', ['KeyQ'], []),
+  a('carrier.jukeLeft', 'carrier', 'Juke left', [], ['Pad:RSLeft']),
+  a('carrier.jukeRight', 'carrier', 'Juke right', [], ['Pad:RSRight']),
+  a('carrier.stiffArm', 'carrier', 'Stiff arm', ['KeyW'], ['Pad:X']),
+  a('carrier.spin', 'carrier', 'Spin', ['KeyE'], ['Pad:B']),
   a('carrier.truck', 'carrier', 'Truck', ['KeyR'], ['Pad:RSUp']),
-  a('carrier.dive', 'carrier', 'Dive / QB slide', ['KeyC'], ['Pad:A']),
-  a('carrier.protect', 'carrier', 'Protect ball', ['KeyV'], ['Pad:LB']),
+  a('carrier.dive', 'carrier', 'Dive / QB slide', ['KeyF'], ['Pad:A']),
+  a('carrier.protect', 'carrier', 'Protect ball (hold)', ['KeyC'], ['Pad:LB']),
 
   // Kicking
   a('kick.aim', 'kick', 'Aim and power (drag)', ['Mouse0'], ['Pad:RSDown'], true),
@@ -109,6 +112,33 @@ export const ACTIONS: ActionDef[] = [
   a('global.perf', 'global', 'Performance screen', ['Backquote'], [], true),
   a('global.fullscreen', 'global', 'Toggle fullscreen', ['F11'], []),
 ];
+
+/**
+ * Keyboard defaults that changed in settings v3 (arrows for movement, 1–3
+ * for catches, Q–F for carrier moves), with their v2 values. A saved binding
+ * still on its v2 default moves to the new one; one the player changed stays.
+ */
+export const KB_DEFAULTS_V2: Record<string, string[]> = {
+  'pocket.moveUp': ['KeyW'],
+  'pocket.moveDown': ['KeyS'],
+  'pocket.moveLeft': ['KeyA'],
+  'pocket.moveRight': ['KeyD'],
+  'air.aggressive': ['Mouse0'],
+  'air.rac': ['Mouse2'],
+  'air.possession': ['Space'],
+  'carrier.up': ['KeyW'],
+  'carrier.down': ['KeyS'],
+  'carrier.left': ['KeyA'],
+  'carrier.right': ['KeyD'],
+  'carrier.sprint': ['ShiftLeft'],
+  'carrier.jukeLeft': ['KeyQ'],
+  'carrier.jukeRight': ['KeyE'],
+  'carrier.spin': ['Space'],
+  'carrier.stiffArm': ['KeyF'],
+  'carrier.truck': ['KeyR'],
+  'carrier.dive': ['KeyC'],
+  'carrier.protect': ['KeyV'],
+};
 
 export const ACTIONS_BY_ID = new Map(ACTIONS.map((d) => [d.id, d]));
 

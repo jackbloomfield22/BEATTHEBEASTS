@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { loadJSON, saveJSON } from './storage';
-import type { Bindings } from '@/input/actions';
+import { KB_DEFAULTS_V2, type Bindings } from '@/input/actions';
 
 export type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
 export type Difficulty = 'rookie' | 'pro' | 'legend' | 'beast';
@@ -21,7 +21,7 @@ export interface GraphicsSettings {
 }
 
 export interface Settings {
-  version: 2;
+  version: 3;
   display: {
     fullscreen: boolean;
     resolutionScale: number; // 0.5 .. 1.0
@@ -109,7 +109,7 @@ export function renderDpr(cssW: number, cssH: number, deviceDpr: number, preset:
 
 export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings {
   return {
-    version: 2,
+    version: 3,
     display: { fullscreen: false, resolutionScale: 1, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 200, ballInAir: 'assist', keyboard, gamepad },
@@ -168,7 +168,7 @@ export const useSettings = create<SettingsStore>((set, get) => ({
 }));
 
 /** Bring older saved settings up to the current version. */
-function migrate(stored: Settings): Settings {
+export function migrate(stored: Settings): Settings {
   const s = structuredClone(stored);
   if ((s.version as number) === 1) {
     // v2: fullscreen became opt-in (it was requested on the title keypress),
@@ -176,7 +176,20 @@ function migrate(stored: Settings): Settings {
     s.display.fullscreen = false;
     const p = s.graphics?.preset;
     if (p && p !== 'custom') s.display.resolutionScale = PRESET_RES_SCALE[p];
-    s.version = 2;
+    (s as { version: number }).version = 2;
+  }
+  if ((s.version as number) === 2) {
+    // v3: new keyboard defaults for play (arrows, 1–3 catches, Q–F moves).
+    // Bindings still on their v2 default are dropped so the merge fills in
+    // the new default; ones the player rebound are kept.
+    const kb = s.controls?.keyboard;
+    if (kb) {
+      for (const [id, old] of Object.entries(KB_DEFAULTS_V2)) {
+        const cur = kb[id];
+        if (cur && cur.length === old.length && cur.every((c, i) => c === old[i])) delete kb[id];
+      }
+    }
+    s.version = 3;
   }
   return s;
 }

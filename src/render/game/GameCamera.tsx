@@ -11,9 +11,10 @@ import { frameEvents } from './frameEvents';
 
 // The play cameras (GDD §11.1, TECH_PLAN §8), driven from the sim snapshot
 // through critically damped springs so every cut is a glide:
-//   Broadcast: behind the offense, high enough to see both wideouts; it
-//   pulls up and back while the ball is in the air, follows the carrier with
-//   look-ahead, and swings to a high sideline angle on a long run.
+//   Broadcast: behind the offense, high enough to see both wideouts; once
+//   the pass is out it rides behind the ball and pushes in on the catch
+//   point, then settles behind the carrier with look-ahead, and swings to a
+//   high sideline angle on a long run.
 //   All-22: high above the backfield, the whole field of play in view.
 //   Field level: tight, behind the ball.
 // Hits add a shake scaled by their force (Reduce Camera Shake scales it down).
@@ -77,11 +78,7 @@ function targetPose(mode: Mode): Pose | null {
     return base;
   }
   if (cur.phase === 'air' || (cur.phase === 'dead' && !c)) {
-    // Pull up and back: frame the thrower and where the ball is going.
-    const ax = s.ball.aim.x;
-    const ay = s.ball.aim.y;
-    const d = Math.hypot(ax - qb.x, ay - qb.y);
-    return { ex: Math.min(qb.x, los) - 15 - d * 0.12, ey: (qb.y + ay) * 0.35, eh: 9 + d * 0.16, lx: qb.x + (ax - qb.x) * 0.62, ly: qb.y + (ay - qb.y) * 0.6, lh: 0, fov: 52 };
+    return airPose(s, ball);
   }
   if (c) {
     // Follow the carrier with look-ahead; he runs toward his own attack direction.
@@ -99,6 +96,53 @@ function targetPose(mode: Mode): Pose | null {
     return { ex: c.x - dir * 13, ey: c.y * 0.75, eh: 6.8, lx, ly, lh: 0.6, fov: 52 };
   }
   return base;
+}
+
+/** The throw being followed: where and when it left, and the flight time it was given. */
+const flight = { arrive: -1, x0: 0, y0: 0, total: 1 };
+
+/**
+ * The pass: from the moment it's out, the camera rides behind the ball on
+ * its line to the receiver and pushes in so the catch point fills the frame
+ * as it arrives (then the carrier follow takes over). The line is biased
+ * downfield so a screen or a throw to the flat never swings the camera
+ * round to face the offense.
+ */
+function airPose(s: NonNullable<typeof practice.runner>['state'], ball: { x: number; y: number; z: number }): Pose {
+  const b = s.ball;
+  if (b.arrive !== flight.arrive) {
+    flight.arrive = b.arrive;
+    flight.x0 = ball.x;
+    flight.y0 = ball.y;
+    flight.total = Math.max(0.3, b.arrive - s.t);
+  }
+  const ax = b.aim.x;
+  const ay = b.aim.y;
+  // Progress through the flight, eased so the push-in lands with the ball.
+  const p = Math.min(1, Math.max(0, 1 - (b.arrive - s.t) / flight.total));
+  const e = p * p * (3 - 2 * p);
+  // The camera's line: the throw's direction, leaning downfield.
+  const dx = ax - flight.x0;
+  const dy = ay - flight.y0;
+  let ux = Math.max(0, dx) + 0.35 * Math.hypot(dx, dy) + 1e-3;
+  let uy = dy * 0.8;
+  const m = Math.hypot(ux, uy);
+  ux /= m;
+  uy /= m;
+  // Look: the ball early, the catch point late (at catch height).
+  const lx = ball.x + (ax - ball.x) * (0.3 + 0.7 * e);
+  const ly = ball.y + (ay - ball.y) * (0.3 + 0.7 * e);
+  // Back off along the line: wide at release, about 9 yd off the catch at arrival.
+  const back = 20 - 11 * e;
+  return {
+    ex: lx - ux * back,
+    ey: ly - uy * back,
+    eh: 8 - 4.6 * e,
+    lx,
+    ly,
+    lh: 0.4 + 0.9 * e,
+    fov: 50 - 12 * e,
+  };
 }
 
 export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
@@ -134,7 +178,9 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     if (urlFlags.shot !== null) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
     const sp = springs.current;
     // Eye slower than the look: the lens leads, the dolly follows.
-    const w = [2.6, 2.6, 2.6, 4, 4, 4, 3];
+    // In the air the whole rig tightens up so it keeps pace with the ball.
+    const air = practice.runner?.cur.phase === 'air' && modeSetting === 'broadcast';
+    const w = air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));
     // Shake: hits kick it, it rings down in ~0.3 s.
     for (const e of frameEvents) {
@@ -155,11 +201,12 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       camera.updateProjectionMatrix();
     }
     // The sticks are camera-relative: tell the input layer where "up" points
-    // on the field. Once the ball carrier has it, that frame holds for the
-    // rest of the play (the camera swinging to the sideline on a long run
-    // mustn't turn his controls 90 degrees mid-stride).
+    // on the field. Once the ball is thrown, the pocket's frame holds for the
+    // rest of the play: the camera riding the ball toward the sideline, or
+    // swinging to the sideline on a long run, mustn't turn the carrier's
+    // controls mid-stride.
     const ph = practice.runner?.cur.phase;
-    const fx = ph === 'carrier' || ph === 'dead' ? NaN : v[3]! - v[0]!;
+    const fx = ph === 'air' || ph === 'carrier' || ph === 'dead' ? NaN : v[3]! - v[0]!;
     const fz = v[5]! - v[2]!;
     const [gx, gy] = fieldDir(fx, fz);
     const m = Math.hypot(gx, gy);

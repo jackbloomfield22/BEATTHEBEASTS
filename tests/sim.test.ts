@@ -24,6 +24,7 @@ import {
 } from '@/sim';
 import { flyFor, solveLaunch } from '@/sim/ball';
 import { steer } from '@/sim/movement';
+import { jukeSide } from '@/sim/play';
 
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const rosters = practiceRosters(snap);
@@ -210,5 +211,32 @@ describe('sim: a 10-point attribute gap is measurable (GDD §18 sensitivity)', (
       return sum / Math.max(1, n);
     };
     expect(shedFor(70) - shedFor(80)).toBeGreaterThan(0.08);
+  });
+});
+
+describe('sim: one-button juke', () => {
+  const carrierOf = () => {
+    const s = setup(3, playById('trips-stick'), defById('cover3'), true);
+    const c = s.agents[s.icons[0]!]!;
+    c.vel = { x: 6, y: 0 };
+    return { s, c };
+  };
+  it('goes to the side he steers, relative to his heading', () => {
+    const { s, c } = carrierOf();
+    expect(jukeSide(s, c, { x: 0.3, y: 1 }, 1)).toBe('jukeL');
+    expect(jukeSide(s, c, { x: 0.3, y: -1 }, 1)).toBe('jukeR');
+    // Running back toward his own goal, "left on the field" is his right.
+    c.vel = { x: -6, y: 0 };
+    expect(jukeSide(s, c, { x: 0, y: 1 }, 1)).toBe('jukeR');
+  });
+  it('without a steer, away from the nearest free defender in front of him', () => {
+    const { s, c } = carrierOf();
+    for (const i of s.def) s.agents[i]!.down = true;
+    const d = s.agents[s.def[0]!]!;
+    d.down = false;
+    d.pos = { x: c.pos.x + 3, y: c.pos.y + 1 }; // ahead, to his left
+    expect(jukeSide(s, c, { x: 1, y: 0 }, 1)).toBe('jukeR');
+    d.pos = { x: c.pos.x + 3, y: c.pos.y - 1 }; // ahead, to his right
+    expect(jukeSide(s, c, { x: 1, y: 0 }, 1)).toBe('jukeL');
   });
 });

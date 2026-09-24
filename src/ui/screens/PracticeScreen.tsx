@@ -135,6 +135,13 @@ const ICON_COLOR: Record<string, string> = { WR: '#00e5ff', TE: '#bd6bff', RB: '
 const PAD_GLYPH = ['A', 'B', 'X', 'Y', 'RB'];
 const PAD_SHAPE = ['▼', '●', '■', '▲', '◆'];
 
+/** The three catches, in their key order (1, 2, 3 on the keyboard). */
+const CATCHES = [
+  { type: 'aggressive', action: 'air.aggressive', name: 'Go up and get it', sub: 'Aggressive' },
+  { type: 'possession', action: 'air.possession', name: 'Secure it, go down', sub: 'Possession' },
+  { type: 'rac', action: 'air.rac', name: 'Catch and run', sub: 'Run after catch' },
+] as const;
+
 /** The key (or button) bound to an action, for prompts. */
 function useKey() {
   const kb = useSettings((s) => s.settings.controls.keyboard);
@@ -151,6 +158,9 @@ function PlayHud() {
   const device = useDevice();
   const colorblind = useSettings((s) => s.settings.accessibility.colorblind !== 'off');
   const key = useKey();
+  // The four move keys as one label (↑←↓→ by default), or the stick.
+  const moveKeys = (p: string) =>
+    device === 'gamepad' ? 'L-Stick' : (p === 'carrier.' ? ['up', 'left', 'down', 'right'] : ['Up', 'Left', 'Down', 'Right']).map((d) => key(p + d)).join('');
   const runner = practice.runner;
   const icons = runner ? runner.state.icons.map((i) => runner.state.agents[i]!) : [];
   const phase = ui.phase;
@@ -186,6 +196,7 @@ function PlayHud() {
       ) : null}
       {ui.stage === 'live' && inPocket ? (
         <div className="prompt-row">
+          <span><kbd>{moveKeys('pocket.move')}</kbd> Move</span>
           <span><kbd>{device === 'gamepad' ? 'A B X Y RB' : '1–5'}</kbd> Throw: tap for touch, hold for a bullet</span>
           <span>{device === 'gamepad' ? 'Left stick while holding: placement' : 'Mouse off the icon: placement'}</span>
           <span><kbd>{key('pocket.pumpFake')}</kbd> Pump</span>
@@ -193,18 +204,27 @@ function PlayHud() {
         </div>
       ) : null}
       {ui.stage === 'live' && phase === 'air' ? (
-        <div className="prompt-row catch">
-          <span><kbd>{key('air.aggressive')}</kbd> Aggressive</span>
-          <span><kbd>{key('air.rac')}</kbd> Run after catch</span>
-          <span><kbd>{key('air.possession')}</kbd> Possession</span>
+        <div className="catch-call" data-called={ui.catchType ?? 'none'}>
+          <div className="catch-head">{ui.catchType ? 'Catch called' : 'Call the catch'}</div>
+          <div className="catch-opts">
+            {CATCHES.map((c) => (
+              <div key={c.type} className={`catch-opt${ui.catchType === c.type ? ' on' : ui.catchType ? ' off' : ''}`}>
+                <kbd>{key(c.action)}</kbd>
+                <span className="catch-name">{c.name}</span>
+                <span className="catch-sub">{c.sub}</span>
+              </div>
+            ))}
+          </div>
+          {!ui.catchType ? <div className="catch-foot">No call: catch and run</div> : null}
         </div>
       ) : null}
       {ui.stage === 'live' && phase === 'carrier' && ui.carrier ? (
         <div className="prompt-row">
+          <span><kbd>{moveKeys('carrier.')}</kbd> Run</span>
           <span><kbd>{key('carrier.sprint')}</kbd> Sprint</span>
-          <span><kbd>{key('carrier.jukeLeft')}</kbd><kbd>{key('carrier.jukeRight')}</kbd> Juke</span>
-          <span><kbd>{key('carrier.spin')}</kbd> Spin</span>
+          <span><kbd>{device === 'gamepad' ? 'R-Stick ←→' : key('carrier.juke')}</kbd> Juke</span>
           <span><kbd>{key('carrier.stiffArm')}</kbd> Stiff arm</span>
+          <span><kbd>{key('carrier.spin')}</kbd> Spin</span>
           <span><kbd>{key('carrier.truck')}</kbd> Truck</span>
           <span><kbd>{key('carrier.dive')}</kbd> Dive</span>
           <span><kbd>{key('carrier.protect')}</kbd> Protect</span>

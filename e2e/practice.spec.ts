@@ -11,7 +11,7 @@ import { trackErrors, waitReady } from './helpers';
 
 type P = {
   __btbPractice: { runner: { paused: boolean; state: S } | null; tick(n: number): void };
-  __btbPracticeUi: { getState(): { stage: string; result: { headline: string } | null } };
+  __btbPracticeUi: { getState(): { stage: string; result: { headline: string } | null; catchType: string | null } };
   __btbGameReady?: boolean;
   __btbSimHashes(): Promise<{ key: string; hash: number; ticks: number; reason: string }[]>;
 };
@@ -61,11 +61,11 @@ test('a full play: snap, throw, catch, run, tackle or score, result card', async
   s = await tickUntil(page, (x) => x.phase === 'carrier' || x.phase === 'dead');
   expect(s.events.some((e) => e.type === 'catch')).toBe(true);
   // Run it: sprint upfield.
-  await page.keyboard.down('KeyW');
-  await page.keyboard.down('ShiftLeft');
+  await page.keyboard.down('ArrowUp');
+  await page.keyboard.down('ShiftRight');
   s = await tickUntil(page, (x) => x.result !== null);
-  await page.keyboard.up('KeyW');
-  await page.keyboard.up('ShiftLeft');
+  await page.keyboard.up('ArrowUp');
+  await page.keyboard.up('ShiftRight');
   expect(['tackle', 'touchdown', 'outOfBounds']).toContain(s.result!.reason);
   expect(s.result!.yards).toBeGreaterThan(10);
   // The dead ball settles and the result card comes up.
@@ -73,6 +73,26 @@ test('a full play: snap, throw, catch, run, tackle or score, result card', async
   await expect(page.locator('.result-card')).toBeVisible();
   await expect(page.locator('.result-head')).toContainText(s.result!.touchdown ? 'Touchdown' : 'Complete');
   expect(errors).toEqual([]);
+});
+
+test('the catch call: 1–3 while the ball is in the air, and the called one lights up', async ({ page }) => {
+  await open(page, 37, 1);
+  await page.keyboard.press('Space');
+  await tick(page, 100);
+  await page.keyboard.down('Digit1');
+  await tick(page, 3);
+  await page.keyboard.up('Digit1');
+  await tickUntil(page, (x) => x.phase === 'air', 60);
+  // The three prompts are up the moment it's thrown, nothing called yet.
+  await expect(page.locator('.catch-opt')).toHaveCount(3);
+  await expect(page.locator('.catch-opt.on')).toHaveCount(0);
+  await expect(page.locator('.catch-opt kbd')).toHaveText(['1', '2', '3']);
+  // 2: secure it and go down.
+  await page.keyboard.press('Digit2');
+  await tick(page, 1);
+  expect(await page.evaluate(() => (window as unknown as P).__btbPracticeUi.getState().catchType)).toBe('possession');
+  await expect(page.locator('.catch-opt.on')).toContainText('Secure it');
+  await expect(page.locator('.catch-opt.off')).toHaveCount(2);
 });
 
 test('a tackle: the carrier goes down and the next snap is at the new spot', async ({ page }) => {
@@ -105,14 +125,14 @@ test('scores: a touchdown run ends the series with a touchdown card', async ({ p
   await page.keyboard.up('Digit1');
   await tickUntil(page, (x) => x.phase === 'carrier' || x.phase === 'dead');
   // Weave: angle away from the nearest defender (the stick right), sprinting.
-  await page.keyboard.down('ShiftLeft');
-  await page.keyboard.down('KeyW');
-  await page.keyboard.down('KeyD');
+  await page.keyboard.down('ShiftRight');
+  await page.keyboard.down('ArrowUp');
+  await page.keyboard.down('ArrowRight');
   await tick(page, 20);
-  await page.keyboard.up('KeyD');
+  await page.keyboard.up('ArrowRight');
   const s = await tickUntil(page, (x) => x.result !== null);
-  await page.keyboard.up('KeyW');
-  await page.keyboard.up('ShiftLeft');
+  await page.keyboard.up('ArrowUp');
+  await page.keyboard.up('ShiftRight');
   // Seed 37 with these inputs is a 75-yard catch and run (the replay is exact).
   expect(s.result!.touchdown).toBe(true);
   expect(s.events.some((e) => e.type === 'touchdown')).toBe(true);

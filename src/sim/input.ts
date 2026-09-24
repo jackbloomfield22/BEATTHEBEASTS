@@ -29,6 +29,11 @@ export interface InputFrame {
   catchType: CatchType | null;
   jukeL: boolean;
   jukeR: boolean;
+  /**
+   * Juke with the side left to the carrier: toward the side he's steering
+   * (relative to his heading), else away from the nearest tackler.
+   */
+  juke: boolean;
   spin: boolean;
   stiffArm: boolean;
   truck: boolean;
@@ -48,6 +53,7 @@ export const NEUTRAL: InputFrame = Object.freeze({
   catchType: null,
   jukeL: false,
   jukeR: false,
+  juke: false,
   spin: false,
   stiffArm: false,
   truck: false,

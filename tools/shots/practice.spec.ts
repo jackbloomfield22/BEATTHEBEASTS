@@ -48,20 +48,33 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   await page.keyboard.up('Digit1');
   await tick(page, 8);
   await shot(page, '05-throw');
-  await tick(page, 60);
-  await shot(page, '06-ball-in-air');
+  // The camera rides the ball and pushes in on the catch; call the catch (2: secure it) on the way.
+  await tick(page, 14);
+  await shot(page, '06a-air-early');
+  await page.keyboard.press('Digit2');
+  await tick(page, 22);
+  await shot(page, '06b-air-mid-called');
+  for (let k = 0; k < 40 && (await phase(page)) === 'air'; k++) {
+    const left = await page.evaluate(() => {
+      const r = (window as unknown as P).__btbPractice.runner!.state;
+      return r.ball.arrive - r.t;
+    });
+    if (left < 0.12) break;
+    await tick(page, 3);
+  }
+  await shot(page, '06c-air-arrival');
   for (let k = 0; k < 40 && (await phase(page)) === 'air'; k++) await tick(page, 6);
-  await page.keyboard.down('ShiftLeft');
-  await page.keyboard.down('KeyW');
-  await page.keyboard.down('KeyD');
+  await page.keyboard.down('ShiftRight');
+  await page.keyboard.down('ArrowUp');
+  await page.keyboard.down('ArrowRight');
   await tick(page, 20);
-  await page.keyboard.up('KeyD');
+  await page.keyboard.up('ArrowRight');
   await shot(page, '07-run');
   await tick(page, 70);
   await shot(page, '08-long-run');
   for (let k = 0; k < 80 && (await phase(page)) !== 'dead'; k++) await tick(page, 6);
-  await page.keyboard.up('KeyW');
-  await page.keyboard.up('ShiftLeft');
+  await page.keyboard.up('ArrowUp');
+  await page.keyboard.up('ShiftRight');
   await tick(page, 30);
   await page.keyboard.press('F3');
   await shot(page, '09-field-level-dead-ball');
