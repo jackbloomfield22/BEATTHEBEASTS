@@ -1116,7 +1116,7 @@
         "loop_deg": 0.0,
         "clear_cm": 22.9,
         "com_cm": null,
-        "reach_cm": 0.0,
+        "reach_cm": 0.01,
         "pass": true
       },
       "travel": [
@@ -1396,7 +1396,7 @@
         "loop_deg": 0.0,
         "clear_cm": 23.8,
         "com_cm": null,
-        "reach_cm": 0.0,
+        "reach_cm": 0.01,
         "pass": true
       },
       "travel": [
@@ -1466,7 +1466,7 @@
         "loop_deg": 0.0,
         "clear_cm": 23.8,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "travel": [
