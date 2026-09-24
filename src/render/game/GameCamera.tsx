@@ -77,8 +77,14 @@ function targetPose(mode: Mode): Pose | null {
     base.ly += (qb.y - by) * 0.3;
     return base;
   }
-  if (cur.phase === 'air' || (cur.phase === 'dead' && !c)) {
+  // A dead ball after a throw holds on the catch point; after a sack (no
+  // throw, no carrier) it holds on the ball where he went down.
+  const thrown = s.ball.thrower >= 0 && s.ball.arrive > s.snapT;
+  if (cur.phase === 'air' || (cur.phase === 'dead' && !c && thrown)) {
     return airPose(s, cur);
+  }
+  if (cur.phase === 'dead' && !c) {
+    return { ex: ball.x - 13, ey: ball.y * 0.75, eh: 6.8, lx: ball.x + 2, ly: ball.y, lh: 0.6, fov: 52 };
   }
   if (c) {
     // Follow the carrier with look-ahead; he runs toward his own attack direction.
