@@ -168,7 +168,16 @@ export interface PlayResult {
   offenseBall: boolean;
   touchdown: boolean;
   /** Pass result for stats. */
-  pass?: { attempted: boolean; complete: boolean; intercepted: boolean; airYards: number; target: number };
+  pass?: {
+    attempted: boolean;
+    complete: boolean;
+    intercepted: boolean;
+    airYards: number;
+    target: number;
+    /** When the ball reached the target: the nearest defender to it (yd) and how hard it was contested (0–1). Unset if it never got to him. */
+    sep?: number;
+    contest?: number;
+  };
   sack: boolean;
   ticks: number;
 }

@@ -27,7 +27,7 @@ import { blockOf, stepBlocks } from './blocks';
 import { applyImpulse, fumbles, resolveTackle, separate, startMove, tickMoves } from './contact';
 import { releaseTime } from './effects';
 import { BULLET_CHARGE, TAP_MAX, type InputFrame } from './input';
-import { remember, steer } from './movement';
+import { arrive, remember, steer } from './movement';
 import { planThrow, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import type { PlayState } from './state';
@@ -474,19 +474,21 @@ function ballStep(s: PlayState): void {
         s.carrier = who;
         s.phase = 'carrier';
         a.anim = 'catch';
-        a.busy = Math.max(a.busy, 10);
         if (out === 'catch') {
+          // No pause after the catch: in stride he keeps all his speed, and
+          // only the hands are busy (a few frames to tuck it before a move).
+          // Securing it with both hands gives a little speed up; going up
+          // for it costs the most (he lands and restarts). From the catch
+          // clips' timing: tuck ~0.07 s, secure ~0.13 s, high point ~0.2 s.
           const type = s.catchType ?? 'rac';
-          if (type === 'aggressive') {
-            a.vel.x *= 0.35;
-            a.vel.y *= 0.35;
-          } else if (type === 'possession') {
-            a.vel.x *= 0.6;
-            a.vel.y *= 0.6;
-          }
+          const keep = type === 'aggressive' ? 0.55 : type === 'possession' ? 0.8 : 1;
+          a.vel.x *= keep;
+          a.vel.y *= keep;
+          a.busy = Math.max(a.busy, type === 'aggressive' ? 12 : type === 'possession' ? 8 : 4);
           if (s.pass) s.pass.complete = true;
           s.events.push({ t: s.t, type: 'catch', who: [who], at: { x: a.pos.x, y: a.pos.y }, data: { type } });
         } else {
+          a.busy = Math.max(a.busy, 10);
           if (s.pass) s.pass.intercepted = true;
           s.events.push({ t: s.t, type: 'interception', who: [who], at: { x: a.pos.x, y: a.pos.y } });
         }
@@ -568,10 +570,10 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
     }
     const as = play.assign[a.slot as keyof typeof play.assign];
     if (carrier && carrier.side === 'off') {
-      // Blocking for the ball carrier (receivers mid-route keep running until close).
-      if (as.kind === 'route' && s.ball.mode === 'held' && dist(a.pos, carrier.pos) > 12) runRoute(s, a);
-      // Linemen keep driving at the point of attack; everyone else blocks downfield.
-      else runBlock(s, a, carrier.pos, !(as.kind === 'runBlock' && (a.slot === 'LT' || a.slot === 'LG' || a.slot === 'C' || a.slot === 'RG' || a.slot === 'RT')));
+      // Blocking for the ball carrier. Linemen keep driving at the point of
+      // attack; everyone else, receivers included the moment the ball is
+      // caught, blocks downfield (feedback item 7: YAC comes from the blocks).
+      runBlock(s, a, carrier.pos, !(as.kind === 'runBlock' && (a.slot === 'LT' || a.slot === 'LG' || a.slot === 'C' || a.slot === 'RG' || a.slot === 'RT')));
       continue;
     }
     if (carrier && carrier.side === 'def') {
@@ -585,11 +587,12 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
     }
     switch (as.kind) {
       case 'route':
-        if (s.phase === 'air' && s.ball.target === i) {
-          // Go get it: to the catch point, adjusting to where it's coming down.
-          const to = { x: s.ball.aim.x, y: s.ball.aim.y };
-          steer(a, { x: (to.x - a.pos.x) * 4, y: (to.y - a.pos.y) * 4 });
-        } else runRoute(s, a);
+        if (s.phase === 'air' && s.ball.target === i) runToBall(s, a);
+        // The ball's thrown to someone else: work to the nearest threat to
+        // the catch point, ready to block when it's caught (no contact before
+        // the catch: that's interference).
+        else if (s.phase === 'air' && s.ball.target >= 0 && a.busy === 0) runBlock(s, a, { x: s.ball.aim.x, y: s.ball.aim.y }, true, false);
+        else runRoute(s, a);
         break;
       case 'passBlock':
         passBlock(s, a);
@@ -619,6 +622,39 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
   } else if (carrier && carrier.side === 'def') {
     carrierStep(s, inp);
   }
+}
+
+/**
+ * The target with the ball in the air (feedback item 7): he catches it in
+ * stride. The throw was led to where he'd be flat out, so he runs his path
+ * bent onto the catch point at the pace that gets him there when the ball
+ * does: full speed on a ball led well, a stride short on one underthrown,
+ * never a stop to wait. Once the ball is on him he runs through the catch.
+ * Only a settle route (curl, hitch, comeback, sit) works back to the ball.
+ */
+function runToBall(s: PlayState, a: Agent): void {
+  const b = s.ball;
+  const rt = a.route;
+  const settle = !!rt && rt.sit[rt.pts.length - 1] === true && rt.idx >= rt.pts.length - 1;
+  const to = { x: b.aim.x, y: b.aim.y };
+  const d = dist(a.pos, to);
+  const left = b.arrive - s.t;
+  if (settle) {
+    // Come back to the ball: at it by the time it gets there, braking into the catch.
+    steer(a, arrive(a, to, 1, 1));
+    return;
+  }
+  const top = a.fx.vmax;
+  if (left > 0.1 && d > 0.25) {
+    // Pace to be there on time; a hurry past top speed is simply top speed.
+    const sp = Math.min(top, d / left);
+    steer(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp });
+    return;
+  }
+  // The ball's on him: run through the catch the way he's going.
+  const v = len(a.vel);
+  if (v > 0.5) steer(a, { x: (a.vel.x / v) * top, y: (a.vel.y / v) * top });
+  else steer(a, { x: to.x - a.pos.x, y: to.y - a.pos.y });
 }
 
 function pursueTackle(s: PlayState, a: Agent, t: Agent): void {

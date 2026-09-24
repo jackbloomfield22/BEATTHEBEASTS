@@ -48,6 +48,7 @@ export const ROUTES: Record<RouteName, RoutePoint[]> = {
   dig: [{ d: 12, o: 0 }, { d: 12, o: -25 }],
   corner: [{ d: 11, o: 0 }, { d: 22, o: 9 }, { d: 30, o: 12 }],
   post: [{ d: 12, o: 0 }, { d: 35, o: -12 }],
+  // Out to the flat at full speed; if the ball hasn't come by the numbers he sits down in the space (he doesn't turn it into a wheel).
   flat: [{ d: 1.5, o: 2 }, { d: 4, o: 10 }, { d: 4.5, o: 12, sit: true }],
   curl: [{ d: 12, o: 0 }, { d: 10, o: -1.5, sit: true }],
   drag: [{ d: 2, o: -2 }, { d: 5, o: -30 }],

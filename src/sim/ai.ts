@@ -268,7 +268,7 @@ export const blockable = (s: PlayState, d: Agent): boolean => s.t - ((d.mem.shed
  * play and drive him. `downfield`: only defenders in front of the carrier,
  * engaged from between them and the ball.
  */
-export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false): void {
+export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, engageOk = true): void {
   if (blockOf(s, b.i) || b.busy > 0) {
     if (!blockOf(s, b.i)) steer(b, { x: 0, y: 0 });
     return;
@@ -280,7 +280,8 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false):
     for (const i of s.def) {
       const d = s.agents[i]!;
       if (d.down || blockOf(s, i) || !blockable(s, d)) continue;
-      if (downfield && (d.pos.x < toward.x - 1 || dist(d.pos, toward) > 10)) continue;
+      // Downfield: the defenders who can still get to the play (in front of it, within ~15 yd: a pursuer's two seconds).
+      if (downfield && (d.pos.x < toward.x - 1 || dist(d.pos, toward) > 15)) continue;
       // Threat: close to me, closer to the play.
       const k = dist(d.pos, b.pos) + 0.6 * dist(d.pos, toward);
       if (k < bd && d.pos.x > b.pos.x - 2) {
@@ -301,7 +302,7 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false):
   steer(b, arrive(b, mid, 0.95));
   // Downfield, a block only lands from between him and the ball (else it's a block in the back).
   const between = !downfield || (b.pos.x - d.pos.x) * (toward.x - d.pos.x) + (b.pos.y - d.pos.y) * (toward.y - d.pos.y) > 0;
-  if (between && blockable(s, d) && dist(b.pos, d.pos) < b.fx.radius + d.fx.radius + 0.25) {
+  if (engageOk && between && blockable(s, d) && dist(b.pos, d.pos) < b.fx.radius + d.fx.radius + 0.25) {
     const blk = engage(s, b, d, 'run');
     b.mem.driveY = Math.sign(d.pos.y - toward.y) * 0.4;
     void blk;
@@ -343,7 +344,9 @@ export function openness(s: PlayState, qb: Agent, r: Agent, bullet?: boolean, pe
     const carry = Math.min(T, rt0);
     const px = d.pos.x + d.vel.x * carry;
     const py = d.pos.y + d.vel.y * carry;
-    const closing = Math.max(0, T - rt0) * d.fx.vmax * 0.5;
+    // After his read he runs flat out to the catch point (breakOnBall), less
+    // the time to turn and get going (~a quarter of his flight after the read).
+    const closing = Math.max(0, T - rt0) * d.fx.vmax * 0.8;
     sep = Math.min(sep, Math.sqrt((px - at.x) * (px - at.x) + (py - at.y) * (py - at.y)) - closing);
   }
   // Throwing lanes: a defender who can get to the ball's path before it
@@ -386,7 +389,11 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
   const held = s.t - s.snapT - s.setup.play.drop.set;
   const need = 1.4 - 1.1 * pressure - Math.min(0.8, held * 0.3) - (held > 2.2 ? 2 : 0);
   s.eyes = { x: r.pos.x, y: r.pos.y };
-  if (o.sep + noise > need) return cur;
+  // A deep ball needs a step on the coverage: the longer it hangs, the more
+  // a small misread costs (NFL QBs throw ~12% of attempts 20+ air yards and
+  // complete ~35–45% of them). About a yard more margin per 20 yd downfield.
+  const risk = Math.max(0, o.at.x - s.setup.los - 10) * 0.05;
+  if (o.sep + noise > need + risk) return cur;
   if (since > readTime) {
     s.read.idx++;
     s.read.since = s.t;
@@ -396,7 +403,8 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
     let best = -1;
     let bs = -Infinity;
     icons.forEach((k, j) => {
-      const q = openness(s, qb, s.agents[k]!).sep;
+      const oq = openness(s, qb, s.agents[k]!);
+      const q = oq.sep - Math.max(0, oq.at.x - s.setup.los - 10) * 0.05;
       if (q > bs) {
         bs = q;
         best = j;
@@ -625,11 +633,15 @@ export function zoneCover(s: PlayState, d: Agent, zone: NonNullable<Parameters<t
   d.anim = d.vel.x > 0.8 ? 'backpedal' : 'run';
 }
 
-/** Break on a thrown ball: to the closest point of its path he can reach. */
+/**
+ * Break on a thrown ball: to the catch point, flat out while it's far and
+ * braking to be there with the ball (not running through it: a defender over
+ * the top who overran the spot was out of the play). One who can't get there
+ * in time is still taking the right angle to it.
+ */
 export function breakOnBall(s: PlayState, d: Agent): void {
   const b = s.ball;
   const aim = { x: b.aim.x, y: b.aim.y };
-  const dir = norm(sub(aim, d.pos));
-  steer(d, { x: dir.x * d.fx.vmax, y: dir.y * d.fx.vmax });
+  steer(d, arrive(d, aim, 1, 1));
   d.mem.onBall = true;
 }

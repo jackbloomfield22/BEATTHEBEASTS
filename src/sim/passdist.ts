@@ -1,0 +1,171 @@
+// Passing distribution (feedback item 7): what the AI-vs-AI passing game
+// produces, as a football person would read it. The headless harness prints
+// it, and a test holds the shape (completion rate, the explosive tail, YAC,
+// contested catches) inside believable bands.
+//
+// Bands: NFL league-wide completion runs ~62–66%; ~10–12% of completions
+// gain 20+ yd and ~2–4% gain 40+; YAC on short throws (under 10 air yards)
+// averages ~5–6 yd; contested catch rates (PFF, NGS) sit around 40–50% for
+// the best receivers and lower for everyone else.
+
+import { routeOf } from './ai';
+import { NEUTRAL } from './input';
+import { stepPlay } from './play';
+import { DEF_CALLS, PLAYS, type DefCall, type OffPlay, type RouteName } from './plays';
+import { createPlay, type PlayState } from './state';
+import type { DefSlot, OffSlot, SimPlayer } from './types';
+import { dist } from './vec';
+
+/** Short, underneath routes (the "YAC on short routes" figure). */
+const SHORT: RouteName[] = ['slant', 'flat', 'hitch', 'stick', 'drag', 'checkdown', 'swing', 'sit', 'curl', 'out', 'in'];
+
+/** A target is "in phase" with a defender inside this (yd) when the ball gets there. */
+export const IN_PHASE = 1.0;
+
+export interface PassSample {
+  play: string;
+  def: string;
+  route: RouteName | null;
+  complete: boolean;
+  intercepted: boolean;
+  /** Yards gained on the play (from the line). */
+  yards: number;
+  /** Catch spot minus the line (completions). */
+  air: number;
+  /** Yards after the catch (completions). */
+  yac: number;
+  /**
+   * How open he was: the nearest defender to the ball when it reached him
+   * (yd); 0 when a defender got to it first; his separation at the planned
+   * arrival when it never got to him (overthrown). NaN on a throwaway.
+   */
+  sep: number;
+}
+
+export interface PassDist {
+  plays: number;
+  att: number;
+  comp: number;
+  int: number;
+  sacks: number;
+  cmpPct: number;
+  ypa: number;
+  /** Share of completions gaining 20+ and 40+. */
+  exp20: number;
+  exp40: number;
+  /** Average YAC on completions to short routes, and on all completions. */
+  yacShort: number;
+  yacAll: number;
+  /** Share of targets in phase (a defender within IN_PHASE at arrival), and the catch rate on those. */
+  contestedShare: number;
+  contestedCatch: number;
+  /** Catch rate when the target had 2+ yd of separation. */
+  openCatch: number;
+  /** Completions by gain: <0, 0–4, 5–9, 10–19, 20–39, 40+. */
+  buckets: number[];
+  samples: PassSample[];
+}
+
+/** Separation at the planned arrival: the nearest defender to the target on the first tick at or past it. */
+function arrivalSep(s: PlayState): number {
+  const r = s.agents[s.ball.target];
+  if (!r) return 99;
+  let k = 99;
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (!d.down) k = Math.min(k, dist(d.pos, r.pos));
+  }
+  return k;
+}
+
+export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> }, n: number, plays: OffPlay[] = PLAYS, defs: DefCall[] = DEF_CALLS): PassDist {
+  const samples: PassSample[] = [];
+  let playsRun = 0;
+  let sacks = 0;
+  for (const play of plays) {
+    for (const def of defs) {
+      for (let k = 0; k < n; k++) {
+        const s = createPlay({ seed: 1000 + k * 7919, offense: rosters.offense, defense: rosters.defense, play, def, los: 35, toGo: 10, user: false });
+        let sep = -1;
+        let target = -1;
+        let catchX = NaN;
+        for (let t = 0; t < 60 * 40 && !s.result; t++) {
+          stepPlay(s, NEUTRAL);
+          if (s.ball.mode === 'air' && s.ball.target >= 0) target = s.ball.target;
+          if (sep < 0 && target >= 0 && s.pass?.attempted && s.t >= s.ball.arrive - 1e-9) {
+            // The ball may already be caught (arrive is the planned time); the target is the thrown-to man either way.
+            const b = s.ball.target;
+            s.ball.target = target;
+            sep = arrivalSep(s);
+            s.ball.target = b;
+          }
+          if (Number.isNaN(catchX) && s.pass?.complete && s.carrier >= 0) catchX = s.agents[s.carrier]!.pos.x;
+        }
+        playsRun++;
+        const r = s.result!;
+        if (r.sack) sacks++;
+        if (!r.pass?.attempted) continue;
+        // A throwaway has no target: an attempt, but no route or separation.
+        const tgt = s.agents[r.pass.target];
+        const complete = r.pass.complete && !r.pass.intercepted;
+        const catchAt = s.events.find((e) => e.type === 'catch')?.at?.x ?? catchX;
+        const air = complete ? catchAt - s.setup.los : 0;
+        samples.push({
+          play: play.id,
+          def: def.id,
+          route: tgt ? routeOf(s, tgt) : null,
+          complete,
+          intercepted: r.pass.intercepted,
+          yards: r.yards,
+          air,
+          yac: complete ? r.yards - air : 0,
+          sep: !tgt ? NaN : r.pass.sep !== undefined ? r.pass.sep : s.events.some((e) => e.type === 'interception' || e.type === 'deflection') ? 0 : sep < 0 ? 99 : sep,
+        });
+      }
+    }
+  }
+  const comp = samples.filter((p) => p.complete);
+  const short = comp.filter((p) => p.route && SHORT.includes(p.route) && p.air < 10);
+  const contested = samples.filter((p) => p.sep < IN_PHASE);
+  const open = samples.filter((p) => p.sep >= 2);
+  const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+  const share = (a: number, b: number) => (b ? a / b : 0);
+  const edges = [0, 5, 10, 20, 40];
+  const buckets = [0, 0, 0, 0, 0, 0];
+  for (const p of comp) {
+    let j = 0;
+    while (j < edges.length && p.yards >= edges[j]!) j++;
+    buckets[j]!++;
+  }
+  return {
+    plays: playsRun,
+    att: samples.length,
+    comp: comp.length,
+    int: samples.filter((p) => p.intercepted).length,
+    sacks,
+    cmpPct: share(comp.length, samples.length),
+    ypa: avg(samples.map((p) => (p.complete ? p.yards : 0))),
+    exp20: share(comp.filter((p) => p.yards >= 20).length, comp.length),
+    exp40: share(comp.filter((p) => p.yards >= 40).length, comp.length),
+    yacShort: avg(short.map((p) => p.yac)),
+    yacAll: avg(comp.map((p) => p.yac)),
+    contestedShare: share(contested.length, samples.length),
+    contestedCatch: share(contested.filter((p) => p.complete).length, contested.length),
+    openCatch: share(open.filter((p) => p.complete).length, open.length),
+    buckets,
+    samples,
+  };
+}
+
+/** One block of text for the harness and the docs. */
+export function formatPassDist(d: PassDist): string {
+  const p = (x: number) => `${(100 * x).toFixed(1)}%`;
+  return [
+    `plays ${d.plays}  att ${d.att}  comp ${d.comp}  int ${d.int}  sacks ${d.sacks}`,
+    `completion ${p(d.cmpPct)}  ypa ${d.ypa.toFixed(1)}`,
+    `completions 20+ ${p(d.exp20)}  40+ ${p(d.exp40)}`,
+    `YAC short routes ${d.yacShort.toFixed(1)}  all ${d.yacAll.toFixed(1)}`,
+    `in phase (< ${IN_PHASE} yd) ${p(d.contestedShare)} of targets, caught ${p(d.contestedCatch)}; 2+ yd open caught ${p(d.openCatch)}`,
+    `completions by gain  <0 ${d.buckets[0]}  0-4 ${d.buckets[1]}  5-9 ${d.buckets[2]}  10-19 ${d.buckets[3]}  20-39 ${d.buckets[4]}  40+ ${d.buckets[5]}`,
+  ].join('\n');
+}
