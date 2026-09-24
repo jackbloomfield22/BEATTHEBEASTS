@@ -94,9 +94,16 @@ Your notes from the M5 play test, in the order they affect play: prompts and rea
 **Gate**
 - Prompts and open indicators in every phase: pre-snap, pocket, air and carrier (screenshots, and the pre-snap browser test).
 - Sack time at target: 4.53 s median at Pro.
-- Latency: LATENCY_RESULT
+- **Latency: every measured key responds under 100 ms** (`e2e/latency.spec.ts`: real key presses on a fixed 60 Hz frame clock, so N frames = N × 16.7 ms on hardware that holds 60 fps; figures in `docs/screenshots/m5.5/latency*.json`).
+  - Snap: 1 frame (17 ms).
+  - Pocket movement: 3 frames (50 ms, the velocity visibly turning toward the key).
+  - Throw hold (the ring): 1 frame. Release to the throw motion: 1 frame.
+  - Catch call lit: 2 frames (33 ms).
+  - Carrier: movement 1 frame, sprint 2 frames (33 ms), and the juke, stiff arm and spin clips each start 1 frame (17 ms) after the key.
+  - Truck, dive and protect weren't measured this run (the play ended before them); they go through the same path as the stiff arm.
+  - The test also caught a bug: a receiver tap shorter than a tick was lost. It's fixed.
 - The three videos: done.
-- `npm run check` passes (CHECK_COUNT tests), and the browser suite passes.
+- `npm run check` passes (427 tests), and the browser suite passes: 8 practice and How to Play tests, plus the 2 latency tests.
 
 **Critique** (from the play-through screenshots and the video contact sheets)
 - **What works:**
