@@ -94,6 +94,8 @@ export function buildSeats(occupancy = 0.93): Seats {
 
 /** Share of occupied seats drawn per crowd-density setting (the rest read as empty seats). */
 export const CROWD_DRAWN = { low: 0.4, medium: 0.6, high: 0.85, ultra: 1 } as const;
+/** Share of those drawn on Low and Medium when the camera is high (broadcast, All-22). */
+export const CROWD_HIGH_CAMERA = 0.75;
 
 const VERT_PARS = /* glsl */ `
 attribute vec4 aSeat;

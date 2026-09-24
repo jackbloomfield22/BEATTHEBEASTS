@@ -10,7 +10,7 @@ import { buildBoulders, buildHeadlands, buildTerrain, createBoulderMaterial, cre
 import { createOcean } from './ocean/ocean';
 import { buildBowl, PROFILE } from './stadium/bowl';
 import { bakeSpectatorAtlas } from './crowd/spectator';
-import { CROWD_DRAWN, createCrowd } from './crowd/crowd';
+import { CROWD_DRAWN, CROWD_HIGH_CAMERA, createCrowd } from './crowd/crowd';
 import { crowdEnergy } from './crowd/reactions';
 import { createPrecipitation, PRECIP_COUNT } from './weather/precip';
 import { createParticlePool } from './vfx/particles';
@@ -93,11 +93,23 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
 
   const precip = useMemo(() => createPrecipitation(), []);
   const vfx = useMemo(() => createParticlePool(), []);
+  // Spectators drawn: the density setting's share of the (shuffled) seats.
+  // On Low and Medium, a high camera (broadcast, All-22) draws 75% of that:
+  // from there a spectator is a few pixels and a thinner crowd reads the
+  // same, and the crowd is a big share of that view's cost (M5 perf).
+  const crowdBase = useRef(0);
   useEffect(() => {
     const g = crowd.mesh.geometry as THREE.InstancedBufferGeometry;
     const total = (g.attributes.aSeat as THREE.InstancedBufferAttribute).count;
-    g.instanceCount = Math.round(total * CROWD_DRAWN[quality.crowdDensity]);
+    crowdBase.current = Math.round(total * CROWD_DRAWN[quality.crowdDensity]);
+    g.instanceCount = crowdBase.current;
   }, [crowd, quality.crowdDensity]);
+  const thinHigh = quality.tier === 'low' || quality.tier === 'medium';
+  useFrame(({ camera }) => {
+    const g = crowd.mesh.geometry as THREE.InstancedBufferGeometry;
+    const high = thinHigh && camera.position.y > 10;
+    g.instanceCount = Math.round(crowdBase.current * (high ? CROWD_HIGH_CAMERA : 1));
+  });
   const plaza = useMemo(() => buildPlazaGeometry(), []);
   const grass = useMemo(() => createGrassShells(assets.paint), [assets.paint]);
   useEffect(() => {

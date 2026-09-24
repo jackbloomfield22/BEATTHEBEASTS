@@ -87,7 +87,8 @@ function Post({ preset, quality }: { preset: LightingPreset; quality: QualityPre
   }, [dpr, size]);
   return (
     <EffectComposer ref={composer} multisampling={g.antialias === 'smaa+msaa' ? 4 : 0} frameBufferType={THREE.HalfFloatType} enableNormalPass={false}>
-      {ao ? <N8AO halfRes={g.ao === 'half'} aoRadius={1.6} distanceFalloff={0.6} intensity={2.2} quality={quality === 'ultra' ? 'high' : quality === 'high' ? 'medium' : 'low'} /> : <></>}
+      {/* Medium: half resolution each way (a quarter of the pixels) and the fewest samples (M5 perf, the broadcast gate). */}
+      {ao ? <N8AO halfRes={g.ao === 'half'} aoRadius={1.6} distanceFalloff={0.6} intensity={2.2} quality={quality === 'ultra' ? 'high' : quality === 'high' ? 'medium' : quality === 'medium' ? 'performance' : 'low'} /> : <></>}
       {g.bloom ? <Bloom mipmapBlur intensity={preset.bloom.intensity * (reduceFlashing ? 0.6 : 1)} luminanceThreshold={preset.bloom.threshold} luminanceSmoothing={0.2} radius={0.72} /> : <></>}
       <primitive object={color} dispose={null} />
       <SMAA />
