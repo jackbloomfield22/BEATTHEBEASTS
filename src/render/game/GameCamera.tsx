@@ -78,7 +78,7 @@ function targetPose(mode: Mode): Pose | null {
     return base;
   }
   if (cur.phase === 'air' || (cur.phase === 'dead' && !c)) {
-    return airPose(s, ball);
+    return airPose(s, cur);
   }
   if (c) {
     // Follow the carrier with look-ahead; he runs toward his own attack direction.
@@ -108,7 +108,8 @@ const flight = { arrive: -1, x0: 0, y0: 0, total: 1 };
  * downfield so a screen or a throw to the flat never swings the camera
  * round to face the offense.
  */
-function airPose(s: NonNullable<typeof practice.runner>['state'], ball: { x: number; y: number; z: number }): Pose {
+function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullable<typeof practice.runner>['cur']): Pose {
+  const ball = cur.ball;
   const b = s.ball;
   if (b.arrive !== flight.arrive) {
     flight.arrive = b.arrive;
@@ -129,9 +130,13 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], ball: { x: num
   const m = Math.hypot(ux, uy);
   ux /= m;
   uy /= m;
-  // Look: the ball early, the catch point late (at catch height).
-  const lx = ball.x + (ax - ball.x) * (0.3 + 0.7 * e);
-  const ly = ball.y + (ay - ball.y) * (0.3 + 0.7 * e);
+  // Look: the ball early, the catch late. The catch is between the aim
+  // point and the receiver closing on it (he's often a stride short).
+  const r = b.target >= 0 ? cur.agents[b.target] : undefined;
+  const cx = r ? (ax + r.x) / 2 : ax;
+  const cy = r ? (ay + r.y) / 2 : ay;
+  const lx = ball.x + (cx - ball.x) * (0.3 + 0.7 * e);
+  const ly = ball.y + (cy - ball.y) * (0.3 + 0.7 * e);
   // Back off along the line: wide at release, about 9 yd off the catch at arrival.
   const back = 20 - 11 * e;
   return {
@@ -140,7 +145,8 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], ball: { x: num
     eh: 8 - 4.6 * e,
     lx,
     ly,
-    lh: 0.4 + 0.9 * e,
+    // Low enough that the catch sits just above center, clear of the catch-call panel.
+    lh: 0.4 + 0.2 * e,
     fov: 50 - 12 * e,
   };
 }
