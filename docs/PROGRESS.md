@@ -33,7 +33,99 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 
 ## Milestone log
 
-### M5 Core play (built, PR open)
+### M5.5 Game feel (built, PR open)
+
+Your notes from the M5 play test, in the order they affect play: prompts and readability first, then the pocket, the field's edges and the fluidity work, and last the videos so you can judge feel between sessions.
+
+**1. Prompts: always on screen, at the moment they matter.** They follow your bindings and switch with the device.
+- **Pre-snap:** the snap key, large; "1–5 are your receivers, in read order"; hold Tab to see the routes; H for a hot route. The icons carry the receiver keys.
+- **Pocket:** move, throw (tap/hold), placement, pump, throw away, and an open/covered legend.
+- **Ball in the air:** the 1/2/3 catch call, large and centred. The one you press lights and grows; the others fade.
+- **Ball carrier:** Q juke, W stiff arm, E spin, Shift sprint and his stamina ride under his feet the whole time he has the ball. Truck, dive and protect sit in the bottom row.
+
+**2. Seeing what to do**
+- **Open receivers:** icons glow and pulse when the man is open and dim when he's covered. This uses the sim's own openness estimate, read without touching the play. The thresholds come from 1,200 scripted throws: 1–3 yd of separation completes about 65% with no interceptions; 2+ yd inside the defender completes about 40%, with 7–8% intercepted.
+- **Landing reticle:** a lime ring on the turf where the held throw would land, sized to the throw's error cone.
+- **Tutorial:** a first-play card in Practice Field walks through snap, read, throw, catch and run once, following the play without waiting. The pause menu can skip it or show it again.
+- **Slowed first catch:** the session's first catch plays at 0.6x, eased in and out.
+
+**3. Pocket time.** The rusher's base drift against a pass set went from 0.55 to 0.3. The median sack with no throw is now **4.53 s at Pro (was 3.70)**. The ratings spread holds and widens: the best pass-blocking unit in the snapshot holds 4.40 s and the worst 3.63 s (was 3.68 and 3.25). `tools/sim/sacktime.ts` measures it, and a test pins both the median and the gap.
+
+**4. Fluidity**
+- **Carrier moves (sim):**
+  - A move's change of velocity builds over its plant (juke 5 ticks, spin 6, dive 3) instead of in one tick.
+  - A move pressed during the last one is buffered for 0.15 s and fires when he can start it.
+  - A sharp cut at speed slows him into the plant: a 90° cut asks for 77% speed, a reversal 60%.
+  - Letting go of the stick coasts him down instead of stopping him dead.
+- **Blends (render):** the pop meter (`?pops`) logs any bone turning faster than 30 rad/s (45 for legs) and names the clip and state behind it.
+  - It found defensive backs flipping 180° in one frame between the pedal and turning to run (72–94 rad/s). The drawn facing now turns at most 12 rad/s, eased.
+  - The gait's speed is eased over 60 ms, so a juke doesn't jolt the stride.
+  - Transition fades went from 0.08 to 0.14 s (out 0.16), and overlay fades to 0.13/0.16 s.
+  - The sack clip went from 126 spikes to 14. What's left is authored fast motion: the throwing arm, the tackle's wrap, the get-up, and the get-offs' arm punch at 31–34 rad/s. None of it is a cut.
+- **Camera:** every change eases through springs. It rides the ball on a pass, settles behind the carrier, and **after a sack now holds on the ball**. The recorded sack caught it flying to the offense's own end zone, which also happened in play.
+- **Latency:** see the gate below.
+
+**5. Field boundaries and touchdowns** (your bug reports)
+- **Out of bounds:** the carrier is out the moment a foot touches a sideline or an end line, and is spotted where he went out.
+- **Catches:** a catch out of bounds (toe-tap only on a possession catch) or behind an end line is incomplete. An interception return out the back is a touchback.
+- **Touchdowns:** the lines are taken in the order he met them within the tick. It's a score only if the ball reached the goal line in bounds first. Out before the pylon is out of bounds short of the goal line.
+- **AI:**
+  - Routes keep 1.5 yd inside the sideline and stop short of the end line, settling along it.
+  - Pursuit stays inside the field.
+  - AI carriers never pick a lane through the line, and step out rather than take a hit on the sideline.
+- **Everyone else** is held within a step of the field while the play is live.
+- **Tests:**
+  - no player more than a step outside and no live carrier past an end line, across AI plays and users running for the lines;
+  - out before the pylon isn't a score, in-then-out is;
+  - the ball held past the end line isn't a score;
+  - a catch behind the end line is incomplete.
+
+**6. Route preview and hot routes** (pulled from M6)
+- **Route preview:** hold Tab (RT on a gamepad) before the snap to draw every route on the turf in the play call's art. It's built from the function the sim runs routes from, so it can't disagree with the play.
+- **Hot routes:** H, then the receiver's number, then his route: go, out, in, slant, curl, comeback, flat or hitch. Pick by number, or with the arrows and Enter; on a gamepad, Y, his button, the D-pad and A. The art previews the focused route with the others faded.
+- **In the sim:** the call goes in as an input, so a replay has it, and he runs the new route from the snap. "In" and "comeback" are new routes. Flip play moved from Tab to F; settings v4 moves it and keeps a rebound key.
+
+**7. Videos.** `BTB_VIDEO=1 npm run shots` records the scripted clips in `src/game/clips.ts` from the broadcast camera: 30 fps, real speed, encoded with ffmpeg. Each has its pop log next to it.
+- `docs/screenshots/m5.5/completion-rac.mp4`: Four Verticals against Cover 3, caught at ~45 yd, 18 more after the catch with a juke.
+- `docs/screenshots/m5.5/sack.mp4`: the QB holds it and the four-man rush gets home at 4.4 s.
+- `docs/screenshots/m5.5/broken-tackle.mp4`: a stiff arm sheds the first tackler, 13 yd after the catch.
+- These are recorded at Low on the software renderer here. The look is judged on the screenshots; the videos are for motion and timing.
+
+**Gate**
+- Prompts and open indicators in every phase: pre-snap, pocket, air and carrier (screenshots, and the pre-snap browser test).
+- Sack time at target: 4.53 s median at Pro.
+- Latency: LATENCY_RESULT
+- The three videos: done.
+- `npm run check` passes (CHECK_COUNT tests), and the browser suite passes.
+
+**Critique** (from the play-through screenshots and the video contact sheets)
+- **What works:**
+  - The play now tells you what to do at each moment without a key to remember.
+  - The catch call is readable from across the room.
+  - The carrier's keys follow him.
+  - The route preview reads like the play call's art on the grass.
+  - In the videos, the pass camera's ride and push-in, the carrier follow, the tackle and the get-up all read as one continuous play.
+- **What's weak:**
+  1. Early in a route most icons read as covered: before the break a receiver isn't a target yet (the sim's rule), so the glow mostly appears from the break on. That's right for the read, but the first beat after the snap is mostly grey.
+  2. Run after the catch only really happens on deep routes. On the short concepts (stick, smash, mesh) the catch and the tackle are almost the same moment. That's a sim tuning job for M6's play book.
+  3. Mesh against Cover 2 is a hole: 88% complete, ~27 yd per attempt in the harness. It was the same on `main` (29.6), so it's not new; it's an M6 coverage fix.
+  4. The get-offs' first arm punch is still quick (31–34 rad/s). It's authored that way, but it may read as a twitch at the snap.
+  5. The videos are software-rendered at Low, so shadows and crowd are thinner than on your machine.
+
+**Needs you**
+- **The play test,** Main menu → Practice Field. What I'd most like your read on:
+  - the pocket at ~4.5 s;
+  - whether the open/covered glow matches what you see;
+  - the landing ring;
+  - hot routes;
+  - how Q/W/E feel with the plant and the buffer.
+- **The perf check on the preview** as before (`?perf`): the new HUD and the route art are cheap, but the icons now update every frame.
+
+**Known issues and limits**
+- Openness is judged every 4 frames (cheap, and fast enough for the glow).
+- The tutorial is one play long by design. Show it again from the pause menu.
+
+### M5 Core play (merged, PR #7)
 
 Built in the order you asked, so the parts you can't test here didn't wait on the parts I can.
 

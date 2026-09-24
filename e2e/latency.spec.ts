@@ -18,7 +18,7 @@ type W = {
 };
 
 const phase = (page: Page) => page.evaluate(() => (window as unknown as W).__btbPractice.runner?.state.phase ?? '');
-const waitPhase = (page: Page, p: string[]) => page.waitForFunction((ps) => ps.includes((window as unknown as W).__btbPractice.runner?.state.phase ?? ''), p, { timeout: 120_000 });
+const waitPhase = (page: Page, p: string[]) => page.waitForFunction((ps) => ps.includes((window as unknown as W).__btbPractice.runner?.state.phase ?? ''), p, { timeout: 600_000 });
 /** Wait until the carrier can start a move (not committed, not cooling down), so a press is never a buffered one. */
 const ready = (page: Page) =>
   page.waitForFunction(
@@ -29,7 +29,7 @@ const ready = (page: Page) =>
       return !!c && c.busy === 0 && c.moveCooldown === 0;
     },
     null,
-    { timeout: 60_000 },
+    { timeout: 300_000 },
   );
 /** A press held for a few frames, then a pause for the response to show. */
 async function press(page: Page, key: string, holdMs = 120) {
@@ -39,8 +39,11 @@ async function press(page: Page, key: string, holdMs = 120) {
   await page.waitForTimeout(250);
 }
 
+// Small, so this machine's software renderer draws frames (each one a tick) quickly.
+test.use({ viewport: { width: 640, height: 360 } });
+
 test('every key shows its response within 100 ms at 60 fps', async ({ page }) => {
-  test.setTimeout(600_000);
+  test.setTimeout(2_400_000);
   await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
   await page.goto('/?screen=practice&nointro&seed=37&quality=low&shot=practice');
   await waitReady(page);
