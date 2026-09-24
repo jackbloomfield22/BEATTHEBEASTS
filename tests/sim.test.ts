@@ -372,12 +372,27 @@ describe('sim: the field has edges (M5.5)', () => {
     }
   });
 
-  /** A play with the user's receiver already carrying the ball at a spot, running a velocity. */
-  const carrying = (pos: { x: number; y: number }, vel: { x: number; y: number }) => {
+  /**
+   * A play with the user's receiver already carrying the ball at a spot,
+   * running a velocity. `tackler`: one defender standing there (everyone
+   * else is down); `inp` overrides the input on a tick (a dive).
+   */
+  const carrying = (pos: { x: number; y: number }, vel: { x: number; y: number }, opt: { tackler?: { x: number; y: number }; inp?: (k: number) => Partial<InputFrame> } = {}) => {
     const s = at(4, 80, PLAYS[0], DEF_CALLS[0], true);
     stepPlay(s, input({ snap: true }));
+    // Past the first 0.4 s after the snap, when tackles can happen.
+    for (let k = 0; k < 30; k++) stepPlay(s, NEUTRAL);
     const c = s.agents[s.icons[0]!]!;
     for (const i of s.def) s.agents[i]!.down = true; // nobody to tackle him
+    s.blocks.length = 0;
+    if (opt.tackler) {
+      const d = s.agents[s.def[0]!]!;
+      d.down = false;
+      d.busy = 0;
+      d.pos = { ...opt.tackler };
+      d.vel = { x: 0, y: 0 };
+      d.hist.push({ pos: { ...opt.tackler }, vel: { x: 0, y: 0 } });
+    }
     c.pos = { ...pos };
     c.vel = { ...vel };
     c.hist.push({ pos: { ...pos }, vel: { ...vel } });
@@ -386,9 +401,55 @@ describe('sim: the field has edges (M5.5)', () => {
     s.carrier = c.i;
     s.phase = 'carrier';
     const n = Math.hypot(vel.x, vel.y);
-    for (let k = 0; k < 120 && !s.result; k++) stepPlay(s, input({ move: { x: vel.x / n, y: vel.y / n }, sprint: true }));
+    for (let k = 0; k < 120 && !s.result; k++) stepPlay(s, input({ move: { x: vel.x / n, y: vel.y / n }, sprint: true, ...opt.inp?.(k) }));
     return s;
   };
+
+  // Touchdowns (owner's bug: a catch in the end zone spotted at the 1). The
+  // rule: the ball's forward point breaking the plane in bounds, checked
+  // before any tackle in the same tick; a catch with the ball in the end
+  // zone scores at the catch.
+  it('a dive that gets the ball across the plane scores, though his body lands short', () => {
+    const s = carrying({ x: 98.2, y: 0 }, { x: 5, y: 0 }, { inp: (k) => ({ dive: k === 0 }) });
+    const c = s.agents[s.carrier]!;
+    expect(s.result!.touchdown).toBe(true);
+    expect(s.result!.reason).toBe('touchdown');
+    expect(c.pos.x).toBeLessThan(GOAL_X);
+  });
+
+  it('a runner hit at the goal line with the ball across scores (the tackle does not win the tick)', () => {
+    // Ball already over, body short, a tackler on him.
+    const a = carrying({ x: 99.65, y: 0 }, { x: 2, y: 0 }, { tackler: { x: 100.3, y: 0 } });
+    expect(a.result!.touchdown).toBe(true);
+    expect(a.events.some((e) => e.type === 'tackle')).toBe(false);
+    // The ball breaks the plane during the same tick he's hit.
+    const b = carrying({ x: 99.5, y: 0 }, { x: 7, y: 0 }, { tackler: { x: 100.2, y: 0.3 } });
+    expect(b.result!.touchdown).toBe(true);
+    // Short of it, hit: down at the ball's spot, short of the goal line.
+    const c = carrying({ x: 98.6, y: 0 }, { x: 1, y: 0 }, { tackler: { x: 99.2, y: 0 } });
+    if (!c.result!.touchdown) expect(c.result!.spot).toBeLessThan(GOAL_X);
+  });
+
+  it('a catch in the end zone is a touchdown at the catch, even with a tackler on him', () => {
+    let inside = 0;
+    for (const los of [80, 88, 94]) {
+      for (const play of PLAYS) {
+        for (let k = 0; k < 12; k++) {
+          const s = createPlay({ seed: 1000 + k * 7919, offense: rosters.offense, defense: rosters.defense, play, def: DEF_CALLS[k % DEF_CALLS.length]!, los, toGo: 10, user: false });
+          runToWhistle(s, () => NEUTRAL);
+          const c = s.events.find((e) => e.type === 'catch');
+          if (!c || c.at!.x + 0.4 < GOAL_X || s.events.some((e) => e.type === 'catchOutOfBounds')) continue;
+          inside++;
+          expect(s.result!.touchdown).toBe(true);
+          expect(s.result!.reason).toBe('touchdown');
+          // Scored on the catch tick: nothing after it but the whistle.
+          const tdT = s.events.find((e) => e.type === 'touchdown')!.t;
+          expect(tdT).toBe(c.t);
+        }
+      }
+    }
+    expect(inside).toBeGreaterThan(5);
+  });
 
   it('a carrier who steps out before the pylon does not score', () => {
     // Two yards out, a foot from the sideline, angling out: he's out before the goal line.

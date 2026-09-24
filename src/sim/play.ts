@@ -42,6 +42,19 @@ export const MAX_PLAY = 30;
 
 const off = (s: PlayState, slot: string): Agent => s.agents[s.slot[slot]!]!;
 
+/**
+ * How far the ball's forward point sits ahead of the carrier's body centre
+ * (yd): the 0.25 yd carry offset ballStep holds it at, plus half the ball's
+ * length (11 in ≈ 0.31 yd). A dive stretches it out another ~0.4 yd (arms
+ * extended). The goal line is the ball breaking the plane, not the body.
+ */
+const BALL_NOSE = 0.4;
+const DIVE_REACH = 0.4;
+export function ballNose(c: Agent, x = c.pos.x): number {
+  const attack = c.side === 'off' ? 1 : -1;
+  return x + attack * (BALL_NOSE + (c.move === 'dive' ? DIVE_REACH : 0));
+}
+
 function whistle(s: PlayState, reason: WhistleReason, spot: number, offenseBall: boolean, touchdown = false): void {
   if (s.result) return;
   const los = s.setup.los;
@@ -337,7 +350,9 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
   if (c.move === 'dive' && c.busy <= 1) {
     c.down = true;
     c.anim = 'down';
-    whistle(s, 'tackle', attack > 0 ? Math.max(s.maxX, c.pos.x) : c.pos.x, c.side === 'off');
+    // The ball over the plane as he lands is a score, before the whistle for him being down.
+    lineCheck(s, c);
+    whistle(s, 'tackle', attack > 0 ? Math.max(s.maxX, ballNose(c)) : c.pos.x, c.side === 'off');
   }
 }
 
@@ -424,7 +439,7 @@ function contactStep(s: PlayState): void {
       whistle(s, c.pos.x <= 0 ? 'safety' : 'sack', c.pos.x, true);
     } else {
       s.events.push({ t: s.t, type: 'tackle', who: [o.i, c.i], at: { ...c.pos }, data: { big: out === 'bigHit' } });
-      whistle(s, 'tackle', attack > 0 ? Math.max(s.maxX, c.pos.x) : c.pos.x, c.side === 'off');
+      whistle(s, 'tackle', attack > 0 ? Math.max(s.maxX, ballNose(c)) : c.pos.x, c.side === 'off');
     }
     return;
   }
@@ -438,7 +453,8 @@ function ballStep(s: PlayState): void {
     // The snap travels from the center to the QB's hands (shotgun, ~0.3 s).
     const snapT = s.snapT < 0 ? 0 : Math.min(1, (s.t - s.snapT) / 0.33);
     const c = off(s, 'C');
-    const hx = h.pos.x + 0.25;
+    // Carried a quarter-yard ahead of his body, the way he's running (ballNose reads the same offset).
+    const hx = h.pos.x + 0.25 * (h.side === 'off' ? 1 : -1);
     if (s.snapT >= 0 && snapT < 1 && b.holder === s.qb) {
       b.pos = { x: c.pos.x + (hx - c.pos.x) * snapT, y: c.pos.y + (h.pos.y - c.pos.y) * snapT, z: 0.2 + 0.9 * snapT };
     } else if (s.snapT >= 0) {
@@ -699,12 +715,17 @@ export function stepPlay(s: PlayState, inp: InputFrame): void {
   defenseRoles(s);
   const goal = s.carrier >= 0 ? s.agents[s.carrier]!.pos : s.agents[s.qb]!.pos;
   stepBlocks(s, goal);
+  // Where the carrier's own move took him, before bodies push apart: a ball
+  // that broke the plane in his stride is over, even if contact then shoves him back.
+  const moved = s.carrier >= 0 ? { x: s.agents[s.carrier]!.pos.x, y: s.agents[s.carrier]!.pos.y } : null;
   separate(s);
   ballStep(s);
+  // Forward progress, the lines, the goal line: before any tackle this tick.
+  // A runner whose ball broke the plane scored, whoever hits him as it does;
+  // a catch with the ball in the end zone is a score at the catch.
+  if (s.carrier >= 0 && !s.result) lineCheck(s, s.agents[s.carrier]!, moved);
   contactStep(s);
   keepInBounds(s);
-  // Forward progress, the lines, the goal line.
-  if (s.carrier >= 0 && !s.result) lineCheck(s, s.agents[s.carrier]!);
   if (!s.result && s.t - s.snapT > MAX_PLAY) whistle(s, 'timeout', Number.isFinite(s.maxX) ? s.maxX : s.setup.los, true);
   for (const a of s.agents) remember(a);
 }
@@ -740,18 +761,25 @@ function goalAt(p0: V2, p1: V2, goal: number, attack: 1 | -1): number | null {
 /**
  * The ball carrier and the lines, in the order he met them this tick. A
  * score needs the ball across the goal line in bounds: if his foot touched a
- * sideline (or he was out the back) before he reached the goal line, it's
- * out of bounds where he went out, not a touchdown.
+ * sideline (or he was out the back) before the ball reached the goal line,
+ * it's out of bounds where he went out, not a touchdown. Runs before the
+ * tackle check each tick, and again at the end of a dive.
  */
-function lineCheck(s: PlayState, c: Agent): void {
+function lineCheck(s: PlayState, c: Agent, moved: V2 | null = null): void {
   const p0 = c.hist[c.hist.length - 1]?.pos ?? c.pos;
   const p1 = c.pos;
   const attack: 1 | -1 = c.side === 'off' ? 1 : -1;
   const fo = outAt(p0, p1);
-  const fg = goalAt(p0, p1, attack > 0 ? GOAL_X : 0, attack);
+  // The goal line is the ball's forward point breaking the plane, at the
+  // farthest he got this tick (his stride, before contact pushed him back).
+  // (The ball carrier's run is the same line as `moved` → p1 give or take a
+  // push of a few centimetres, so the fractions compare.)
+  const far = moved && (moved.x - p1.x) * attack > 0 ? moved : p1;
+  const fg = goalAt({ x: ballNose(c, p0.x), y: p0.y }, { x: ballNose(c, far.x), y: far.y }, attack > 0 ? GOAL_X : 0, attack);
   const at = (f: number) => ({ x: p0.x + (p1.x - p0.x) * f, y: p0.y + (p1.y - p0.y) * f });
   if (fg !== null && (fo === null || fg < fo)) {
-    s.events.push({ t: s.t, type: 'touchdown', who: [c.i], at: at(fg) });
+    const o = at(fg);
+    s.events.push({ t: s.t, type: 'touchdown', who: [c.i], at: { x: ballNose(c, o.x), y: o.y } });
     whistle(s, 'touchdown', attack > 0 ? GOAL_X : 0, attack > 0, true);
     return;
   }
