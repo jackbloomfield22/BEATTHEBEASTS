@@ -25,6 +25,7 @@ import {
 import { flyFor, solveLaunch } from '@/sim/ball';
 import { steer } from '@/sim/movement';
 import { jukeSide } from '@/sim/play';
+import { simPlayer } from '@/sim/roster';
 
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const rosters = practiceRosters(snap);
@@ -133,9 +134,35 @@ describe('sim: a play snap to whistle', () => {
     }
     times.sort((a, b) => a - b);
     const median = times[20]!;
-    // NFL: pressure in ~2.5 s, a QB holding the ball is down in ~3.5–4.5 s.
-    expect(median).toBeGreaterThan(2.8);
-    expect(median).toBeLessThan(5);
+    // Tuned for play (M5.5): a QB who never throws goes down at a median of
+    // ~4.5 s at Pro against the four-man rush.
+    expect(median).toBeGreaterThan(4.1);
+    expect(median).toBeLessThan(4.9);
+  });
+});
+
+describe('sim: pass protection follows the linemen', () => {
+  it('the best pass-blocking unit holds clearly longer than the worst', () => {
+    const OL = ['LT', 'LG', 'C', 'RG', 'RT'] as const;
+    const grade = (ids: string[]) => ids.reduce((a, id) => {
+      const p = simPlayer(snap.entries.find((e) => e.id === id)!, 70);
+      return a + p.attrs.pbPower! + p.attrs.pbFinesse! + p.attrs.anchor!;
+    }, 0);
+    const units = snap.units.filter((u) => u.linemen.length >= 5).sort((a, b) => grade(a.linemen) - grade(b.linemen));
+    const median = (ids: string[]) => {
+      const offense = { ...rosters.offense };
+      OL.forEach((k, j) => (offense[k] = simPlayer(snap.entries.find((e) => e.id === ids[j])!, 70 + j)));
+      const ts: number[] = [];
+      for (let k = 0; k < 60; k++) {
+        const s = createPlay({ seed: 9000 + k * 7919, offense, defense: rosters.defense, play: PLAYS[k % PLAYS.length]!, def: DEF_CALLS[k % DEF_CALLS.length]!, los: 35, toGo: 10, user: true });
+        runToWhistle(s, (st) => input({ snap: st.tick === 0 }));
+        ts.push(s.t);
+      }
+      return ts.sort((a, b) => a - b)[30]!;
+    };
+    const best = median(units[units.length - 1]!.linemen);
+    const worst = median(units[0]!.linemen);
+    expect(best - worst).toBeGreaterThan(0.5);
   });
 });
 

@@ -20,7 +20,17 @@ const LEV0 = -0.35;
  * ~10% (tackles) to ~25% (elite rushers); ESPN/NGS pass-rush win rate).
  */
 const DRIFT = 0.55;
+/** The rusher's base drift in a run block (per second, doubled: a drive block is a shorter fight). */
 const BASE = 0.55;
+/**
+ * The rusher's base drift against a pass set. M5.5 lowered it from 0.55 so a
+ * QB who never throws goes down at a median ~4.5 s at Pro against the
+ * four-man rush (it was ~3.7 s; the owner's play test found the pocket too
+ * short). The skill edge (DRIFT) is unchanged, so the ratings spread holds:
+ * `tools/sim/sacktime.ts` measures the best pass-blocking unit in the
+ * snapshot at ~4.4 s and the worst at ~3.6 s.
+ */
+const PASS_BASE = 0.3;
 const NOISE = 0.55;
 
 const n = (a: Agent, k: string) => a.fx.r(k) / 99;
@@ -96,7 +106,7 @@ export function stepBlocks(s: PlayState, goal: V2): void {
     // Drift toward whoever has the edge, plus a base drift for the rusher
     // (blocks don't hold forever), plus matchup noise.
     // Run blocks resolve faster than pass sets (a drive block is a shorter fight).
-    blk.lev += (DRIFT * e * 2 + BASE * (blk.kind === 'run' ? 2.0 : 1)) * TICK + NOISE * Math.sqrt(TICK) * gauss(s.rng.block) * 0.35;
+    blk.lev += (DRIFT * e * 2 + (blk.kind === 'run' ? BASE * 2.0 : PASS_BASE)) * TICK + NOISE * Math.sqrt(TICK) * gauss(s.rng.block) * 0.35;
     if (blk.lev < -1) blk.lev = -1;
     if (blk.lev >= 1 || b.down || d.down) {
       // Shed: the defender is free, the blocker lunges and loses a beat.
