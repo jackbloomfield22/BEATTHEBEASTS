@@ -9,6 +9,7 @@ import { urlFlags } from '@/app/platform';
 import { practice, usePractice } from '@/game/practice';
 import { Input } from '@/input/InputManager';
 import { createRouteArt } from './routeArt';
+import { measure, resetPops } from './popMeter';
 import { lerpAngle, type AgentSnap } from '@/game/snapshot';
 import { latency } from '@/game/latency';
 import { view } from '@/game/view';
@@ -132,7 +133,7 @@ export function GameScene() {
   }, [scene, gl, camera, marks, ball, routeArt]);
 
   useFrame(({ camera, gl, clock }, dt) => {
-    const step = urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    const step = urlFlags.video ? 1 / urlFlags.video : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
     latency.frame++;
     practice.frame(step);
     const r = practice.runner;
@@ -168,6 +169,7 @@ export function GameScene() {
         b.lastYaw = yawOf(a.face);
         b.lastSpeed = 0;
       });
+      if (urlFlags.pops) resetPops();
       lastSimT.current = cur.t;
     }
     // The snap: everyone who has a get-off out of his stance plays it.
@@ -218,6 +220,7 @@ export function GameScene() {
       b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look });
       b.ragdoll.update(animDt);
       b.player.updateLod(camera, viewportPx);
+      if (urlFlags.pops) measure(b, animDt, latency.frame, s.agents[i]!.anim, cur.phase);
     });
 
     placeBall(s.snapT, s.t);

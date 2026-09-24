@@ -5,11 +5,12 @@ import { chromiumLaunch } from '../../playwright.config';
 // tools/shots/out/matrix. Look at them, compare to docs/reference, and write
 // the critique in docs/PROGRESS.md. BTB_CONTACT=1 runs the Animation Lab
 // contact sheets (contact.spec.ts) instead; BTB_PRACTICE=1 the Practice
-// Field play-through (practice.spec.ts).
+// Field play-through (practice.spec.ts); BTB_VIDEO=1 the feel videos
+// (video.spec.ts: scripted plays recorded from the broadcast camera).
 export default defineConfig({
   testDir: '.',
-  testMatch: process.env.BTB_CONTACT ? 'contact.spec.ts' : process.env.BTB_PRACTICE ? 'practice.spec.ts' : 'matrix.spec.ts',
-  timeout: 600_000,
+  testMatch: process.env.BTB_CONTACT ? 'contact.spec.ts' : process.env.BTB_PRACTICE ? 'practice.spec.ts' : process.env.BTB_VIDEO ? 'video.spec.ts' : 'matrix.spec.ts',
+  timeout: process.env.BTB_VIDEO ? 3_600_000 : 600_000,
   workers: 1,
   reporter: [['list']],
   use: { baseURL: 'http://localhost:5174', viewport: { width: 1920, height: 1080 }, launchOptions: chromiumLaunch },

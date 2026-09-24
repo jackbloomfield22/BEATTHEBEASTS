@@ -31,6 +31,7 @@ import { bufferedMove, cutWeight, jukeSide, outAt } from '@/sim/play';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT } from '@/sim/types';
 import { applyImpulse, startMove, tickMoves } from '@/sim/contact';
 import { simPlayer } from '@/sim/roster';
+import { CLIPS } from '@/game/clips';
 
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const rosters = practiceRosters(snap);
@@ -456,5 +457,16 @@ describe('sim: hot routes (M5.5)', () => {
     stepPlay(s, input({ hotRoute: { icon: 9, route: 'go' } }));
     stepPlay(s, input({ hotRoute: { icon: 1, route: 'wheel' } }));
     expect(Object.keys(s.hot)).toEqual([]);
+  });
+});
+
+describe('feel clips (M5.5): the scripted plays behind the videos', () => {
+  const run = (c: (typeof CLIPS)[number]) => runToWhistle(createPlay({ seed: c.seed, offense: rosters.offense, defense: rosters.defense, play: playById(c.play), def: defById(c.def), los: c.los, toGo: 10, user: true }), c.script);
+  it('each clip still shows what it is named for', () => {
+    const [rac, sack, broken] = CLIPS.map(run);
+    const racCatch = rac!.events.find((e) => e.type === 'catch')!;
+    expect(rac!.agents[rac!.carrier]!.pos.x - racCatch.at!.x).toBeGreaterThan(12);
+    expect(sack!.result!.sack).toBe(true);
+    expect(broken!.events.some((e) => e.type === 'brokenTackle')).toBe(true);
   });
 });

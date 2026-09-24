@@ -152,6 +152,9 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   };
 }
 
+/** Game time the video camera last stepped to. */
+const videoClock = { t: 0 };
+
 export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const modeSetting = useSettings((s) => s.settings.gameplay.camera);
@@ -169,7 +172,16 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
   }, []);
 
   useFrame((_, dt) => {
-    const step = urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    // Video recording: the camera moves by the game time that passed (the
+    // page renders freely between recorded frames), so its easing is as in play.
+    let step = urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    if (urlFlags.video) {
+      const r = practice.runner;
+      const now = r ? r.cur.t : 0;
+      step = Math.max(0, Math.min(0.1, now - videoClock.t));
+      videoClock.t = now;
+      if (!springs.current) step = 0;
+    }
     const goal = targetPose(modeSetting);
     if (!goal) return;
     // World-space target: eye and look.
@@ -182,7 +194,7 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       springs.current = [camera.position.x, camera.position.y, camera.position.z, look.x, look.y, look.z, camera.fov].map((v) => new Spring(v));
     }
     // Screenshots and browser tests cut straight to the pose every frame.
-    if (urlFlags.shot !== null) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
+    if (urlFlags.shot !== null && !urlFlags.video) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
     const sp = springs.current;
     // Eye slower than the look: the lens leads, the dolly follows.
     // In the air the whole rig tightens up so it keeps pace with the ball.

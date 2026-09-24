@@ -8,11 +8,12 @@ import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
 import { loadJSON, saveJSON } from '@/app/storage';
 import type { InputContext } from '@/input/actions';
-import { createPlay, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayState, type SimPlayer } from '@/sim';
+import { createPlay, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type DefCall, type InputFrame, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayState, type SimPlayer } from '@/sim';
 import { Controls } from './controls';
 import { describe, type ResultCard } from './describe';
 import { loadPracticeRosters } from './rosters';
 import { SimRunner } from './runner';
+import type { Clip } from './clips';
 import { routeOf } from '@/sim/ai';
 import { nextSituation, startSituation, type Situation } from './situation';
 
@@ -176,6 +177,24 @@ class PracticeSession {
     this.snaps++;
     const def = ui.cover === 'random' ? DEF_CALLS[(seed >>> 4) % DEF_CALLS.length]! : defById(ui.cover);
     const sit = ui.seriesOver ? startSituation(ui.startSpot, ui.startDowns) : ui.situation;
+    this.setUp(playId, seed, def, sit);
+  }
+
+  /** A scripted clip's play (the feel videos): its seed, coverage and spot. Step it with tickWith. */
+  callClip(c: Clip): void {
+    set({ playId: c.play });
+    this.setUp(c.play, c.seed, defById(c.def), { ...startSituation(0, 0), los: c.los, ballY: 0, toGo: 10, down: 1 });
+  }
+
+  /** Step one tick with a given input (a scripted clip), through the same path as tick(). */
+  tickWith(inp: InputFrame): void {
+    if (!this.live()) return;
+    this.sync();
+    this.runner!.step(inp);
+    this.sync();
+  }
+
+  private setUp(playId: string, seed: number, def: DefCall, sit: Situation): void {
     this.closeHot();
     const state = createPlay({
       seed,
@@ -404,6 +423,7 @@ if (import.meta.env.DEV) {
     __btbPractice: practice,
     __btbPracticeUi: usePractice,
     __btbInput: Input,
+    __btbClips: async () => (await import('./clips')).CLIPS,
     // The browser half of the determinism check (e2e/practice.spec.ts).
     __btbSimHashes: async () => (await import('./determinism')).simHashes(await loadPracticeRosters()),
   });
