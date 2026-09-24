@@ -26,10 +26,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.96,
+          "trunk": 88.92,
+          "eyes": -3.87
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 21.8,
-        "com_cm": 11.1,
+        "clear_cm": 23.8,
+        "com_cm": 10.3,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -59,10 +64,55 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.78,
+          "trunk": -2.24,
+          "eyes": 4.0,
+          "load": 0.25
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 42.5,
-        "com_cm": 5.9,
+        "clear_cm": 37.6,
+        "com_cm": 19.7,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "stance_dl_3pt": {
+      "kind": "stance",
+      "frames": 60,
+      "duration": 2.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            60
+          ]
+        ],
+        "r": [
+          [
+            0,
+            60
+          ]
+        ]
+      },
+      "gates": {
+        "stance": {
+          "hip": 0.69,
+          "trunk": -4.77,
+          "eyes": 4.0,
+          "load": 0.47
+        },
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 46.0,
+        "com_cm": 10.4,
         "reach_cm": 0.01,
         "pass": true
       }
@@ -92,11 +142,17 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.71,
+          "trunk": -7.83,
+          "eyes": 4.0,
+          "load": 0.5
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 44.7,
-        "com_cm": 20.7,
-        "reach_cm": 0.01,
+        "clear_cm": 44.0,
+        "com_cm": 22.5,
+        "reach_cm": 0.0,
         "pass": true
       }
     },
@@ -125,10 +181,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.83,
+          "trunk": 57.34,
+          "eyes": -2.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 35.3,
-        "com_cm": 1.1,
+        "clear_cm": 35.7,
+        "com_cm": 1.3,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -158,10 +219,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.78,
+          "trunk": 54.21,
+          "eyes": -4.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 36.5,
-        "com_cm": 1.1,
+        "clear_cm": 40.3,
+        "com_cm": 1.3,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -191,10 +257,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.8,
+          "trunk": 50.08,
+          "eyes": -2.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 33.4,
-        "com_cm": 1.5,
+        "clear_cm": 35.1,
+        "com_cm": 1.8,
         "reach_cm": 0.01,
         "pass": true
       }
@@ -224,10 +295,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.8,
+          "trunk": 41.23,
+          "eyes": -4.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 30.9,
-        "com_cm": 1.2,
+        "clear_cm": 33.2,
+        "com_cm": 1.6,
         "reach_cm": 0.01,
         "pass": true
       }
@@ -257,10 +333,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.81,
+          "trunk": 45.95,
+          "eyes": -4.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 31.1,
-        "com_cm": 1.3,
+        "clear_cm": 33.6,
+        "com_cm": 1.9,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -290,11 +371,16 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.87,
+          "trunk": 70.54,
+          "eyes": -2.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 28.8,
-        "com_cm": 5.8,
-        "reach_cm": 0.0,
+        "clear_cm": 32.1,
+        "com_cm": 8.8,
+        "reach_cm": 0.01,
         "pass": true
       }
     },
@@ -323,10 +409,15 @@
         ]
       },
       "gates": {
+        "stance": {
+          "hip": 0.86,
+          "trunk": 23.35,
+          "eyes": -24.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 29.6,
-        "com_cm": 1.2,
+        "clear_cm": 31.7,
+        "com_cm": 1.8,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -356,11 +447,26 @@
         ]
       },
       "gates": {
-        "slide_cm": 0.17,
+        "mech": {
+          "lean": 2.4,
+          "pelvis_v": 3.2,
+          "pelvis_x": 4.4,
+          "pelvis_rot": 10.1,
+          "torso_rot": 19.7,
+          "elbow_min": 16.0,
+          "elbow_max": 32.0,
+          "shoulder": 30.0,
+          "knee_drive": 36.8,
+          "heel_rec": 60.4,
+          "strike": 16.0,
+          "hand_front": -51.8,
+          "hand_back": 6.4
+        },
+        "slide_cm": 0.05,
         "loop_deg": 0.0,
-        "clear_cm": 21.2,
+        "clear_cm": 17.2,
         "com_cm": null,
-        "reach_cm": 0.18,
+        "reach_cm": 0.01,
         "pass": true
       }
     },
@@ -389,11 +495,26 @@
         ]
       },
       "gates": {
-        "slide_cm": 0.21,
+        "mech": {
+          "lean": 6.7,
+          "pelvis_v": 6.7,
+          "pelvis_x": 2.8,
+          "pelvis_rot": 15.5,
+          "torso_rot": 34.1,
+          "elbow_min": 78.0,
+          "elbow_max": 98.0,
+          "shoulder": 59.7,
+          "knee_drive": 47.9,
+          "heel_rec": 97.5,
+          "strike": 6.0,
+          "hand_front": -6.1,
+          "hand_back": -11.4
+        },
+        "slide_cm": 0.31,
         "loop_deg": 0.0,
-        "clear_cm": 22.5,
+        "clear_cm": 21.7,
         "com_cm": null,
-        "reach_cm": 2.29,
+        "reach_cm": 3.34,
         "pass": true
       }
     },
@@ -422,11 +543,26 @@
         ]
       },
       "gates": {
+        "mech": {
+          "lean": 10.2,
+          "pelvis_v": 6.4,
+          "pelvis_x": 2.4,
+          "pelvis_rot": 18.3,
+          "torso_rot": 42.8,
+          "elbow_min": 74.1,
+          "elbow_max": 101.9,
+          "shoulder": 91.3,
+          "knee_drive": 65.8,
+          "heel_rec": 115.1,
+          "strike": -3.0,
+          "hand_front": 3.5,
+          "hand_back": 6.3
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 23.3,
+        "clear_cm": 23.8,
         "com_cm": null,
-        "reach_cm": 1.76,
+        "reach_cm": 1.68,
         "pass": true
       }
     },
@@ -455,11 +591,26 @@
         ]
       },
       "gates": {
+        "mech": {
+          "lean": 14.0,
+          "pelvis_v": 5.0,
+          "pelvis_x": 2.0,
+          "pelvis_rot": 21.5,
+          "torso_rot": 51.6,
+          "elbow_min": 74.3,
+          "elbow_max": 105.7,
+          "shoulder": 121.8,
+          "knee_drive": 79.8,
+          "heel_rec": 127.1,
+          "strike": -12.0,
+          "hand_front": 11.6,
+          "hand_back": 21.0
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 21.9,
+        "clear_cm": 25.0,
         "com_cm": null,
-        "reach_cm": 0.54,
+        "reach_cm": 0.01,
         "pass": true
       }
     },
@@ -488,14 +639,1526 @@
         ]
       },
       "gates": {
+        "mech": {
+          "lean": 22.8,
+          "pelvis_v": 2.4,
+          "pelvis_x": 2.0,
+          "pelvis_rot": 6.2,
+          "torso_rot": 12.7,
+          "elbow_min": 86.1,
+          "elbow_max": 97.9,
+          "shoulder": 31.4,
+          "knee_drive": 65.2,
+          "heel_rec": 84.5,
+          "strike": -22.0,
+          "hand_front": -21.9,
+          "hand_back": -34.7
+        },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 26.0,
+        "clear_cm": 25.3,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
       }
+    },
+    "huddle_break": {
+      "kind": "transition",
+      "frames": 39,
+      "duration": 1.3,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            17
+          ],
+          [
+            24,
+            39
+          ]
+        ],
+        "r": [
+          [
+            0,
+            24
+          ],
+          [
+            32,
+            39
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "from": "stance_huddle",
+      "to": "stance_idle"
+    },
+    "set_ol_3pt": {
+      "kind": "transition",
+      "frames": 30,
+      "duration": 1.0,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            1
+          ],
+          [
+            9,
+            30
+          ]
+        ],
+        "r": [
+          [
+            0,
+            10
+          ],
+          [
+            18,
+            30
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "from": "stance_idle",
+      "to": "stance_ol_3pt"
+    },
+    "set_dl_3pt": {
+      "kind": "transition",
+      "frames": 30,
+      "duration": 1.0,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            1
+          ],
+          [
+            9,
+            30
+          ]
+        ],
+        "r": [
+          [
+            0,
+            10
+          ],
+          [
+            18,
+            30
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "from": "stance_idle",
+      "to": "stance_dl_3pt"
+    },
+    "set_dl_4pt": {
+      "kind": "transition",
+      "frames": 30,
+      "duration": 1.0,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            1
+          ],
+          [
+            9,
+            30
+          ]
+        ],
+        "r": [
+          [
+            0,
+            10
+          ],
+          [
+            18,
+            30
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "from": "stance_idle",
+      "to": "stance_dl_4pt"
+    },
+    "set_wr_2pt": {
+      "kind": "transition",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            1
+          ],
+          [
+            8,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            8
+          ],
+          [
+            15,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 22.9,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "from": "stance_idle",
+      "to": "stance_wr_2pt"
+    },
+    "set_lb_ready": {
+      "kind": "transition",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            1
+          ],
+          [
+            8,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            8
+          ],
+          [
+            15,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "from": "stance_idle",
+      "to": "stance_lb_ready"
+    },
+    "set_db_ready": {
+      "kind": "transition",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            1
+          ],
+          [
+            8,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            8
+          ],
+          [
+            15,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "from": "stance_idle",
+      "to": "stance_db_ready"
+    },
+    "set_rb_2pt": {
+      "kind": "transition",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            1
+          ],
+          [
+            8,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            8
+          ],
+          [
+            15,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "from": "stance_idle",
+      "to": "stance_rb_2pt"
+    },
+    "set_qb_center": {
+      "kind": "transition",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            1
+          ],
+          [
+            8,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            8
+          ],
+          [
+            15,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "from": "stance_idle",
+      "to": "stance_qb_center"
+    },
+    "set_qb_gun": {
+      "kind": "transition",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            1
+          ],
+          [
+            8,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            8
+          ],
+          [
+            15,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "from": "stance_idle",
+      "to": "stance_qb_gun"
+    },
+    "getoff_ol_3pt": {
+      "kind": "transition",
+      "frames": 19,
+      "duration": 0.6333333333333333,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ]
+        ],
+        "r": [
+          [
+            0,
+            3
+          ],
+          [
+            8,
+            14
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 26.2,
+        "com_cm": null,
+        "reach_cm": 3.47,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0003,
+        0.0012,
+        0.0035,
+        0.0078,
+        0.0152,
+        0.0266,
+        0.0432,
+        0.0664,
+        0.0975,
+        0.1379,
+        0.1893,
+        0.2533,
+        0.3318,
+        0.4266,
+        0.5396,
+        0.6728,
+        0.8285,
+        1.0088
+      ],
+      "from": "stance_ol_3pt",
+      "to": "loco_run"
+    },
+    "getoff_dl_3pt": {
+      "kind": "transition",
+      "frames": 19,
+      "duration": 0.6333333333333333,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ]
+        ],
+        "r": [
+          [
+            0,
+            3
+          ],
+          [
+            8,
+            14
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 25.8,
+        "com_cm": null,
+        "reach_cm": 2.16,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0001,
+        0.0003,
+        0.0009,
+        0.0022,
+        0.0048,
+        0.0093,
+        0.0169,
+        0.0287,
+        0.0464,
+        0.0719,
+        0.1076,
+        0.1564,
+        0.2214,
+        0.3065,
+        0.416,
+        0.555,
+        0.7288
+      ],
+      "from": "stance_dl_3pt",
+      "to": "loco_run"
+    },
+    "getoff_dl_4pt": {
+      "kind": "transition",
+      "frames": 19,
+      "duration": 0.6333333333333333,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ]
+        ],
+        "r": [
+          [
+            0,
+            3
+          ],
+          [
+            8,
+            14
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 25.8,
+        "com_cm": null,
+        "reach_cm": 2.15,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0,
+        0.0001,
+        0.0003,
+        0.0009,
+        0.0022,
+        0.0048,
+        0.0093,
+        0.0169,
+        0.0287,
+        0.0464,
+        0.0719,
+        0.1076,
+        0.1564,
+        0.2214,
+        0.3065,
+        0.416,
+        0.555,
+        0.7288
+      ],
+      "from": "stance_dl_4pt",
+      "to": "loco_run"
+    },
+    "getoff_wr_2pt": {
+      "kind": "transition",
+      "frames": 15,
+      "duration": 0.5,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            6
+          ]
+        ],
+        "r": [
+          [
+            0,
+            3
+          ],
+          [
+            6,
+            10
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 25.9,
+        "com_cm": null,
+        "reach_cm": 1.16,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0006,
+        0.004,
+        0.0122,
+        0.0271,
+        0.0503,
+        0.0832,
+        0.1275,
+        0.1844,
+        0.2554,
+        0.3418,
+        0.4449,
+        0.5659,
+        0.7061,
+        0.8666,
+        1.0488
+      ],
+      "from": "stance_wr_2pt",
+      "to": "loco_run"
+    },
+    "getoff_lb_ready": {
+      "kind": "transition",
+      "frames": 15,
+      "duration": 0.5,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            6
+          ]
+        ],
+        "r": [
+          [
+            0,
+            3
+          ],
+          [
+            6,
+            10
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 26.2,
+        "com_cm": null,
+        "reach_cm": 0.46,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0004,
+        0.0027,
+        0.0088,
+        0.0205,
+        0.0394,
+        0.0673,
+        0.1058,
+        0.1565,
+        0.221,
+        0.3011,
+        0.3982,
+        0.5139,
+        0.6499,
+        0.8077,
+        0.9888
+      ],
+      "from": "stance_lb_ready",
+      "to": "loco_run"
+    },
+    "getoff_db_ready": {
+      "kind": "transition",
+      "frames": 15,
+      "duration": 0.5,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            6
+          ]
+        ],
+        "r": [
+          [
+            0,
+            3
+          ],
+          [
+            6,
+            10
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 26.0,
+        "com_cm": null,
+        "reach_cm": 0.6,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0005,
+        0.0035,
+        0.011,
+        0.0248,
+        0.0465,
+        0.0777,
+        0.12,
+        0.1749,
+        0.2438,
+        0.3281,
+        0.4292,
+        0.5485,
+        0.6873,
+        0.847,
+        1.0288
+      ],
+      "from": "stance_db_ready",
+      "to": "loco_run"
+    },
+    "getoff_rb_2pt": {
+      "kind": "transition",
+      "frames": 15,
+      "duration": 0.5,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            6
+          ]
+        ],
+        "r": [
+          [
+            0,
+            3
+          ],
+          [
+            6,
+            10
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 25.9,
+        "com_cm": null,
+        "reach_cm": 0.58,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0003,
+        0.0025,
+        0.0083,
+        0.0195,
+        0.0378,
+        0.0648,
+        0.1023,
+        0.152,
+        0.2155,
+        0.2944,
+        0.3905,
+        0.5053,
+        0.6406,
+        0.7978,
+        0.9788
+      ],
+      "from": "stance_rb_2pt",
+      "to": "loco_run"
+    },
+    "stop_walk": {
+      "kind": "transition",
+      "frames": 27,
+      "duration": 0.9,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            20
+          ],
+          [
+            26,
+            27
+          ]
+        ],
+        "r": [
+          [
+            0,
+            4
+          ],
+          [
+            16,
+            27
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.03,
+        "loop_deg": 0.0,
+        "clear_cm": 23.3,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0425,
+        0.0835,
+        0.1228,
+        0.1605,
+        0.1966,
+        0.2311,
+        0.264,
+        0.2953,
+        0.325,
+        0.3531,
+        0.3796,
+        0.4044,
+        0.4277,
+        0.4494,
+        0.4694,
+        0.4879,
+        0.5048,
+        0.52,
+        0.5336,
+        0.5457,
+        0.5561,
+        0.5649,
+        0.5722,
+        0.5778,
+        0.5818,
+        0.5842,
+        0.585
+      ],
+      "from": "loco_walk",
+      "to": "stance_idle"
+    },
+    "stop_jog": {
+      "kind": "transition",
+      "frames": 33,
+      "duration": 1.1,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            8
+          ],
+          [
+            24,
+            33
+          ]
+        ],
+        "r": [
+          [
+            11,
+            20
+          ],
+          [
+            32,
+            33
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.01,
+        "loop_deg": 0.0,
+        "clear_cm": 16.1,
+        "com_cm": null,
+        "reach_cm": 4.75,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.1149,
+        0.2263,
+        0.3341,
+        0.4384,
+        0.5391,
+        0.6364,
+        0.7301,
+        0.8202,
+        0.9068,
+        0.9899,
+        1.0694,
+        1.1455,
+        1.2179,
+        1.2869,
+        1.3523,
+        1.4141,
+        1.4725,
+        1.5273,
+        1.5785,
+        1.6263,
+        1.6705,
+        1.7111,
+        1.7482,
+        1.7818,
+        1.8119,
+        1.8384,
+        1.8614,
+        1.8808,
+        1.8967,
+        1.9091,
+        1.9179,
+        1.9232,
+        1.925
+      ],
+      "from": "loco_jog",
+      "to": "stance_idle"
+    },
+    "stop_run": {
+      "kind": "transition",
+      "frames": 42,
+      "duration": 1.4,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            5
+          ],
+          [
+            21,
+            29
+          ]
+        ],
+        "r": [
+          [
+            10,
+            15
+          ],
+          [
+            33,
+            42
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 17.4,
+        "com_cm": null,
+        "reach_cm": 3.27,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.191,
+        0.3775,
+        0.5593,
+        0.7365,
+        0.9091,
+        1.0771,
+        1.2406,
+        1.3994,
+        1.5536,
+        1.7032,
+        1.8482,
+        1.9886,
+        2.1244,
+        2.2556,
+        2.3821,
+        2.5041,
+        2.6215,
+        2.7343,
+        2.8425,
+        2.946,
+        3.045,
+        3.1394,
+        3.2291,
+        3.3143,
+        3.3948,
+        3.4708,
+        3.5421,
+        3.6089,
+        3.671,
+        3.7286,
+        3.7815,
+        3.8298,
+        3.8736,
+        3.9127,
+        3.9472,
+        3.9771,
+        4.0025,
+        4.0232,
+        4.0393,
+        4.0508,
+        4.0577,
+        4.06
+      ],
+      "from": "loco_run",
+      "to": "stance_idle"
+    },
+    "stop_sprint": {
+      "kind": "transition",
+      "frames": 51,
+      "duration": 1.7,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            4
+          ],
+          [
+            15,
+            18
+          ],
+          [
+            31,
+            37
+          ],
+          [
+            48,
+            51
+          ]
+        ],
+        "r": [
+          [
+            7,
+            11
+          ],
+          [
+            23,
+            27
+          ],
+          [
+            39,
+            49
+          ],
+          [
+            50,
+            51
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 18.4,
+        "com_cm": null,
+        "reach_cm": 2.71,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.2806,
+        0.5556,
+        0.825,
+        1.0889,
+        1.3472,
+        1.6,
+        1.8472,
+        2.0889,
+        2.325,
+        2.5556,
+        2.7806,
+        3.0,
+        3.2139,
+        3.4222,
+        3.625,
+        3.8222,
+        4.0139,
+        4.2,
+        4.3806,
+        4.5556,
+        4.725,
+        4.8889,
+        5.0472,
+        5.2,
+        5.3472,
+        5.4889,
+        5.625,
+        5.7556,
+        5.8806,
+        6.0,
+        6.1139,
+        6.2222,
+        6.325,
+        6.4222,
+        6.5139,
+        6.6,
+        6.6806,
+        6.7556,
+        6.825,
+        6.8889,
+        6.9472,
+        7.0,
+        7.0472,
+        7.0889,
+        7.125,
+        7.1556,
+        7.1806,
+        7.2,
+        7.2139,
+        7.2222,
+        7.225
+      ],
+      "from": "loco_sprint",
+      "to": "stance_idle"
     }
   },
-  "bytes": 640908
+  "bytes": 1742344
 }

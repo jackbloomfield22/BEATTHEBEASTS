@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import math
+
 import bpy
 from mathutils import Vector
 
-from .skeleton import J, bones
+from .skeleton import _A, J, bones
 
 
 def build_armature(name: str = "rig") -> bpy.types.Object:
@@ -31,6 +33,13 @@ def build_armature(name: str = "rig") -> bpy.types.Object:
     # positive X rotation bends a knee or an elbow the same way on both sides.
     for e in eb:
         e.align_roll(Vector((0, -1, 0)) if abs(e.vector.normalized().y) < 0.9 else Vector((0, 0, 1)))
+    # Hands and fingers: local Z toward the palm instead, so +X flexion curls
+    # a finger into the palm (and flexes the wrist) rather than sideways
+    # toward the thumb. The rest palm faces the thigh (skeleton.py).
+    for e in eb:
+        if e.name.startswith(("hand_", "index_", "fingers_", "thumb_")):
+            sg = 1.0 if e.name.endswith("_l") else -1.0
+            e.align_roll(Vector((-math.sin(_A) * sg, 0, -math.cos(_A))))
     bpy.ops.object.mode_set(mode="OBJECT")
     return ob
 
@@ -140,10 +149,13 @@ def crotch_weights(mesh: bpy.types.Object, half_width: float = 0.08, top: float 
             g.new(name=name)
     for v in mesh.data.vertices:
         x, z = v.co.x, v.co.z
-        if abs(x) > half_width or z > top:
+        # The crotch only: below it the inner faces of the two pant legs sit
+        # within half_width of the midline too, and blending them toward the
+        # opposite thigh webbed the legs together when they split.
+        if abs(x) > half_width or z > top or z < 0.80:
             continue
         # How far into the blend zone (1 on the midline, 0 at its edge).
-        k = 1 - smoothstep(half_width * 0.5, half_width, abs(x))
+        k = (1 - smoothstep(half_width * 0.5, half_width, abs(x))) * smoothstep(0.80, 0.85, z)
         side = smoothstep(-half_width * 0.6, half_width * 0.6, x)  # 0 right .. 1 left
         pelvis = 0.35 * k
         blend = {"thigh_l": (1 - pelvis) * side, "thigh_r": (1 - pelvis) * (1 - side), "pelvis": pelvis}

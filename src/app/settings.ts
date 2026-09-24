@@ -90,9 +90,18 @@ export const PRESET_RES_SCALE: Record<QualityPreset, number> = { low: 0.85, medi
  */
 export const RENDER_PIXEL_BUDGET: Record<QualityPreset, number> = { low: 1920 * 1080, medium: 1920 * 1080, high: 2560 * 1440, ultra: Infinity };
 
+/**
+ * Highest pixel ratio a tier renders at, whatever the window. The pixel
+ * budget alone lets a small window on a Retina display (or a zoomed browser)
+ * render at nearly 2x: a 1126x870 window came out at 2184x1688 on Medium and
+ * held 28 fps from the broadcast camera on an M1 Pro (M4.5 report). Past
+ * ~1.25x the extra pixels are hard to see behind SMAA at game distances.
+ */
+export const RENDER_DPR_CAP: Record<QualityPreset, number> = { low: 1, medium: 1.25, high: 1.5, ultra: 2 };
+
 /** Canvas pixel ratio for a window of cssW×cssH on a display of deviceDpr. */
 export function renderDpr(cssW: number, cssH: number, deviceDpr: number, preset: QualityPreset, scale: number): number {
-  const native = Math.min(deviceDpr || 1, 2);
+  const native = Math.min(deviceDpr || 1, RENDER_DPR_CAP[preset]);
   const budget = RENDER_PIXEL_BUDGET[preset];
   const fit = Number.isFinite(budget) ? Math.sqrt(budget / Math.max(1, cssW * cssH)) : native;
   return Math.min(native, fit) * scale;

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { patchMaterial } from '../sky/atmosphere';
 import { NOISE_GLSL } from '../sky/SkyDome';
 import { FIELD_SAMPLE_GLSL } from './field';
+import { fieldNoiseUniforms } from './fieldNoise';
 
 // Near-camera turf: shell texturing. A stack of horizontal layers over a
 // patch of field around the camera's focus; each layer keeps only the pixels
@@ -52,7 +53,7 @@ export function createGrassShells(paint: THREE.Texture, maxShells = GRASS_SHELLS
   patchMaterial(
     mat,
     (shader) => {
-      Object.assign(shader.uniforms, uniforms);
+      Object.assign(shader.uniforms, uniforms, fieldNoiseUniforms());
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nattribute float aShell;\nuniform vec3 uCenter;\nuniform float uCount;\nvarying float vShell;\nvarying vec3 vGWorld;')
         .replace(

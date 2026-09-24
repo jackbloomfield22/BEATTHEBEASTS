@@ -5,7 +5,8 @@
 - **M1 Foundation:** merged (PR #1).
 - **M2 Ratings:** merged (PR #2 and the follow-up PR #3: traits overhaul, Throw Power, consensus check, anchor bands, the approved fixes and round 2).
 - **M3 The look:** merged (PR #4). Perf re-test passed on your M1 Pro: Medium at 100% resolution, 80–113 fps in the three menu views.
-- **M4 Characters and animation:** built, PR #5 (branch `claude/m4-characters`). Screenshots in `docs/screenshots/m4/`, critique below.
+- **M4 Characters and animation:** merged (PR #5).
+- **M4.5 Character and animation quality pass:** built on `claude/m4.5-quality`, PR open. Screenshots in `docs/screenshots/m4.5/`, critique below. **Needs your M1 Pro re-test** for the 60 fps broadcast gate (I can't measure GPU time here).
 
 ## Known legacy issues (do not rebuild)
 
@@ -29,7 +30,93 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 
 ## Milestone log
 
-### M4 Characters and animation (built, PR #5)
+### M4.5 Character and animation quality pass (built, PR open)
+
+Your seven priorities, in order, plus the M4 weak spots and the ratings stints (the stints are in the ratings section below).
+
+**1. Running (whole-body gait keyer, `tools/blender/lib/gait.py`)**
+- The keyer now moves the whole body, not a marionette's feet:
+  - pelvis bob (a spring: runners lowest at mid-stance), side shift and drop, and yaw;
+  - the thorax counter-rotates, spread up the spine;
+  - trunk lean scales with speed (walk 4°, jog 9°, run 13°, sprint 17.5° keyed);
+  - arms swing from the shoulder in the thorax frame with the elbow held near 90° ("cheek to back pocket" at sprint);
+  - heel-to-toe roll (heel strike walking, midfoot jogging, forefoot sprinting);
+  - knee drive rising with speed; heel recovery;
+  - a stabilized head; the pads ride a spring.
+- **New gates per cycle, judged against running mechanics** (Novacheck; Schache; Mann's sprint model; Perry & Burnfield for walking): trunk lean, pelvis vertical travel, pelvis and thorax rotation, elbow range, shoulder swing, knee drive, heel recovery, foot strike and the sprint hand path. For example, sprint keys 14° of lean, 5 cm of pelvis travel, 52° of thorax against the pelvis, elbow 74–106°, knee drive 80°. All five cycles pass (`docs/ANIMATION.md`).
+
+**2. Hands.** Gloves are now their own mesh: four thinner tapered fingers and a thumb, with a clean cuff. The finger bones are rolled so flexion closes into the palm. Four hand states that clips key: relaxed, fist (fingers to the palm, thumb across), spread and gripping a ball.
+
+**3. Body**
+- A thicker neck on trapezius slopes into the helmet, with neck straps, a chin strap, and a collar band plus undershirt surface closing the opening.
+- Skin under the pads and collar is culled (it z-fought through the jersey edge).
+- Skin material: roughness variation, no plastic gloss, muscle relief on the arms and neck.
+- M4 weak spots:
+  - fitted pants with a snug knee band, and a shorter tuck;
+  - the pants hem no longer opens at full knee flexion (the crotch weights were blending the inner legs down to the knee);
+  - loose, bent idle arms;
+  - no hood at the collar (the pads are rigid on the chest);
+  - TV numbers on the sleeves.
+
+**4. Diversity (`src/render/players/variety.ts`, tested)**
+- Proportions by position and size: shoulder width and arm length through bone rest positions, and morphs for pad size, neck, waist, calves and arms.
+- Gear by position plus a seeded pick:
+  - pad size, sleeve length, arm sleeves, glove color;
+  - visor, sock height and stripes, towel, wrist tape;
+  - facemask by position (skill, lineman cage, QB two-bar).
+
+**5. Stances (checked against coaching points; stance gates for hip height, back angle, hand load and eyes)**
+- **OL three-point:** hips 0.78 m on the 1.88 m base body (0.81 m on a 6'5" tackle), a flat back tilted gently to the rear, head up, and a light fingertip hand (~25% of the weight) under the shoulder so he can pass-set.
+- **DL three-point (new clip) and four-point:** lower, weight forward on loaded hands (~47–50%).
+- **QB shotgun:** knees bent, slight lean, hands at the waist with the fingers spread and the palms to the center.
+- The arms had to grow to 0.32 + 0.28 m (a 1.05× wingspan, the NFL norm): the old arms couldn't reach the turf at a real stance height.
+
+**6. Transitions (`tools/blender/lib/transitions.py`, 21 clips).**
+- Clips: huddle break (with the clap); a set from standing into each of nine stances; the snap get-off from seven stances into the run; a stop from walk, jog, run and sprint.
+- They are authored in world space from a footstep plan, so planted feet never move. Swing legs take the gait's leg shape from the actual hip.
+- They are exported in place with a per-frame travel curve for root motion.
+- Get-offs land on the run cycle's first frame at run speed. Stops decelerate at a constant ~5 m/s² from a sprint over five steps (braking studies report 4–7 m/s²).
+- **All 37 clips pass the slide, loop and clearance gates.**
+- **Runtime (`src/anim/animator.ts`):** transitions play over the loops with short fades, lock feet from their own contacts, move the player by body-scaled root motion, and hand over to the clip they end on. Stops wait for the next left touch-down.
+- **Lab sequence mode** (`/#/dev/anim?mode=sequence&pos=ol_3pt`): huddle → break → jog to the line → stop → set → stance → snap → run → stop → stand, for any position.
+- Along the way, the contact gauge was reading a flat foot as a heel strike (the heel rest point sits 1 cm under the ball). Fixed.
+
+**7. Broadcast performance.** I can't time the GPU here: SwiftShader frame times swung 2.2–3.5 s from one sample to the next, so they couldn't rank anything. These changes are targeted at what that camera draws:
+- **Pixel ratio capped per tier** (Low 1, Medium 1.25, High 1.5, Ultra 2) on top of the 1080p budget. Your report (2184×1688 at dpr 1.94 on Medium) fits a window rendered against High's budget. A **Custom** preset counted as High. It now keeps the detected tier.
+- **The field shader was the big cost from that camera.** The field is ~90% of the frame, and each pixel evaluated 12 octaves of value noise (about 48 hashes). The same noise is now baked once at startup (~0.1 s) into a field-space texture and an 8 m tiling texture: three texture reads. Before/after shots match (`perf-field-noise-before-after.jpg`).
+- **Fair weather skips the weather-surface noise** on every lit pixel (a uniform branch).
+- **Players pick their detail by height on screen** (High above 240 px, Medium above 64 px). From the broadcast camera all 22 draw Medium or Low.
+- **Crowd depth prepass:** the lit crowd pass no longer discards, so each crowd pixel is shaded once and Apple GPUs keep hidden-surface removal. The image is pixel-identical; `?noprepass` gives A/B in dev.
+- **Far shadow cascades redraw every third frame** (staggered), or at once when the camera moves. The near cascade still redraws every frame.
+- **Startup spike:** the lineup now sets up its shadow cascades and compiles its shaders off-frame before it enters the scene. Before, the skinned, morphing, cascade-shadowed player program compiled on its first drawn frame, which is my best explanation for the 1.8 s spike.
+- **Please re-test:** `?lineup&perf&cam=-50,14,-13.7,0,0,-11.5,18` at Medium and 100%, plus the field-level view. If it still misses 60, the perf screen's internal resolution and draw calls will tell me which of these to push further. Next in line: N8AO at quarter resolution on Medium, and a lower crowd density for high cameras.
+
+**Critique** (`docs/screenshots/m4.5/`: `<preset>-lineup-broadcast`, `<preset>-lineup-field`, `contact-*`, `lab-*`; Medium quality)
+- **At broadcast distance** (your gate):
+  - The line reads as a football game in all five presets. Two kits, a clean neutral zone, and stances you can name: the OL sit higher than the DL, the DBs sit back.
+  - The 22 players read as different people. Heights and builds vary, pads are sized by position, and sleeves, gloves, socks and facemasks differ.
+  - The gaits are clearly athletes, not marionettes: the runner leans, the arms drive, the knees come up.
+  - I'd accept the players at this distance. The scene around them still reads as a game, not a real broadcast: flat turf, no ball, no officials, no sideline.
+- **At field level and in the Lab**, closer than your gate, the gaps are real:
+  1. Bare forearms are smooth tubes. The muscle relief doesn't read under a flat golden light, and everyone has the default skin tone until tones are assigned in the editor.
+  2. The shoulder-pad caps are too round, like a pool float, and the jersey has no mesh texture, seams or wrinkles.
+  3. Faces are all the same (the helmet hides most of this at game distance).
+  4. Gloves at a few metres read as white shapes, not hands. Up close the fingers, thumb and spread read well (`lab-qb-gun-hands`).
+  5. A small skin wedge can show at the underside of a sleeve hem with the arm bent (about a metre from the camera), and the sleeve's hem band is slightly jagged.
+- **Transitions:**
+  - Get-offs stay low for two steps before rising into the run. Linemen rise late.
+  - Stops brake over several shortening steps and settle into the idle stance, with the arm swing dying down first.
+  - The huddle break's clap is quick and small at distance.
+  - Weakest: the set into the two-point stances is a plain blend with two steps. It's correct but generic, with no small hop or settle.
+
+**Known issues**
+- The 60 fps broadcast gate is unverified until your re-test.
+- Close-up items 1–5 above.
+- The foot-lock residual from M4 still applies mid-blend. Transitions lock from their own contacts.
+
+**Next:** M5 Core play, after your review and the perf re-test.
+
+### M4 Characters and animation (merged, PR #5)
 
 **What's in**
 - **Rig and body, built in code** (`tools/blender`, headless Blender 5.0 via the `bpy` module; no downloaded meshes or motion). One skeleton: 52 deform bones in an A-pose at 1.88 m. The body is lofted from measured cross-sections, fused with a voxel remesh, decimated to three LODs (about 20k / 9k / 3.5k triangles) and cut with clean planar hems. Heat-map weights (limited to 4 influences, no bare vertices; the build asserts it), plus hand-fixed seams at the crotch and collar. Covered skin is culled.
@@ -185,6 +272,19 @@ Frame times can't be measured here (software rendering), so the 60 fps at 100% t
 ### Ratings follow-up (after the M2 review)
 
 The curve and calibration are unchanged. Formula changes, all user-approved: QB Throw Power (below), then four fixes after the consensus review (next paragraph), which also changed the WR/TE OVR weights. Anchors, traits, the Explorer and a consensus check moved too.
+
+**M4.5 added stints** (you: "from the 47 missing stints add only these: Deion Sanders ATL/SF 1990–94, Randy Moss MIN 2000–04, Terrell Owens SF 2000–03, Charles Woodson LV. Sourced like White's"; report: "Added in M4.5" under round 2 item 5):
+- *Added stints*: same file, tool and loader as White's, which now take offensive stints too. Season lines come from each player's Wikipedia career table (revision pinned). The build checks the table against its own Career row, the stated values, and nflverse roster seasons. Seasons from 1999 on are checked season by season against nflverse (all equal), and the ratings read nflverse's stats for them. `imp` comes from the same franchise's legacy stint in the adjacent decade, else the nearest one in time. Results:
+  - Deion Sanders ATL 1990s (1990–93: 3, 6, 3, 7 INT; imp from ATL 1980s): CB #11, 95.6.
+  - Deion Sanders SF 1990s (1994: 6 INT, 3 TD; imp from DAL 1990s, since he has no SF stint): CB #1, 98.2 (one season, medium confidence).
+  - Randy Moss MIN 2000s (2000–04: 425 rec, 6,416 yds, 62 TD; imp from MIN 1990s): WR #26, 93.1.
+  - Terrell Owens SF 2000s (2000–03: 370 rec, 5,265 yds, 51 TD; imp from SF 1990s): WR #3, 96.7.
+  - Charles Woodson LV 1990s (1998–99: 6 INT; imp from GB 2000s): CB #21, 93.4.
+  - Charles Woodson LV 2000s (2000–05: 11 INT): CB #44, 87.0.
+  
+  A stint is one franchise in one decade, so "ATL/SF" became two stints and Woodson's 1998–2005 Raiders run also became two. His 2013–15 return (safety, ages 37–39) is not added. 44 gaps are left in the report.
+  
+  Side effect: the larger WR pool moves Cris Carter's Catch in Traffic from 96.7 to 96.4 (anchor 97+, now flagged). Revis's NYJ 2000s Press reads 92.6 and passes (flag kept). Anchors: still 37 of 42. Lamar's flag and the six uncited M2 40 times are untouched.
 
 **Round 2 (your decisions on PR #3)** (report: "Approved fixes, round 2"; every stint before round 2 frozen in `data/ratings/round2.before.json` by `tools/ratings/round2-before.ts`):
 - *TE block grade*: the per-player cap is dropped, the 20% weight cap stays (`PLAYER_CAPPED_SIGNALS` is `imp` only; the test now checks the grade is never per-player capped). Kittle Run Block 77.7 → 93.6, TE 94.6 (#12) → 97.2 (#3); Winslow Run Block 95.7 → 91.5, TE 98.2 (#1) → 97.0 (#4). Winslow's Run Block stays high because round 1 moved the grade's lost weight onto size (0.361) and strength (0.217) and his 251 lb frame reads about 271 today; reported, not changed.

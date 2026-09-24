@@ -123,7 +123,9 @@ function FrameDriver({ cap }: { cap: number }) {
 
 export function currentQuality(): QualityPreset {
   const s = useSettings.getState().settings;
-  return (urlFlags.quality as QualityPreset | null) ?? (s.graphics.preset === 'custom' ? 'high' : s.graphics.preset);
+  // Custom settings keep the tier the hardware was detected as (render budget,
+  // DPR cap, terrain detail); treating them as High doubled the pixels.
+  return (urlFlags.quality as QualityPreset | null) ?? (s.graphics.preset === 'custom' ? (s.detectedPreset ?? 'medium') : s.graphics.preset);
 }
 
 export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasElement) => void } = {}) {

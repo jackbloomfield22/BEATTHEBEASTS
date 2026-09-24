@@ -4,7 +4,7 @@
 
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFENSE } from '@data/legacy';
+import { DEFENSE, PLAYERS } from '@data/legacy';
 import { applyAddedStints, type AddedStintsFile } from '@/engine/data/addedStints';
 import { buildInputs } from '@/engine/ratings/inputs';
 import { CITED_FORTY_CONF, fortyCorrection } from '@/engine/ratings/physical';
@@ -19,11 +19,29 @@ const { inputs } = buildInputs(S);
 
 describe('added stints', () => {
   it('the committed file validates and adds Reggie White (PHI 1990s)', () => {
-    const { entries } = applyAddedStints(added, DEFENSE);
+    const { entries } = applyAddedStints(added, DEFENSE, PLAYERS);
     const w = entries.find((e) => e.id === 'defense:reggie-white:PHI:1990s')!;
     expect(w.s.sk).toBe(43);
     expect(w.imp).toBe(DEFENSE.find((d) => d.id === 'defense:reggie-white:PHI:1980s')!.imp);
     expect(inputs.some((i) => i.id === w.id)).toBe(true);
+  });
+
+  it('adds the four M4.5 stints the user named, with imp from impFrom and 1999+ stats from nflverse', () => {
+    const { entries, offense } = applyAddedStints(added, DEFENSE, PLAYERS);
+    const ids = [...entries, ...offense].map((e) => e.id);
+    for (const id of ['defense:deion-sanders:ATL:1990s', 'defense:deion-sanders:SF:1990s', 'players:randy-moss:MIN:2000s', 'players:terrell-owens:SF:2000s', 'defense:charles-woodson:LV:1990s', 'defense:charles-woodson:LV:2000s']) {
+      expect(ids, id).toContain(id);
+      const r = added.stints.find((x) => x.id === id)!;
+      const e = [...entries, ...offense].find((x) => x.id === id)!;
+      expect(e.imp, id).toBe([...DEFENSE, ...PLAYERS].find((d) => d.id === r.impFrom)!.imp);
+      const inp = inputs.find((i) => i.id === id)!;
+      expect(inp, id).toBeDefined();
+      if (r.seasons.every((y) => y >= 1999)) expect(inp.games.conf, id).toBe('verified');
+    }
+    expect(offense.find((e) => e.id === 'players:randy-moss:MIN:2000s')!.s.y).toBeCloseTo(6416 / 77, 1);
+    const moss = inputs.find((i) => i.id === 'players:randy-moss:MIN:2000s')!;
+    expect(moss.stats.recYdsPerGame!.conf).toBe('verified');
+    expect(moss.seasons.v).toEqual([2000, 2001, 2002, 2003, 2004]);
   });
 
   it('the loader refuses a bad record', () => {
@@ -34,6 +52,9 @@ describe('added stints', () => {
     expect(bad({ personOf: 'defense:bruce-smith:BUF:1990s' })).toThrow(/name/);
     expect(bad({ seasons: [1989, 1990] })).toThrow(/decade|line/);
     expect(bad({ source: { ...base.source, permalink: '' } })).toThrow(/source/);
+    const moss = added.stints.find((x) => x.id === 'players:randy-moss:MIN:2000s')!;
+    expect(() => applyAddedStints({ stints: [{ ...structuredClone(moss), nflverse: undefined }] }, DEFENSE, PLAYERS)).toThrow(/nflverse/);
+    expect(() => applyAddedStints({ stints: [{ ...structuredClone(moss), impFrom: 'players:terrell-owens:SF:1990s' }] }, DEFENSE, PLAYERS)).toThrow(/name/);
   });
 });
 

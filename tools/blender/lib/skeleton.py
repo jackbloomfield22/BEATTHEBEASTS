@@ -26,8 +26,12 @@ HEIGHT = 1.88
 # Joint positions (x, y, z). Left side only; the right side mirrors x.
 _A = math.radians(45.0)  # A-pose: upper arm 45 degrees below horizontal
 _SHOULDER = (0.195, 0.015, 1.505)
-_UPPER_ARM = 0.30
-_FOREARM = 0.268
+# Arms: NFL players are long-armed (wingspan ~1.03-1.06 x height at the
+# combine); 0.32 + 0.28 m gives this 1.88 m athlete a ~1.97 m wingspan
+# (1.05x). Shorter arms (0.30 + 0.268) couldn't put a lineman's hand on the
+# turf with his hips at stance height.
+_UPPER_ARM = 0.32
+_FOREARM = 0.28
 _ELBOW = (_SHOULDER[0] + _UPPER_ARM * math.cos(_A), 0.035, _SHOULDER[2] - _UPPER_ARM * math.sin(_A))
 _WRIST = (_ELBOW[0] + _FOREARM * math.cos(_A), 0.02, _ELBOW[2] - _FOREARM * math.sin(_A))
 
@@ -78,25 +82,35 @@ def _hand(off_along: float, off_side: float, off_fwd: float, off_down: float = 0
     )
 
 
-# Hand: palm toward the thigh, thumb forward (-Y). Fingers as three groups:
-# thumb, index, and middle-ring-pinky together (ball grips need no more).
+# Hand: palm toward the thigh, thumb forward (-Y). Two finger chains carry
+# four fingers: the index on its own, and middle, ring and pinky together on
+# "fingers" (they close and open as one in every hand state we key). The
+# chain sits between the middle and ring fingers so all three bind to it.
+# Knuckle spacing ~19 mm and finger lengths from hand anthropometry (a hand
+# ~0.19 m long: middle finger the longest, pinky ~80% of it).
+FINGERS = {
+    # name: (offset toward the pinky side (m), knuckle along, finger length)
+    "index": (-0.026, 0.093, 0.094),
+    "middle": (-0.007, 0.096, 0.100),
+    "ring": (0.012, 0.093, 0.094),
+    "pinky": (0.029, 0.087, 0.076),
+}
 J.update(
     {
         "hand_end_l": _hand(0.095, 0, 0),
-        "thumb_01_l": _hand(0.025, 0, -0.03, 0.01),
-        "thumb_02_l": _hand(0.06, 0, -0.05, 0.02),
-        "thumb_03_l": _hand(0.09, 0, -0.06, 0.025),
-        "thumb_end_l": _hand(0.115, 0, -0.065, 0.028),
-        "index_01_l": _hand(0.095, 0, -0.02),
-        "index_02_l": _hand(0.14, 0, -0.022),
-        "index_03_l": _hand(0.168, 0, -0.022),
-        "index_end_l": _hand(0.19, 0, -0.022),
-        "fingers_01_l": _hand(0.095, 0, 0.018),
-        "fingers_02_l": _hand(0.142, 0, 0.018),
-        "fingers_03_l": _hand(0.172, 0, 0.018),
-        "fingers_end_l": _hand(0.195, 0, 0.018),
+        "thumb_01_l": _hand(0.022, 0, -0.030, 0.012),
+        "thumb_02_l": _hand(0.055, 0, -0.047, 0.020),
+        "thumb_03_l": _hand(0.083, 0, -0.056, 0.024),
+        "thumb_end_l": _hand(0.107, 0, -0.060, 0.026),
     }
 )
+for _f, (_off, _k, _len) in FINGERS.items():
+    # Phalanges ~0.45 / 0.30 / 0.25 of the finger.
+    for _n, _t in (("01", 0.0), ("02", 0.45), ("03", 0.75), ("end", 1.0)):
+        J[f"{_f}_{_n}_l"] = _hand(_k + _len * _t, 0, _off)
+# The shared chain for middle, ring and pinky.
+for _n in ("01", "02", "03", "end"):
+    J[f"fingers_{_n}_l"] = tuple((J[f"middle_{_n}_l"][i] + J[f"ring_{_n}_l"][i]) / 2 for i in range(3))
 
 # Twist joints sit part-way along their segment.
 J["upperarm_twist_l"] = _along(J["shoulder_l"], J["elbow_l"], 0.5)

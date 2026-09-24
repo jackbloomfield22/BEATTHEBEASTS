@@ -3,6 +3,7 @@ import { patchMaterial } from '../sky/atmosphere';
 import type { Kit } from './kits';
 import { glyphAtlas, CAP, CELL, PAD, SPREAD } from './glyphAtlas';
 import { ATLAS_COLS, ATLAS_ROWS, layoutText, MAX_NAME, MAX_NUMBER } from './glyphs';
+import type { GearColor, Variety } from './variety';
 
 // One material styles a whole player (one draw call): each vertex carries a
 // part id (tools/blender/build_character.py writes it to TEXCOORD_0.x, the
@@ -11,14 +12,22 @@ import { ATLAS_COLS, ATLAS_ROWS, layoutText, MAX_NAME, MAX_NUMBER } from './glyp
 // from the rest pose (`position` before skinning), so it follows the body
 // through every animation without textures.
 
-export const PART = { skin: 0, glove: 1, sock: 2, cleat: 3, jersey: 4, pants: 5, helmet: 6, facemask: 7 } as const;
+// Part ids: tools/blender/lib/gear.py PARTS.
+export const PART = {
+  skin: 0, glove: 1, sock: 2, cleat: 3, jersey: 4, pants: 5, helmet: 6,
+  maskSkill: 7, maskCage: 8, maskQb: 9, maskLow: 10, visor: 11, strap: 12, towel: 13, collar: 14,
+} as const;
 const PART_SCALE = 16; // must match tools/blender/lib/gear.py PART_SCALE
-const N = 8;
+const N = 15;
+const MASKS = [PART.maskSkill, PART.maskCage, PART.maskQb, PART.maskLow];
 
-// Finish per part: roughness, metalness. Skin ~0.5; fabric rough; helmet
-// shell a glossy clear-coated plastic (~0.2); facemask powder-coated steel.
-const ROUGH = [0.5, 0.62, 0.85, 0.45, 0.72, 0.68, 0.2, 0.35];
-const METAL = [0, 0, 0, 0, 0, 0, 0.05, 0.55];
+// Finish per part: roughness, metalness. Skin ~0.6 (matte, varied per
+// fragment in the shader); fabric rough; helmet shell a glossy clear-coated
+// plastic (~0.2); facemasks powder-coated steel; the visor a smoked,
+// polished polycarbonate; the chin strap a satin plastic cup.
+const ROUGH = [0.62, 0.62, 0.85, 0.45, 0.72, 0.68, 0.2, 0.35, 0.35, 0.35, 0.35, 0.06, 0.4, 0.92, 0.75];
+const METAL = [0, 0, 0, 0, 0, 0, 0.05, 0.55, 0.55, 0.55, 0.55, 0.25, 0, 0, 0];
+const GEAR_COLORS: Record<Exclude<GearColor, 'kit' | 'trim'>, string> = { black: '#121314', white: '#ecedef' };
 
 // Lettering on the jersey (sizes from the NFL uniform rules: back numbers
 // 10-12 in, front 8-10 in; nameplate letters about 2.5-3 in). Heights are cap
@@ -29,7 +38,9 @@ const METAL = [0, 0, 0, 0, 0, 0, 0.05, 0.55];
 const BACK_NUMBER = { cap: 0.235, y: 1.3 };
 const FRONT_NUMBER = { cap: 0.19, y: 1.31 };
 const NUMBER_CONDENSE = 0.84;
-const NAME = { cap: 0.066, y: 1.505, maxWidth: 0.34 };
+const NAME = { cap: 0.066, y: 1.47, maxWidth: 0.34 };
+// Sleeve ("TV") numbers on the outside of each sleeve, 4 in tall.
+const SLEEVE_NUMBER = { cap: 0.085, t: 0.3 };
 /** Outline width, m. */
 const OUTLINE = 0.009;
 /** Letter spacing on the nameplate, em. */
@@ -82,6 +93,8 @@ vec3 lettering(vec3 c, vec3 p) {
   if (abs(p.x) > 0.21) return c;
   if (p.z < -0.03) {
     // Back: seen from behind, the text runs from the player's left (+x) to right.
+    // The nameplate stays on the back itself (the pad arch curves over the
+    // shoulders above ~1.52 m, where it would show from the front).
     float u = -p.x;
     float em = ${BACK_NUMBER.cap.toFixed(3)} / ${CAP.toFixed(3)};
     vec2 q = vec2(u / (em * ${NUMBER_CONDENSE.toFixed(3)}) + uNumW * 0.5, (p.y - ${BACK_NUMBER.y.toFixed(3)}) / em + 0.5);
@@ -100,6 +113,42 @@ vec3 lettering(vec3 c, vec3 p) {
   }
   return c;
 }
+// Arm frames in the rest pose (skeleton.py: A-pose, arms 45 deg down,
+// upper arm 0.32 m, forearm 0.28 m).
+const vec3 ARM_DIR = vec3(0.7071, -0.7071, 0.0);
+vec3 armDir(vec3 p) { return vec3(sign(p.x) * ARM_DIR.x, ARM_DIR.y, 0.0); }
+// Along the forearm, 0 at the elbow and 1 at the wrist.
+float forearmT(vec3 p) {
+  vec3 el = vec3(sign(p.x) * 0.4213, 1.2787, -0.035);
+  return dot(p - el, armDir(p)) / 0.28;
+}
+// Cheap value noise for skin variation.
+float pHash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+float pNoise(vec3 p) {
+  vec3 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = mix(mix(pHash(i), pHash(i + vec3(1, 0, 0)), f.x), mix(pHash(i + vec3(0, 1, 0)), pHash(i + vec3(1, 1, 0)), f.x), f.y);
+  float b = mix(mix(pHash(i + vec3(0, 0, 1)), pHash(i + vec3(1, 0, 1)), f.x), mix(pHash(i + vec3(0, 1, 1)), pHash(i + vec3(1, 1, 1)), f.x), f.y);
+  return mix(a, b, f.z);
+}
+float gauss(float x, float c, float w) { float d = (x - c) / w; return exp(-d * d); }
+// Muscle relief on the bare arm (m of height): deltoid cap, biceps in front,
+// triceps behind, the forearm flexor mass below the elbow; the grooves
+// between them read in the light as the height field's slope.
+float muscleHeight(vec3 p) {
+  if (abs(p.x) < 0.2) return 0.0;
+  vec3 d = armDir(p);
+  vec3 sh = vec3(sign(p.x) * 0.195, 1.505, -0.015);
+  float t = dot(p - sh, d) / 0.32;
+  vec3 r = p - sh - d * dot(p - sh, d);
+  float front = r.z, lateral = dot(r, normalize(vec3(sign(p.x) * 0.7071, 0.7071, 0.0)));
+  float h = 0.0035 * gauss(t, 0.18, 0.12) * smoothstep(-0.02, 0.03, lateral);
+  h += 0.003 * gauss(t, 0.58, 0.16) * smoothstep(0.0, 0.03, front);
+  h += 0.0025 * gauss(t, 0.55, 0.2) * smoothstep(0.0, 0.03, -front);
+  float tf = forearmT(p);
+  h += 0.0025 * gauss(tf, 0.2, 0.14);
+  return h;
+}
 uniform vec3 uPartColor[${N}];
 uniform float uPartRough[${N}];
 uniform float uPartMetal[${N}];
@@ -107,19 +156,71 @@ uniform vec3 uTrim;
 uniform vec3 uHelmetStripe;
 uniform float uStripeGlow;
 uniform vec3 uPantsStripe;
+uniform vec3 uSleeveColor;
+uniform vec2 uSleeves; // left, right: compression sleeve on
+uniform float uTape;
+uniform float uSockStripes;
+uniform float uSkinVar;
 varying float vPart;
 varying vec3 vRest;
 int playerPart() { return int(floor(vPart + 0.001)); }
 float sleeveT(vec3 p) {
   vec3 sh = vec3(sign(p.x) * 0.195, 1.505, -0.015);
   vec3 dir = normalize(vec3(sign(p.x) * 0.7071, -0.7071, 0.0));
-  return dot(p - sh, dir) / 0.30;
+  return dot(p - sh, dir) / 0.32;
 }
-// The part's color with its trim, and a trim mask for the emissive stripe.
-vec3 playerAlbedo(int part, vec3 p, out float stripe) {
+// Sleeve (TV) number on the outside of the sleeve (arm frame, rest pose).
+vec3 sleeveNumber(vec3 c, vec3 p) {
+  if (abs(p.x) < 0.24) return c;
+  vec3 d = armDir(p);
+  vec3 sh = vec3(sign(p.x) * 0.195, 1.505, -0.015);
+  vec3 lat = normalize(vec3(sign(p.x) * 0.7071, 0.7071, 0.0));
+  vec3 center = sh + d * (0.32 * ${SLEEVE_NUMBER.t.toFixed(2)});
+  if (dot(p - center, lat) < 0.02) return c; // the outer face only
+  float em = ${SLEEVE_NUMBER.cap.toFixed(3)} / ${CAP.toFixed(3)};
+  // Read from the side: front to back across, shoulder to elbow down.
+  float u = -sign(p.x) * (p.z - center.z);
+  vec2 q = vec2(u / (em * ${NUMBER_CONDENSE.toFixed(3)}) + uNumW * 0.5, dot(p - center, -d) / em + 0.5);
+  float aa = length(fwidth(q)) * 0.6;
+  if (uNumW > 0.0 && q.y > -0.1 && q.y < 1.1) c = letter(c, numberSd(q), aa, em, uNumColor, uNumOutline);
+  return c;
+}
+// The part's color with its trim, a trim mask for the emissive stripe, and
+// the fragment's roughness.
+vec3 playerAlbedo(int part, vec3 p, out float stripe, out float rough) {
   vec3 c = uPartColor[part];
   stripe = 0.0;
-  if (part == ${PART.helmet}) {
+  rough = uPartRough[part];
+  if (part == ${PART.skin}) {
+    // Skin: a little tone and roughness variation (pores, sweat, oil), never
+    // a uniform plastic sheen; darker in the creases between muscles.
+    float n = pNoise(p * 60.0) * 0.6 + pNoise(p * 190.0) * 0.4;
+    c *= 1.0 + (n - 0.5) * 0.10 * uSkinVar;
+    rough = 0.52 + 0.18 * n;
+    float side = sign(p.x);
+    bool arm = abs(p.x) > 0.22;
+    vec3 d = armDir(p);
+    vec3 sh = vec3(side * 0.195, 1.505, -0.015);
+    float t = dot(p - sh, d) / 0.32;
+    float tf = forearmT(p);
+    // Compression sleeve from under the jersey sleeve to the glove cuff.
+    float on = side > 0.0 ? uSleeves.x : uSleeves.y;
+    if (arm && on > 0.5 && (t > 0.45 && tf < 0.84)) {
+      c = uSleeveColor;
+      rough = 0.7;
+    } else if (arm && uTape > 0.5 && tf > 0.72 && tf < 0.84) {
+      // Tape above the glove.
+      c = vec3(0.86, 0.86, 0.84);
+      rough = 0.8;
+    }
+  } else if (part == ${PART.sock}) {
+    // Stripes around the sock (trim color).
+    float s1 = smoothstep(0.305, 0.31, p.y) * (1.0 - smoothstep(0.33, 0.335, p.y));
+    float s2 = smoothstep(0.35, 0.355, p.y) * (1.0 - smoothstep(0.375, 0.38, p.y));
+    c = mix(c, uTrim, s1 * step(0.5, uSockStripes) + s2 * step(1.5, uSockStripes));
+  } else if (part == ${PART.collar}) {
+    c = uTrim;
+  } else if (part == ${PART.helmet}) {
     // Center stripe over the crown, front to back.
     float s = 1.0 - smoothstep(0.011, 0.014, abs(p.x));
     s *= step(1.70, p.y);
@@ -132,6 +233,7 @@ vec3 playerAlbedo(int part, vec3 p, out float stripe) {
     float band = step(0.24, abs(p.x)) * smoothstep(0.40, 0.41, t) * (1.0 - smoothstep(0.47, 0.48, t));
     c = mix(c, uTrim, max(collar, band));
     c = lettering(c, p);
+    c = sleeveNumber(c, p);
   } else if (part == ${PART.pants}) {
     float side = step(0.12, abs(p.x)) * (1.0 - smoothstep(0.011, 0.015, abs(p.z + 0.005))) * step(p.y, 1.05);
     c = mix(c, uPantsStripe, side);
@@ -147,6 +249,8 @@ export interface PlayerLook {
   number?: number;
   /** Nameplate text (usually jerseyName(fullName)); none if omitted. */
   name?: string;
+  /** Gear picks (variety.ts); the defaults are a skill player's plain kit. */
+  variety?: Variety;
 }
 
 function linear(hex: string): THREE.Color {
@@ -178,6 +282,12 @@ export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMateri
     uNumColor: { value: new THREE.Color() },
     uNumOutline: { value: new THREE.Color() },
     uNameColor: { value: new THREE.Color() },
+    uPartShow: { value: new Array<number>(N).fill(1) },
+    uSleeveColor: { value: new THREE.Color() },
+    uSleeves: { value: new THREE.Vector2() },
+    uTape: { value: 0 },
+    uSockStripes: { value: 0 },
+    uSkinVar: { value: 1 },
   };
   mat.userData.player = uniforms;
   setPlayerLook(mat, look);
@@ -186,8 +296,15 @@ export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMateri
     (shader) => {
       Object.assign(shader.uniforms, uniforms);
       shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', `#include <common>\nattribute vec2 aPart;\nvarying float vPart;\nvarying vec3 vRest;`)
-        .replace('#include <begin_vertex>', `#include <begin_vertex>\nvPart = aPart.x * ${PART_SCALE.toFixed(1)};\nvRest = position;`);
+        .replace('#include <common>', `#include <common>\nattribute vec2 aPart;\nvarying float vPart;\nvarying vec3 vRest;\nuniform float uPartShow[${N}];`)
+        .replace('#include <begin_vertex>', `#include <begin_vertex>\nvPart = aPart.x * ${PART_SCALE.toFixed(1)};\nvRest = position;`)
+        // Gear this player doesn't wear (other facemask styles, visor,
+        // towel): collapsed out of the clip volume here rather than discarded
+        // per pixel (discard defeats hidden-surface removal on tile GPUs).
+        .replace(
+          '#include <project_vertex>',
+          `#include <project_vertex>\nif (uPartShow[int(floor(vPart))] < 0.5) gl_Position = vec4(0.0, 0.0, -2.0, 1.0);`,
+        );
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', `#include <common>\n${GLSL}`)
         .replace(
@@ -195,9 +312,23 @@ export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMateri
           `#include <color_fragment>
           int pPart = playerPart();
           float pStripe;
-          diffuseColor.rgb = playerAlbedo(pPart, vRest, pStripe);`,
+          float pRough;
+          diffuseColor.rgb = playerAlbedo(pPart, vRest, pStripe, pRough);`,
         )
-        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = uPartRough[pPart];')
+        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = pRough;')
+        .replace(
+          '#include <normal_fragment_maps>',
+          `#include <normal_fragment_maps>
+          if (pPart == ${PART.skin}) {
+            // Muscle relief as a bump from the rest-pose height field.
+            float mh = muscleHeight(vRest);
+            vec3 dpx = dFdx(vViewPosition), dpy = dFdy(vViewPosition);
+            float dhx = dFdx(mh), dhy = dFdy(mh);
+            vec3 r1 = cross(dpy, normal), r2 = cross(normal, dpx);
+            float det = dot(dpx, r1);
+            normal = normalize(abs(det) * normal - sign(det) * (dhx * r1 + dhy * r2));
+          }`,
+        )
         .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = uPartMetal[pPart];')
         .replace(
           '#include <emissivemap_fragment>',
@@ -223,7 +354,11 @@ function contrast(hex: string, lum: number): number {
   return (Math.max(l, lum) + 0.05) / (Math.min(l, lum) + 0.05);
 }
 
-export function setPlayerLook(mat: THREE.MeshStandardMaterial, { kit, skin, number, name }: PlayerLook): void {
+function gearColor(c: GearColor, kit: Kit, kitColor: string): string {
+  return c === 'kit' ? kitColor : c === 'trim' ? kit.trim : GEAR_COLORS[c];
+}
+
+export function setPlayerLook(mat: THREE.MeshStandardMaterial, { kit, skin, number, name, variety }: PlayerLook): void {
   const u = mat.userData.player as {
     uPartColor: Uniform<THREE.Color[]>;
     uTrim: Uniform<THREE.Color>;
@@ -240,9 +375,29 @@ export function setPlayerLook(mat: THREE.MeshStandardMaterial, { kit, skin, numb
     uNumColor: Uniform<THREE.Color>;
     uNumOutline: Uniform<THREE.Color>;
     uNameColor: Uniform<THREE.Color>;
+    uPartShow: Uniform<number[]>;
+    uSleeveColor: Uniform<THREE.Color>;
+    uSleeves: Uniform<THREE.Vector2>;
+    uTape: Uniform<number>;
+    uSockStripes: Uniform<number>;
   };
-  const byPart = [skin, kit.gloves, kit.socks, kit.cleats, kit.jersey, kit.pants, kit.helmet, kit.facemask];
+  const v = variety;
+  const glove = v ? gearColor(v.gloveColor, kit, kit.gloves) : kit.gloves;
+  // By part id: skin, glove, sock, cleat, jersey, pants, helmet, the four
+  // facemasks, visor (smoked), chin strap, towel, collar (trim; the shader).
+  const byPart = [skin, glove, kit.socks, kit.cleats, kit.jersey, kit.pants, kit.helmet, kit.facemask, kit.facemask, kit.facemask, kit.facemask, '#16181c', '#e9e9e6', '#f2f2ef', kit.trim];
   byPart.forEach((hex, i) => u.uPartColor.value[i]!.copy(linear(hex)));
+  const show = u.uPartShow.value;
+  show.fill(1);
+  const style = v?.mask ?? 'skill';
+  const styleId = { skill: PART.maskSkill, cage: PART.maskCage, qb: PART.maskQb }[style];
+  for (const m of MASKS) if (m !== PART.maskLow) show[m] = m === styleId ? 1 : 0;
+  show[PART.visor] = v?.visor ? 1 : 0;
+  show[PART.towel] = v?.towel ? 1 : 0;
+  u.uSleeveColor.value.copy(linear(v ? gearColor(v.sleeveColor, kit, kit.jersey) : kit.jersey));
+  u.uSleeves.value.set(v?.sleeves.l ? 1 : 0, v?.sleeves.r ? 1 : 0);
+  u.uTape.value = v?.tape ? 1 : 0;
+  u.uSockStripes.value = v?.sockStripes ?? 0;
   u.uTrim.value.copy(linear(kit.trim));
   u.uHelmetStripe.value.copy(linear(kit.helmetStripe));
   u.uStripeGlow.value = kit.stripeGlow;

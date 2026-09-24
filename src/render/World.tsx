@@ -184,6 +184,9 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     if (prev && prev !== rt.texture) prev.dispose();
     if (import.meta.env.DEV) Object.assign(window, { __btbVfx: vfx, __btbCrowd: crowdEnergy, __btbScene: scene, __btbEnvScene: envScene, __btbGl: gl, __btbPmrem: pmrem });
   }, [preset, gl, lut, pmrem, envScene, env, assets, scene, precip, vfx, quality.weatherParticles, quality.tier]);
+  useEffect(() => {
+    if (import.meta.env.DEV) Object.assign(window, { __btbCamera: camera });
+  }, [camera]);
 
   // Shadows follow quality: cascaded shadow maps (lighting/shadows.ts), sized
   // per tier. With the rig on, its cascade lights carry the key light and the
@@ -201,9 +204,11 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
     const rig = createShadowRig({ camera: camera as THREE.PerspectiveCamera, parent: scene, ...cfg });
     rig.attachTree(scene);
     rigRef.current = rig;
+    shadowAttach.rig = rig;
     sun.visible = false;
     return () => {
       rigRef.current = null;
+      if (shadowAttach.rig === rig) shadowAttach.rig = null;
       sun.visible = true;
       rig.dispose();
     };

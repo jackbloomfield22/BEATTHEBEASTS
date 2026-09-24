@@ -154,6 +154,25 @@ export function approvedFixes2Section(run: RatingRun, S: LoadedSources): string[
   );
   topTable('DE');
 
+  // M4.5: four more of the gaps, named by the user.
+  const m45 = S.added.filter((r) => r.id !== 'defense:reggie-white:PHI:1990s');
+  if (m45.length) {
+    const ranges = (ys: readonly number[]) => (ys.length > 1 ? `${ys[0]}–${ys[ys.length - 1]}` : `${ys[0]}`);
+    out(
+      `   **Added in M4.5** (user: "from the 47 missing stints add only these: Deion Sanders ATL/SF 1990–94, Randy Moss MIN 2000–04, Terrell Owens SF 2000–03, Charles Woodson LV. Sourced like White's"). Same method as White: season lines from the player's Wikipedia career table (revision pinned; the table must agree with its own Career row, the stated values and nflverse roster seasons), \`imp\` from the same player's legacy stint (same franchise in the adjacent decade, else the nearest in time), person, body and honors from his existing stint. For 1999+ seasons the table was checked season by season against nflverse (receptions, yards and TDs, or interceptions and sacks: all equal) and the ratings read the nflverse stats (verified), as for every legacy stint. A stint is one franchise in one decade, so "ATL/SF 1990–94" is two stints (ATL 1990–93, SF 1994) and Woodson's first Raiders run (1998–2005) is LV 1990s and LV 2000s; his 2013–15 return (safety, ages 37–39) is not added.`,
+      '',
+      '| Stint | Seasons | Line | imp from | OVR (rank) | Confidence |',
+      '|---|---|---|---|---|---|',
+    );
+    for (const r of m45) {
+      const e = get(r.id);
+      const t = r.totals;
+      const line = r.id.startsWith('players:') ? `${t.games} G, ${t.rec} rec, ${t.yds} yds, ${t.td} TD` : `${t.games} G, ${t.int} INT, ${t.td} TD, ${t.sk} sk`;
+      out(`| ${idWho(r.id, r.entry.n)} | ${ranges(r.seasons)} | ${line} | ${idWho(r.impFrom, r.entry.n)}, imp ${S.players.find((p) => p.id === r.impFrom)?.imp ?? S.defense.find((d) => d.id === r.impFrom)?.imp} | ${e ? `**${f1(e.ovr.value)} (${e.pos} #${rankNow(e)})**` : 'not rated'} | ${e?.ovr.conf ?? '–'} |`);
+    }
+    out('');
+  }
+
   // Other gaps noticed, not added.
   const byId = new Map(run.entries.map((e) => [e.id, e]));
   const gaps: { score: number; text: string }[] = [];

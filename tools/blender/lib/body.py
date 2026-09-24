@@ -49,7 +49,28 @@ def torso(name="torso", z0: float = 0.0, z1: float = 9.0, grow: float = 0.0, bas
 
 
 def neck():
-    return loft("neck", [Ring((0, 0.022, 1.50), 0.070), Ring((0, 0.018, 1.60), 0.066), Ring((0, 0.008, 1.70), 0.058)], segs=20)
+    """A football neck: thick (~0.47 m around at the collar), set on
+    trapezius slopes that rise from the shoulders into the back of the helmet,
+    so the head sits on the body instead of floating on a stalk."""
+    parts = [loft("neck", [Ring((0, 0.024, 1.50), 0.080, 0.074), Ring((0, 0.020, 1.60), 0.076, 0.070), Ring((0, 0.010, 1.70), 0.064, 0.060)], segs=24)]
+    for sx in (1, -1):
+        # Upper trapezius: from the top of the shoulder, up and in to the
+        # base of the skull, thick at the back.
+        parts.append(
+            loft(
+                "trap",
+                [Ring((0.150 * sx, 0.030, 1.520), 0.022, 0.030), Ring((0.100 * sx, 0.034, 1.570), 0.026, 0.032), Ring((0.050 * sx, 0.034, 1.628), 0.022, 0.026), Ring((0.022 * sx, 0.030, 1.675), 0.016, 0.018)],
+                side_hint=(0, 1, 0),
+                segs=16,
+            )
+        )
+        # Sternocleidomastoid: the strap from behind the ear to the collarbone.
+        parts.append(tube("scm", [(0.048 * sx, 0.008, 1.700), (0.034 * sx, -0.028, 1.620), (0.020 * sx, -0.040, 1.550)], 0.011))
+    return parts
+
+
+def tube(name, pts, r):
+    return loft(name, [Ring(p, r) for p in pts], segs=12)
 
 
 def head():
@@ -84,25 +105,32 @@ def arm(s: str):
     return loft(f"arm_{s}", rings, side_hint=(0, 1, 0), segs=20)
 
 
-def hand(s: str):
+def hand_parts(s: str, grow: float = 0.0):
+    """The hand: palm, four fingers and the thumb (skeleton.FINGERS). Built
+    as its own mesh (the glove, gear.py) so the cuff is a clean edge."""
+    from .skeleton import FINGERS
+
     sg = 1 if s == "l" else -1
     wr = Vector(J[f"wrist_{s}"])
     d = Vector((math.cos(_A) * sg, 0, -math.sin(_A)))
-    palm_n = Vector((-math.sin(_A) * sg, 0, -math.cos(_A)))  # palm normal, toward the thigh
+    palm_n = Vector((-math.sin(_A) * sg, 0, -math.cos(_A)))
     parts = [
         loft(
             f"palm_{s}",
-            [Ring(wr - d * 0.01, 0.027, 0.018), Ring(wr + d * 0.04, 0.042, 0.017), Ring(wr + d * 0.09, 0.044, 0.014)],
+            [Ring(wr - d * 0.012, 0.030 + grow, 0.020 + grow), Ring(wr + d * 0.035, 0.041 + grow, 0.016 + grow), Ring(wr + d * 0.085, 0.043 + grow, 0.013 + grow)],
             side_hint=(0, 1, 0),
             segs=16,
-        )
+        ),
+        ellipsoid(f"thenar_{s}", tuple(wr + d * 0.032 + palm_n * 0.007 + Vector((0, -0.020, 0))), (0.017 + grow, 0.017 + grow, 0.016 + grow), segs=12),
     ]
-    for f, r, fw in (("index", 0.0105, None), ("fingers", 0.0105, 0.027), ("thumb", 0.012, None)):
-        pts = [J[f"{f}_01_{s}"], J[f"{f}_02_{s}"], J[f"{f}_03_{s}"], J[f"{f}_end_{s}"]]
-        rings = [Ring(p, fw if fw else r, r) for p in pts]
-        parts.append(loft(f"{f}_{s}", rings, side_hint=(0, 1, 0), segs=12))
-    # Slight cupping: the palm's heel (thenar) pad.
-    parts.append(ellipsoid(f"thenar_{s}", tuple(wr + d * 0.035 + palm_n * 0.008 + Vector((0, -0.018, 0))), (0.018, 0.018, 0.018), segs=12))
+    radius = {"index": 0.0084, "middle": 0.0086, "ring": 0.0081, "pinky": 0.0072}
+    for f, r in radius.items():
+        pts = [J[f"{f}_{n}_{s}"] for n in ("01", "02", "03", "end")]
+        # Fingers taper to the tip.
+        rings = [Ring(p, (r + grow) * k) for p, k in zip(pts, (1.08, 1.0, 0.92, 0.8))]
+        parts.append(loft(f"{f}_{s}", rings, segs=10))
+    pts = [J[f"thumb_{n}_{s}"] for n in ("01", "02", "03", "end")]
+    parts.append(loft(f"thumb_{s}", [Ring(p, (0.0105 + grow) * k) for p, k in zip(pts, (1.25, 1.0, 0.95, 0.82))], segs=10))
     return parts
 
 
@@ -137,7 +165,8 @@ def foot(s: str):
 
 
 def build_body(voxel: float = 0.005):
-    parts = [torso(), neck(), *head()]
+    # No hands: the glove (gear.glove) is the hand, overlapping the wrist.
+    parts = [torso(), *neck(), *head()]
     for s in ("l", "r"):
-        parts += [arm(s), *hand(s), leg(s), foot(s)]
+        parts += [arm(s), leg(s), foot(s)]
     return union_remesh(parts, "body", voxel=voxel, smooth_iters=12)

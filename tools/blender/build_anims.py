@@ -29,8 +29,10 @@ import bpy  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
 from lib.anim_rig import Controls  # noqa: E402
+from lib.skeleton import J  # noqa: E402
 from lib.gait import FPS, GAITS, contacts, gait_pose  # noqa: E402
-from lib.poses import STANCES, Pose, apply_pose  # noqa: E402
+from lib.poses import HEEL_REST, STANCES, Pose, apply_pose  # noqa: E402
+from lib.transitions import transitions  # noqa: E402
 from lib.rig import build_armature  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -44,8 +46,39 @@ LOOP_MAX = 1.0  # degrees between the last frame and the first of a loop
 CLEAR_MIN = 0.07  # m between the ankles (and knees) at every frame
 COM_MARGIN = -0.02  # m: centre of mass may sit at most 2 cm outside the support polygon
 
+# Whole-body mechanics gates for the locomotion cycles (M4.5), from the same
+# literature the keyer uses (lib/gait.py): trunk lean from vertical (deg,
+# mean), pelvis vertical travel (cm, peak to peak), thorax yaw against the
+# pelvis (deg, peak to peak), elbow flexion range (deg), shoulder swing (deg,
+# peak to peak, thorax frame), knee drive (peak thigh flexion, deg), heel
+# recovery (peak knee flexion in swing, deg), foot angle at touch-down (deg,
+# + toes up = heel strike, - = forefoot) and, for the sprint, the hand path
+# (front hand above the shoulder, back hand behind the pelvis, cm).
+MECH_TARGETS = {
+    "loco_walk": {"lean": (1, 6), "pelvis_v": (2.0, 6.0), "torso_rot": (8, 40), "knee_drive": (20, 40), "heel_rec": (50, 75), "strike": (10, 25)},
+    "loco_jog": {"lean": (5, 10), "pelvis_v": (5.0, 10.0), "torso_rot": (20, 50), "elbow": (65, 115), "shoulder": (50, 90), "knee_drive": (42, 58), "heel_rec": (85, 110), "strike": (2, 12)},
+    "loco_run": {"lean": (8, 14), "pelvis_v": (4.0, 9.0), "torso_rot": (25, 55), "elbow": (65, 115), "shoulder": (80, 110), "knee_drive": (58, 75), "heel_rec": (105, 125), "strike": (-8, 4)},
+    "loco_sprint": {"lean": (11, 18), "pelvis_v": (3.0, 8.0), "torso_rot": (30, 60), "elbow": (65, 115), "shoulder": (105, 140), "knee_drive": (70, 90), "heel_rec": (118, 140), "strike": (-25, -5), "hand_front": (8, 30), "hand_back": (5, 40)},
+    "loco_backpedal": {"lean": (18, 40), "elbow": (65, 115)},
+}
+
 # Stances that bear weight on a hand (it joins the support polygon).
-HAND_SUPPORT = {"ol_3pt": ["r"], "dl_4pt": ["l", "r"]}
+HAND_SUPPORT = {"ol_3pt": ["r"], "dl_3pt": ["r"], "dl_4pt": ["l", "r"]}
+# Coaching targets for the stances (M4.5; lib/poses.py cites them): hip
+# height (m, base 1.88 m rig), back angle (deg above horizontal, pelvis to
+# the base of the neck), share of the weight on the down hands, and the
+# eyes (deg above horizontal; linemen look up the field, not at the turf).
+STANCE_TARGETS = {
+    "ol_3pt": {"hip": (0.76, 0.81), "trunk": (-6, 12), "load": (0.15, 0.32), "eyes": (-15, 15)},
+    "dl_3pt": {"hip": (0.64, 0.73), "trunk": (-10, 4), "load": (0.35, 0.55), "eyes": (-20, 15)},
+    "dl_4pt": {"hip": (0.66, 0.76), "trunk": (-12, 2), "load": (0.40, 0.60), "eyes": (-20, 15)},
+    "qb_gun": {"hip": (0.86, 0.94), "trunk": (60, 80), "eyes": (-10, 10)},
+    "qb_center": {"eyes": (-15, 10)},
+    "wr_2pt": {"eyes": (-15, 10)},
+    "lb_ready": {"eyes": (-15, 10)},
+    "db_ready": {"eyes": (-15, 10)},
+    "rb_2pt": {"eyes": (-15, 10)},
+}
 STANCE_FRAMES = 60  # 2 s breathing loop
 
 
@@ -68,7 +101,9 @@ def clip_list():
     for name, st in STANCES.items():
         clips.append({"name": f"stance_{name}", "kind": "stance", "stance": name, "frames": STANCE_FRAMES, "loop": True, "speed": 0.0, "dir": [0, 0], "pose": (lambda f, st=st: breathing(st, f)), "contacts": {"l": [[0, STANCE_FRAMES]], "r": [[0, STANCE_FRAMES]]}})
     for name, g in GAITS.items():
-        clips.append({"name": f"loco_{name}", "kind": "locomotion", "frames": g.frames, "loop": True, "speed": g.speed, "dir": list(g.dir), "pose": (lambda f, g=g: gait_pose(g, f % g.frames)), "contacts": contacts(g)})
+        clips.append({"name": f"loco_{name}", "kind": "locomotion", "frames": g.frames, "loop": True, "speed": g.speed, "dir": list(g.dir), "pose": (lambda f, g=g: gait_pose(g, f % g.frames)), "contacts": contacts(g), "travel": (lambda f, g=g: g.speed * f / FPS)})
+    for tr in transitions():
+        clips.append({"name": tr.name, "kind": "transition", "frames": tr.frames, "loop": False, "speed": 0.0, "dir": [0.0, -1.0], "pose": tr.pose, "contacts": tr.contacts, "travel": tr.travel, "from": tr.frm, "to": tr.to})
     return clips
 
 
@@ -151,6 +186,127 @@ def support(rig, hands):
     return _hull(pts)
 
 
+def contact_point(rig, s):
+    """The foot's ground contact: the heel while the toes are up (heel strike),
+    otherwise the ball."""
+    pb = rig.pose.bones[f"foot_{s}"]
+    rest = rig.data.bones[f"foot_{s}"].matrix_local
+    heel = rig.matrix_world @ pb.matrix @ rest.inverted() @ HEEL_REST[s]
+    ball = world(rig, f"toe_{s}")
+    # Toes up: the heel below where it sits on a flat foot (its rest point
+    # is 1 cm under the ball's), not merely below the ball.
+    if heel.z < ball.z - (Vector(J[f"ball_{s}"]).z - HEEL_REST[s].z) - 0.004:
+        # Report where the ball would be with this heel down flat, so the
+        # heel-to-ball hand-over is one continuous track.
+        v = ball - heel
+        v.z = 0
+        flat = HEEL_REST[s] - Vector(J[f"ball_{s}"])
+        flat.z = 0
+        return heel + v.normalized() * flat.length + Vector((0, 0, Vector(J[f"ball_{s}"]).z - HEEL_REST[s].z))
+    return ball.copy()
+
+
+def _yaw(v) -> float:
+    return math.degrees(math.atan2(v.x, -v.y))
+
+
+def _sag(v, fwd, up) -> float:
+    """Angle of a limb from straight down, forward positive, in the plane of fwd/up."""
+    return math.degrees(math.atan2(v.dot(fwd), -v.dot(up)))
+
+
+def measure(rig, mech, f, clip):
+    fwd, up = Vector((0, -1, 0)), Vector((0, 0, 1))
+    pel = rig.pose.bones["pelvis"]
+    ph, neck = world(rig, "pelvis"), world(rig, "neck_01")
+    mech["lean"].append(math.degrees(math.atan2((neck - ph).dot(fwd), (neck - ph).dot(up))))
+    mech["pz"].append(ph.z)
+    mech["px"].append(ph.x)
+    mech["pyaw"].append(_yaw(pel.matrix.to_3x3().col[2]))
+    mech["tyaw"].append(_yaw(rig.pose.bones["spine_04"].matrix.to_3x3().col[2]))
+    # Left limbs (the right mirrors half a cycle later).
+    sh, el, wr = world(rig, "upperarm_l"), world(rig, "forearm_l"), world(rig, "hand_l")
+    ua, fa = (el - sh).normalized(), (wr - el).normalized()
+    mech["elbow"].append(math.degrees(ua.angle(fa)))
+    t = rig.pose.bones["spine_04"].matrix.to_3x3()
+    mech["shoulder"].append(_sag(el - sh, t.col[2].normalized(), t.col[1].normalized()))
+    hp, kn, an = world(rig, "thigh_l"), world(rig, "calf_l"), world(rig, "foot_l")
+    mech["thigh"].append(_sag(kn - hp, fwd, up))
+    mech["knee"].append(math.degrees((kn - hp).normalized().angle((an - kn).normalized())))
+    hand = (world(rig, "hand_l") + world(rig, "hand_l", tail=True)) / 2
+    mech["hand_up"].append((hand.z - sh.z) * 100)
+    mech["hand_back"].append((hand - ph).dot(-fwd) * 100)
+    # Foot angle at the left touch-down (frame 0): toes up (+) or down (-) against flat.
+    if f == 0:
+        ball, ankle = world(rig, "toe_l"), world(rig, "foot_l")
+        v = ball - ankle
+        rest = Vector(J["ball_l"]) - Vector(J["ankle_l"])
+        pitch = math.degrees(math.atan2(v.z, math.hypot(v.x, v.y))) - math.degrees(math.atan2(rest.z, math.hypot(rest.x, rest.y)))
+        mech["strike"].append(pitch)
+
+
+def measure_stance(rig, stance, cm) -> dict:
+    hip = (world(rig, "thigh_l") + world(rig, "thigh_r")) / 2
+    neck = world(rig, "neck_01")
+    v = neck - world(rig, "pelvis")
+    out = {"hip": hip.z, "trunk": math.degrees(math.atan2(v.z, math.hypot(v.x, v.y)))}
+    face = rig.pose.bones["head"].matrix.to_3x3().col[2]
+    out["eyes"] = math.degrees(math.atan2(face.z, math.hypot(face.x, face.y)))
+    hands = HAND_SUPPORT.get(stance, [])
+    if hands:
+        feet = (world(rig, "toe_l") + world(rig, "toe_r") + world(rig, "foot_l") + world(rig, "foot_r")) / 4
+        hand = sum((world(rig, f"hand_{s}") for s in hands), Vector()) / len(hands)
+        a, b = Vector((feet.x, feet.y)), Vector((hand.x, hand.y))
+        out["load"] = (Vector((cm.x, cm.y)) - a).dot(b - a) / (b - a).length_squared
+    return out
+
+
+def stance_gates(clip, m) -> dict:
+    tgt = STANCE_TARGETS.get(clip.get("stance"))
+    if not m:
+        return {}
+    out = {"stance": {k: round(v, 2) for k, v in m.items()}}
+    if tgt:
+        fails = [k for k, (lo, hi) in tgt.items() if k in m and not lo <= m[k] <= hi]
+        if fails:
+            out["mech_fail"] = fails
+    return out
+
+
+def mech_gates(clip, mech) -> dict:
+    tgt = MECH_TARGETS.get(clip["name"])
+    if not tgt:
+        return {}
+    ptp = lambda xs: max(xs) - min(xs)  # noqa: E731
+    rel = [a - b for a, b in zip(mech["tyaw"], mech["pyaw"])]
+    m = {
+        "lean": sum(mech["lean"]) / len(mech["lean"]),
+        "pelvis_v": ptp(mech["pz"]) * 100,
+        "pelvis_x": ptp(mech["px"]) * 100,
+        "pelvis_rot": ptp(mech["pyaw"]),
+        "torso_rot": ptp(rel),
+        "elbow_min": min(mech["elbow"]),
+        "elbow_max": max(mech["elbow"]),
+        "shoulder": ptp(mech["shoulder"]),
+        "knee_drive": max(mech["thigh"]),
+        "heel_rec": max(mech["knee"]),
+        "strike": mech["strike"][0] if mech["strike"] else 0.0,
+        "hand_front": max(mech["hand_up"]),
+        "hand_back": max(mech["hand_back"]),
+    }
+    fails = []
+    for k, (lo, hi) in tgt.items():
+        if k == "elbow":
+            if m["elbow_min"] < lo or m["elbow_max"] > hi:
+                fails.append(k)
+        elif not lo <= m[k] <= hi:
+            fails.append(k)
+    out = {"mech": {k: round(v, 1) for k, v in m.items()}}
+    if fails:
+        out["mech_fail"] = fails
+    return out
+
+
 def bake(rig, c, clip):
     """Pose every frame with IK live, record each bone's resulting local
     transform, gate it, and write an FK-only action."""
@@ -160,6 +316,8 @@ def bake(rig, c, clip):
     clearance = math.inf
     com_margin = math.inf
     reach = 0.0  # worst distance between an IK target and where the limb got to
+    stance_metrics = {}
+    mech = {k: [] for k in ("lean", "pz", "px", "pyaw", "tyaw", "elbow", "shoulder", "thigh", "knee", "hand_up", "hand_back", "strike")}
     for f in range(frames + 1):
         apply_pose(rig, c, clip["pose"](f))
         bpy.context.view_layer.update()
@@ -170,24 +328,31 @@ def bake(rig, c, clip):
         samples.append(local)
         if f < frames:
             for s in "lr":
-                ball_track[s].append(world(rig, f"toe_{s}").copy())
+                ball_track[s].append(contact_point(rig, s))
+            if clip["kind"] == "locomotion":
+                measure(rig, mech, f, clip)
             for s in "lr":
                 reach = max(reach, (world(rig, f"foot_{s}") - c.foot[s].location).length)
             clearance = min(clearance, (world(rig, "foot_l") - world(rig, "foot_r")).length, (world(rig, "calf_l") - world(rig, "calf_r")).length)
             if clip["kind"] == "stance":
                 cm = com(rig)
                 com_margin = min(com_margin, inside_margin((cm.x, cm.y), support(rig, HAND_SUPPORT.get(clip.get("stance"), []))))
+                if f == 0:
+                    stance_metrics = measure_stance(rig, clip.get("stance"), cm)
 
     # Foot slide: while planted, a foot's ball plus the distance the body
     # travels should stay put (in-place clips: the ground moves under us).
     dx, dy = clip["dir"]
-    step = Vector((dx, dy, 0)) * clip["speed"] / FPS
+    heading = Vector((dx, dy, 0))
+    travel = clip.get("travel") or (lambda f: 0.0)
     slide = 0.0
     for s in "lr":
         for a, b in clip["contacts"][s]:
             end = b if b > a else b + frames  # a contact can wrap past the loop point
-            span = range(a, end)
-            pts = [ball_track[s][f % frames] + step * f for f in span]
+            span = range(a, min(end, frames if not clip["loop"] else end))
+            if not span:
+                continue
+            pts = [ball_track[s][f % frames] + heading * travel(f) for f in span]
             mean = sum(pts, Vector()) / len(pts)
             slide = max(slide, max((p - mean).length for p in pts))
     # Loop continuity: frame N against frame 0.
@@ -208,7 +373,9 @@ def bake(rig, c, clip):
     rig.animation_data_create()
     rig.animation_data.action = act
     prev = {}
-    last = frames if clip["loop"] else frames - 1
+    # Loops key their first frame again at the end; transitions key their
+    # last pose so they land exactly on the clip they hand over to.
+    last = frames
     for f in range(last + 1):
         src = samples[0] if (clip["loop"] and f == frames) else samples[f]
         for pb in rig.pose.bones:
@@ -226,13 +393,21 @@ def bake(rig, c, clip):
     for con, m in mutes:
         con.mute = m
     gates = {
+        **mech_gates(clip, mech),
+        **stance_gates(clip, stance_metrics),
         "slide_cm": round(slide * 100, 2),
         "loop_deg": round(loop_err, 2),
         "clear_cm": round(clearance * 100, 1),
         "com_cm": None if com_margin == math.inf else round(com_margin * 100, 1),
         "reach_cm": round(reach * 100, 2),
     }
-    gates["pass"] = gates["slide_cm"] <= SLIDE_MAX * 100 and gates["loop_deg"] <= LOOP_MAX and gates["clear_cm"] >= CLEAR_MIN * 100 and (gates["com_cm"] is None or gates["com_cm"] >= COM_MARGIN * 100)
+    gates["pass"] = (
+        gates["slide_cm"] <= SLIDE_MAX * 100
+        and gates["loop_deg"] <= LOOP_MAX
+        and gates["clear_cm"] >= CLEAR_MIN * 100
+        and (gates["com_cm"] is None or gates["com_cm"] >= COM_MARGIN * 100)
+        and not gates.get("mech_fail")
+    )
     return act, gates
 
 
@@ -279,6 +454,10 @@ def main():
             "contacts": clip["contacts"],
             "gates": gates,
         }
+        if clip["kind"] == "transition":
+            # Root motion: meters travelled along `dir` by each frame (the
+            # clip itself plays in place), and the clips it joins.
+            meta["clips"][clip["name"]].update({"travel": [round(clip["travel"](f), 4) for f in range(clip["frames"] + 1)], "from": clip["from"], "to": clip["to"]})
         print(f"{clip['name']:20s} {gates}")
 
     # Export the armature and the clips (the mesh lives in player.glb).

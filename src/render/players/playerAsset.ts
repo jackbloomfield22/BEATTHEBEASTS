@@ -4,6 +4,10 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import { createPlayerMaterial, setPlayerLook, type PlayerLook } from './playerMaterial';
 import { bodyShape, type BodyShape } from './bodyShape';
 import { loadGlyphAtlas } from './glyphAtlas';
+import type { Variety } from './variety';
+
+/** Bones whose rest position variety.ts scales: upperarm (shoulder width), forearm and hand (arm length). */
+const PROPORTION_BONES = ['upperarm_l', 'upperarm_r', 'forearm_l', 'forearm_r', 'hand_l', 'hand_r'];
 
 // The player asset (tools/blender/build_character.py → public/assets/
 // characters/player.glb): one armature and three LOD skinned meshes sharing
@@ -11,8 +15,17 @@ import { loadGlyphAtlas } from './glyphAtlas';
 // morph weights; geometry is shared.
 
 export const PLAYER_URL = `${import.meta.env.BASE_URL}assets/characters/player.glb`;
-/** Screen-space switch points (camera distance in m at the default 40° lens) for LOD 1 and 2. */
-export const LOD_DISTANCES = [0, 22, 55];
+/**
+ * LOD switch points by the player's height on screen, in render-target pixels:
+ * High (~25k triangles) above 240 px, Medium (~12k) above 64 px, Low (~3.6k)
+ * below. The facemask bars and fingers the High LOD adds are under a pixel
+ * below ~240 px; from the broadcast camera (~50-70 px a player at 1080p) all
+ * 22 draw Medium or Low. By screen size rather than distance, a zoomed lens,
+ * a small window or a lower resolution scale all pick the right detail.
+ */
+export const LOD_SCREEN_PX = [240, 64] as const;
+const BASE_HEIGHT_M = 1.88;
+const _camPos = new THREE.Vector3();
 
 export interface PlayerAsset {
   scene: THREE.Group;
@@ -67,7 +80,10 @@ export class Player {
   readonly material: THREE.MeshStandardMaterial;
   readonly bones = new Map<string, THREE.Bone>();
   shape: BodyShape;
+  variety: Variety | null = null;
   private lod = -1;
+  /** Rest positions of the bones variety.ts re-proportions. */
+  private readonly restPos = new Map<string, THREE.Vector3>();
 
   constructor(asset: PlayerAsset, opts: PlayerOptions) {
     this.root = cloneSkinned(asset.scene);
@@ -92,13 +108,20 @@ export class Player {
     this.shadowProxy.receiveShadow = false;
     this.shadowProxy.renderOrder = -1;
     low.parent!.add(this.shadowProxy);
+    for (const n of PROPORTION_BONES) {
+      const b = this.bones.get(n);
+      if (b) this.restPos.set(n, b.position.clone());
+    }
     this.shape = bodyShape(opts.heightM, opts.weightKg);
+    this.variety = opts.variety ?? null;
     this.applyShape();
     this.setLod(0);
   }
 
   setLook(look: PlayerLook): void {
     setPlayerLook(this.material, look);
+    this.variety = look.variety ?? null;
+    this.applyShape();
   }
 
   setBody(heightM: number, weightKg: number): void {
@@ -108,14 +131,25 @@ export class Player {
 
   private applyShape(): void {
     const s = this.shape;
+    const v = this.variety;
     this.root.scale.setScalar(s.scale);
+    const weights: Record<string, number> = { heavy: s.heavy, lean: s.lean, belly: s.belly, ...(v?.morph ?? {}) };
     for (const m of [...this.lods, this.shadowProxy]) {
       const dict = m.morphTargetDictionary;
       const inf = m.morphTargetInfluences;
       if (!dict || !inf) continue;
-      inf[dict.heavy!] = s.heavy;
-      inf[dict.lean!] = s.lean;
-      inf[dict.belly!] = s.belly;
+      for (const [k, w] of Object.entries(weights)) if (dict[k] !== undefined) inf[dict[k]!] = w;
+    }
+    // Proportions (clips don't key these bones' positions; library.ts):
+    // shoulder width moves the arm out along the clavicle, arm length
+    // stretches the upper arm and forearm (each bone's position is its
+    // parent's length along the parent's axis).
+    for (const [n, rest] of this.restPos) {
+      const b = this.bones.get(n)!;
+      b.position.copy(rest);
+      if (!v) continue;
+      if (n.startsWith('upperarm_')) b.position.multiplyScalar(1 + v.shoulder / Math.max(rest.length(), 1e-3));
+      else b.position.multiplyScalar(v.arm);
     }
   }
 
@@ -126,9 +160,24 @@ export class Player {
     this.lods.forEach((m, k) => (m.visible = k === i));
   }
 
-  /** Pick the LOD from the camera distance (bias > 1 prefers lower detail, per quality tier). */
-  updateLod(cameraPos: THREE.Vector3, bias = 1): void {
-    const d = cameraPos.distanceTo(this.root.position) * bias;
-    this.setLod(d > LOD_DISTANCES[2]! ? 2 : d > LOD_DISTANCES[1]! ? 1 : 0);
+  /**
+   * Pick the LOD from the player's height on screen. `viewportPx` is the
+   * render target's height in pixels; bias > 1 prefers lower detail.
+   */
+  updateLod(camera: THREE.Camera, viewportPx: number, bias = 1): void {
+    this.setLod(lodForScreenHeight(screenHeightPx(camera, this.root.position, BASE_HEIGHT_M * this.shape.scale, viewportPx) / bias));
   }
+}
+
+/** Height on screen (px) of an upright object `heightM` tall standing at `pos`. */
+export function screenHeightPx(camera: THREE.Camera, pos: THREE.Vector3, heightM: number, viewportPx: number): number {
+  const d = Math.max(0.1, camera.getWorldPosition(_camPos).distanceTo(pos));
+  const cam = camera as THREE.PerspectiveCamera;
+  if (!cam.isPerspectiveCamera) return viewportPx;
+  const view = 2 * d * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2) / cam.zoom;
+  return (heightM / view) * viewportPx;
+}
+
+export function lodForScreenHeight(px: number): number {
+  return px >= LOD_SCREEN_PX[0] ? 0 : px >= LOD_SCREEN_PX[1] ? 1 : 2;
 }
