@@ -93,9 +93,21 @@ Built in the order you asked, so the parts you can't test here didn't wait on th
 **5. The M5 exit (TECH_PLAN §17)**
 - **Scripted browser plays** (`e2e/practice.spec.ts`, real keyboard input with the sim stepped tick by tick so the play replays exactly): snap, throw, catch, run, tackle and the result card; a tackle and the next snap at the new spot; a 75-yard catch-and-run touchdown that ends the series.
 - **The determinism hash matches Node and the browser:** 24 fixed plays (every play vs every coverage, AI and a scripted user). Node pins the hashes in `tests/golden/sim-hashes.json`, and the browser reproduces them bit for bit.
-- `npm run check` passes (409 tests), and the browser suite passes. One presets test timed out once while Blender renders were running alongside it, then passed on its own.
+- `npm run check` passes (409 tests), and the browser suite passes (16 tests). One presets test timed out once while Blender renders were running alongside it, then passed on its own.
 
-**Critique:** follows with the Practice Field screenshots (rendering now).
+**Critique** (`docs/screenshots/m5/`: `practice-*` from the play-through at Golden Hour on High, `contact-*` from Blender, `lab-*` close-ups)
+- **What works:**
+  - The play reads as a football play from the broadcast camera: the formation at the line with numbered icons over the receivers, the blue line of scrimmage and the yellow line to gain, the pocket forming as the rush engages, the pull-up while the ball is in the air, and a result card with names ("Complete to Brent Jones, +5 yds. Tackled by Taylor at the Own 30").
+  - The play call over the live stadium looks like a game menu, and the art is the sim's own routes.
+  - Tackles are the most convincing new motion: the tackler's wrap and drive into the turf, the carrier going over through the ragdoll, both lying where they fell, and both getting up after the whistle.
+  - The QB's drop and throw read in silhouette at game distance (the release frame is unmistakably a throw).
+- **What's weak:**
+  1. The pass rush is a scrum: linemen and rushers close together in stances and gaits, with no hands-on engagement pose. That's the M6 line-play set.
+  2. The high sideline angle on a long run frames the carrier well now, but the switch to it is a big camera move: from broadcast to across the field in about a second. It may feel abrupt in play; I'd like your read before tuning it.
+  3. The ball is small at broadcast distance. It's there (in the hands, on the throw, in flight) but hard to follow on a deep pass. A subtle trail or a larger read scale is an option for M7.
+  4. The ragdoll's fall is short and loose in the first frames (a knee can fold oddly for a few frames before he settles); the lying clips then take over cleanly.
+  5. Close up, the forearms are better (the ridge and the flexor mass catch light) but still simpler than the rest of the body, and the skin wedge at the sleeve hem is still there.
+- **Pads, jersey, gloves:** the pad caps now have a flat top and an edge, which reads as a pad rather than a float. The knit shows within a couple of metres and disappears cleanly beyond that. The glove cuff reads as a band at mid distance.
 
 **Needs you**
 - **The perf re-test**, on this preview (it includes M4.5): the Practice Field from the broadcast camera during a play is now the real gate (`?perf` shows the numbers). If it misses 60 at Medium, the perf screen's internal resolution and draw calls will tell me what to cut next.
@@ -107,6 +119,8 @@ Built in the order you asked, so the parts you can't test here didn't wait on th
 - The QB can't hand off or run a designed QB run; he can scramble.
 - OL and DL engagements use the stances and gaits (the line-play clips are M6).
 - No sound for the play yet (M7).
+
+**Next:** M6 Full game, after your perf re-test and play test.
 
 ### M4.5 Character and animation quality pass (built, PR #6 open)
 
@@ -192,7 +206,7 @@ Your seven priorities, in order, plus the M4 weak spots and the ratings stints (
 - Close-up items 1–5 above.
 - The foot-lock residual from M4 still applies mid-blend. Transitions lock from their own contacts.
 
-**Next:** M5 Core play, after your review and the perf re-test.
+**Next:** M5 Core play (built; see above).
 
 ### M4 Characters and animation (merged, PR #5)
 
