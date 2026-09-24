@@ -24,7 +24,8 @@ import {
 } from '@/sim';
 import { flyFor, solveLaunch } from '@/sim/ball';
 import { steer } from '@/sim/movement';
-import { bufferedMove, cutWeight, jukeSide } from '@/sim/play';
+import { bufferedMove, cutWeight, jukeSide, outAt } from '@/sim/play';
+import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT } from '@/sim/types';
 import { applyImpulse, startMove, tickMoves } from '@/sim/contact';
 import { simPlayer } from '@/sim/roster';
 
@@ -317,5 +318,112 @@ describe('sim: carrier feel (M5.5)', () => {
     expect(Math.hypot(cut.x, cut.y) / v).toBeCloseTo(0.77, 1);
     const back = cutWeight(c, { x: -v, y: 0 });
     expect(Math.hypot(back.x, back.y) / v).toBeCloseTo(0.6, 2);
+  });
+});
+
+describe('sim: the field has edges (M5.5)', () => {
+  // Every player within a step of the field while the play is live, and no
+  // live ball carrier past an end line: AI plays everywhere on the field,
+  // and a user who runs for the sideline and the back of the end zone.
+  const bounds = (s: PlayState) => {
+    for (const a of s.agents) {
+      expect(Math.abs(a.pos.y)).toBeLessThanOrEqual(FIELD_HALF_W + STEP_OUT + 1e-6);
+      expect(a.pos.x).toBeLessThanOrEqual(END_X + STEP_OUT + 1e-6);
+      expect(a.pos.x).toBeGreaterThanOrEqual(BACK_X - STEP_OUT - 1e-6);
+    }
+    if (s.carrier >= 0) {
+      const c = s.agents[s.carrier]!;
+      expect(c.pos.x).toBeLessThanOrEqual(END_X);
+      expect(c.pos.x).toBeGreaterThanOrEqual(BACK_X);
+    }
+  };
+  const live = (s: PlayState, inputAt: (s: PlayState) => InputFrame) => {
+    for (let k = 0; k < 60 * 30 && !s.result; k++) {
+      stepPlay(s, inputAt(s));
+      if (!s.result) bounds(s);
+    }
+    expect(s.result).toBeDefined();
+    return s;
+  };
+  const at = (seed: number, los: number, play = PLAYS[seed % PLAYS.length]!, def = DEF_CALLS[seed % DEF_CALLS.length]!, user = false) =>
+    createPlay({ seed, offense: rosters.offense, defense: rosters.defense, play, def, los, ballY: ((seed % 3) - 1) * 6, toGo: 10, user });
+
+  it('AI plays from their own goal line to the opponent 5 stay on the field', () => {
+    for (let k = 0; k < 60; k++) live(at(700 + k, [5, 35, 60, 85, 95][k % 5]!), () => NEUTRAL);
+  });
+
+  it('a user carrier who runs for the sideline or the end line is dead there, never past it', () => {
+    for (let k = 0; k < 30; k++) {
+      const side = k % 2 ? 1 : -1;
+      const s = live(at(900 + k, [30, 70, 92][k % 3]!, PLAYS[k % PLAYS.length], DEF_CALLS[k % DEF_CALLS.length], true), (st) =>
+        input({ snap: st.tick === 0, throwHeld: st.tick >= 70 && st.tick < 74 ? 1 : 0, move: st.phase === 'carrier' ? { x: k % 3 === 2 ? 1 : 0.3, y: k % 3 === 2 ? 0 : side } : { x: 0, y: 0 }, sprint: true }),
+      );
+      const r = s.result!;
+      if (r.reason === 'outOfBounds') {
+        const ev = s.events.find((e) => e.type === 'outOfBounds')!;
+        // Spotted where he went out: on the line, within a foot.
+        expect(Math.abs(Math.abs(ev.at!.y) - FIELD_HALF_W) < OOB_FOOT + 0.05 || Math.abs(ev.at!.x - END_X) < OOB_FOOT + 0.05).toBe(true);
+        expect(r.spot).toBeLessThanOrEqual(ev.at!.x + 1e-6);
+      }
+    }
+  });
+
+  /** A play with the user's receiver already carrying the ball at a spot, running a velocity. */
+  const carrying = (pos: { x: number; y: number }, vel: { x: number; y: number }) => {
+    const s = at(4, 80, PLAYS[0], DEF_CALLS[0], true);
+    stepPlay(s, input({ snap: true }));
+    const c = s.agents[s.icons[0]!]!;
+    for (const i of s.def) s.agents[i]!.down = true; // nobody to tackle him
+    c.pos = { ...pos };
+    c.vel = { ...vel };
+    c.hist.push({ pos: { ...pos }, vel: { ...vel } });
+    s.ball.mode = 'held';
+    s.ball.holder = c.i;
+    s.carrier = c.i;
+    s.phase = 'carrier';
+    const n = Math.hypot(vel.x, vel.y);
+    for (let k = 0; k < 120 && !s.result; k++) stepPlay(s, input({ move: { x: vel.x / n, y: vel.y / n }, sprint: true }));
+    return s;
+  };
+
+  it('a carrier who steps out before the pylon does not score', () => {
+    // Two yards out, a foot from the sideline, angling out: he's out before the goal line.
+    const s = carrying({ x: 98, y: FIELD_HALF_W - 0.5 }, { x: 6, y: 2.5 });
+    expect(s.result!.touchdown).toBe(false);
+    expect(s.result!.reason).toBe('outOfBounds');
+    expect(s.result!.spot).toBeLessThan(GOAL_X);
+  });
+
+  it('a carrier who crosses the goal line in bounds, then goes out, scores', () => {
+    const s = carrying({ x: 99.6, y: FIELD_HALF_W - 0.8 }, { x: 7, y: 1 });
+    expect(s.result!.touchdown).toBe(true);
+    expect(s.events.find((e) => e.type === 'touchdown')!.at!.x).toBeCloseTo(GOAL_X, 1);
+  });
+
+  it('a carrier already out the back of the end zone does not score', () => {
+    expect(outAt({ x: 109.7, y: 0 }, { x: 110.1, y: 0 })).not.toBeNull();
+    // Holding the ball past the end line (out of bounds) is never a touchdown, even though he's past the goal line.
+    const s = carrying({ x: END_X + 0.3, y: 0 }, { x: 2, y: 0 });
+    expect(s.result!.touchdown).toBe(false);
+    // Nor is one who's already out over the sideline when he reaches the goal line.
+    const t = carrying({ x: 99.9, y: FIELD_HALF_W + 0.1 }, { x: 5, y: 0 });
+    expect(t.result!.touchdown).toBe(false);
+  });
+
+  it('a catch behind the end line is incomplete, never a touchdown', () => {
+    let deep = 0;
+    for (let k = 0; k < 80; k++) {
+      const s = at(3000 + k, 97, playById('trips-four-verts'), DEF_CALLS[k % DEF_CALLS.length], true);
+      live(s, (st) => input({ snap: st.tick === 0, throwHeld: st.tick >= 80 && st.tick < 104 ? 1 + (k % 4) : 0, aim: { x: 1, y: 0.5 } }));
+      const td = s.events.find((e) => e.type === 'touchdown');
+      if (td) expect(td.at!.x).toBeLessThanOrEqual(END_X);
+      const out = s.events.find((e) => e.type === 'catchOutOfBounds');
+      if (out && out.at!.x > END_X - OOB_FOOT) {
+        deep++;
+        expect(s.result!.reason).toBe('incomplete');
+        expect(s.result!.touchdown).toBe(false);
+      }
+    }
+    expect(deep).toBeGreaterThan(0);
   });
 });

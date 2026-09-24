@@ -9,6 +9,17 @@ import type { Effects } from './effects';
 export const TICK = 1 / 60;
 export const FIELD_HALF_W = 160 / 6; // 26.667 yd
 export const GOAL_X = 100;
+/** The end lines: the back of each end zone (10 yd deep). Past them is out of bounds. */
+export const END_X = GOAL_X + 10;
+export const BACK_X = -10;
+/**
+ * A carrier is out the moment a foot touches the line: his center within
+ * this far of it (half a stride's foot placement, ~0.2 yd). The white line
+ * itself is out of bounds.
+ */
+export const OOB_FOOT = 0.2;
+/** Anyone else may drift at most a step past a line while the play is live (then he's held there). */
+export const STEP_OUT = 1;
 
 export type Side = 'off' | 'def';
 
@@ -113,7 +124,7 @@ export interface Ball {
 
 export type Phase = 'presnap' | 'snap' | 'dropback' | 'pocket' | 'air' | 'carrier' | 'loose' | 'dead';
 
-export type WhistleReason = 'tackle' | 'sack' | 'incomplete' | 'outOfBounds' | 'touchdown' | 'interceptionDown' | 'safety' | 'fumbleOut' | 'timeout';
+export type WhistleReason = 'tackle' | 'sack' | 'incomplete' | 'outOfBounds' | 'touchdown' | 'touchback' | 'interceptionDown' | 'safety' | 'fumbleOut' | 'timeout';
 
 export interface SimEvent {
   t: number;
@@ -137,6 +148,7 @@ export interface SimEvent {
     | 'recovery'
     | 'touchdown'
     | 'outOfBounds'
+    | 'catchOutOfBounds'
     | 'whistle';
   /** Agents involved (actor first). */
   who?: number[];

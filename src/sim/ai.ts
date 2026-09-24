@@ -10,8 +10,11 @@ import { arrive, CRUISE, seen, steer } from './movement';
 import { maxThrowSpeed, releaseTime } from './effects';
 import { lead } from './passing';
 import { ROUTES, ZONES, type OffPlay } from './plays';
-import { clampY, DIFFICULTY, zoneSpot, type PlayState } from './state';
-import { FIELD_HALF_W, GOAL_X, type Agent } from './types';
+import { DIFFICULTY, zoneSpot, type PlayState } from './state';
+import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, type Agent } from './types';
+
+/** Room a route keeps from the sideline and the end line (yd): a catchable spot, in bounds. */
+const ROUTE_ROOM = 1.5;
 import { dist, len, norm, sub, v2, type V2 } from './vec';
 
 const latency = (s: PlayState) => DIFFICULTY[s.setup.difficulty ?? 'pro'].latency;
@@ -42,7 +45,10 @@ export function setRoutes(s: PlayState): void {
     const as = s.setup.play.assign[a.slot as keyof OffPlay['assign']];
     if (as.kind !== 'route') continue;
     const out = a.pos.y >= by ? 1 : -1;
-    const pts = ROUTES[as.route].map((q) => v2(a.pos.x + q.d, clampY(a.pos.y + q.o * out)));
+    // Every point inside the field with room to catch: 1.5 yd off the
+    // sideline (a route near the boundary stems back inside) and short of
+    // the end line.
+    const pts = ROUTES[as.route].map((q) => v2(Math.min(END_X - ROUTE_ROOM, a.pos.x + q.d), Math.max(-FIELD_HALF_W + ROUTE_ROOM, Math.min(FIELD_HALF_W - ROUTE_ROOM, a.pos.y + q.o * out))));
     a.route = { pts, sit: ROUTES[as.route].map((q) => !!q.sit), idx: 0 };
   }
 }
@@ -53,6 +59,8 @@ export function setRoutes(s: PlayState): void {
  * up the boundary; they don't run out of bounds).
  */
 export function continueDir(at: V2, p0: V2, p1: V2): V2 {
+  // At the back of the end zone: settle along the end line, working back inside.
+  if (at.x > END_X - ROUTE_ROOM - 0.5) return { x: 0, y: -Math.sign(at.y) * 0.35 };
   const dir = norm(sub(p1, p0));
   const room = FIELD_HALF_W - Math.abs(at.y);
   if (room < 4 && Math.sign(dir.y) === Math.sign(at.y)) {
@@ -427,6 +435,9 @@ export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
     }
     const side = c.pos.y + dir.y * 5;
     if (Math.abs(side) > FIELD_HALF_W - 1.5) score -= 3;
+    // Never through the line: a lane that runs him out within a couple of strides is out.
+    if (Math.abs(c.pos.y + dir.y * 2) > FIELD_HALF_W - 0.6) score -= 8;
+    if (dir.x * attack > 0 && c.pos.x + dir.x * 2 > END_X) score -= 8;
     // Reads aren't perfect: a lower Vision misjudges lanes (held per lane for a beat).
     score += ((c.mem[`lane${k}`] as number | undefined) ?? 0) * (1.6 - 1.3 * c.fx.a('vision'));
     if (score > bestScore) {
@@ -435,6 +446,15 @@ export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
     }
   }
   void goalX;
+  // Pinned on the sideline with a tackler closing: step out rather than take the hit.
+  const room = FIELD_HALF_W - Math.abs(c.pos.y);
+  if (room < 2 && (c.pos.x - s.setup.los) * attack > 2) {
+    for (const i of attack > 0 ? s.def : s.off) {
+      const d = s.agents[i]!;
+      if (d.down || blockOf(s, i)) continue;
+      if (dist(d.pos, c.pos) < 2.2) return { x: attack * c.fx.vmax * 0.4, y: Math.sign(c.pos.y) * c.fx.vmax * 0.9 };
+    }
+  }
   return { x: best.x * c.fx.vmax, y: best.y * c.fx.vmax };
 }
 
@@ -496,6 +516,7 @@ export function pursue(s: PlayState, d: Agent, t: Agent): void {
   const room = FIELD_HALF_W - Math.abs(t.pos.y);
   const inside = Math.sign(-t.pos.y) * 0.6 * Math.max(0, Math.min(1, (room - 1) / 2));
   aim.y = Math.max(-FIELD_HALF_W + 0.3, Math.min(FIELD_HALF_W - 0.3, aim.y + inside));
+  aim.x = Math.max(BACK_X + 0.3, Math.min(END_X - 0.3, aim.x));
   const dir = norm(sub(aim, d.pos));
   steer(d, { x: dir.x * d.fx.vmax, y: dir.y * d.fx.vmax });
 }

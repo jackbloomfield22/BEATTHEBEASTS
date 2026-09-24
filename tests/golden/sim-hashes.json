@@ -7,8 +7,8 @@
  },
  {
   "key": "trips-stick/cover3/4242/user",
-  "hash": 1358901518,
-  "ticks": 276,
+  "hash": 64653983,
+  "ticks": 282,
   "reason": "incomplete"
  },
  {
@@ -19,7 +19,7 @@
  },
  {
   "key": "trips-stick/cover1/4242/user",
-  "hash": 275846655,
+  "hash": 1849739428,
   "ticks": 282,
   "reason": "incomplete"
  },
@@ -31,43 +31,43 @@
  },
  {
   "key": "trips-stick/cover2/4242/user",
-  "hash": 2217711648,
-  "ticks": 276,
+  "hash": 3895143354,
+  "ticks": 282,
   "reason": "incomplete"
  },
  {
   "key": "trips-four-verts/cover3/11",
-  "hash": 3876307324,
+  "hash": 4173747417,
   "ticks": 372,
   "reason": "tackle"
  },
  {
   "key": "trips-four-verts/cover3/4242/user",
-  "hash": 621459843,
+  "hash": 468617516,
   "ticks": 292,
   "reason": "tackle"
  },
  {
   "key": "trips-four-verts/cover1/11",
-  "hash": 2088919519,
+  "hash": 508358481,
   "ticks": 310,
   "reason": "tackle"
  },
  {
   "key": "trips-four-verts/cover1/4242/user",
-  "hash": 714996699,
+  "hash": 4142769498,
   "ticks": 292,
   "reason": "tackle"
  },
  {
   "key": "trips-four-verts/cover2/11",
-  "hash": 3723149136,
+  "hash": 1498479961,
   "ticks": 332,
   "reason": "incomplete"
  },
  {
   "key": "trips-four-verts/cover2/4242/user",
-  "hash": 4111540312,
+  "hash": 582317777,
   "ticks": 293,
   "reason": "tackle"
  },
@@ -109,38 +109,38 @@
  },
  {
   "key": "doubles-mesh/cover3/11",
-  "hash": 1967110103,
-  "ticks": 232,
+  "hash": 3417893626,
+  "ticks": 233,
   "reason": "tackle"
  },
  {
   "key": "doubles-mesh/cover3/4242/user",
-  "hash": 1998564309,
-  "ticks": 272,
+  "hash": 4046389530,
+  "ticks": 273,
   "reason": "tackle"
  },
  {
   "key": "doubles-mesh/cover1/11",
-  "hash": 4159446905,
-  "ticks": 230,
+  "hash": 466185389,
+  "ticks": 231,
   "reason": "tackle"
  },
  {
   "key": "doubles-mesh/cover1/4242/user",
-  "hash": 1580969369,
+  "hash": 273709213,
   "ticks": 222,
   "reason": "tackle"
  },
  {
   "key": "doubles-mesh/cover2/11",
-  "hash": 3976451031,
-  "ticks": 277,
+  "hash": 830746344,
+  "ticks": 263,
   "reason": "tackle"
  },
  {
   "key": "doubles-mesh/cover2/4242/user",
-  "hash": 319421465,
-  "ticks": 225,
+  "hash": 1558282166,
+  "ticks": 227,
   "reason": "tackle"
  }
 ]

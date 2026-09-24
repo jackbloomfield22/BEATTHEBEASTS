@@ -31,7 +31,7 @@ import { remember, steer } from './movement';
 import { planThrow, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import type { PlayState } from './state';
-import { FIELD_HALF_W, GOAL_X, TICK, type Agent, type Move, type PlayResult, type WhistleReason } from './types';
+import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type PlayResult, type WhistleReason } from './types';
 import { dist, len, norm, sub, v2, type V2 } from './vec';
 
 /** Seconds the play keeps animating after the whistle. */
@@ -473,13 +473,18 @@ function ballStep(s: PlayState): void {
           if (s.pass) s.pass.intercepted = true;
           s.events.push({ t: s.t, type: 'interception', who: [who], at: { x: a.pos.x, y: a.pos.y } });
         }
-        // A catch out of bounds is an incompletion (no toe-tap unless possession: GDD §9.2).
-        if (Math.abs(a.pos.y) > FIELD_HALF_W) {
-          const toe = out === 'catch' && s.catchType === 'possession' && Math.abs(a.pos.y) < FIELD_HALF_W + 0.4;
-          if (!toe) {
-            if (s.pass) s.pass.complete = false;
-            whistle(s, 'incomplete', s.setup.los, true);
+        // A catch out of bounds is an incompletion (no toe-tap unless
+        // possession: GDD §9.2), and so is one behind an end line.
+        const wide = Math.abs(a.pos.y) > FIELD_HALF_W - OOB_FOOT;
+        const toe = wide && out === 'catch' && s.catchType === 'possession' && Math.abs(a.pos.y) < FIELD_HALF_W + 0.4;
+        const deep = a.pos.x > END_X - OOB_FOOT || a.pos.x < BACK_X + OOB_FOOT;
+        if ((wide && !toe) || deep) {
+          if (s.pass) {
+            s.pass.complete = false;
+            s.pass.intercepted = false;
           }
+          s.events.push({ t: s.t, type: 'catchOutOfBounds', who: [who], at: { x: a.pos.x, y: a.pos.y } });
+          whistle(s, 'incomplete', s.setup.los, true);
         }
         return;
       }
@@ -689,25 +694,92 @@ export function stepPlay(s: PlayState, inp: InputFrame): void {
   separate(s);
   ballStep(s);
   contactStep(s);
-  // Forward progress, the sideline, the goal line.
-  if (s.carrier >= 0 && !s.result) {
-    const c = s.agents[s.carrier]!;
-    if (c.side === 'off') s.maxX = Math.max(s.maxX, c.pos.x);
-    if (Math.abs(c.pos.y) > FIELD_HALF_W) {
-      s.events.push({ t: s.t, type: 'outOfBounds', who: [c.i], at: { ...c.pos } });
-      whistle(s, 'outOfBounds', c.side === 'off' ? Math.min(s.maxX, c.pos.x) : c.pos.x, c.side === 'off');
-    } else if (c.side === 'off' && c.pos.x >= GOAL_X) {
-      s.events.push({ t: s.t, type: 'touchdown', who: [c.i], at: { ...c.pos } });
-      whistle(s, 'touchdown', GOAL_X, true, true);
-    } else if (c.side === 'def' && c.pos.x <= 0) {
-      s.events.push({ t: s.t, type: 'touchdown', who: [c.i], at: { ...c.pos } });
-      whistle(s, 'touchdown', 0, false, true);
-    } else if (c.side === 'off' && c.slot === 'QB' && s.phase !== 'carrier' && c.pos.x <= 0) {
-      whistle(s, 'safety', 0, true);
-    }
-  }
+  keepInBounds(s);
+  // Forward progress, the lines, the goal line.
+  if (s.carrier >= 0 && !s.result) lineCheck(s, s.agents[s.carrier]!);
   if (!s.result && s.t - s.snapT > MAX_PLAY) whistle(s, 'timeout', Number.isFinite(s.maxX) ? s.maxX : s.setup.los, true);
   for (const a of s.agents) remember(a);
+}
+
+/**
+ * Fraction (0..1) of this tick's move from p0 to p1 at which the carrier's
+ * foot first touched a boundary (a sideline or an end line), or null if he's
+ * in bounds at p1. 0 if he was already touching at p0.
+ */
+export function outAt(p0: V2, p1: V2): number | null {
+  const lim = FIELD_HALF_W - OOB_FOOT;
+  const out = (p: V2) => Math.abs(p.y) > lim || p.x > END_X - OOB_FOOT || p.x < BACK_X + OOB_FOOT;
+  if (!out(p1)) return null;
+  if (out(p0)) return 0;
+  let f = 1;
+  const cross = (a: number, b: number, line: number) => {
+    if ((a - line) * (b - line) < 0) f = Math.min(f, (line - a) / (b - a));
+  };
+  cross(p0.y, p1.y, lim);
+  cross(p0.y, p1.y, -lim);
+  cross(p0.x, p1.x, END_X - OOB_FOOT);
+  cross(p0.x, p1.x, BACK_X + OOB_FOOT);
+  return f;
+}
+
+/** Fraction of the move at which he reached a goal line (x = goal, going the attack way), or null. 0 if already past it. */
+function goalAt(p0: V2, p1: V2, goal: number, attack: 1 | -1): number | null {
+  if ((p1.x - goal) * attack < 0) return null;
+  if ((p0.x - goal) * attack >= 0) return 0;
+  return (goal - p0.x) / (p1.x - p0.x);
+}
+
+/**
+ * The ball carrier and the lines, in the order he met them this tick. A
+ * score needs the ball across the goal line in bounds: if his foot touched a
+ * sideline (or he was out the back) before he reached the goal line, it's
+ * out of bounds where he went out, not a touchdown.
+ */
+function lineCheck(s: PlayState, c: Agent): void {
+  const p0 = c.hist[c.hist.length - 1]?.pos ?? c.pos;
+  const p1 = c.pos;
+  const attack: 1 | -1 = c.side === 'off' ? 1 : -1;
+  const fo = outAt(p0, p1);
+  const fg = goalAt(p0, p1, attack > 0 ? GOAL_X : 0, attack);
+  const at = (f: number) => ({ x: p0.x + (p1.x - p0.x) * f, y: p0.y + (p1.y - p0.y) * f });
+  if (fg !== null && (fo === null || fg < fo)) {
+    s.events.push({ t: s.t, type: 'touchdown', who: [c.i], at: at(fg) });
+    whistle(s, 'touchdown', attack > 0 ? GOAL_X : 0, attack > 0, true);
+    return;
+  }
+  if (c.side === 'off') s.maxX = Math.max(s.maxX, Math.min(p1.x, fo !== null ? at(fo).x : p1.x));
+  if (fo !== null) {
+    const o = at(fo);
+    s.events.push({ t: s.t, type: 'outOfBounds', who: [c.i], at: o });
+    if (c.side === 'def' && o.x > END_X - 1) whistle(s, 'touchback', GOAL_X - 20, false);
+    else if (c.side === 'off' && o.x < BACK_X + 1) whistle(s, 'safety', 0, true);
+    else whistle(s, 'outOfBounds', c.side === 'off' ? Math.min(s.maxX, o.x) : o.x, c.side === 'off');
+    return;
+  }
+  if (c.side === 'off' && c.slot === 'QB' && s.phase !== 'carrier' && p1.x <= 0) whistle(s, 'safety', 0, true);
+}
+
+/**
+ * The lines as hard limits for everyone but the ball carrier (his are the
+ * rules above): a player may drift a step past a sideline or an end line
+ * while the play is live, no further; his outward speed is taken away there.
+ */
+function keepInBounds(s: PlayState): void {
+  const yl = FIELD_HALF_W + STEP_OUT;
+  for (const a of s.agents) {
+    if (a.i === s.carrier) continue;
+    if (a.pos.y > yl || a.pos.y < -yl) {
+      a.pos.y = Math.sign(a.pos.y) * yl;
+      if (a.vel.y * a.pos.y > 0) a.vel.y = 0;
+    }
+    if (a.pos.x > END_X + STEP_OUT) {
+      a.pos.x = END_X + STEP_OUT;
+      if (a.vel.x > 0) a.vel.x = 0;
+    } else if (a.pos.x < BACK_X - STEP_OUT) {
+      a.pos.x = BACK_X - STEP_OUT;
+      if (a.vel.x < 0) a.vel.x = 0;
+    }
+  }
 }
 
 /** Run a play to its whistle with a fixed input source (headless). */
