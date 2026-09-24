@@ -35,6 +35,18 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   await page.waitForFunction(() => (window as unknown as P).__btbGameReady === true, null, { timeout: 300_000 });
   await page.evaluate(() => void ((window as unknown as P).__btbPractice.runner!.paused = true));
   await shot(page, '02-presnap');
+  // Hold Tab: every route on the field. Then the hot-route picker on receiver 4, focused on a slant.
+  await page.keyboard.down('Tab');
+  await page.waitForTimeout(400);
+  await shot(page, '02b-route-preview');
+  await page.keyboard.up('Tab');
+  await page.keyboard.press('KeyH');
+  await page.keyboard.press('Digit4');
+  await page.keyboard.press('ArrowDown');
+  await page.waitForTimeout(400);
+  await shot(page, '02c-hot-route');
+  await page.keyboard.press('KeyH');
+  await page.waitForTimeout(300);
   await page.keyboard.press('Space');
   await tick(page, 40);
   await shot(page, '03-drop');

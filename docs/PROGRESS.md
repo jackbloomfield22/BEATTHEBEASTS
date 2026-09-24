@@ -6,8 +6,10 @@
 - **M2 Ratings:** merged (PR #2 and the follow-up PR #3: traits overhaul, Throw Power, consensus check, anchor bands, the approved fixes and round 2).
 - **M3 The look:** merged (PR #4). Perf re-test passed on your M1 Pro: Medium at 100% resolution, 80–113 fps in the three menu views.
 - **M4 Characters and animation:** merged (PR #5).
-- **M4.5 Character and animation quality pass:** built on `claude/m4.5-quality`, PR #6 open. You'll merge it and do the perf re-test on the M5 preview.
-- **M5 Core play:** built on `claude/m5-core-play` (branched from M4.5, so it includes that work), PR open. A full play runs snap to whistle and the Practice Field is playable. Screenshots in `docs/screenshots/m5/`, critique below. **Needs your perf re-test and play test.**
+- **M4.5 Character and animation quality pass:** merged (PR #6).
+- **M5 Core play:** merged (PR #7), with the quick pass (pass camera, 1/2/3 catches, arrows, Q–F moves).
+- **M5.5 Game feel:** built on `claude/m5.5-game-feel`, PR open. Prompts in every phase, open receivers, the landing reticle, the tutorial, more pocket time, field boundaries, route preview and hot routes, blended transitions, latency measured, and three feel videos in `docs/screenshots/m5.5/`. **Needs your play test.**
+- **Next: M6**, which opens with the draft room (3D draft over the stadium, the video-board slot machine, the ported draft rules, the Scouting panel), with the Practice Field playing the drafted roster. The tunnel reveal and pre-game cinematics stay in M7.
 
 ## Known legacy issues (do not rebuild)
 
