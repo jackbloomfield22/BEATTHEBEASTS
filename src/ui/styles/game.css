@@ -57,7 +57,8 @@
 .catch-opt.on { transform: scale(1.1); border-color: var(--lime); color: var(--lime); background: color-mix(in srgb, var(--lime) 28%, var(--panel-strong)); box-shadow: 0 0 1.4rem color-mix(in srgb, var(--lime) 55%, transparent); animation: catch-pop .18s ease-out; }
 .catch-opt.off { opacity: .35; }
 .catch-foot { font-size: .85rem; color: var(--ink-2); }
-@keyframes catch-in { from { opacity: 0; transform: translate(-50%, .6rem); } to { opacity: 1; transform: translate(-50%, 0); } }
+/* Slides in without fading: a prompt is readable from its first frame (it answers a key press). */
+@keyframes catch-in { from { transform: translate(-50%, .6rem); } to { transform: translate(-50%, 0); } }
 @keyframes catch-pop { 0% { transform: scale(1); } 60% { transform: scale(1.18); } 100% { transform: scale(1.1); } }
 /* The carrier's cluster: placed under his feet by the render loop. */
 .carrier-hud { position: absolute; left: 0; top: 0; width: 0; height: 0; visibility: hidden; will-change: transform; }
