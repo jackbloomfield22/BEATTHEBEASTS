@@ -5,6 +5,7 @@ import type { PlayState, SimEvent } from '@/sim';
 import type { Player } from '../players/playerAsset';
 import { YARD } from '../world/constants';
 import { worldDir } from '@/game/coords';
+import { latency } from '@/game/latency';
 
 // The choreographer: which clip each player plays, from the sim's state and
 // events (TECH_PLAN §9.2). The sim decides everything; this only picks and
@@ -97,6 +98,8 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
       case 'move': {
         if (!a) break;
         const mv = e.data?.move;
+        const kind = mv === 'jukeL' || mv === 'jukeR' ? 'juke' : mv;
+        if (kind === 'juke' || kind === 'spin' || kind === 'stiffArm' || kind === 'truck' || kind === 'dive') latency.respond(kind);
         if (mv === 'jukeL') a.animator.play('juke_l', { now: true });
         else if (mv === 'jukeR') a.animator.play('juke_r', { now: true });
         else if (mv === 'spin') a.animator.play('spin', { now: true });
@@ -175,6 +178,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     const rate = Math.max(0.6, Math.min(1.8, RELEASE_FRAME / Math.max(0.05, w.at - simT)));
     if (sp * YARD < 1.6) anim.play('qb_throw', { now: true, rate });
     else anim.playOverlay('qb_throw', { rate, mask: THROW_MASK });
+    latency.respond('throwRelease');
   }
   // The catch: hands out so the secure frame meets the ball.
   if (ball.mode === 'air' && ball.target === i && b.catchFor !== ball.arrive && ball.arrive - simT <= SECURE) {
@@ -187,6 +191,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   if (i === holder && !a.down) {
     const pocket = i === s.qb && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket');
     anim.setHold(pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' ? 'ovl_protect' : 'ovl_carry_r');
+    if (a.move === 'protect') latency.respond('protect');
   } else anim.setHold(null);
   // Down without a clip that lies him down: he falls, once (a dove-and-
   // missed tackler whose clip ended, a player knocked over).

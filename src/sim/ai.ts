@@ -19,6 +19,9 @@ const latency = (s: PlayState) => DIFFICULTY[s.setup.difficulty ?? 'pro'].latenc
 /** Seconds a defender needs to react to what he sees (Play Recognition, difficulty). */
 export const reaction = (s: PlayState, d: Agent): number => 0.18 + 0.32 * (1 - d.fx.a('playRec')) + latency(s) + jitter(s, d);
 
+/** reaction() without rolling a jitter that hasn't been rolled yet (read-only). */
+const reactionPeek = (s: PlayState, d: Agent): number => 0.18 + 0.32 * (1 - d.fx.a('playRec')) + latency(s) + ((d.mem.jitter as number | undefined) ?? 0);
+
 /** A defender's own read speed on this play: seeded, ±~0.08 s (no two snaps play out alike). */
 export function jitter(s: PlayState, d: Agent): number {
   let j = d.mem.jitter as number | undefined;
@@ -287,7 +290,15 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false):
  * throw, the ball's flight time, and the margin in yards by which the ball
  * beats the nearest defender there (his time to the spot against the ball's).
  */
-export function openness(s: PlayState, qb: Agent, r: Agent, bullet?: boolean): { sep: number; at: V2; T: number; bullet: boolean } {
+/**
+ * How open a receiver is for a throw now: the separation (yd) from the
+ * nearest defender when the ball would get there, less the lanes it would
+ * pass through. `peek` reads without touching the play's state (the HUD
+ * calls it every frame): a defender whose read jitter hasn't been rolled
+ * yet counts as zero rather than rolling it.
+ */
+export function openness(s: PlayState, qb: Agent, r: Agent, bullet?: boolean, peek = false): { sep: number; at: V2; T: number; bullet: boolean } {
+  const react = (d: Agent) => (peek ? reactionPeek(s, d) : reaction(s, d));
   const vmax = maxThrowSpeed(qb.fx.r('throwPower'));
   // First guess at the throw: bullets for short and mid windows, touch deep.
   let at = lead(r, 0.8);
@@ -305,11 +316,11 @@ export function openness(s: PlayState, qb: Agent, r: Agent, bullet?: boolean): {
     if (d.down) continue;
     // Where he'll be when the ball arrives: carrying on as he is until he
     // reacts to the throw, then breaking on the ball.
-    const react = reaction(s, d);
-    const carry = Math.min(T, react);
+    const rt0 = react(d);
+    const carry = Math.min(T, rt0);
     const px = d.pos.x + d.vel.x * carry;
     const py = d.pos.y + d.vel.y * carry;
-    const closing = Math.max(0, T - react) * d.fx.vmax * 0.5;
+    const closing = Math.max(0, T - rt0) * d.fx.vmax * 0.5;
     sep = Math.min(sep, Math.sqrt((px - at.x) * (px - at.x) + (py - at.y) * (py - at.y)) - closing);
   }
   // Throwing lanes: a defender who can get to the ball's path before it
@@ -324,7 +335,7 @@ export function openness(s: PlayState, qb: Agent, r: Agent, bullet?: boolean): {
       const py = qb.pos.y + (at.y - qb.pos.y) * f;
       const tBall = T * f;
       const k = Math.sqrt((d.pos.x - px) * (d.pos.x - px) + (d.pos.y - py) * (d.pos.y - py));
-      const canCover = Math.max(0, tBall - reaction(s, d)) * d.fx.vmax * 0.7 + 0.5;
+      const canCover = Math.max(0, tBall - react(d)) * d.fx.vmax * 0.7 + 0.5;
       if (k < canCover) sep = Math.min(sep, sep + (k - canCover) * 0.5 * see);
     }
   }

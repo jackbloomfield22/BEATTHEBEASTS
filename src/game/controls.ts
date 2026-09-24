@@ -7,6 +7,7 @@
 import { Input } from '@/input/InputManager';
 import { NEUTRAL, type CatchType, type InputFrame } from '@/sim';
 import type { V2 } from '@/sim/vec';
+import { latency, type LatKind } from './latency';
 import { AIM_RADIUS, view } from './view';
 
 type HoldSource = { kind: 'key'; action: string } | { kind: 'mouse' } | { kind: 'pad'; action: string };
@@ -35,11 +36,53 @@ export function placementFrom(ox: number, oy: number, ux: number, uy: number): V
   return { x: Math.max(-1, Math.min(1, lead)), y: Math.max(-1, Math.min(1, high)) };
 }
 
+/** Screen directions of the move keys (x right, y up). */
+const MOVE_KEYS: Record<string, [number, number]> = {
+  'pocket.moveUp': [0, 1],
+  'pocket.moveDown': [0, -1],
+  'pocket.moveLeft': [-1, 0],
+  'pocket.moveRight': [1, 0],
+  'carrier.up': [0, 1],
+  'carrier.down': [0, -1],
+  'carrier.left': [-1, 0],
+  'carrier.right': [1, 0],
+};
+const PRESS_KIND: Record<string, LatKind> = {
+  'preSnap.snap': 'snap',
+  'carrier.sprint': 'sprint',
+  'pocket.throw1': 'throwHold',
+  'pocket.throw2': 'throwHold',
+  'pocket.throw3': 'throwHold',
+  'pocket.throw4': 'throwHold',
+  'pocket.throw5': 'throwHold',
+  'pocket.throwClick': 'throwHold',
+  'air.aggressive': 'catch',
+  'air.possession': 'catch',
+  'air.rac': 'catch',
+  'carrier.juke': 'juke',
+  'carrier.jukeLeft': 'juke',
+  'carrier.jukeRight': 'juke',
+  'carrier.spin': 'spin',
+  'carrier.stiffArm': 'stiffArm',
+  'carrier.truck': 'truck',
+  'carrier.dive': 'dive',
+  'carrier.protect': 'protect',
+};
+
+/** Start a latency sample for a press (the response is marked where it shows). */
+function notePress(id: string, time: number): void {
+  const mv = MOVE_KEYS[id];
+  if (mv) latency.press('move', time, { dir: stickToField(mv[0], mv[1], view.fwd) });
+  const kind = PRESS_KIND[id];
+  if (kind) latency.press(kind, time);
+}
+
 export class Controls {
   private edges = new Set<string>();
   private edgeDevice = new Map<string, string>();
   private hold: { icon: number; src: HoldSource } | null = null;
-  private aim: V2 = { x: 0, y: 0 };
+  /** The placement being chosen for the held icon (lead/back shoulder, high/low). */
+  aim: V2 = { x: 0, y: 0 };
   private off: () => void;
   /** The reticle's offset from the held icon (CSS px), for the HUD. */
   readonly reticle = { x: 0, y: 0, icon: 0 };
@@ -49,6 +92,7 @@ export class Controls {
       if (info.repeat) return;
       this.edges.add(id);
       this.edgeDevice.set(id, info.device);
+      notePress(id, info.time);
     });
   }
 
@@ -157,6 +201,7 @@ export class Controls {
         if (still) f.throwHeld = h.icon;
         else {
           // Released this tick: the sim throws with this frame's placement.
+          latency.press('throwRelease', h.src.kind === 'mouse' ? Input.releasedAt('pocket.throwClick') : Input.releasedAt(h.src.action));
           this.hold = null;
           this.reticle.icon = 0;
         }

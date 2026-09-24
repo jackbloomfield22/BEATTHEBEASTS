@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { useApp } from '@/app/appStore';
 import { useSettings } from '@/app/settings';
 import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
 import { inputLabel } from '@/input/actions';
 import { practice, usePractice } from '@/game/practice';
+import { latency } from '@/game/latency';
 import { downLabel, spotLabel, START_DOWNS, START_SPOTS, startSituation } from '@/game/situation';
 import { DEF_CALLS, playById, PLAYS } from '@/sim';
 import { useMenuNav } from '../nav';
@@ -165,6 +166,8 @@ function PlayHud() {
   const icons = runner ? runner.state.icons.map((i) => runner.state.agents[i]!) : [];
   const phase = ui.phase;
   const inPocket = phase === 'snap' || phase === 'dropback' || phase === 'pocket';
+  const live = ui.stage === 'live';
+  const pad = device === 'gamepad';
   return (
     <div className="play-hud">
       <div className="bug">
@@ -175,61 +178,130 @@ function PlayHud() {
       </div>
       <div className="icon-layer">
         {icons.map((a, k) => (
-          <div key={k} className="rec-icon" ref={(el) => void (hudDom.icons[k] = el)} style={{ ['--c' as string]: ICON_COLOR[a.p.pos] ?? '#fff' }}>
+          <div key={k} className="rec-icon" data-open="none" ref={(el) => void (hudDom.icons[k] = el)} style={{ ['--c' as string]: ICON_COLOR[a.p.pos] ?? '#fff' }}>
             <svg className="rec-ring" viewBox="0 0 40 40">
               <circle cx="20" cy="20" r="17" className="ring-base" />
               <circle cx="20" cy="20" r="17" className="ring-charge" ref={(el) => void (hudDom.rings[k] = el)} strokeDasharray={RING_LEN} strokeDashoffset={RING_LEN} />
             </svg>
-            <span className="rec-glyph">{device === 'gamepad' ? (colorblind ? PAD_SHAPE[k] : PAD_GLYPH[k]) : k + 1}</span>
+            <span className="rec-glyph">{pad ? (colorblind ? PAD_SHAPE[k] : PAD_GLYPH[k]) : key(`pocket.throw${k + 1}`)}</span>
             <span className="rec-name">{a.p.name.split(' ').slice(-1)[0]}</span>
           </div>
         ))}
         <div className="aim-reticle" ref={(el) => void (hudDom.reticle = el)} />
-      </div>
-      <div className="stamina" ref={(el) => void (hudDom.stamina = el)}>
-        <span className="stamina-fill" ref={(el) => void (hudDom.staminaFill = el)} />
+        {/* Under the ball carrier, the whole time he has it: stamina and his moves. */}
+        <div className="carrier-hud" ref={(el) => void (hudDom.carrierHud = el)}>
+          <div className="stamina" ref={(el) => void (hudDom.stamina = el)}>
+            <span className="stamina-fill" ref={(el) => void (hudDom.staminaFill = el)} />
+          </div>
+          <div className="carrier-keys">
+            <span><kbd>{pad ? 'R-Stick ←→' : key('carrier.juke')}</kbd>Juke</span>
+            <span><kbd>{key('carrier.stiffArm')}</kbd>Stiff arm</span>
+            <span><kbd>{key('carrier.spin')}</kbd>Spin</span>
+            <span><kbd>{key('carrier.sprint')}</kbd>Sprint</span>
+          </div>
+        </div>
       </div>
       {ui.stage === 'presnap' ? (
-        <div className="prompt">
-          <kbd>{key('preSnap.snap')}</kbd> Snap
+        <div className="snap-call">
+          <div className="snap-key">
+            <kbd>{key('preSnap.snap')}</kbd> Snap
+          </div>
+          <div className="snap-sub">
+            {pad ? 'A B X Y RB' : `${key('pocket.throw1')}–${key('pocket.throw5')}`} are your receivers, in read order
+          </div>
         </div>
       ) : null}
-      {ui.stage === 'live' && inPocket ? (
+      {live && inPocket ? (
         <div className="prompt-row">
           <span><kbd>{moveKeys('pocket.move')}</kbd> Move</span>
-          <span><kbd>{device === 'gamepad' ? 'A B X Y RB' : '1–5'}</kbd> Throw: tap for touch, hold for a bullet</span>
-          <span>{device === 'gamepad' ? 'Left stick while holding: placement' : 'Mouse off the icon: placement'}</span>
+          <span><kbd>{pad ? 'A B X Y RB' : `${key('pocket.throw1')}–${key('pocket.throw5')}`}</kbd> Throw: tap for touch, hold for a bullet</span>
+          <span>{pad ? 'Left stick while holding: placement' : 'Mouse off the icon: placement'}</span>
           <span><kbd>{key('pocket.pumpFake')}</kbd> Pump</span>
           <span><kbd>{key('pocket.throwAway')}</kbd> Throw away</span>
+          <span className="legend"><i className="dot open" /> open <i className="dot covered" /> covered</span>
         </div>
       ) : null}
-      {ui.stage === 'live' && phase === 'air' ? (
-        <div className="catch-call" data-called={ui.catchType ?? 'none'}>
-          <div className="catch-head">{ui.catchType ? 'Catch called' : 'Call the catch'}</div>
-          <div className="catch-opts">
-            {CATCHES.map((c) => (
-              <div key={c.type} className={`catch-opt${ui.catchType === c.type ? ' on' : ui.catchType ? ' off' : ''}`}>
-                <kbd>{key(c.action)}</kbd>
-                <span className="catch-name">{c.name}</span>
-                <span className="catch-sub">{c.sub}</span>
-              </div>
-            ))}
-          </div>
-          {!ui.catchType ? <div className="catch-foot">No call: catch and run</div> : null}
-        </div>
-      ) : null}
-      {ui.stage === 'live' && phase === 'carrier' && ui.carrier ? (
+      {live && phase === 'air' ? <CatchCall called={ui.catchType} keyOf={key} /> : null}
+      {live && phase === 'carrier' && ui.carrier ? (
         <div className="prompt-row">
           <span><kbd>{moveKeys('carrier.')}</kbd> Run</span>
-          <span><kbd>{key('carrier.sprint')}</kbd> Sprint</span>
-          <span><kbd>{device === 'gamepad' ? 'R-Stick ←→' : key('carrier.juke')}</kbd> Juke</span>
-          <span><kbd>{key('carrier.stiffArm')}</kbd> Stiff arm</span>
-          <span><kbd>{key('carrier.spin')}</kbd> Spin</span>
           <span><kbd>{key('carrier.truck')}</kbd> Truck</span>
           <span><kbd>{key('carrier.dive')}</kbd> Dive</span>
-          <span><kbd>{key('carrier.protect')}</kbd> Protect</span>
+          <span><kbd>{key('carrier.protect')}</kbd> Protect (hold)</span>
         </div>
       ) : null}
+      <Tutorial />
+    </div>
+  );
+}
+
+/**
+ * The first-play tutorial card: one line per step, under the score bug, with
+ * the keys as they're bound for the device in use. It follows the play and
+ * never waits for the player.
+ */
+function Tutorial() {
+  const step = usePractice((s) => s.tutorial);
+  const device = useDevice();
+  const key = useKey();
+  if (!step) return null;
+  const pad = device === 'gamepad';
+  const k = (a: string) => <kbd>{key(a)}</kbd>;
+  const lit = (label: string) => <kbd>{label}</kbd>;
+  const body: Record<string, ReactNode> = {
+    snap: (
+      <>
+        Press {k('preSnap.snap')} to snap the ball.
+      </>
+    ),
+    read: <>Read the field while you drop back. A glowing icon is an open man; a dim one is covered.</>,
+    throw: (
+      <>
+        {pad ? 'Press his button' : <>Press {lit(`${key('pocket.throw1')}–${key('pocket.throw5')}`)}</>} to throw to him: tap for touch, hold for a bullet.{' '}
+        {pad ? 'The left stick' : 'The mouse off his icon'} places it; the ring on the field is where it lands.
+      </>
+    ),
+    catch: (
+      <>
+        Call the catch while it's in the air: {k('air.aggressive')} go up and get it, {k('air.possession')} secure it, {k('air.rac')} catch and run. Slowed down this once.
+      </>
+    ),
+    run: (
+      <>
+        Run with {pad ? lit('L-Stick') : lit(['up', 'left', 'down', 'right'].map((d) => key(`carrier.${d}`)).join(''))}, {k('carrier.sprint')} to sprint. {pad ? lit('R-Stick ←→') : k('carrier.juke')} juke,{' '}
+        {k('carrier.stiffArm')} stiff arm, {k('carrier.spin')} spin.
+      </>
+    ),
+  };
+  const order = ['snap', 'read', 'throw', 'catch', 'run'];
+  return (
+    <div className="tutorial-card" data-step={step}>
+      <span className="tutorial-step">
+        {order.indexOf(step) + 1}/{order.length}
+      </span>
+      <span className="tutorial-text">{body[step]}</span>
+    </div>
+  );
+}
+
+/** The catch call: large and centered the moment the ball is thrown; the called one lights up. */
+function CatchCall({ called, keyOf }: { called: string | null; keyOf: (action: string) => string }) {
+  useLayoutEffect(() => {
+    if (called) latency.respond('catch');
+  }, [called]);
+  return (
+    <div className="catch-call" data-called={called ?? 'none'}>
+      <div className="catch-head">{called ? 'Catch called' : 'Call the catch'}</div>
+      <div className="catch-opts">
+        {CATCHES.map((c) => (
+          <div key={c.type} className={`catch-opt${called === c.type ? ' on' : called ? ' off' : ''}`}>
+            <kbd>{keyOf(c.action)}</kbd>
+            <span className="catch-name">{c.name}</span>
+            <span className="catch-sub">{c.sub}</span>
+          </div>
+        ))}
+      </div>
+      {!called ? <div className="catch-foot">No call: catch and run</div> : null}
     </div>
   );
 }
@@ -275,6 +347,9 @@ function PauseMenu() {
     { label: 'Resume', run: () => practice.resume() },
     { label: 'Restart play', run: () => practice.runItBack() },
     { label: 'Call a new play', run: () => practice.abandon() },
+    usePractice.getState().tutorial
+      ? { label: 'Skip the tutorial', run: () => (practice.skipTutorial(), practice.resume()) }
+      : { label: practice.tutorialPending ? 'Tutorial on next play' : 'Show the tutorial next play', run: () => (practice.replayTutorial(), practice.resume()) },
     { label: 'Leave practice', run: () => back() },
   ];
   const confirm = (i: number) => {

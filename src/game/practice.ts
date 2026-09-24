@@ -6,8 +6,9 @@
 
 import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
+import { loadJSON, saveJSON } from '@/app/storage';
 import type { InputContext } from '@/input/actions';
-import { createPlay, DEAD_HOLD, DEF_CALLS, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type SimPlayer } from '@/sim';
+import { createPlay, DEAD_HOLD, DEF_CALLS, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayState, type SimPlayer } from '@/sim';
 import { Controls } from './controls';
 import { describe, type ResultCard } from './describe';
 import { loadPracticeRosters } from './rosters';
@@ -32,6 +33,8 @@ export interface PracticeUi {
   carrier: string | null;
   /** The catch the user called while the ball is in the air (null = none yet). */
   catchType: CatchType | null;
+  /** The first-play tutorial's step, or null when it's off (done once, or skipped). */
+  tutorial: TutorialStep | null;
   result: ResultCard | null;
   /** The coverage the Beasts played on the last snap (revealed with the result). */
   lastCover: string | null;
@@ -51,11 +54,29 @@ export const usePractice = create<PracticeUi>(() => ({
   phase: 'presnap',
   carrier: null,
   catchType: null,
+  tutorial: null,
   result: null,
   lastCover: null,
   seriesOver: false,
   error: null,
 }));
+
+/**
+ * The first-play tutorial (M5.5): one pass through snap, read, throw, catch
+ * and run on the first Practice Field play, then never again unless asked
+ * for (pause menu). Each step shows while it applies and moves on with the
+ * play; it never waits for the player.
+ */
+export type TutorialStep = 'snap' | 'read' | 'throw' | 'catch' | 'run';
+const TUTORIAL_KEY = 'practice.tutorialDone';
+/** Seconds of the read step before it hands to the throw step (sooner if he picks a receiver). */
+const READ_STEP = 1.6;
+/**
+ * The session's first catch plays at this speed (the ball's flight and the
+ * catch), so the catch buttons register before they're second nature. The
+ * speed eases in and out rather than cutting.
+ */
+const FIRST_CATCH_SPEED = 0.6;
 
 const set = (p: Partial<PracticeUi>) => usePractice.setState(p);
 const get = () => usePractice.getState();
@@ -94,11 +115,18 @@ class PracticeSession {
   private lastSit: Situation = startSituation(0, 0);
   /** Bumped whenever a new play is set up (the render re-reads the runner). */
   playId = 0;
+  /** The tutorial runs on the next play. */
+  private tutorialNext = !loadJSON<boolean>(TUTORIAL_KEY);
+  private readSince = -1;
+  /** The session's first catch is still to come (it plays slowed). */
+  private firstCatch = true;
+  private sawAir = false;
 
   /** Enter the Practice Field: load the rosters, open the play call. */
   async enter(seed?: number): Promise<void> {
     this.seedBase = seed ?? (Math.random() * 0x7fffffff) | 0;
     this.snaps = 0;
+    this.firstCatch = true;
     set({ stage: 'loading', result: null, error: null });
     this.offPause ??= Input.onAction((id, info) => {
       if (id !== 'global.pause' || info.repeat) return;
@@ -149,7 +177,25 @@ class PracticeSession {
     this.playId++;
     this.controls.clear();
     this.setContext('preSnap');
-    set({ stage: 'presnap', playId, situation: sit, playSit: sit, phase: 'presnap', carrier: null, result: null, lastCover: def.name, seriesOver: false });
+    this.readSince = -1;
+    this.sawAir = false;
+    set({ stage: 'presnap', playId, situation: sit, playSit: sit, phase: 'presnap', carrier: null, result: null, lastCover: def.name, seriesOver: false, tutorial: this.tutorialNext ? 'snap' : null });
+  }
+
+  /** Stop the tutorial now and don't show it again. */
+  skipTutorial(): void {
+    this.tutorialNext = false;
+    saveJSON(TUTORIAL_KEY, true);
+    set({ tutorial: null });
+  }
+
+  /** Show the tutorial again on the next play. */
+  replayTutorial(): void {
+    this.tutorialNext = true;
+  }
+
+  get tutorialPending(): boolean {
+    return this.tutorialNext;
   }
 
   /** Run the same play again from the same spot (a new seed). */
@@ -195,7 +241,12 @@ class PracticeSession {
     if (!this.live()) return;
     // The UI and the input context follow the play tick by tick (a frame can
     // step several ticks: a catch and the carrier's first move can land in one).
-    this.runner!.advance(dt, () => {
+    const r = this.runner!;
+    // The session's first catch: ease the play down while the ball is in the air, and back up after.
+    const slow = this.firstCatch && r.state.phase === 'air';
+    r.timeScale += ((slow ? FIRST_CATCH_SPEED : 1) - r.timeScale) * (1 - Math.exp(-dt * 10));
+    if (Math.abs(r.timeScale - 1) < 1e-3) r.timeScale = 1;
+    r.advance(dt, () => {
       this.sync();
       return this.controls.sample();
     });
@@ -228,12 +279,35 @@ class PracticeSession {
       this.syncContext(false);
     }
     if (s.catchType !== get().catchType) set({ catchType: s.catchType });
+    if (s.phase === 'air') this.sawAir = true;
+    else if (this.sawAir) this.firstCatch = false;
+    this.stepTutorial(s);
     if (s.result && get().stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) {
       const ui = get();
       const next = nextSituation(ui.situation, s.result, s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y);
       this.setContext(null);
       set({ stage: 'result', result: describe(s), situation: next ?? startSituation(ui.startSpot, ui.startDowns), seriesOver: next === null });
     }
+  }
+
+  private stepTutorial(s: PlayState): void {
+    const step = get().tutorial;
+    if (!step) return;
+    let next: TutorialStep | null = step;
+    const pocket = s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket';
+    const c = s.carrier >= 0 ? s.agents[s.carrier]! : null;
+    if (s.result) {
+      // The play is over: the tutorial has done its one pass.
+      this.skipTutorial();
+      return;
+    }
+    if (pocket && step === 'snap') {
+      next = 'read';
+      this.readSince = s.t;
+    } else if (pocket && step === 'read' && (s.t - this.readSince > READ_STEP || this.controls.heldIcon)) next = 'throw';
+    else if (s.phase === 'air') next = 'catch';
+    else if (s.phase === 'carrier' && c?.side === 'off') next = 'run';
+    if (next !== step) set({ tutorial: next });
   }
 
   private syncContext(force: boolean): void {

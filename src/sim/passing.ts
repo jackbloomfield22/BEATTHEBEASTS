@@ -125,6 +125,40 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, a
   return { from, to, v0, T: final.T, kind: bullet ? 'bullet' : 'touch', distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez) };
 }
 
+/**
+ * Where a throw to `rec` would land if it went now, before the error cone:
+ * the led catch point with the placement, and the cone's size (1 sigma, yd)
+ * for his accuracy at that depth and his motion. Read-only (no dice), for
+ * the landing reticle while the user holds an icon.
+ */
+export function previewThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, aim: V2): { x: number; y: number; sigma: number } {
+  const power = qb.fx.r('throwPower');
+  const vmax = maxThrowSpeed(power);
+  const bullet = charge > 0;
+  const S = bullet ? vmax * (0.84 + 0.16 * Math.min(1, charge)) : vmax * 0.7;
+  const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
+  let T = 0.8;
+  let spot = lead(rec, T);
+  for (let k = 0; k < 4; k++) {
+    T = flightTime(from, { x: spot.x, y: spot.y, z: CATCH_Z }, S, bullet ? 0.05 : touchArc(dist(from, spot))).T + 0.05;
+    spot = lead(rec, T);
+  }
+  const rv = len(rec.vel) > 0.5 ? { x: rec.vel.x / len(rec.vel), y: rec.vel.y / len(rec.vel) } : { x: 1, y: 0 };
+  let x = spot.x + rv.x * 1.6 * aim.x;
+  let y = spot.y + rv.y * 1.6 * aim.x;
+  const d = dist(from, { x, y });
+  const range = maxRange(power);
+  if (d > range) {
+    x = from.x + (x - from.x) * (range / d);
+    y = from.y + (y - from.y) * (range / d);
+  }
+  const air = x - s.setup.los;
+  const acc = air < 12 ? qb.fx.r('shortAcc') : air < 25 ? qb.fx.r('midAcc') : qb.fx.r('deepAcc');
+  const moving = Math.min(1, len(qb.vel) / 4);
+  const sigma = errorAt20(acc) * Math.max(0.4, d / 20) * (1 + moving * 1.1 * (1 - qb.fx.a('throwOnRun'))) * (bullet ? 1 + 0.18 * Math.min(1, charge) : 1);
+  return { x, y, sigma };
+}
+
 /** Release the planned throw: the ball flies. */
 export function release(s: PlayState, qb: Agent, rec: Agent, plan: ThrowPlan): void {
   const b = s.ball;

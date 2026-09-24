@@ -8,6 +8,8 @@ export const hudDom = {
   rings: [] as (SVGCircleElement | null)[],
   reticle: null as HTMLElement | null,
   stamina: null as HTMLElement | null,
+  /** The carrier's cluster (stamina and his move keys), placed under him every frame. */
+  carrierHud: null as HTMLElement | null,
   staminaFill: null as HTMLElement | null,
 };
 

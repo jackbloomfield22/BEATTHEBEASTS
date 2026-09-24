@@ -8,9 +8,14 @@ import { skinHexFor } from '@/app/characterization';
 import { urlFlags } from '@/app/platform';
 import { practice } from '@/game/practice';
 import { lerpAngle, type AgentSnap } from '@/game/snapshot';
+import { latency } from '@/game/latency';
 import { view } from '@/game/view';
 import { worldX, worldY, worldZ, yawOf } from '@/game/coords';
 import { BULLET_CHARGE, DEF_SLOTS, OFF_SLOTS, TAP_MAX, TICK, type SimPlayer } from '@/sim';
+import { openness } from '@/sim/ai';
+import { previewThrow } from '@/sim/passing';
+import { openState } from '@/game/view';
+import { YARD } from '../world/constants';
 import { hudDom, RING_LEN } from '@/ui/game/hudDom';
 import { crowdEnergy } from '../crowd/reactions';
 import { KITS } from '../players/kits';
@@ -125,6 +130,7 @@ export function GameScene() {
 
   useFrame(({ camera, gl, clock }, dt) => {
     const step = urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    latency.frame++;
     practice.frame(step);
     const r = practice.runner;
     const show = !!r && !!bodies;
@@ -165,6 +171,7 @@ export function GameScene() {
     if (!snapped.current && cur.phase !== 'presnap') {
       snapped.current = true;
       onSnap(bodies, s, (slot) => STANCE[slot] ?? 'stance_idle');
+      latency.respond('snap');
     }
     onEvents(bodies, s, frameEvents);
     // Animate by the sim time that passed (the same as the frame time in
@@ -173,6 +180,11 @@ export function GameScene() {
     const animDt = Math.max(0, Math.min(0.5, simT - lastSimT.current));
     lastSimT.current = simT;
     const viewportPx = gl.domElement.height;
+    // The player the user moves now: the QB until the ball leaves him, then his carrier.
+    const ph = cur.phase;
+    const userCarrier = cur.carrier >= 0 && s.agents[cur.carrier]!.side === 'off';
+    const controlled = ph === 'carrier' ? (userCarrier ? cur.carrier : -1) : ph === 'snap' || ph === 'dropback' || ph === 'pocket' ? s.qb : -1;
+    if (controlled < 0) latency.motion(null);
     bodies.forEach((b, i) => {
       const p0 = prev.agents[i]!;
       const p1 = cur.agents[i]!;
@@ -181,6 +193,7 @@ export function GameScene() {
       tmp.vx = p0.vx + (p1.vx - p0.vx) * alpha;
       tmp.vy = p0.vy + (p1.vy - p0.vy) * alpha;
       const face = lerpAngle(p0.face, p1.face, alpha);
+      if (i === controlled) latency.motion({ x: tmp.vx, y: tmp.vy });
       const sp = Math.hypot(tmp.vx, tmp.vy);
       const along = tmp.vx * Math.cos(face) + tmp.vy * Math.sin(face);
       const d = drive(b, i, s, simT, sp > 0.05 ? along : 0, sp);
@@ -206,8 +219,16 @@ export function GameScene() {
 
     placeBall(s.snapT, s.t);
     placeMarks(s.setup.los, s.setup.toGo);
-    placeHud();
   }, -100);
+
+  // The HUD goes on after the camera has moved this frame (GameCamera runs
+  // at -90), so the icons and the carrier's keys sit on the players as drawn,
+  // not a frame behind them.
+  useFrame(({ camera }) => {
+    if (!practice.runner || !bodies) return;
+    camera.updateMatrixWorld();
+    placeHud();
+  }, -80);
 
   function placeBall(snapT: number, t: number) {
     const r = practice.runner!;
@@ -252,6 +273,13 @@ export function GameScene() {
     const rect = gl.domElement.getBoundingClientRect();
     const pocket = cur.phase === 'presnap' || cur.phase === 'snap' || cur.phase === 'dropback' || cur.phase === 'pocket';
     const thrown = s.windup !== null;
+    // How open each target is (the icons glow when open, dim when covered),
+    // after the snap and before the throw; refreshed every few frames.
+    const reading = !thrown && cur.phase !== 'presnap' && cur.phase !== 'snap';
+    if (reading && latency.frame % 4 === 0) {
+      const qb = s.agents[s.qb]!;
+      for (let k = 0; k < s.icons.length; k++) view.icons[k]!.open = openState(openness(s, qb, s.agents[s.icons[k]!]!, undefined, true).sep);
+    }
     for (let k = 0; k < 5; k++) {
       const el = hudDom.icons[k];
       const v = view.icons[k]!;
@@ -283,6 +311,8 @@ export function GameScene() {
       if (el) {
         el.style.visibility = v.visible ? 'visible' : 'hidden';
         el.style.transform = `translate(${v.x.toFixed(1)}px, ${v.y.toFixed(1)}px)`;
+        const o = reading ? v.open : 'none';
+        if (el.dataset.open !== o) el.dataset.open = o;
       }
       // The power ring: fills while the icon is held (a tap stays empty: touch).
       const ring = hudDom.rings[k];
@@ -292,7 +322,22 @@ export function GameScene() {
         const charge = t <= TAP_MAX ? 0 : Math.min(1, (t - TAP_MAX) / BULLET_CHARGE);
         ring.style.strokeDashoffset = String(RING_LEN * (1 - charge));
         ring.style.opacity = held ? '1' : '0';
+        if (held) latency.respond('throwHold');
       }
+    }
+    // Where the held throw would land (the error cone's size), on the turf.
+    const land = marks.land;
+    const heldIcon = practice.controls.heldIcon;
+    const rec = heldIcon ? s.icons[heldIcon - 1] : undefined;
+    land.visible = pocket && !thrown && rec !== undefined;
+    if (land.visible && rec !== undefined) {
+      const t = s.hold.ticks * TICK;
+      const charge = t <= TAP_MAX ? 0 : Math.min(1, (t - TAP_MAX) / BULLET_CHARGE);
+      const aim = practice.controls.aim;
+      const pv = previewThrow(s, s.agents[s.qb]!, s.agents[rec]!, charge, aim);
+      land.position.set(worldX(pv.y), 0.07, worldZ(pv.x));
+      const r = Math.max(0.6, Math.min(4, pv.sigma)) * YARD;
+      land.getObjectByName('cone')!.scale.setScalar(r);
     }
     const ret = hudDom.reticle;
     const rc = practice.controls.reticle;
@@ -301,12 +346,21 @@ export function GameScene() {
       ret.style.visibility = v && v.visible && !thrown ? 'visible' : 'hidden';
       if (v) ret.style.transform = `translate(${(v.x + rc.x).toFixed(1)}px, ${(v.y + rc.y).toFixed(1)}px)`;
     }
-    const st = hudDom.stamina;
-    if (st) {
+    // The carrier's cluster rides under him (his feet on screen) the whole time he has the ball.
+    const ch = hudDom.carrierHud;
+    if (ch) {
       const c = cur.carrier >= 0 ? cur.agents[cur.carrier]! : null;
-      const mine = c && s.agents[cur.carrier]!.side === 'off' && cur.phase === 'carrier';
-      st.style.visibility = mine ? 'visible' : 'hidden';
-      if (mine && hudDom.staminaFill) hudDom.staminaFill.style.transform = `scaleX(${c.stamina.toFixed(3)})`;
+      const mine = !!c && s.agents[cur.carrier]!.side === 'off' && cur.phase === 'carrier' && !c.down && !!bodies;
+      ch.style.visibility = mine ? 'visible' : 'hidden';
+      if (mine) {
+        const root = bodies![cur.carrier]!.player.root;
+        _p.set(root.position.x, -0.15, root.position.z).project(camera);
+        const x = rect.left + ((_p.x + 1) / 2) * rect.width;
+        const y = rect.top + ((1 - _p.y) / 2) * rect.height;
+        // Kept on screen (a carrier near the bottom edge keeps his keys in view).
+        ch.style.transform = `translate(${Math.max(120, Math.min(rect.width - 120, x)).toFixed(1)}px, ${Math.min(rect.height - 90, y).toFixed(1)}px)`;
+        if (hudDom.staminaFill) hudDom.staminaFill.style.transform = `scaleX(${c.stamina.toFixed(3)})`;
+      }
     }
   }
 
