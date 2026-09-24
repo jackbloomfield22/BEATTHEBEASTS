@@ -409,7 +409,19 @@ function ballStep(s: PlayState): void {
         // The ball pops up off his hands: live, anyone can play a tip.
         b.target = -2;
         b.vel = { x: b.vel.x * 0.25 + gauss(s.rng.bounce), y: b.vel.y * 0.25 + gauss(s.rng.bounce), z: 2.5 + 2 * s.rng.bounce() };
-        s.events.push({ t: s.t, type: out === 'drop' ? 'drop' : 'deflection', who: [who], at: { x: a.pos.x, y: a.pos.y } });
+        // A contested ball knocked from a receiver's hands: credit the defender who got there.
+        let by = who;
+        if (out === 'deflect' && a.side === 'off') {
+          let bd = Infinity;
+          for (const i of s.def) {
+            const k = dist(s.agents[i]!.pos, a.pos);
+            if (k < bd) {
+              bd = k;
+              by = i;
+            }
+          }
+        }
+        s.events.push({ t: s.t, type: out === 'drop' ? 'drop' : 'deflection', who: by === who ? [who] : [by, who], at: { x: a.pos.x, y: a.pos.y } });
       }
     }
     if (b.pos.z <= 0.05) {

@@ -85,6 +85,7 @@ class PracticeSession {
   private seedBase = 0;
   private snaps = 0;
   private offPause: (() => void) | null = null;
+  private resuming = false;
   private stageBeforePause: PracticeStage = 'presnap';
   /** The situation of the last snap (Run It Back replays from here). */
   private lastSit: Situation = startSituation(0, 0);
@@ -99,7 +100,8 @@ class PracticeSession {
     this.offPause ??= Input.onAction((id, info) => {
       if (id !== 'global.pause' || info.repeat) return;
       const st = get().stage;
-      if (st === 'presnap' || st === 'live') this.pause();
+      // The same Esc that just resumed (menu.back fires first) doesn't pause again.
+      if ((st === 'presnap' || st === 'live') && !this.resuming) this.pause();
     });
     try {
       this.rosters ??= await loadPracticeRosters();
@@ -169,6 +171,8 @@ class PracticeSession {
 
   resume(): void {
     if (!this.runner) return;
+    this.resuming = true;
+    queueMicrotask(() => (this.resuming = false));
     this.runner.paused = false;
     this.controls.clear();
     set({ stage: this.stageBeforePause });
@@ -185,19 +189,42 @@ class PracticeSession {
 
   /** Each rendered frame: advance the sim and move the UI along. */
   frame(dt: number): void {
+    if (!this.live()) return;
+    // The UI and the input context follow the play tick by tick (a frame can
+    // step several ticks: a catch and the carrier's first move can land in one).
+    this.runner!.advance(dt, () => {
+      this.sync();
+      return this.controls.sample();
+    });
+    this.sync();
+  }
+
+  /** Step ticks directly (browser tests and the dev console), through the same path as frames. */
+  tick(n: number): void {
+    for (let k = 0; k < n && this.live(); k++) {
+      this.sync();
+      this.runner!.step(this.controls.sample());
+    }
+    this.sync();
+  }
+
+  private live(): boolean {
     const r = this.runner;
     const stage = get().stage;
-    if (!r || stage === 'paused' || stage === 'call' || stage === 'loading') return;
+    if (!r || stage === 'paused' || stage === 'call' || stage === 'loading') return false;
     // After the result card is up, the dead ball settles for a few more seconds, then holds.
-    if (stage === 'result' && r.state.t - r.state.whistleT > DEAD_HOLD + 4) return;
-    r.advance(dt, () => this.controls.sample());
-    const s = r.state;
+    return !(stage === 'result' && r.state.t - r.state.whistleT > DEAD_HOLD + 4);
+  }
+
+  private sync(): void {
+    const s = this.runner!.state;
+    const stage = get().stage;
     if (s.phase !== get().phase) {
       const c = s.carrier >= 0 ? s.agents[s.carrier]! : null;
       set({ phase: s.phase, stage: s.phase === 'presnap' ? 'presnap' : stage === 'result' ? 'result' : 'live', carrier: c && c.side === 'off' ? c.p.name : null });
       this.syncContext(false);
     }
-    if (s.result && stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) {
+    if (s.result && get().stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) {
       const ui = get();
       const next = nextSituation(ui.situation, s.result, s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y);
       this.setContext(null);
@@ -223,4 +250,4 @@ class PracticeSession {
 
 export const practice = new PracticeSession();
 
-if (import.meta.env.DEV) Object.assign(globalThis, { __btbPractice: practice, __btbPracticeUi: usePractice });
+if (import.meta.env.DEV) Object.assign(globalThis, { __btbPractice: practice, __btbPracticeUi: usePractice, __btbInput: Input });

@@ -47,6 +47,17 @@ export function lead(r: Agent, T: number): V2 {
   return at;
 }
 
+/**
+ * How much loft a touch pass takes (0 = the flattest throw at that speed,
+ * 1 = the lob), by distance: a short touch pass is a soft line drive, a
+ * deep one drops in over the top. From a 90 arm this gives ~0.9 s at 8
+ * yd, ~1.1 s at 15, ~1.7 s at 25 and ~2.3 s at 35 (NFL Next Gen Stats
+ * time-to-target by depth runs ~0.8–1.1 s short, ~1.4–1.8 s at 20–30 yd).
+ */
+export function touchArc(d: number): number {
+  return 0.08 + Math.max(0, Math.min(1, (d - 10) / 40)) * 0.24;
+}
+
 export interface ThrowPlan {
   from: V3;
   to: V3;
@@ -76,7 +87,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, a
   let spot = lead(rec, T);
   for (let k = 0; k < 4; k++) {
     const to = { x: spot.x, y: spot.y, z: CATCH_Z };
-    T = flightTime(from, to, S, bullet ? 0.05 : 0.38).T + 0.05;
+    T = flightTime(from, to, S, bullet ? 0.05 : touchArc(dist(from, to))).T + 0.05;
     spot = lead(rec, T);
   }
   // Placement input: lead / back shoulder along his path, high / low.
@@ -109,7 +120,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, a
     tz = 0.3;
   }
   const to: V3 = { x: tx, y: ty, z: tz };
-  const final = flightTime(from, to, S, bullet ? 0.05 : 0.38);
+  const final = flightTime(from, to, S, bullet ? 0.05 : touchArc(d));
   const v0 = solveLaunch(from, to, final.T);
   return { from, to, v0, T: final.T, kind: bullet ? 'bullet' : 'touch', distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez) };
 }
@@ -225,7 +236,8 @@ export function stepAir(s: PlayState): number {
     const dh = Math.sqrt(hx * hx + hy * hy);
     // Defenders only play the ball once they've read it (mem.onBall).
     if (a.side === 'def' && !a.mem.onBall && dh > 0.55) continue;
-    if (a.side === 'off' && a.i !== b.target && dh > 0.6) continue;
+    // Linemen are ineligible: they never play a pass (they can't be the target either).
+    if (a.side === 'off' && a.i !== b.target && (dh > 0.6 || a.p.pos === 'OL')) continue;
     if (dh < r && dh < bestD) {
       best = a.i;
       bestD = dh;
