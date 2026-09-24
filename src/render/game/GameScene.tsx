@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { loadAnimLibrary, type AnimLibrary } from '@/anim/library';
 import { PlayerAnimator } from '@/anim/animator';
+import { Ragdoll } from '@/anim/ragdoll';
 import { skinHexFor } from '@/app/characterization';
 import { urlFlags } from '@/app/platform';
 import { practice } from '@/game/practice';
@@ -17,11 +18,11 @@ import { bodyFromImperial } from '../players/bodyShape';
 import { jerseyName } from '../players/glyphs';
 import { playerVariety, type Position } from '../players/variety';
 import { loadPlayerAsset, Player, type PlayerAsset } from '../players/playerAsset';
-import { YARD } from '../world/constants';
 import { prepareLate, shadowAttach } from '../lighting/shadows';
 import { createFootball } from './football';
 import { createFieldMarks } from './fieldMarks';
 import { frameEvents } from './frameEvents';
+import { ballInHands, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
 
 // The live play (TECH_PLAN §4.3): one top-priority frame callback advances
 // the sim through the Practice session, then every player, the ball, the
@@ -56,16 +57,6 @@ const STANCE: Record<string, string> = {
 
 const RENDER_POS: Record<SimPlayer['pos'], Position> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', OL: 'OL', DE: 'DL', DT: 'DL', LB: 'LB', CB: 'CB', S: 'S' };
 
-interface Body {
-  player: Player;
-  animator: PlayerAnimator;
-  slot: string;
-  /** Temporary fall until the tackle clips and ragdoll arrive (M5-3): 0 standing .. 1 down. */
-  fall: number;
-  lastYaw: number;
-  lastSpeed: number;
-}
-
 function buildTeam(players: SimPlayer[], slots: string[], kit: 'royal' | 'beasts', asset: PlayerAsset, lib: AnimLibrary): Body[] {
   return players.map((p, k) => {
     const body = bodyFromImperial(p.heightIn, p.weightLb);
@@ -77,8 +68,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: 'royal' | 'beasts
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    player.root.rotation.order = 'YXZ';
-    return { player, animator: new PlayerAnimator(player, lib), slot: slots[k]!, fall: 0, lastYaw: 0, lastSpeed: 0 };
+    return { player, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null };
   });
 }
 
@@ -87,7 +77,6 @@ const _q = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
 const _X = new THREE.Vector3(1, 0, 0);
 const _dir = new THREE.Vector3();
-const _look = new THREE.Vector3();
 const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move: null, down: false, stamina: 1 };
 
 export function GameScene() {
@@ -163,7 +152,7 @@ export function GameScene() {
         b.player.root.visible = true;
         b.player.root.position.set(worldX(a.y), 0, worldZ(a.x));
         b.player.root.rotation.set(0, yawOf(a.face), 0);
-        b.fall = 0;
+        resetBody(b);
         b.animator.reset();
         b.animator.setStance(STANCE[b.slot] ?? 'stance_idle');
         b.animator.update(10, { speed: 0 });
@@ -175,13 +164,9 @@ export function GameScene() {
     // The snap: everyone who has a get-off out of his stance plays it.
     if (!snapped.current && cur.phase !== 'presnap') {
       snapped.current = true;
-      for (const b of bodies) {
-        const st = STANCE[b.slot] ?? '';
-        const off = `getoff_${st.slice(7)}`;
-        if (b.animator.lib.meta[off]) b.animator.play(off);
-        else b.animator.setStance('stance_idle');
-      }
+      onSnap(bodies, s, (slot) => STANCE[slot] ?? 'stance_idle');
     }
+    onEvents(bodies, s, frameEvents);
     // Animate by the sim time that passed (the same as the frame time in
     // play; more when a test or a hitch stepped several ticks at once).
     const simT = cur.t + alpha * TICK;
@@ -197,26 +182,24 @@ export function GameScene() {
       tmp.vy = p0.vy + (p1.vy - p0.vy) * alpha;
       const face = lerpAngle(p0.face, p1.face, alpha);
       const sp = Math.hypot(tmp.vx, tmp.vy);
-      // Until the backpedal is blended in (M5-3), a player moving backward
-      // turns to run where he's going instead of moonwalking.
       const along = tmp.vx * Math.cos(face) + tmp.vy * Math.sin(face);
-      const heading = along < -1 && sp > 1 ? Math.atan2(tmp.vy, tmp.vx) : face;
+      const d = drive(b, i, s, simT, sp > 0.05 ? along : 0, sp);
+      const heading = d.faceVelocity ? Math.atan2(tmp.vy, tmp.vx) : face;
       const yaw = yawOf(heading);
       const root = b.player.root;
       root.position.set(worldX(tmp.y), 0, worldZ(tmp.x));
       root.rotation.y = yaw;
-      // Down: a plain tip-over until the tackle clips and the ragdoll blend (M5-3).
-      b.fall = Math.max(0, Math.min(1, b.fall + (p1.down ? animDt / 0.45 : -animDt / 0.6)));
-      root.rotation.x = b.fall * b.fall * 1.35;
-      const speedM = (heading === face ? Math.max(0, along) : sp) * YARD;
+      if (b.lie) {
+        // Lying where the fall left him (the lying clip's root is at his hips, his head along +Z).
+        root.position.set(b.lie.x, 0, b.lie.z);
+        root.rotation.y = b.lie.prone ? b.lie.yaw : b.lie.yaw + Math.PI;
+      }
       const yawRate = animDt > 0 ? lerpAngle(0, yaw - b.lastYaw, 1) / Math.max(animDt, 1 / 120) : 0;
-      const accel = animDt > 0 ? (speedM - b.lastSpeed) / Math.max(animDt, 1 / 120) : 0;
+      const accel = animDt > 0 ? (d.speed - b.lastSpeed) / Math.max(animDt, 1 / 120) : 0;
       b.lastYaw = yaw;
-      b.lastSpeed = speedM;
-      // Eyes: the ball in the air, else downfield.
-      const bp = cur.ball;
-      _look.set(worldX(bp.y), worldY(Math.max(bp.z, 1.2)), worldZ(bp.x));
-      b.animator.update(animDt, { speed: b.fall > 0.2 ? 0 : speedM, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: cur.phase === 'air' ? _look : null });
+      b.lastSpeed = d.speed;
+      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look });
+      b.ragdoll.update(animDt);
       b.player.updateLod(camera, viewportPx);
     });
 
@@ -233,19 +216,7 @@ export function GameScene() {
     const b1 = cur.ball;
     const held = b1.mode === 'held' && b1.holder >= 0;
     const inSnap = cur.phase === 'presnap' || (snapT >= 0 && t - snapT < 0.34);
-    if (held && !inSnap && bodies) {
-      // Carried: tucked at the carrier's side, pointing where he runs.
-      const body = bodies[b1.holder]!;
-      const root = body.player.root;
-      const yaw = root.rotation.y;
-      const fx = Math.sin(yaw);
-      const fz = Math.cos(yaw);
-      const s = body.player.shape.scale;
-      ball.position.set(root.position.x + fx * 0.22 * s - fz * 0.2 * s, (1.02 - body.fall * 0.7) * s, root.position.z + fz * 0.22 * s + fx * 0.2 * s);
-      _dir.set(fx, 0.45, fz).normalize();
-      ball.quaternion.setFromUnitVectors(_X, _dir);
-      return;
-    }
+    if (held && !inSnap && bodies && ballInHands(bodies[b1.holder]!, r.state, ball)) return;
     ball.position.set(worldX(b0.y + (b1.y - b0.y) * a), worldY(b0.z + (b1.z - b0.z) * a), worldZ(b0.x + (b1.x - b0.x) * a));
     if (cur.phase === 'presnap') {
       // On the ground, pointing downfield.

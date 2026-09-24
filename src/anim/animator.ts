@@ -31,6 +31,8 @@ export interface AnimInput {
   lookAt?: THREE.Vector3 | null;
   /** World velocity of the ground under the player (the Lab's treadmill; 0 in the game). */
   groundVelocity?: THREE.Vector3;
+  /** Moving backward facing forward (a defensive back's pedal): `speed` is then the backward speed. */
+  backpedal?: boolean;
 }
 
 const FEET = ['l', 'r'] as const;
@@ -54,6 +56,8 @@ interface FootState {
 interface TransitionState {
   name: string;
   t: number;
+  /** Playback rate (a throw is timed to the sim's release). */
+  rate: number;
   /** Layer weight: fades in over TRANS_IN, out over TRANS_OUT after the hand-over. */
   w: number;
   done: boolean;
@@ -63,6 +67,32 @@ interface TransitionState {
 const TRANS_IN = 0.08; // s: each transition starts from the pose it leaves, so a short fade
 const TRANS_OUT = 0.1;
 
+/**
+ * An upper-body overlay (a carry, a catch, a stiff arm): its clip, sampled
+ * at `t`, drives only the bones in its mask, over whatever the base layers
+ * (stance, gait, transition) posed, by weight `w`.
+ */
+interface Overlay {
+  name: string;
+  t: number;
+  w: number;
+  rate: number;
+  loop: boolean;
+  duration: number;
+  /** Fading out (a one-shot that ended, or a hold that was cleared). */
+  out: boolean;
+  tracks: OverlayTrack[];
+}
+
+interface OverlayTrack {
+  bone: THREE.Bone;
+  interp: THREE.Interpolant;
+}
+
+const OVERLAY_IN = 0.1;
+const OVERLAY_OUT = 0.15;
+const _oq = new THREE.Quaternion();
+
 export class PlayerAnimator {
   readonly mixer: THREE.AnimationMixer;
   private actions = new Map<string, THREE.AnimationAction>();
@@ -71,6 +101,9 @@ export class PlayerAnimator {
   private stanceTime = 0;
   private loco = 0; // 0 standing .. 1 moving
   phase = 0;
+  /** The backpedal cycle's share of the gait layer and its own phase. */
+  private back = 0;
+  private backPhase = 0;
   private feet: Record<'l' | 'r', FootState> = {
     l: { weight: 0, locked: false, pos: new THREE.Vector3(), source: null },
     r: { weight: 0, locked: false, pos: new THREE.Vector3(), source: null },
@@ -89,6 +122,9 @@ export class PlayerAnimator {
   private trans: TransitionState | null = null;
   /** A stop waiting for the left foot's touch-down (the clip starts there). */
   private queued: string | null = null;
+  /** Overlays: a held one (the ball carried, the QB's hold) and a one-shot action over it. */
+  private holdLayer: Overlay | null = null;
+  private actionLayer: Overlay | null = null;
   /** Root motion this update (m along the facing, body-scaled) and its rate (m/s). */
   rootMotion = 0;
   rootSpeed = 0;
@@ -127,6 +163,8 @@ export class PlayerAnimator {
     this.chestY = [];
     this.trans = null;
     this.queued = null;
+    this.holdLayer = null;
+    this.actionLayer = null;
     this.rootMotion = 0;
     this.rootSpeed = 0;
   }
@@ -137,11 +175,73 @@ export class PlayerAnimator {
    * starts now. The caller keeps feeding the speed it wants after the clip:
    * the run speed through a get-off, zero through a stop.
    */
-  play(name: string): void {
+  play(name: string, opts: { now?: boolean; rate?: number; t0?: number } = {}): void {
     const m = this.lib.meta[name];
     if (!m || m.kind !== 'transition') return;
-    if (m.from?.startsWith('loco_') && this.loco > 0.5) this.queued = name;
-    else this.start(name);
+    if (!opts.now && m.from?.startsWith('loco_') && this.loco > 0.5 && name.startsWith('stop_')) this.queued = name;
+    else this.start(name, opts.rate ?? 1, opts.t0 ?? 0);
+  }
+
+  /** The transition playing now and its time (s), or null. */
+  get transition(): { name: string; t: number; done: boolean } | null {
+    return this.trans ? { name: this.trans.name, t: this.trans.t, done: this.trans.done } : null;
+  }
+
+  /** Hold an overlay (null clears it): the ball tucked, the QB's two-hand hold. */
+  setHold(name: string | null): void {
+    if (name === (this.holdLayer && !this.holdLayer.out ? this.holdLayer.name : null)) return;
+    if (!name) {
+      if (this.holdLayer) this.holdLayer.out = true;
+      return;
+    }
+    this.holdLayer = this.overlay(name, { loop: true });
+  }
+
+  /**
+   * Play a one-shot overlay: a catch, a stiff arm, a pump fake, or any clip
+   * masked to the upper body (a throw on the run: pass `mask`). `rate` and
+   * `t0` time it to the sim.
+   */
+  playOverlay(name: string, opts: { rate?: number; t0?: number; mask?: string[] } = {}): void {
+    const o = this.overlay(name, { rate: opts.rate, t0: opts.t0, mask: opts.mask });
+    if (o) this.actionLayer = o;
+  }
+
+  /** The one-shot overlay playing now and its time, or null. */
+  get overlayAction(): { name: string; t: number } | null {
+    return this.actionLayer && !this.actionLayer.out ? { name: this.actionLayer.name, t: this.actionLayer.t } : null;
+  }
+
+  private overlay(name: string, opts: { loop?: boolean; rate?: number; t0?: number; mask?: string[] }): Overlay | null {
+    const clip = this.lib.clips.get(name);
+    const meta = this.lib.meta[name];
+    if (!clip || !meta) return null;
+    const mask = new Set(opts.mask ?? meta.mask ?? []);
+    const tracks: OverlayTrack[] = [];
+    for (const tr of clip.tracks) {
+      const [bone, prop] = tr.name.split('.');
+      if (prop !== 'quaternion' || !bone || !mask.has(bone)) continue;
+      const b = this.player.bones.get(bone);
+      // three sets createInterpolant per track (linear, or slerp for quaternions); the types leave it out.
+      if (b) tracks.push({ bone: b, interp: (tr as unknown as { createInterpolant(): THREE.Interpolant }).createInterpolant() });
+    }
+    return { name, t: opts.t0 ?? 0, w: 0, rate: opts.rate ?? 1, loop: !!opts.loop, duration: meta.duration, out: false, tracks };
+  }
+
+  private stepOverlay(o: Overlay | null, dt: number): Overlay | null {
+    if (!o) return null;
+    o.t += dt * o.rate;
+    if (o.loop) o.t %= o.duration;
+    else if (o.t >= o.duration - OVERLAY_OUT * o.rate) o.out = true;
+    o.w = o.out ? o.w - dt / OVERLAY_OUT : Math.min(1, o.w + dt / OVERLAY_IN);
+    if (o.w <= 0) return null;
+    const t = Math.min(o.t, o.duration - 1e-4);
+    for (const k of o.tracks) {
+      const v = k.interp.evaluate(t);
+      _oq.set(v[0]!, v[1]!, v[2]!, v[3]!);
+      k.bone.quaternion.slerp(_oq, Math.min(1, o.w));
+    }
+    return o;
   }
 
   /** The stop for the gait nearest a speed. */
@@ -177,16 +277,16 @@ export class PlayerAnimator {
     return ((travelAt(m, this.lib.fps, tr.t + h) - travelAt(m, this.lib.fps, tr.t)) / h) * this.player.shape.scale;
   }
 
-  private start(name: string): void {
+  private start(name: string, rate = 1, t0 = 0): void {
     this.queued = null;
-    this.trans = { name, t: 0, w: this.trans && !this.trans.done ? this.trans.w : 0, done: false, travel: 0 };
+    this.trans = { name, t: t0, rate, w: this.trans && !this.trans.done ? this.trans.w : 0, done: false, travel: 0 };
   }
 
   /** The transition finished: its last frame is the first of the clip it hands to. */
-  private handOver(to: string): void {
+  private handOver(to: string, toPhase = 0): void {
     if (to.startsWith('loco_')) {
       this.loco = 1;
-      this.phase = 0;
+      this.phase = toPhase;
     } else {
       this.loco = 0;
       this.stance = to;
@@ -217,7 +317,10 @@ export class PlayerAnimator {
     this.loco += ((speed > MIN_LOCO_SPEED ? 1 : 0) - this.loco) * k;
     const g = sampleGait(this.lib.gaits, speed, scale);
     const lastPhase = this.phase;
-    this.phase = advancePhase(this.phase, speed, dt, g.stride);
+    this.back += ((input.backpedal ? 1 : 0) - this.back) * k;
+    const bpMeta = this.lib.meta.loco_backpedal;
+    if (bpMeta && this.back > 0.01) this.backPhase = advancePhase(this.backPhase, speed, dt, bpMeta.speed * bpMeta.duration * scale);
+    if (!input.backpedal) this.phase = advancePhase(this.phase, speed, dt, g.stride);
     // A queued stop starts at the left touch-down (the phase wrapping).
     if (this.queued && (this.phase < lastPhase || this.loco < 0.5)) {
       this.start(this.queued);
@@ -230,11 +333,11 @@ export class PlayerAnimator {
     if (tr && trMeta) {
       const before = travelAt(trMeta, this.lib.fps, tr.t);
       if (!tr.done) {
-        tr.t += dt;
+        tr.t += dt * tr.rate;
         if (tr.t >= trMeta.duration) {
           tr.t = trMeta.duration;
           tr.done = true;
-          if (trMeta.to) this.handOver(trMeta.to);
+          if (trMeta.to) this.handOver(trMeta.to, trMeta.toPhase);
         }
       }
       this.rootMotion = (travelAt(trMeta, this.lib.fps, tr.t) - before) * scale;
@@ -255,8 +358,13 @@ export class PlayerAnimator {
       const w = gait === g.a ? 1 - g.w : gait === g.b ? g.w : 0;
       const p = warpPhase(this.phase, gait.duty, duty);
       clipPhase.set(gait.name, p);
-      a.setEffectiveWeight(this.loco * w * (1 - tw));
+      a.setEffectiveWeight(this.loco * w * (1 - tw) * (1 - this.back));
       a.time = p * gait.duration;
+    }
+    const bp = this.actions.get('loco_backpedal');
+    if (bp && bpMeta) {
+      bp.setEffectiveWeight(this.loco * this.back * (1 - tw));
+      bp.time = this.backPhase * bpMeta.duration;
     }
     this.stanceTime += dt;
     let total = 0;
@@ -281,6 +389,10 @@ export class PlayerAnimator {
     for (const [bone, q] of this.animPose) bone.quaternion.copy(q);
     this.mixer.update(0);
     for (const [bone, q] of this.animPose) q.copy(bone.quaternion);
+    // Overlays over the clips (the snapshot above is what the next frame
+    // restores, so they never compound).
+    this.holdLayer = this.stepOverlay(this.holdLayer, dt);
+    this.actionLayer = this.stepOverlay(this.actionLayer, dt);
     this.player.root.updateMatrixWorld(true);
 
     // 3. Lean (before the feet are locked, so the lock sees the leaned body).
@@ -296,7 +408,9 @@ export class PlayerAnimator {
         this.lockFoot(s, 'trans', down, dt, input.groundVelocity);
         continue;
       }
-      if (this.loco > 0.5) {
+      if (this.loco > 0.5 && this.back > 0.5 && bpMeta) {
+        down = planted(bpMeta, s, this.backPhase);
+      } else if (this.loco > 0.5) {
         down = true;
         for (const [gait, w] of [[g.a, 1 - g.w], [g.b, g.w]] as const) {
           if (w > 0.02) down &&= planted(this.lib.meta[gait.name]!, s, clipPhase.get(gait.name)!);

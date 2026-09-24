@@ -18,6 +18,7 @@ from lib.poses import apply_pose  # noqa: E402
 from lib.preview import import_player, render_views, setup_scene, sheet  # noqa: E402
 from lib.rig import build_armature  # noqa: E402
 from lib.transitions import transitions  # noqa: E402
+from lib.actions import action_clips  # noqa: E402
 
 
 def main() -> None:
@@ -33,13 +34,13 @@ def main() -> None:
     cam = setup_scene(size=300)
     tmp = tempfile.mkdtemp()
     rows = []
-    trs = {t.name: t for t in transitions()}
+    trs = {t.name: t for t in [*transitions(), *action_clips()]}
     for name in names:
         tr = trs.get(name)
         files = []
         for k in range(n):
             if tr:
-                f = round(k * tr.frames / (n - 1))
+                f = round(k * tr.frames / (n - 1)) if not getattr(tr, "loop", False) else round(k * tr.frames / n)
                 pose = tr.pose(f)
             else:
                 g = GAITS[name]
