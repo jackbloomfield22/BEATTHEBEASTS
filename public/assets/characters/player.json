@@ -4,17 +4,17 @@
     {
       "lod": 0,
       "triangles": 24728,
-      "vertices": 13180
+      "vertices": 13189
     },
     {
       "lod": 1,
-      "triangles": 12069,
-      "vertices": 6702
+      "triangles": 12070,
+      "vertices": 6707
     },
     {
       "lod": 2,
       "triangles": 3606,
-      "vertices": 2177
+      "vertices": 2180
     }
   ],
   "bones": 52,
@@ -83,5 +83,5 @@
     "calves",
     "arms"
   ],
-  "bytes": 2014568
+  "bytes": 2009676
 }

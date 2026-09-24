@@ -25,6 +25,7 @@ from mathutils import Vector  # noqa: E402
 
 from lib import gear  # noqa: E402
 from lib.body import build_body  # noqa: E402
+from lib.skeleton import J  # noqa: E402
 from lib.geo import decimate_to, delete_verts, duplicate, tri_count  # noqa: E402
 from lib.rig import bind, build_armature, crotch_weights, fill_bare, limit_weights, remap_weights, transfer_weights  # noqa: E402
 from lib.shapes import PART_AWARE, PART_FOLLOW, SHAPES  # noqa: E402
@@ -56,12 +57,21 @@ def covered(co: Vector) -> bool:
     # hidden (skin lying on the jersey's inside z-fights through its edge).
     if co.z > 1.44 and math.hypot(co.x, co.y - 0.02) < 0.092:
         return False
+    # Inside the glove cuff (gear.glove: wrist - 4.5 cm .. + 2 cm): the
+    # forearm poked through it when the wrist bent back (QB gun). Keep 1 cm
+    # under the cuff edge so no gap opens.
+    for s in ("l", "r"):
+        el, wr = Vector(J[f"elbow_{s}"]), Vector(J[f"wrist_{s}"])
+        d = wr - el
+        t = (co - el).dot(d) / d.length_squared
+        if t > 1.0 - 0.035 / d.length and (co - (el + d * t)).length < 0.06:
+            return True
     if 0.95 <= co.z < 1.62:
         for s in ("l", "r"):
             if (co.x > 0) == (s == "l") and abs(co.x) > 0.16:
                 t, _ = gear.along_upper_arm(co, s)
-                if t > gear.SLEEVE_END - 0.06:
-                    return False  # bare arm below the sleeve
+                if t > gear.SLEEVE_END + 0.02:
+                    return False  # bare arm below the sleeve (1 cm up inside the hem)
         return abs(co.x) < 0.33  # torso and upper arm, under the jersey
     return False
 
@@ -187,7 +197,9 @@ def pads_rigid(ob: bpy.types.Object) -> None:
         co = v.co
         if co.z < 1.36:
             continue
-        k = min(1.0, (co.z - 1.36) / 0.06) * (1.0 - min(1.0, max(0.0, (abs(co.x) - 0.19) / 0.07)))
+        # Rigid out to the cap's edge (|x| 0.22), fading by 0.30: with the fade
+        # starting at 0.19 a backswing levered the cap up like a flap (sprint).
+        k = min(1.0, (co.z - 1.36) / 0.06) * (1.0 - min(1.0, max(0.0, (abs(co.x) - 0.22) / 0.08)))
         if k <= 0:
             continue
         moved = 0.0
