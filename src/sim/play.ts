@@ -331,9 +331,18 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
   const attack: 1 | -1 = c.side === 'off' ? 1 : -1;
   const userCarrier = s.setup.user && c.side === 'off';
   let want: V2;
+  // Context speed (feedback item 3): flat out in space, controlled with a tackler on him.
+  const pace = carrierPace(s, c, attack);
   if (userCarrier) {
-    const sp = inp.sprint && c.stamina > 0.05 ? 1 : 0.84;
-    want = { x: inp.move.x * c.fx.vmax * sp, y: inp.move.y * c.fx.vmax * sp };
+    // Shift: a short burst, on the press (holding it doesn't keep bursting).
+    if (inp.sprint && !c.mem.sprintHeld && c.burst === 0 && c.burstCd === 0 && c.stamina > BURST_MIN) {
+      c.burst = BURST_TICKS;
+      c.burstCd = BURST_COOLDOWN;
+      c.stamina = Math.max(0, c.stamina - BURST_COST);
+      s.events.push({ t: s.t, type: 'move', who: [c.i], data: { move: 'burst' } });
+    }
+    c.mem.sprintHeld = inp.sprint;
+    want = { x: inp.move.x * c.fx.vmax * pace, y: inp.move.y * c.fx.vmax * pace };
     const pressed: Move | null = inp.jukeL
       ? 'jukeL'
       : inp.jukeR
@@ -354,6 +363,7 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     if (!inp.protect && c.move === 'protect') c.move = null;
   } else {
     want = carrierAI(s, c, attack);
+    want = { x: want.x * pace, y: want.y * pace };
     // A defender squaring up close: try a move that suits him (AI).
     if (c.moveCooldown === 0 && c.busy === 0) {
       for (const i of attack > 0 ? s.def : s.off) {
@@ -380,7 +390,8 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
   if (c.busy > 0 && c.move && c.move !== 'protect' && c.move !== 'stiffArm') {
     steer(c, c.vel, { mult: 1 });
   } else {
-    steer(c, cutWeight(c, want), { mult: c.move === 'protect' ? 0.88 : 1, brake: len(want) < 0.1 ? CARRIER_COAST : 1 });
+    // Protecting the ball (two hands, covered up) is the one slow gait: a jog.
+    steer(c, cutWeight(c, want), { mult: c.move === 'protect' ? PROTECT_PACE : 1, brake: len(want) < 0.1 ? CARRIER_COAST : 1, burst: c.burst > 0 });
   }
   if (c.anim !== 'juke' && c.anim !== 'spin' && c.anim !== 'stiffArm' && c.anim !== 'truck' && c.anim !== 'dive') c.anim = 'carry';
   if (c.move === 'dive' && c.busy <= 1) {
@@ -408,6 +419,37 @@ function sweptGap(o: Agent, c: Agent): number {
   const ey = ay + dy * u;
   return Math.sqrt(ex * ex + ey * ey);
 }
+
+/**
+ * Carrier speed by context (feedback item 3). Flat out in open field or
+ * through a lane; a controlled run (86% at a yard, full again by 2.5 yd) when
+ * a free tackler is within a couple of yards in front of him, so a cut or a
+ * move can land (the ~85% "breakdown" pace backs use to set up a tackler);
+ * never a jog in the open. Speed and Acceleration are the ceiling (steer).
+ */
+export function carrierPace(s: PlayState, c: Agent, attack: 1 | -1): number {
+  const sp = len(c.vel);
+  const hx = sp > 1 ? c.vel.x / sp : attack;
+  const hy = sp > 1 ? c.vel.y / sp : 0;
+  let near = Infinity;
+  for (const i of attack > 0 ? s.def : s.off) {
+    const d = s.agents[i]!;
+    if (d.down || blockOf(s, i)) continue;
+    const rx = d.pos.x - c.pos.x;
+    const ry = d.pos.y - c.pos.y;
+    if (rx * hx + ry * hy < -0.3) continue; // behind him: run away from him
+    near = Math.min(near, Math.sqrt(rx * rx + ry * ry));
+  }
+  return near < 2.5 ? 0.86 + 0.14 * Math.max(0, Math.min(1, (near - 1.2) / 1.3)) : 1;
+}
+
+/** Burst: half a second, a tenth of his stamina, not again for 1.5 s, not when he's spent. */
+const BURST_TICKS = 30;
+const BURST_COOLDOWN = 90;
+const BURST_COST = 0.1;
+const BURST_MIN = 0.15;
+/** Protecting the ball: a jog, ~78% (two hands on it, pads over it). */
+const PROTECT_PACE = 0.78;
 
 /** Tackles on the ball carrier (or the QB in the pocket). */
 function contactStep(s: PlayState): void {
@@ -715,7 +757,12 @@ function runToBall(s: PlayState, a: Agent): void {
   const b = s.ball;
   const rt = a.route;
   const settle = !!rt && rt.sit[rt.pts.length - 1] === true && rt.idx >= rt.pts.length - 1;
-  const to = { x: b.aim.x, y: b.aim.y };
+  // Until he finds the ball in the air he runs to where it should come (the
+  // QB's lead and placement); then he adjusts to where it's really going,
+  // within what his legs can do. Finding it: 0.2–0.45 s by Catching (a ball
+  // off target is a ball he has to track, which is what accuracy is for).
+  const found = s.t - b.releaseT >= 0.2 + 0.25 * (1 - a.fx.a('catching'));
+  const to = found ? { x: b.aim.x, y: b.aim.y } : { x: b.meant.x, y: b.meant.y };
   const d = dist(a.pos, to);
   const left = b.arrive - s.t;
   if (settle) {

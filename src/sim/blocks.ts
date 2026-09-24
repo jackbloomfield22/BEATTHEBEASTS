@@ -62,7 +62,8 @@ function edge(b: Agent, d: Agent, blk: Block): number {
     // Linemen drive with their run-block ratings; receivers and tight ends stalk with Run Block.
     const push = lineman
       ? n(b, 'rbPower') * 0.5 + n(b, 'rbFinesse') * 0.2 + n(b, 'strength') * 0.3
-      : n(b, 'runBlock') * 0.55 + n(b, 'impactBlock') * 0.15 + n(b, 'strength') * 0.3 - 0.12;
+      : // A stalk in space: a receiver on a defensive back holds him about a second (−0.25: a DB coming off it to the ball is the norm).
+        n(b, 'runBlock') * 0.55 + n(b, 'impactBlock') * 0.15 + n(b, 'strength') * 0.3 - 0.25;
     const hold = shed * 0.5 + n(d, 'strength') * 0.3 + n(d, 'powerMoves') * 0.2;
     const mass = (d.fx.mass - b.fx.mass) / 250;
     return hold - push + mass;

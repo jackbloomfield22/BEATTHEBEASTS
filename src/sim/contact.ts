@@ -156,6 +156,8 @@ export function applyImpulse(a: Agent): void {
 export function tickMoves(a: Agent): void {
   if (a.busy > 0) a.busy--;
   if (a.moveCooldown > 0) a.moveCooldown--;
+  if (a.burst > 0) a.burst--;
+  if (a.burstCd > 0) a.burstCd--;
   if (a.busy === 0 && a.move && a.move !== 'protect') a.move = null;
   a.moveFatigue = Math.max(0, a.moveFatigue - TICK * 0.5);
 }

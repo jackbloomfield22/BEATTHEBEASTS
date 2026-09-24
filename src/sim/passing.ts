@@ -49,9 +49,20 @@ export function lead(r: Agent, T: number): V2 {
   if (rt.idx >= rt.pts.length && rt.sit[rt.pts.length - 1]) return { x: r.pos.x, y: r.pos.y };
   let left = fullSpeedRun(r, T);
   let at = { x: r.pos.x, y: r.pos.y };
+  // Each break costs ground: redirecting his run by θ at speed v takes
+  // ~v(1 − cos θ)/a of his cut acceleration a, and while he turns he makes
+  // next to no ground along the new leg: about v²(1 − cos θ)/a lost.
+  const v = Math.max(len(r.vel), r.fx.vmax * 0.8);
+  let dir = len(r.vel) > 0.5 ? { x: r.vel.x / len(r.vel), y: r.vel.y / len(r.vel) } : null;
   for (let k = rt.idx; k < rt.pts.length; k++) {
     const q = rt.pts[k]!;
     const d = dist(at, q);
+    if (d > 1e-6) {
+      const nd = { x: (q.x - at.x) / d, y: (q.y - at.y) / d };
+      if (dir) left -= (v * v * (1 - (dir.x * nd.x + dir.y * nd.y))) / r.fx.cutAccel;
+      dir = nd;
+    }
+    if (left <= 0) return at;
     if (d >= left) return { x: at.x + ((q.x - at.x) / d) * left, y: at.y + ((q.y - at.y) / d) * left };
     left -= d;
     at = { x: q.x, y: q.y };
@@ -82,6 +93,15 @@ export function touchArc(d: number): number {
   return 0.08 + Math.max(0, Math.min(1, (d - 10) / 40)) * 0.24;
 }
 
+/**
+ * The error cone's growth with distance (× the 20-yd error). Past 20 yd it
+ * grows in proportion; inside it keeps most of its size, because the misses
+ * that matter on a short throw are mechanics and timing, not distance: PFF
+ * charts ~10% of an elite passer's short throws off target (σ ≈ 0.36 yd at
+ * 10 yd for a 95 accuracy) and ~35% of deep ones (σ ≈ 0.85 at 40).
+ */
+export const coneScale = (d: number): number => (d >= 20 ? d / 20 : 0.7 + 0.3 * (d / 20));
+
 export interface ThrowPlan {
   from: V3;
   to: V3;
@@ -93,6 +113,8 @@ export interface ThrowPlan {
   airYards: number;
   /** Error applied (yd), for the catch roll. */
   miss: number;
+  /** The catch point he meant (lead and placement, before the error). */
+  meant: V2;
 }
 
 /**
@@ -120,11 +142,12 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, a
   let tx = spot.x + rv.x * place;
   let ty = spot.y + rv.y * place;
   let tz = CATCH_Z + 0.55 * aim.y;
+  const meant = { x: tx, y: ty };
   const d = dist(from, { x: tx, y: ty });
   // Error cone (GDD §9.1): the accuracy for the throw's depth sets the base.
   const air = tx - s.setup.los;
   const acc = air < 12 ? qb.fx.r('shortAcc') : air < 25 ? qb.fx.r('midAcc') : qb.fx.r('deepAcc');
-  let sigma = errorAt20(acc) * Math.max(0.4, d / 20);
+  let sigma = errorAt20(acc) * coneScale(d);
   const moving = Math.min(1, len(qb.vel) / 4);
   sigma *= 1 + moving * 1.1 * (1 - qb.fx.a('throwOnRun'));
   sigma *= 1 + pressure * 1.4 * (1 - qb.fx.a('underPressure'));
@@ -146,7 +169,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, a
   const to: V3 = { x: tx, y: ty, z: tz };
   const final = flightTime(from, to, S, bullet ? 0.05 : touchArc(d));
   const v0 = solveLaunch(from, to, final.T);
-  return { from, to, v0, T: final.T, kind: bullet ? 'bullet' : 'touch', distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez) };
+  return { from, to, v0, T: final.T, kind: bullet ? 'bullet' : 'touch', distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant };
 }
 
 /**
@@ -179,7 +202,7 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, charge: number
   const air = x - s.setup.los;
   const acc = air < 12 ? qb.fx.r('shortAcc') : air < 25 ? qb.fx.r('midAcc') : qb.fx.r('deepAcc');
   const moving = Math.min(1, len(qb.vel) / 4);
-  const sigma = errorAt20(acc) * Math.max(0.4, d / 20) * (1 + moving * 1.1 * (1 - qb.fx.a('throwOnRun'))) * (bullet ? 1 + 0.18 * Math.min(1, charge) : 1);
+  const sigma = errorAt20(acc) * coneScale(d) * (1 + moving * 1.1 * (1 - qb.fx.a('throwOnRun'))) * (bullet ? 1 + 0.18 * Math.min(1, charge) : 1);
   return { x, y, sigma };
 }
 
@@ -193,6 +216,8 @@ export function release(s: PlayState, qb: Agent, rec: Agent, plan: ThrowPlan): v
   b.target = rec.i;
   b.aim = { ...plan.to };
   b.arrive = s.t + plan.T;
+  b.meant = { ...plan.meant };
+  b.releaseT = s.t;
   b.thrower = qb.i;
   b.kind = plan.kind;
   b.spin = 0;

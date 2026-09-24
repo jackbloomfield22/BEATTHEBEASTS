@@ -355,6 +355,13 @@ export function openness(s: PlayState, qb: Agent, r: Agent, bullet?: boolean, pe
   return { sep, at, T, bullet: isBullet };
 }
 
+/**
+ * The margin a deep ball needs: a yard more per 20 yd past 10 downfield
+ * (the longer it hangs, the more a small misread costs; NFL QBs throw ~12%
+ * of attempts 20+ air yards and complete ~35–45% of them).
+ */
+const deepRisk = (s: PlayState, at: V2): number => Math.max(0, at.x - s.setup.los - 10) * 0.05;
+
 /** Where the QB AI throws: his read progression, earlier throws when pressured. Returns the icon index (0-based) or −1. */
 export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
   const readTime = 0.55 - 0.3 * qb.fx.a('awareness');
@@ -368,16 +375,22 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
   const noise = (1 - qb.fx.a('decision')) * 1.2 * (s.rng.ai() - 0.5);
   // The clock in his head: past ~2.2 s from the set he takes what's there.
   const held = s.t - s.snapT - s.setup.play.drop.set;
-  const need = 1.4 - 1.1 * pressure - Math.min(0.8, held * 0.3) - (held > 2.2 ? 2 : 0);
+  // The window he wants (yd of separation at the catch point): about a yard. NFL QBs throw ~15% of attempts into tight windows (NGS "aggressiveness").
+  const need = 1.0 - 1.1 * pressure - Math.min(0.8, held * 0.3) - (held > 2.2 ? 2 : 0);
   s.eyes = { x: r.pos.x, y: r.pos.y };
-  // A deep ball needs a step on the coverage: the longer it hangs, the more
-  // a small misread costs (NFL QBs throw ~12% of attempts 20+ air yards and
-  // complete ~35–45% of them). About a yard more margin per 20 yd downfield.
-  const risk = Math.max(0, o.at.x - s.setup.los - 10) * 0.05;
+  // The progression runs once, in time with the routes: a deep read that
+  // wasn't there on schedule isn't come back to late (a QB who's been through
+  // his reads checks it down or scrambles; he doesn't throw a go route 3 s in
+  // unless the man is running free).
+  const late = s.read.idx >= icons.length;
+  const risk = deepRisk(s, o.at) * (late ? 2.5 : 1);
   // A screen goes to its man on schedule unless a defender is on him (it's
   // built on blockers in front of him, not on separation).
   const screen = s.setup.play.type === 'screen' && cur === 0 && s.t - s.snapT >= s.setup.play.drop.set;
-  if (screen ? o.sep + noise > -0.5 : o.sep + noise > need + risk) return cur;
+  // The concept is built for the first reads: he'll put those into a tighter
+  // window on time (anticipation) than he'd want for the outlet.
+  const primary = cur === 0 ? 0.45 : cur === 1 ? 0.2 : 0;
+  if (screen ? o.sep + noise > -0.5 : o.sep + noise > need + risk - primary) return cur;
   if (since > readTime) {
     s.read.idx++;
     s.read.since = s.t;
@@ -388,7 +401,7 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
     let bs = -Infinity;
     icons.forEach((k, j) => {
       const oq = openness(s, qb, s.agents[k]!);
-      const q = oq.sep - Math.max(0, oq.at.x - s.setup.los - 10) * 0.05;
+      const q = oq.sep - deepRisk(s, oq.at) * 2.5;
       if (q > bs) {
         bs = q;
         best = j;
@@ -505,12 +518,14 @@ export function intercept(c: V2, v: number, p: V2, vt: V2): V2 | null {
  */
 export function pursue(s: PlayState, d: Agent, t: Agent): void {
   const seenT = seen(t, reaction(s, d) * 0.4);
-  // Where he's going: a runner accelerates toward the goal line, so blend
-  // what he's doing with a full-speed run upfield (half and half).
+  // Where he's going: a runner in space goes flat out for the goal line
+  // (carrierPace), so take the angle for a man at ~90% of his top speed
+  // upfield, blended with what he's doing now (a shallower angle leaves the
+  // pursuer trailing a man as fast as he is).
   const attack = t.side === 'off' ? 1 : -1;
   const upNow = seenT.vel.x * attack;
-  const upSoon = Math.max(upNow, 0.55 * t.fx.vmax);
-  const vt = { x: attack * (upNow + (upSoon - upNow) * 0.5), y: seenT.vel.y * 0.7 };
+  const upSoon = Math.max(upNow, 0.9 * t.fx.vmax);
+  const vt = { x: attack * (upNow + (upSoon - upNow) * 0.7), y: seenT.vel.y * 0.7 };
   const cut = intercept(d.pos, d.fx.vmax * 0.95, seenT.pos, vt);
   const k = 0.35 + 0.65 * d.fx.a('pursuit');
   const naive = { x: seenT.pos.x + vt.x * 0.25, y: seenT.pos.y + vt.y * 0.25 };
@@ -579,7 +594,10 @@ export function zoneCover(s: PlayState, d: Agent, zone: NonNullable<Parameters<t
     steer(d, { x: 0.8, y: 0 }, { face: Math.PI });
     return;
   }
-  const rad = deep ? 11 : 7;
+  // How far his area reaches: a deep third or half ~11 yd; a curl zone is
+  // really curl-to-flat (he widens to a route in the flat when there's no
+  // curl threat: the Cover 3 "seam-curl-flat" player), ~10; hooks ~7.
+  const rad = deep ? 11 : zone.startsWith('curl') ? 10 : 7;
   const delay = reaction(s, d) * 0.7;
   // The most dangerous receiver in my area: the deepest for deep zones, the closest otherwise.
   let threat: Agent | null = null;

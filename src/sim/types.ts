@@ -87,6 +87,9 @@ export interface Agent {
   moveCooldown: number;
   /** Recent moves (spamming loses effectiveness). */
   moveFatigue: number;
+  /** A burst (the carrier's Shift): ticks left, and ticks until he can burst again. */
+  burst: number;
+  burstCd: number;
   /** A move pressed while he couldn't start it yet, and the ticks it stays pressed (input buffer). */
   moveBuf: { mv: Move; left: number } | null;
   /** A move's velocity change still being applied, per tick, over its plant (not in one tick). */
@@ -115,6 +118,9 @@ export interface Ball {
   target: number;
   aim: { x: number; y: number; z: number };
   arrive: number;
+  /** Where the QB meant it to go (his lead and placement, before the error cone), and when it left his hand. */
+  meant: { x: number; y: number };
+  releaseT: number;
   thrower: number;
   /** 'touch' | 'bullet' of the last throw. */
   kind: 'touch' | 'bullet' | null;

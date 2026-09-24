@@ -12,7 +12,7 @@ import { atan2 } from '@/engine/math/detmath';
 import { blockOf } from './blocks';
 import { arrive, steer } from './movement';
 import { pursue, reaction, runBlock } from './ai';
-import type { OffPlay } from './plays';
+import { ZONES, type OffPlay } from './plays';
 import type { PlayState } from './state';
 import { FIELD_HALF_W, type Agent, type OffSlot } from './types';
 import { dist, v2, type V2 } from './vec';
@@ -321,10 +321,26 @@ export function assignRunFits(s: PlayState): void {
  * a run show).
  */
 export function belief(s: PlayState, d: Agent): 'run' | 'pass' {
+  const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
+  const c = s.carrier >= 0 ? s.agents[s.carrier]! : null;
+  const past = c !== null && c.side === 'off' && c.pos.x > s.setup.los;
+  // A man-coverage defender's key is his man: he plays the run only when his
+  // man blocks (or the ball's across the line), never off a backfield fake.
+  if (as.kind === 'man') {
+    const m = s.agents[s.slot[as.on]!]!;
+    const blocking = s.setup.play.assign[m.slot as keyof typeof s.setup.play.assign].kind !== 'route';
+    return past || (blocking && s.runShow >= 0 && s.t >= s.runShow + reaction(s, d)) ? 'run' : 'pass';
+  }
   const rt = reaction(s, d);
   const db = d.slot === 'LCB' || d.slot === 'RCB' || d.slot === 'FS' || d.slot === 'SS';
-  const tRun = s.runShow >= 0 ? s.runShow + rt + (db ? 0.25 : 0) : Infinity;
-  const tPass = s.passShow >= 0 ? s.passShow + rt : Infinity;
+  // Deep zones are pass-first by coaching (a ball over your head is the one
+  // unforgivable thing): they need to see run a beat longer.
+  const deep = as.kind === 'zone' && ZONES[as.zone].deep;
+  const tRun = s.runShow >= 0 ? s.runShow + rt + (db ? 0.25 : 0) + (deep ? 0.35 : 0) : Infinity;
+  // Seeing the ball come out of a fake takes a sharper eye than seeing the
+  // fake (Play Recognition: the best read it almost at once, the worst a
+  // quarter-second late).
+  const tPass = s.passShow >= 0 ? s.passShow + rt + (s.setup.play.pa ? 0.25 * (1 - d.fx.a('playRec')) : 0) : Infinity;
   const seenRun = s.t >= tRun;
   const seenPass = s.t >= tPass;
   if (seenRun && seenPass) return s.runShow > s.passShow ? 'run' : 'pass';
