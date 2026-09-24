@@ -3,18 +3,18 @@
   "lods": [
     {
       "lod": 0,
-      "triangles": 24728,
-      "vertices": 13189
+      "triangles": 24775,
+      "vertices": 13233
     },
     {
       "lod": 1,
-      "triangles": 12070,
-      "vertices": 6707
+      "triangles": 12066,
+      "vertices": 6709
     },
     {
       "lod": 2,
-      "triangles": 3606,
-      "vertices": 2180
+      "triangles": 3607,
+      "vertices": 2182
     }
   ],
   "bones": 52,
@@ -83,5 +83,5 @@
     "calves",
     "arms"
   ],
-  "bytes": 2009676
+  "bytes": 2017168
 }

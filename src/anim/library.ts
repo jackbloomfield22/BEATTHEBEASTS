@@ -10,7 +10,7 @@ import type { GaitClip } from './blend';
 const BASE = `${import.meta.env.BASE_URL}assets/characters/`;
 
 export interface ClipMeta {
-  kind: 'stance' | 'locomotion' | 'transition';
+  kind: 'stance' | 'locomotion' | 'transition' | 'overlay';
   frames: number;
   duration: number;
   loop: boolean;
@@ -24,6 +24,14 @@ export interface ClipMeta {
   /** Transitions: the clips it leaves and hands over to. */
   from?: string;
   to?: string;
+  /** Transitions into a gait: the gait phase it hands over at (0 = left touch-down). */
+  toPhase?: number;
+  /** Sideways travel by frame (m, +X left), for moves that cut. */
+  side?: number[];
+  /** Frames where the sim's moments land: the ball leaves the hand, a catch is secured, a tackle's contact. */
+  events?: Record<string, number>;
+  /** Overlays: the bones they drive. */
+  mask?: string[];
 }
 
 export interface AnimLibrary {

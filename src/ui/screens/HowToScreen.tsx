@@ -113,14 +113,18 @@ function ControlsPage() {
         <section key={ctx}>
           <h3>{CONTEXT_LABELS[ctx]}</h3>
           <dl>
-            {ACTIONS.filter((a) => a.context === ctx && a.id !== 'global.perf').map((a) => (
-              <div key={a.id} className="ref-row">
-                <dt>{a.label}</dt>
-                <dd>
-                  <kbd>{(device === 'gamepad' ? pad[a.id] : kb[a.id])?.map(inputLabel).join(' / ') || '—'}</kbd>
-                </dd>
-              </div>
-            ))}
+            {ACTIONS.filter((a) => a.context === ctx && a.id !== 'global.perf')
+              .map((a) => ({ a, codes: (device === 'gamepad' ? pad[a.id] : kb[a.id]) ?? [] }))
+              // An action with no default on this device (the directional jukes on a keyboard) is left off unless it's been bound.
+              .filter(({ a, codes }) => codes.length > 0 || a[device === 'gamepad' ? 'pad' : 'kb'].length > 0)
+              .map(({ a, codes }) => (
+                <div key={a.id} className="ref-row">
+                  <dt>{a.label}</dt>
+                  <dd>
+                    <kbd>{codes.map(inputLabel).join(' / ') || '—'}</kbd>
+                  </dd>
+                </div>
+              ))}
           </dl>
         </section>
       ))}

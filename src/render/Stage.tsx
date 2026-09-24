@@ -7,6 +7,8 @@ import { World, type WorldQuality } from './World';
 import { Lineup } from './players/Lineup';
 import { CameraDirector } from './cameras/CameraDirector';
 import { FlyCamera } from './cameras/FlyCamera';
+import { GameScene } from './game/GameScene';
+import { GameCamera } from './game/GameCamera';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { renderDpr, useSettings, type QualityPreset } from '@/app/settings';
@@ -87,7 +89,8 @@ function Post({ preset, quality }: { preset: LightingPreset; quality: QualityPre
   }, [dpr, size]);
   return (
     <EffectComposer ref={composer} multisampling={g.antialias === 'smaa+msaa' ? 4 : 0} frameBufferType={THREE.HalfFloatType} enableNormalPass={false}>
-      {ao ? <N8AO halfRes={g.ao === 'half'} aoRadius={1.6} distanceFalloff={0.6} intensity={2.2} quality={quality === 'ultra' ? 'high' : quality === 'high' ? 'medium' : 'low'} /> : <></>}
+      {/* Medium: half resolution each way (a quarter of the pixels) and the fewest samples (M5 perf, the broadcast gate). */}
+      {ao ? <N8AO halfRes={g.ao === 'half'} aoRadius={1.6} distanceFalloff={0.6} intensity={2.2} quality={quality === 'ultra' ? 'high' : quality === 'high' ? 'medium' : quality === 'medium' ? 'performance' : 'low'} /> : <></>}
       {g.bloom ? <Bloom mipmapBlur intensity={preset.bloom.intensity * (reduceFlashing ? 0.6 : 1)} luminanceThreshold={preset.bloom.threshold} luminanceSmoothing={0.2} radius={0.72} /> : <></>}
       <primitive object={color} dispose={null} />
       <SMAA />
@@ -131,6 +134,7 @@ export function currentQuality(): QualityPreset {
 export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasElement) => void } = {}) {
   const preset = useLightingPreset();
   const shot = useApp((s) => s.shot);
+  const inGame = useApp((s) => s.screen === 'practice');
   const setSceneReady = useApp((s) => s.setSceneReady);
   const display = useSettings((s) => s.settings.display);
   const graphics = useSettings((s) => s.settings.graphics);
@@ -183,7 +187,8 @@ export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasEl
       <FirstLaunchBenchmark targetFps={display.frameCap || 60} />
       <World preset={preset} quality={worldQuality} onReady={setSceneReady} />
       {urlFlags.lineup ? <Lineup /> : null}
-      {urlFlags.fly ? <FlyCamera /> : <CameraDirector shot={shot} fovOffset={display.fov} />}
+      {inGame ? <GameScene /> : null}
+      {urlFlags.fly ? <FlyCamera /> : inGame ? <GameCamera fovOffset={display.fov} /> : <CameraDirector shot={shot} fovOffset={display.fov} />}
       <Post preset={preset} quality={quality} />
       <PerfProbe preset={preset.id} />
     </Canvas>

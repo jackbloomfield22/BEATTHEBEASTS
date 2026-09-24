@@ -33,6 +33,7 @@ from lib.skeleton import J  # noqa: E402
 from lib.gait import FPS, GAITS, contacts, gait_pose  # noqa: E402
 from lib.poses import HEEL_REST, STANCES, Pose, apply_pose  # noqa: E402
 from lib.transitions import transitions  # noqa: E402
+from lib.actions import NO_BALANCE, action_clips  # noqa: E402
 from lib.rig import build_armature  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -99,11 +100,18 @@ def breathing(base: Pose, frame: int) -> Pose:
 def clip_list():
     clips = []
     for name, st in STANCES.items():
-        clips.append({"name": f"stance_{name}", "kind": "stance", "stance": name, "frames": STANCE_FRAMES, "loop": True, "speed": 0.0, "dir": [0, 0], "pose": (lambda f, st=st: breathing(st, f)), "contacts": {"l": [[0, STANCE_FRAMES]], "r": [[0, STANCE_FRAMES]]}})
+        clips.append({"name": f"stance_{name}", "kind": "stance", "stance": name, "frames": STANCE_FRAMES, "loop": True, "speed": 0.0, "dir": [0, 0], "pose": (lambda f, st=st: breathing(st, f)), "contacts": {"l": [[0, STANCE_FRAMES]], "r": [[0, STANCE_FRAMES]]}, "balance": name not in NO_BALANCE})
     for name, g in GAITS.items():
         clips.append({"name": f"loco_{name}", "kind": "locomotion", "frames": g.frames, "loop": True, "speed": g.speed, "dir": list(g.dir), "pose": (lambda f, g=g: gait_pose(g, f % g.frames)), "contacts": contacts(g), "travel": (lambda f, g=g: g.speed * f / FPS)})
     for tr in transitions():
         clips.append({"name": tr.name, "kind": "transition", "frames": tr.frames, "loop": False, "speed": 0.0, "dir": [0.0, -1.0], "pose": tr.pose, "contacts": tr.contacts, "travel": tr.travel, "from": tr.frm, "to": tr.to})
+    for c in action_clips():
+        clip = {"name": c.name, "kind": c.kind, "frames": c.frames, "loop": c.loop, "speed": 0.0, "dir": c.dir if c.kind == "transition" else [0, 0], "pose": c.pose, "contacts": c.contacts, "events": c.events}
+        if c.kind == "transition":
+            clip.update({"travel": c.travel, "travel_xy": c.travel_xy, "from": c.frm, "to": c.to, "to_phase": c.to_phase})
+        if c.mask:
+            clip["mask"] = c.mask
+        clips.append(clip)
     return clips
 
 
@@ -334,7 +342,7 @@ def bake(rig, c, clip):
             for s in "lr":
                 reach = max(reach, (world(rig, f"foot_{s}") - c.foot[s].location).length)
             clearance = min(clearance, (world(rig, "foot_l") - world(rig, "foot_r")).length, (world(rig, "calf_l") - world(rig, "calf_r")).length)
-            if clip["kind"] == "stance":
+            if clip["kind"] == "stance" and clip.get("balance", True):
                 cm = com(rig)
                 com_margin = min(com_margin, inside_margin((cm.x, cm.y), support(rig, HAND_SUPPORT.get(clip.get("stance"), []))))
                 if f == 0:
@@ -345,6 +353,8 @@ def bake(rig, c, clip):
     dx, dy = clip["dir"]
     heading = Vector((dx, dy, 0))
     travel = clip.get("travel") or (lambda f: 0.0)
+    # Clips that travel in 2D (a juke's cut) give the whole displacement.
+    offset = (lambda f: Vector((*clip["travel_xy"](f), 0.0))) if "travel_xy" in clip else (lambda f: heading * travel(f))
     slide = 0.0
     for s in "lr":
         for a, b in clip["contacts"][s]:
@@ -352,7 +362,7 @@ def bake(rig, c, clip):
             span = range(a, min(end, frames if not clip["loop"] else end))
             if not span:
                 continue
-            pts = [ball_track[s][f % frames] + heading * travel(f) for f in span]
+            pts = [ball_track[s][f % frames] + offset(f) for f in span]
             mean = sum(pts, Vector()) / len(pts)
             slide = max(slide, max((p - mean).length for p in pts))
     # Loop continuity: frame N against frame 0.
@@ -458,6 +468,20 @@ def main():
             # Root motion: meters travelled along `dir` by each frame (the
             # clip itself plays in place), and the clips it joins.
             meta["clips"][clip["name"]].update({"travel": [round(clip["travel"](f), 4) for f in range(clip["frames"] + 1)], "from": clip["from"], "to": clip["to"]})
+            if clip.get("to_phase"):
+                # Where in the gait's cycle the clip hands over (0 = left touch-down).
+                meta["clips"][clip["name"]]["toPhase"] = clip["to_phase"]
+            if "travel_xy" in clip:
+                # Sideways travel (glTF +X left), for moves that cut.
+                side = [round(clip["travel_xy"](f)[0], 4) for f in range(clip["frames"] + 1)]
+                if any(abs(x) > 1e-4 for x in side):
+                    meta["clips"][clip["name"]]["side"] = side
+        if clip.get("events"):
+            # Frames where the sim's moments land (the ball leaves the hand, a catch is secured).
+            meta["clips"][clip["name"]]["events"] = clip["events"]
+        if clip.get("mask"):
+            # Overlays: the bones they drive (the runtime lays them over the base motion).
+            meta["clips"][clip["name"]]["mask"] = clip["mask"]
         print(f"{clip['name']:20s} {gates}")
 
     # Export the armature and the clips (the mesh lives in player.glb).

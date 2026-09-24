@@ -57,4 +57,20 @@ export default tseslint.config(
       'no-restricted-globals': ['error', 'window', 'document', 'navigator', 'localStorage', 'performance', 'requestAnimationFrame'],
     },
   },
+  {
+    // The real-time sim must give the same bits in every browser (TECH_PLAN
+    // §4.4): transcendental functions go through engine/math/detmath, and `**`
+    // (Math.pow semantics) is out. (The legacy port keeps legacy's Math.* on purpose.)
+    files: ['src/sim/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...PURE_RESTRICTED_SYNTAX,
+        { selector: "MemberExpression[object.name='Math'][property.name=/^(sin|cos|tan|asin|acos|atan|atan2|exp|expm1|log|log1p|log2|log10|pow|cbrt|hypot|sinh|cosh|tanh)$/]", message: 'Not bit-identical across engines: use engine/math/detmath.' },
+        { selector: "BinaryExpression[operator='**']", message: '`**` is Math.pow: write the product, or use detmath.pow.' },
+        { selector: "AssignmentExpression[operator='**=']", message: '`**` is Math.pow: write the product, or use detmath.pow.' },
+      ],
+    },
+  },
 );

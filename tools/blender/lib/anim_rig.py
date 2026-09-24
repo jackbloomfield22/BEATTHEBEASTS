@@ -100,6 +100,7 @@ class Controls:
             self.foot_rest = getattr(self, "foot_rest", {})
             self.foot_rest[s] = m.to_quaternion()
         self._calibrate_poles()
+        self.elbow_rest = {s: self.elbow[s].location.copy() for s in SIDES}
 
     def arm_ik(self, s: str, on: float) -> None:
         self.rig.pose.bones[f"forearm_{s}"].constraints["IK"].influence = on

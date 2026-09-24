@@ -17,6 +17,9 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `stance_qb_center` | stance | 60 | 0.0 | 0.00 | 0.00 | 33.6 | 1.9 | pass |
 | `stance_qb_gun` | stance | 60 | 0.0 | 0.00 | 0.00 | 32.1 | 8.8 | pass |
 | `stance_huddle` | stance | 60 | 0.0 | 0.00 | 0.00 | 31.7 | 1.8 | pass |
+| `stance_qb_set` | stance | 60 | 0.0 | 0.00 | 0.00 | 34.4 | 7.7 | pass |
+| `stance_down_prone` | stance | 60 | 0.0 | 0.00 | 0.00 | 25.3 | — | pass |
+| `stance_down_supine` | stance | 60 | 0.0 | 0.00 | 0.00 | 22.1 | — | pass |
 | `loco_walk` | locomotion | 32 | 1.3 | 0.05 | 0.00 | 17.2 | — | pass |
 | `loco_jog` | locomotion | 22 | 3.5 | 0.31 | 0.00 | 21.7 | — | pass |
 | `loco_run` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.8 | — | pass |
@@ -43,5 +46,23 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `stop_jog` | transition | 33 | 0.0 | 0.01 | 0.00 | 16.1 | — | pass |
 | `stop_run` | transition | 42 | 0.0 | 0.00 | 0.00 | 17.4 | — | pass |
 | `stop_sprint` | transition | 51 | 0.0 | 0.00 | 0.00 | 18.4 | — | pass |
+| `qb_drop_gun3` | transition | 22 | 0.0 | 0.00 | 0.00 | 28.0 | — | pass |
+| `qb_drop_gun5` | transition | 32 | 0.0 | 0.00 | 0.00 | 27.3 | — | pass |
+| `qb_throw` | transition | 24 | 0.0 | 0.00 | 0.00 | 23.7 | — | pass |
+| `ovl_carry_r` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_protect` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_qb_hold` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_catch` | overlay | 15 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_catch_high` | overlay | 15 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_stiff_arm` | overlay | 15 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_truck` | overlay | 15 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_pump` | overlay | 14 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `juke_l` | transition | 14 | 0.0 | 0.00 | 0.00 | 17.3 | — | pass |
+| `juke_r` | transition | 14 | 0.0 | 0.00 | 0.00 | 17.3 | — | pass |
+| `spin` | transition | 14 | 0.0 | 0.15 | 0.00 | 9.9 | — | pass |
+| `dive` | transition | 24 | 0.0 | 0.00 | 0.00 | 22.0 | — | pass |
+| `tackle` | transition | 27 | 0.0 | 0.00 | 0.00 | 15.7 | — | pass |
+| `getup_prone` | transition | 33 | 0.0 | 0.50 | 0.00 | 23.8 | — | pass |
+| `getup_supine` | transition | 36 | 0.0 | 0.01 | 0.00 | 22.0 | — | pass |
 
-**37 of 37 clips pass.**
+**58 of 58 clips pass.**

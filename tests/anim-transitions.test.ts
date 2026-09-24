@@ -45,3 +45,29 @@ describe('transition clips', () => {
     expect(travelAt(m, 30, -1)).toBe(0);
   });
 });
+
+describe('M5 action clips', () => {
+  const clips = json.clips;
+  it('exist, pass their gates, and carry the events the game times them by', () => {
+    for (const n of ['qb_drop_gun3', 'qb_drop_gun5', 'qb_throw', 'juke_l', 'juke_r', 'spin', 'dive', 'tackle', 'getup_prone', 'getup_supine']) {
+      expect(clips[n], n).toBeDefined();
+      expect(clips[n]!.gates.pass, n).toBe(true);
+    }
+    expect(clips.qb_throw!.events?.release).toBe(11);
+    expect(clips.ovl_catch!.events?.secure).toBe(6);
+    expect(clips.tackle!.events?.contact).toBe(8);
+    // Drops end in the pocket set; the tackle and the dive leave him lying down.
+    expect(clips.qb_drop_gun3!.to).toBe('stance_qb_set');
+    expect(clips.tackle!.to).toBe('stance_down_prone');
+    expect(clips.dive!.to).toBe('stance_down_prone');
+    for (const s of ['stance_qb_set', 'stance_down_prone', 'stance_down_supine']) expect(clips[s]?.kind, s).toBe('stance');
+  });
+  it('overlays drive only the upper body (their masks never touch the legs or the pelvis)', () => {
+    const overlays = Object.entries(clips).filter(([, m]) => m.kind === 'overlay');
+    expect(overlays.map(([n]) => n).sort()).toEqual(['ovl_carry_r', 'ovl_catch', 'ovl_catch_high', 'ovl_protect', 'ovl_pump', 'ovl_qb_hold', 'ovl_stiff_arm', 'ovl_truck']);
+    for (const [n, m] of overlays) {
+      expect(m.mask!.length, n).toBeGreaterThan(5);
+      for (const b of m.mask!) expect(/^(pelvis|root|thigh|calf|foot|toe|spine_01)/.test(b), `${n}: ${b}`).toBe(false);
+    }
+  });
+});

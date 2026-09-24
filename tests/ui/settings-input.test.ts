@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, defaultBindings, findConflicts, inputLabel } from '@/input/actions';
+import { ACTIONS, defaultBindings, findConflicts, inputLabel, KB_DEFAULTS_V2 } from '@/input/actions';
+import { defaultSettings, migrate } from '@/app/settings';
 import { validateCharacterization } from '@/engine/data/characterizationSchema';
 import bundled from '@data/characterization.json';
 
@@ -22,9 +23,36 @@ describe('action map', () => {
     const kb = defaultBindings('kb');
     expect(kb['preSnap.snap']).toEqual(['Space']);
     expect(kb['pocket.throw1']).toEqual(['Digit1']);
-    expect(kb['carrier.jukeLeft']).toEqual(['KeyQ']);
     expect(kb['carrier.truck']).toEqual(['KeyR']);
     expect(kb['global.replay']).toEqual(['KeyP', 'Backspace']);
+  });
+
+  it('plays on the arrows with the left hand on 1–5, 1–3 and Q–F (settings v3)', () => {
+    const kb = defaultBindings('kb');
+    for (const p of ['pocket.move', 'carrier.']) {
+      const up = p === 'carrier.' ? 'up' : 'Up';
+      expect(kb[p + up]).toEqual(['ArrowUp']);
+    }
+    expect(kb['carrier.right']).toEqual(['ArrowRight']);
+    expect(kb['carrier.sprint']).toEqual(['ShiftRight', 'ShiftLeft']);
+    expect([kb['air.aggressive'], kb['air.possession'], kb['air.rac']]).toEqual([['Digit1'], ['Digit2'], ['Digit3']]);
+    expect([kb['carrier.juke'], kb['carrier.stiffArm'], kb['carrier.spin']]).toEqual([['KeyQ'], ['KeyW'], ['KeyE']]);
+    expect([kb['carrier.truck'], kb['carrier.dive'], kb['carrier.protect']]).toEqual([['KeyR'], ['KeyF'], ['KeyC']]);
+    // The directional jukes stay on the right stick only.
+    expect(kb['carrier.jukeLeft']).toEqual([]);
+    expect(defaultBindings('pad')['carrier.jukeLeft']).toEqual(['Pad:RSLeft']);
+  });
+
+  it('v2 settings move to the new keys, but keep a key the player rebound', () => {
+    const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V2, 'carrier.spin': ['KeyX'] }, defaultBindings('pad'));
+    (old as { version: number }).version = 2;
+    const m = migrate(old);
+    expect(m.version).toBe(3);
+    // Still on the old default: dropped, so the merge with the defaults fills in the new one.
+    expect(m.controls.keyboard['carrier.up']).toBeUndefined();
+    expect(m.controls.keyboard['air.possession']).toBeUndefined();
+    // Rebound by the player: kept.
+    expect(m.controls.keyboard['carrier.spin']).toEqual(['KeyX']);
   });
 
   it('labels inputs readably', () => {

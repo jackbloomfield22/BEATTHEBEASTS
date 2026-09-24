@@ -71,6 +71,14 @@ class Pose:
     arms: dict = field(default_factory=dict)  # side -> Arm (aimed after the spine is posed)
     # Head held to a world gaze: (pitch down deg, yaw deg[, neck share]).
     gaze: tuple | None = None
+    # Where the knees point (the IK poles), as a world offset from the middle
+    # of each leg: forward by default; down for a player lying face down, up
+    # on his back. `yaw` (deg, + left) turns the default with a spinning body.
+    knee: tuple | None = None
+    yaw: float = 0.0
+    # Where the elbows point under hand IK: side -> world point (default:
+    # behind and out, the rig's calibration).
+    elbow: dict = field(default_factory=dict)
 
 
 def _foot_rot(s: str, f: Foot) -> Quaternion:
@@ -217,7 +225,13 @@ def apply_pose(rig, c: Controls, p: Pose) -> None:
     for s in SIDES:
         hip = rig.matrix_world @ rig.pose.bones[f"thigh_{s}"].head
         mid = (hip + c.foot[s].location) / 2
-        c.knee[s].location = mid + Vector((0.12 * (1 if s == "l" else -1) * math.sin(math.radians(feet[s].out + 6)), -0.9, 0.0))
+        if p.knee is not None:
+            c.knee[s].location = mid + Vector(p.knee)
+            continue
+        off = Vector((0.12 * (1 if s == "l" else -1) * math.sin(math.radians(feet[s].out + 6)), -0.9, 0.0))
+        c.knee[s].location = mid + (Quaternion((0, 0, 1), math.radians(p.yaw)) @ off if p.yaw else off)
+    for s in SIDES:
+        c.elbow[s].location = Vector(p.elbow[s]) if s in p.elbow else c.elbow_rest[s]
     for s, h in p.hands.items():
         c.arm_ik(s, h[3] if len(h) > 3 else 1.0)
         c.hand[s].location = Vector(h[:3])

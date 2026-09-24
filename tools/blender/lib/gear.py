@@ -15,7 +15,7 @@ import math
 from mathutils import Vector
 
 from .body import hand_parts, torso
-from .geo import Ring, cut, delete_verts, ellipsoid, loft, smoothstep, tube_path, union_remesh
+from .geo import superellipsoid, Ring, cut, delete_verts, ellipsoid, loft, smoothstep, tube_path, union_remesh
 from .skeleton import J
 
 # Part ids, written to TEXCOORD_0.x as id / PART_SCALE (the runtime shader
@@ -61,7 +61,11 @@ def jersey(voxel=0.006):
             v.co += r.normalized() * grow
     # Shoulder pads: a broad, flat plateau over each shoulder (not a dome).
     for sx in (1, -1):
-        parts.append(ellipsoid("pad_cap", (0.165 * sx, 0.012, 1.548), (0.13, 0.150, 0.056), segs=32))
+        # A flat-topped cap with squared corners and a defined outer edge
+        # (a plain ellipsoid read as a pool float), and the epaulet's lip
+        # turning down over the deltoid.
+        parts.append(superellipsoid("pad_cap", (0.165 * sx, 0.012, 1.546), (0.128, 0.148, 0.052), plan=0.5, vert=0.45, segs=40))
+        parts.append(superellipsoid("pad_lip", (0.268 * sx, 0.012, 1.508), (0.030, 0.132, 0.048), plan=0.6, vert=0.7, segs=24))
         s = "l" if sx > 0 else "r"
         sh, el = _v(f"shoulder_{s}"), _v(f"elbow_{s}")
         parts.append(loft("sleeve", [Ring(sh - (el - sh).normalized() * 0.04, 0.085), Ring(sh.lerp(el, 0.2), 0.082, 0.078), Ring(sh.lerp(el, SLEEVE_END + 0.1), 0.071, 0.066)], side_hint=(0, 1, 0), segs=20))

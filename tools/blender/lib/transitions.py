@@ -267,6 +267,17 @@ def huddle_break() -> Transition:
     return Transition("huddle_break", T, pose, _still, "stance_huddle", "stance_idle", steps)
 
 
+def _settle(t: float, t0: float, T: float, hop: float) -> float:
+    """Pelvis offset (m) for the hop and settle between t0 and T: up
+    ~2 cm (skill players), down ~3 cm past the stance, back to 0 by T."""
+    if t <= t0:
+        return 0.0
+    u = (t - t0) / (T - t0)
+    up = 0.02 * hop * math.sin(math.pi * min(1.0, u / 0.3)) if u < 0.3 else 0.0
+    dip = -0.03 * math.sin(math.pi * min(1.0, max(0.0, (u - 0.25) / 0.75))) * (1.0 - 0.35 * max(0.0, (u - 0.62) / 0.38))
+    return up + (dip if u > 0.25 else 0.0)
+
+
 def set_stance(stance: str) -> Transition:
     """From standing into a stance: the left foot sets, then the right,
     the body sinks, and the hands go down last."""
@@ -286,6 +297,16 @@ def set_stance(stance: str) -> Transition:
             hw = smoothstep(0.55 * T, T, t)
             p.hands = {s: (*h[:3], hw) for s, h in st.hands.items()}
         p.feet = {s: steps.foot(s, t) for s in "lr"}
+        # Hop and settle: as the second foot lands, a skill player bounces up
+        # onto the balls of his feet and drops into the stance a little past
+        # it, then settles back up; a lineman just sinks in and settles as his
+        # hand takes weight. Both feet stay down (ball pivot: no slide).
+        b = _settle(t, t2 + 0.02, T, 0.0 if down else 1.0)
+        p.pelvis["up"] = p.pelvis.get("up", 0.0) + b
+        if not down:
+            rise = max(0.0, b) / 0.02
+            for s_ in "lr":
+                p.feet[s_].heel += 10.0 * rise
         return p
 
     return Transition(f"set_{stance}", T, pose, _still, "stance_idle", f"stance_{stance}", steps)

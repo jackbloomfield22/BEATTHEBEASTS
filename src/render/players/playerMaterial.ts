@@ -146,7 +146,16 @@ float muscleHeight(vec3 p) {
   h += 0.003 * gauss(t, 0.58, 0.16) * smoothstep(0.0, 0.03, front);
   h += 0.0025 * gauss(t, 0.55, 0.2) * smoothstep(0.0, 0.03, -front);
   float tf = forearmT(p);
-  h += 0.0025 * gauss(tf, 0.2, 0.14);
+  // Forearm: the flexor-extensor mass swelling below the elbow, the
+  // brachioradialis ridge along the thumb side, and tendons toward the wrist
+  // (the M4.5 forearms read as smooth tubes under a flat light).
+  vec3 ft = normalize(vec3(sign(p.x) * 0.7071, 0.7071, 0.0));
+  vec3 rf = p - vec3(sign(p.x) * 0.4213, 1.2787, -0.035) - d * (tf * 0.28);
+  float top = dot(normalize(rf + 1e-5), ft);
+  h += 0.0042 * gauss(tf, 0.22, 0.16);
+  h += 0.0022 * gauss(tf, 0.3, 0.2) * smoothstep(0.2, 0.8, top);
+  float ang = atan(rf.z, dot(rf, ft));
+  h += 0.0007 * smoothstep(0.55, 0.8, tf) * (1.0 - smoothstep(0.84, 0.9, tf)) * pow(abs(sin(ang * 3.0)), 6.0);
   return h;
 }
 uniform vec3 uPartColor[${N}];
@@ -168,6 +177,20 @@ float sleeveT(vec3 p) {
   vec3 sh = vec3(sign(p.x) * 0.195, 1.505, -0.015);
   vec3 dir = normalize(vec3(sign(p.x) * 0.7071, -0.7071, 0.0));
   return dot(p - sh, dir) / 0.32;
+}
+// Knit athletic mesh on the jersey: a lattice of small holes (a 3D pattern,
+// so it needs no UVs), faded out before it can shimmer (fp: world size of a
+// pixel), and soft folds where the fabric bunches (the tuck at the waist,
+// the sleeve), less over the chest and back where the pads hold it taut.
+float fabricHeight(vec3 p, float fp) {
+  float k = 6.2832 / 0.0045;
+  float lat = cos(k * p.x) + cos(k * p.y) + cos(k * p.z);
+  float knit = smoothstep(0.8, 2.2, lat) * (1.0 - smoothstep(0.0008, 0.0022, fp));
+  float n = pNoise(vec3(p.x * 9.0, p.y * 34.0, p.z * 9.0));
+  float ridge = 1.0 - abs(2.0 * n - 1.0);
+  float st = sleeveT(p);
+  float bunch = (1.0 - smoothstep(1.12, 1.32, p.y)) + step(0.24, abs(p.x)) * smoothstep(0.2, 0.42, st) * 0.8 + 0.25;
+  return -0.00035 * knit + 0.0022 * ridge * ridge * bunch;
 }
 // Sleeve (TV) number on the outside of the sleeve (arm frame, rest pose).
 vec3 sleeveNumber(vec3 c, vec3 p) {
@@ -204,6 +227,8 @@ vec3 playerAlbedo(int part, vec3 p, out float stripe, out float rough) {
     float t = dot(p - sh, d) / 0.32;
     float tf = forearmT(p);
     // Compression sleeve from under the jersey sleeve to the glove cuff.
+    // Grooves between the muscles sit a touch darker (they read under flat light, where relief alone doesn't).
+    if (arm) c *= mix(0.9, 1.0, smoothstep(0.0, 0.0035, muscleHeight(p)));
     float on = side > 0.0 ? uSleeves.x : uSleeves.y;
     if (arm && on > 0.5 && (t > 0.45 && tf < 0.84)) {
       c = uSleeveColor;
@@ -218,6 +243,16 @@ vec3 playerAlbedo(int part, vec3 p, out float stripe, out float rough) {
     float s1 = smoothstep(0.305, 0.31, p.y) * (1.0 - smoothstep(0.33, 0.335, p.y));
     float s2 = smoothstep(0.35, 0.355, p.y) * (1.0 - smoothstep(0.375, 0.38, p.y));
     c = mix(c, uTrim, s1 * step(0.5, uSockStripes) + s2 * step(1.5, uSockStripes));
+  } else if (part == ${PART.glove}) {
+    // Two-tone gloves: the back in the glove color, a darker grip palm, and
+    // a trim-colored cuff, so a hand reads as a hand at mid distance.
+    vec3 d = armDir(p);
+    vec3 ft = normalize(vec3(sign(p.x) * 0.7071, 0.7071, 0.0));
+    float tf = forearmT(p);
+    vec3 wr = vec3(sign(p.x) * 0.619, 1.081, -0.02);
+    float back = dot(p - wr - d * dot(p - wr, d), ft);
+    c = mix(c * 0.42 + vec3(0.03), c, smoothstep(-0.006, 0.006, back));
+    c = mix(c, uTrim, smoothstep(0.86, 0.87, tf) * (1.0 - smoothstep(0.93, 0.94, tf)));
   } else if (part == ${PART.collar}) {
     c = uTrim;
   } else if (part == ${PART.helmet}) {
@@ -232,6 +267,9 @@ vec3 playerAlbedo(int part, vec3 p, out float stripe, out float rough) {
     float t = sleeveT(p);
     float band = step(0.24, abs(p.x)) * smoothstep(0.40, 0.41, t) * (1.0 - smoothstep(0.47, 0.48, t));
     c = mix(c, uTrim, max(collar, band));
+    // Mesh holes and fold valleys a little darker than the knit around them.
+    float fp = length(fwidth(p));
+    c *= 1.0 + fabricHeight(p, fp) * 28.0;
     c = lettering(c, p);
     c = sleeveNumber(c, p);
   } else if (part == ${PART.pants}) {
@@ -319,9 +357,10 @@ export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMateri
         .replace(
           '#include <normal_fragment_maps>',
           `#include <normal_fragment_maps>
-          if (pPart == ${PART.skin}) {
-            // Muscle relief as a bump from the rest-pose height field.
-            float mh = muscleHeight(vRest);
+          if (pPart == ${PART.skin} || pPart == ${PART.jersey}) {
+            // Relief as a bump from a rest-pose height field: muscles on
+            // skin, the knit and its folds on the jersey.
+            float mh = pPart == ${PART.skin} ? muscleHeight(vRest) : fabricHeight(vRest, length(fwidth(vRest)));
             vec3 dpx = dFdx(vViewPosition), dpy = dFdy(vViewPosition);
             float dhx = dFdx(mh), dhy = dFdy(mh);
             vec3 r1 = cross(dpy, normal), r2 = cross(normal, dpx);

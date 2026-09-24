@@ -104,6 +104,28 @@ def ellipsoid(name: str, center: Vec3, radii: Vec3, segs: int = 24) -> bpy.types
     return new_object(name, bm)
 
 
+def superellipsoid(name: str, center: Vec3, radii: Vec3, plan: float = 0.45, vert: float = 0.5, segs: int = 32) -> bpy.types.Object:
+    """A rounded box: an ellipsoid pushed toward its bounding box. `plan` and
+    `vert` are the superquadric exponents (1 = ellipsoid, toward 0 = box):
+    squarer corners seen from above, a flatter top with a defined edge."""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=segs, v_segments=segs // 2, radius=1.0)
+
+    def f(c: float, e: float) -> float:
+        return math.copysign(abs(c) ** e, c)
+
+    for v in bm.verts:
+        x, y, z = v.co
+        # Latitude/longitude form of the superquadric keeps the poles clean.
+        lat = math.asin(max(-1.0, min(1.0, z)))
+        lon = math.atan2(y, x)
+        cx = f(math.cos(lat), vert) * f(math.cos(lon), plan)
+        cy = f(math.cos(lat), vert) * f(math.sin(lon), plan)
+        cz = f(math.sin(lat), vert)
+        v.co = Vector((cx * radii[0] + center[0], cy * radii[1] + center[1], cz * radii[2] + center[2]))
+    return new_object(name, bm)
+
+
 def tube_path(name: str, pts: Sequence[Vec3], radius: float, segs: int = 8) -> bpy.types.Object:
     """A constant-radius tube along a polyline (facemask bars)."""
     d = Vector(pts[-1]) - Vector(pts[0])
