@@ -11,6 +11,7 @@ import { MainMenu } from '@/ui/screens/MainMenu';
 import { SettingsScreen } from '@/ui/screens/SettingsScreen';
 import { HowToScreen } from '@/ui/screens/HowToScreen';
 import { CharacterizationScreen } from '@/ui/screens/CharacterizationScreen';
+import { PracticeScreen } from '@/ui/screens/PracticeScreen';
 import { FpsCounter, PerfScreen } from '@/dev/PerfOverlay';
 import { AppBoundary, StageBoundary } from './Recovery';
 import '@/ui/styles/menus.css';
@@ -171,6 +172,7 @@ function Game() {
         {screen === 'settings' ? <SettingsScreen /> : null}
         {screen === 'howto' ? <HowToScreen /> : null}
         {screen === 'characterization' ? <CharacterizationScreen /> : null}
+        {screen === 'practice' ? <PracticeScreen /> : null}
         {toast ? (
           <div className="toast" key={toast.id}>
             {toast.text}

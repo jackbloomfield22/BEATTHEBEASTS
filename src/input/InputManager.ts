@@ -10,6 +10,8 @@ type Listener = (actionId: string, info: { repeat: boolean; device: Device }) =>
 
 const PAD_BUTTONS = ['Pad:A', 'Pad:B', 'Pad:X', 'Pad:Y', 'Pad:LB', 'Pad:RB', 'Pad:LT', 'Pad:RT', 'Pad:View', 'Pad:Menu', 'Pad:LS', 'Pad:RS', 'Pad:Up', 'Pad:Down', 'Pad:Left', 'Pad:Right'];
 const STICK_THRESHOLD = 0.55;
+/** Analog dead zone (typical Xbox pad drift sits under 0.15). */
+const STICK_DEAD = 0.2;
 const REPEAT_DELAY_MS = 380;
 const REPEAT_RATE_MS = 90;
 
@@ -28,6 +30,10 @@ class InputManagerImpl {
   private captureCb: ((code: string | null) => void) | null = null;
   private started = false;
   lastDevice: Device = 'keyboard';
+  /** Analog sticks (radial dead zone applied), x right, y up. */
+  readonly sticks = { left: { x: 0, y: 0 }, right: { x: 0, y: 0 } };
+  /** Mouse position in CSS pixels. */
+  readonly mouse = { x: 0, y: 0 };
   private deviceListeners = new Set<(d: Device) => void>();
   padConnected = false;
 
@@ -74,6 +80,11 @@ class InputManagerImpl {
   isHeld(actionId: string): boolean {
     const codes = [...(this.kb[actionId] ?? []), ...(this.pad[actionId] ?? [])];
     return codes.some((c) => this.held.has(c));
+  }
+
+  /** A raw input (key code, Mouse0, Pad:A) is down right now, whatever the context. */
+  isCodeHeld(code: string): boolean {
+    return this.held.has(code);
   }
 
   private setDevice(d: Device): void {
@@ -130,9 +141,19 @@ class InputManagerImpl {
       const code = `Mouse${e.button}`;
       if (this.captureCb && this.handleCapture(code)) return;
       this.held.add(code);
+      // Menus take clicks from their own elements; gameplay contexts bind mouse buttons.
+      if (this.activeContext !== 'menu') this.fire(code, false, 'mouse');
     });
     window.addEventListener('mouseup', (e) => this.held.delete(`Mouse${e.button}`));
-    window.addEventListener('mousemove', () => this.setDevice('mouse'), { passive: true });
+    window.addEventListener(
+      'mousemove',
+      (e) => {
+        this.mouse.x = e.clientX;
+        this.mouse.y = e.clientY;
+        this.setDevice('mouse');
+      },
+      { passive: true },
+    );
     // No browser context menu anywhere in the game.
     window.addEventListener('contextmenu', (e) => e.preventDefault());
     // Middle-click autoscroll and ctrl+wheel zoom would break the fixed layout.
@@ -152,6 +173,15 @@ class InputManagerImpl {
   private pollGamepads(now: number): void {
     const pads = navigator.getGamepads?.() ?? [];
     const pressed = new Set<string>();
+    const stick = (out: { x: number; y: number }, x: number, y: number) => {
+      // Radial dead zone, rescaled so the edge of the zone is 0 (no jump).
+      const m = Math.hypot(x, y);
+      const k = m < STICK_DEAD ? 0 : Math.min(1, (m - STICK_DEAD) / (1 - STICK_DEAD)) / m;
+      out.x = x * k;
+      out.y = -y * k;
+    };
+    stick(this.sticks.left, 0, 0);
+    stick(this.sticks.right, 0, 0);
     for (const gp of pads) {
       if (!gp || gp.mapping !== 'standard') continue;
       this.padConnected = true;
@@ -160,6 +190,8 @@ class InputManagerImpl {
         if (name && (b.pressed || b.value > 0.5)) pressed.add(name);
       });
       const [lx = 0, ly = 0, rx = 0, ry = 0] = gp.axes;
+      if (Math.hypot(lx, ly) > STICK_DEAD) stick(this.sticks.left, lx, ly);
+      if (Math.hypot(rx, ry) > STICK_DEAD) stick(this.sticks.right, rx, ry);
       if (ly < -STICK_THRESHOLD) pressed.add('Pad:LSUp');
       if (ly > STICK_THRESHOLD) pressed.add('Pad:LSDown');
       if (lx < -STICK_THRESHOLD) pressed.add('Pad:LSLeft');

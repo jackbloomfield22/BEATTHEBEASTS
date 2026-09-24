@@ -1,0 +1,63 @@
+/* In-play HUD and the Practice Field's play call. Same language as the
+   menus: thin rules, dark translucent surfaces, lime as the only accent,
+   the position palette only for position coding (GDD §12.7). */
+
+.practice-loading { position: absolute; left: 50%; bottom: 8rem; transform: translateX(-50%); font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-2); animation: pulse 1.6s ease-in-out infinite; }
+
+/* Play call */
+.call-sit { display: flex; align-items: baseline; gap: 1.2rem; padding-bottom: .3rem; }
+.call-down { font-family: var(--font-display); font-size: 1.5rem; color: var(--lime); }
+.call-spot { font-size: 1rem; letter-spacing: .08em; color: var(--ink-2); }
+.call-body { position: absolute; top: 8.5rem; bottom: 6.5rem; left: 5.5rem; right: 5.5rem; display: grid; grid-template-columns: minmax(0, 40rem) 1fr; gap: 5rem; }
+.call-list { overflow: hidden; }
+.call-list .setting-header:first-child { margin-top: .4rem; }
+.call-list .menu-item { padding-top: .3rem; padding-bottom: .3rem; }
+.call-art { align-self: start; justify-self: end; width: 34rem; padding: 1.4rem 1.6rem; background: linear-gradient(90deg, rgba(5,4,10,.78), rgba(5,4,10,.55)); border-left: 2px solid rgba(170,255,0,.5); backdrop-filter: blur(10px); animation: detail-in 300ms cubic-bezier(.2,.7,.2,1) both; }
+.play-art { display: block; width: 100%; height: auto; margin: .6rem 0 .4rem; background: rgba(30,70,40,.28); border: 1px solid rgba(244,240,255,.08); }
+.art-yard { stroke: rgba(244,240,255,.12); stroke-width: 1; }
+.art-los { stroke: #3f8cff; stroke-width: 2; opacity: .8; }
+.art-read { font: 700 13px var(--font-ui); text-anchor: middle; }
+.call-note { margin: .4rem 0 0; font-size: .85rem; color: var(--ink-3); line-height: 1.5; }
+
+/* Score bug (top left) */
+.play-hud { position: absolute; inset: 0; pointer-events: none; }
+.bug { position: absolute; top: 2.2rem; left: 2.6rem; display: flex; align-items: stretch; height: 2.6rem; background: rgba(8,7,15,.78); backdrop-filter: blur(8px); border-bottom: 2px solid var(--lime); font-weight: 700; }
+.bug > span { display: flex; align-items: center; padding: 0 1rem; border-right: 1px solid rgba(244,240,255,.1); }
+.bug > span:last-child { border-right: 0; }
+.bug-mark { background: var(--lime); color: #0a0a0a; font-family: var(--font-display); font-size: 1.1rem; }
+.bug-down { font-family: var(--font-display); font-weight: 400; font-size: 1.1rem; }
+.bug-spot { color: var(--ink-2); font-size: .9rem; letter-spacing: .06em; }
+.bug-play { color: var(--ink-3); font-size: .85rem; letter-spacing: .12em; text-transform: uppercase; }
+
+/* Receiver icons: positioned every frame by the render (hudDom). */
+.icon-layer { position: fixed; inset: 0; pointer-events: none; }
+.rec-icon { position: absolute; left: 0; top: 0; width: 0; height: 0; visibility: hidden; will-change: transform; }
+.rec-icon > * { position: absolute; }
+.rec-ring { left: -1.3rem; top: -1.3rem; width: 2.6rem; height: 2.6rem; transform: rotate(-90deg); }
+.ring-base { fill: rgba(8,7,15,.72); stroke: var(--c); stroke-width: 2.2; }
+.ring-charge { fill: none; stroke: #fff; stroke-width: 3.4; opacity: 0; transition: opacity 80ms; filter: drop-shadow(0 0 3px var(--c)); }
+.rec-glyph { left: -1.3rem; top: -1.3rem; width: 2.6rem; height: 2.6rem; display: grid; place-items: center; font-weight: 800; font-size: 1.05rem; color: var(--c); text-shadow: 0 0 .6rem rgba(0,0,0,.8); }
+.rec-name { left: 50%; top: 1.45rem; transform: translateX(-50%); font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; color: rgba(244,240,255,.85); text-shadow: 0 .1rem .5rem rgba(0,0,0,.9); }
+.aim-reticle { position: absolute; left: -.55rem; top: -.55rem; width: 1.1rem; height: 1.1rem; border: 2px solid #fff; border-radius: 50%; visibility: hidden; box-shadow: 0 0 .5rem rgba(0,0,0,.6); }
+.aim-reticle::after { content: ''; position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px; background: var(--lime); border-radius: 50%; }
+
+/* Prompts (bottom) */
+.prompt { position: absolute; bottom: 5.5rem; left: 50%; transform: translateX(-50%); font-weight: 700; font-size: 1.05rem; letter-spacing: .3em; text-transform: uppercase; display: flex; align-items: center; gap: .8rem; text-shadow: 0 .1rem 1rem rgba(0,0,0,.8); animation: pulse 2s ease-in-out infinite; }
+.prompt-row { position: absolute; bottom: 2.4rem; left: 50%; transform: translateX(-50%); display: flex; gap: 1.6rem; font-size: .85rem; color: var(--ink-2); white-space: nowrap; text-shadow: 0 .1rem .8rem rgba(0,0,0,.9); }
+.prompt-row span { display: flex; align-items: center; gap: .4rem; }
+.prompt-row.catch { font-size: 1rem; color: var(--ink); }
+.stamina { position: absolute; bottom: 5rem; left: 50%; width: 12rem; height: .35rem; margin-left: -6rem; background: rgba(8,7,15,.7); visibility: hidden; }
+.stamina-fill { display: block; height: 100%; background: var(--lime); transform-origin: left; box-shadow: 0 0 .6rem rgba(170,255,0,.5); }
+
+/* Result card */
+.result-card { position: absolute; top: 7rem; left: 0; right: 0; margin: 0 auto; width: fit-content; min-width: 36rem; max-width: 46rem; padding: 1.4rem 2rem 1rem; background: linear-gradient(180deg, rgba(8,7,15,.9), rgba(8,7,15,.76)); backdrop-filter: blur(10px); border-top: 3px solid var(--ink-3); animation: detail-in 320ms cubic-bezier(.2,.7,.2,1) both; text-align: center; }
+.result-card.tone-good { border-top-color: var(--lime); }
+.result-card.tone-bad { border-top-color: #ff2a6d; }
+.result-kicker { font-size: .75rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-3); }
+.result-head { font-family: var(--font-display); font-weight: 400; font-size: 2rem; white-space: nowrap; line-height: 1.05; margin: .4rem 0 .3rem; }
+.tone-good .result-head { color: var(--lime); }
+.result-detail { margin: 0; font-size: 1.1rem; color: var(--ink-2); }
+.result-next { margin: .6rem 0 .8rem; font-size: .9rem; color: var(--ink-3); letter-spacing: .04em; }
+.result-actions { display: flex; justify-content: center; gap: .6rem; }
+.result-actions .menu-item { white-space: nowrap; }
+.result-actions .menu-item.is-focused { transform: none; }

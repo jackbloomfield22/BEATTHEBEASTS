@@ -19,7 +19,7 @@ const ITEMS: Item[] = [
   { id: 'play', label: 'Play', blurb: 'Draft an all-time offense through the slot machine, then take the field against the Beasts. Classic shows every number; Film Room hides them.', shot: 'menu', arrives: 'the full game build' },
   { id: 'daily', label: 'Daily Challenge', blurb: 'Same Beasts, same draft sequence for everyone today. Your final margin is your score.', shot: 'daily', arrives: 'the full game build' },
   { id: 'quick', label: 'Quick Play', blurb: 'Auto-draft and straight to kickoff.', shot: 'menu', arrives: 'the full game build' },
-  { id: 'practice', label: 'Practice Field', blurb: 'Drills for pocket passing, route timing and open-field running, plus free play against the Beasts.', shot: 'practice', arrives: 'the core-play build' },
+  { id: 'practice', label: 'Practice Field', blurb: 'Free play against the Beasts: pick a play, a spot and a coverage, and run it as often as you like. Drills with medals arrive with the full game build.', shot: 'practice', screen: 'practice' },
   { id: 'howto', label: 'How to Play', blurb: 'Controls and the rules of the game.', shot: 'history', screen: 'howto' },
   { id: 'settings', label: 'Settings', blurb: 'Display, graphics, controls, audio, gameplay and accessibility.', shot: 'settings', screen: 'settings' },
   { id: 'history', label: 'History', blurb: 'Your past games and dailies, with share cards.', shot: 'history', arrives: 'the full game build' },

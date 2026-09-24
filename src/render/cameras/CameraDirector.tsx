@@ -41,6 +41,8 @@ function titleCurves() {
   return { pos, look, duration: 150 };
 }
 
+let directorMounted = false;
+
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 export function CameraDirector({ shot, fovOffset = 0 }: { shot: CameraShot; fovOffset?: number }) {
@@ -49,7 +51,15 @@ export function CameraDirector({ shot, fovOffset = 0 }: { shot: CameraShot; fovO
   const title = useMemo(() => titleCurves(), []);
   const from = useRef<Pose>({ pos: cam.position.clone(), look: new THREE.Vector3(), fov: cam.fov });
   const blend = useRef(1);
-  const current = useRef<Pose>({ pos: v(-420, -8, 520), look: v(0, 20, 0), fov: 40 });
+  // Remounted after a game camera (leaving the Practice Field): glide from where it left the lens.
+  const current = useRef<Pose>(
+    directorMounted
+      ? { pos: cam.position.clone(), look: cam.position.clone().add(cam.getWorldDirection(new THREE.Vector3()).multiplyScalar(30)), fov: cam.fov }
+      : { pos: v(-420, -8, 520), look: v(0, 20, 0), fov: 40 },
+  );
+  useEffect(() => {
+    directorMounted = true;
+  }, []);
   const shotStart = useRef(0);
   const clockRef = useRef(0);
 
