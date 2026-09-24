@@ -195,6 +195,7 @@ class PracticeSession {
   }
 
   private setUp(playId: string, seed: number, def: DefCall, sit: Situation): void {
+    if (!this.rosters) return;
     this.closeHot();
     const state = createPlay({
       seed,

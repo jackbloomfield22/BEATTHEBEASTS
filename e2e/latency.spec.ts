@@ -31,12 +31,22 @@ const ready = (page: Page) =>
     null,
     { timeout: 300_000 },
   );
-/** A press held for a few frames, then a pause for the response to show. */
-async function press(page: Page, key: string, holdMs = 120) {
+/** Rendered frames so far (each is one tick of game time here). */
+const frameNow = (page: Page) => page.evaluate(() => (window as unknown as W & { __btbLatency: { frame: number } }).__btbLatency.frame);
+async function waitFrames(page: Page, n: number) {
+  const f = await frameNow(page);
+  await page.waitForFunction((t) => (window as unknown as { __btbLatency: { frame: number } }).__btbLatency.frame >= t, f + n, { timeout: 600_000 });
+}
+/**
+ * A press held for `frames` rendered frames, then a few frames for the
+ * response to show. Counted in frames, not ms: this machine may draw one
+ * frame a second, and a hold must span ticks to be seen.
+ */
+async function press(page: Page, key: string, frames = 3) {
   await page.keyboard.down(key);
-  await page.waitForTimeout(holdMs);
+  await waitFrames(page, frames);
   await page.keyboard.up(key);
-  await page.waitForTimeout(250);
+  await waitFrames(page, 6);
 }
 
 // Small, so this machine's software renderer draws frames (each one a tick) quickly.
@@ -53,23 +63,23 @@ test('every key shows its response within 100 ms at 60 fps', async ({ page }) =>
   await page.waitForFunction(() => (window as unknown as W).__btbGameReady === true, null, { timeout: 150_000 });
 
   // Snap, then move in the pocket both ways.
-  await press(page, 'Space');
+  await press(page, 'Space', 1);
   await waitPhase(page, ['dropback', 'pocket']);
-  await press(page, 'ArrowLeft', 300);
-  await press(page, 'ArrowRight', 300);
-  // Hold icon 4 (the ring comes up), release (the throw motion starts).
-  await page.waitForTimeout(400);
-  await press(page, 'Digit4', 60);
+  await press(page, 'ArrowLeft', 12);
+  await press(page, 'ArrowRight', 12);
+  // Tap icon 1 (the ring comes up, a touch pass): on this seed he catches it and runs.
+  await waitFrames(page, 20);
+  await press(page, 'Digit1', 2);
   await waitPhase(page, ['air', 'carrier', 'dead']);
-  if ((await phase(page)) === 'air') await press(page, 'Digit3');
+  if ((await phase(page)) === 'air') await press(page, 'Digit3', 2);
   await waitPhase(page, ['carrier', 'dead']);
   if ((await phase(page)) === 'carrier') {
     await page.keyboard.down('ArrowUp');
-    await press(page, 'ShiftRight', 400);
+    await press(page, 'ShiftRight', 20);
     for (const k of ['KeyQ', 'KeyW', 'KeyE', 'KeyC']) {
       await ready(page);
       if ((await phase(page)) !== 'carrier') break;
-      await press(page, k, k === 'KeyC' ? 300 : 80);
+      await press(page, k, k === 'KeyC' ? 12 : 2);
     }
     await page.keyboard.up('ArrowUp');
   }
