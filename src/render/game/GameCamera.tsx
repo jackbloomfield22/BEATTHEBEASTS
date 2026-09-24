@@ -186,6 +186,10 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     if (!goal) return;
     // World-space target: eye and look.
     const t = [worldX(goal.ey), goal.eh, worldZ(goal.ex), worldX(goal.ly), goal.lh, worldZ(goal.lx), goal.fov];
+    if (!springs.current && urlFlags.video) {
+      // A recorded clip opens on the broadcast shot (in play, the glide in from the menu happens during the play call).
+      springs.current = t.map((v) => new Spring(v));
+    }
     if (!springs.current) {
       // Start from wherever the menu camera was: the first move is a glide in.
       const dir = new THREE.Vector3();
