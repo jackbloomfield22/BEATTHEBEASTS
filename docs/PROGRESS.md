@@ -284,7 +284,7 @@ The curve and calibration are unchanged. Formula changes, all user-approved: QB 
   
   A stint is one franchise in one decade, so "ATL/SF" became two stints and Woodson's 1998–2005 Raiders run also became two. His 2013–15 return (safety, ages 37–39) is not added. 44 gaps are left in the report.
   
-  Side effect: the larger WR pool moves Cris Carter's Catch in Traffic from 96.7 to 96.4 (anchor 97+, now flagged). Revis's NYJ 2000s Press reads 92.6 and passes (flag kept). Anchors: still 37 of 42. Lamar's flag and the six uncited M2 40 times are untouched.
+  Side effect: the larger WR pool moves Cris Carter's Catch in Traffic from 96.7 to 96.4. You accepted 96+ (M5), so the band is now 96+ on the same attribute and the anchor passes: 38 of 42. Revis's NYJ 2000s Press reads 92.6 and passes (flag kept). Anchors: still 37 of 42. Lamar's flag and the six uncited M2 40 times are untouched.
 
 **Round 2 (your decisions on PR #3)** (report: "Approved fixes, round 2"; every stint before round 2 frozen in `data/ratings/round2.before.json` by `tools/ratings/round2-before.ts`):
 - *TE block grade*: the per-player cap is dropped, the 20% weight cap stays (`PLAYER_CAPPED_SIGNALS` is `imp` only; the test now checks the grade is never per-player capped). Kittle Run Block 77.7 → 93.6, TE 94.6 (#12) → 97.2 (#3); Winslow Run Block 95.7 → 91.5, TE 98.2 (#1) → 97.0 (#4). Winslow's Run Block stays high because round 1 moved the grade's lost weight onto size (0.361) and strength (0.217) and his 251 lb frame reads about 271 today; reported, not changed.

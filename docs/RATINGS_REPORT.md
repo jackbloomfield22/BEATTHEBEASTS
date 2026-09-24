@@ -22,7 +22,7 @@ OVR confidence: high 1990, medium 1635, low 671.
 
 ## Anchor tests
 
-**37 of 42 anchors pass.** Each check shows the value and the band. Flags are anchors I think are wrong or can't be met honestly by the data; they are listed for your review rather than bent into the formulas. 18 anchors carry a band you approved changing in the ratings follow-up (marked "new band"; the old band and the reason are listed below).
+**38 of 42 anchors pass.** Each check shows the value and the band. Flags are anchors I think are wrong or can't be met honestly by the data; they are listed for your review rather than bent into the formulas. 19 anchors carry a band you approved changing in the ratings follow-up (marked "new band"; the old band and the reason are listed below).
 
 | Anchor | Result | Checks |
 |---|---|---|
@@ -47,7 +47,7 @@ OVR confidence: high 1990, medium 1635, low 671.
 | Calvin Johnson (2010s DET) | PASS | ✓ catchInTraffic 98.7 (want ≥ 99)<br>✓ heightIn 77", rank 8 of 969 WRs (want top 10)<br>✓ jumping 97.7, rank 7 of 975 WRs (want top 10) |
 | Tyreek Hill (KC, MIA) | **FLAG** (new band) | ✓ speed 96.5 (want ≥ 95) [KC 2010s]<br>✓ acceleration 94.6 (want ≥ 95) [KC 2010s]<br>✓ speed 94.0 (want ≥ 93) [MIA 2020s]<br>✗ acceleration 92.2 (want ≥ 93) [MIA 2020s] |
 | Larry Fitzgerald (2000s ARI) | PASS (new band) | ✓ catchInTraffic 94.3 (want ≥ 93) |
-| Cris Carter (1990s MIN) | **FLAG** | ✗ catchInTraffic 96.4 (want ≥ 97)<br>✓ speed 86.2 (want < 88) |
+| Cris Carter (1990s MIN) | PASS (new band) | ✓ catchInTraffic 96.4 (want ≥ 96)<br>✓ speed 86.2 (want < 88) |
 | Wes Welker (NE) | PASS (new band) | ✓ shortRoute 96.9 (want ≥ 97) [NE 2000s]<br>✓ shortRoute 94.9 (want ≥ 95) [NE 2010s] |
 | Antonio Brown (2010s PIT) | PASS (new band) | ✓ shortRoute 96.2 (want ≥ 96) |
 | Tony Gonzalez (2000s KC) | PASS | ✓ catching 94.8 (want ≥ 95)<br>✓ shortRoute 95.5 (want ≥ 95) |
@@ -82,6 +82,7 @@ OVR confidence: high 1990, medium 1635, low 671.
 - **Randy Moss (1990s MIN)** (passes): User-approved band change (ratings follow-up). The anchor moved from the NE 2000s stint (ages 30–33, where the aging curve takes about 4 points) to his MIN 1990s stint; bands unchanged. Measured: 4.25 pro-day 40 and a 47" vertical.
 - **Tyreek Hill (KC, MIA)** (**still flagged**): User-approved band change (ratings follow-up). Speed and Acceleration 99 → 95+ at KC (ages 22–27) and 93+ at MIA (ages 28–31); on this scale 99 speed is reserved for about a 4.22 electronic 40.
 - **Larry Fitzgerald (2000s ARI)** (passes): User-approved band change (ratings follow-up). Catch in Traffic 97+ → 93+ (height, TDs per catch, volume and honors put Calvin Johnson, Rice and Owens above him). The 'speed below 88' band was dropped after the M2 review.
+- **Cris Carter (1990s MIN)** (passes): Band 97+ → 96+ (you, M5: "Cris Carter: accept 96+, keep the anchor on Catch in Traffic"). The M4.5 added stints (Owens, Moss) moved the WR pool every receiver is standardized against: 96.7 → 96.4. Carter's own inputs are unchanged.
 - **Wes Welker (NE)** (passes): User-approved band change (ratings follow-up). Short Route 97+ → 95+ for the 2010s stint only (2010–12, ages 29–31; near miss at 95). The 2000s stint keeps 97+.
 - **Antonio Brown (2010s PIT)** (passes): User-approved band change (ratings follow-up). Short Route 97+ → 96+ (near miss: "96, want 97").
 - **Deion Sanders (DAL, ATL)** (passes): User-approved band change (ratings follow-up). Speed 99 on the DAL stint (ages 28–32) → 95+ on the young ATL 1980s stint (his 1989 combine 4.27). Tackle below 70 is dropped as data-limited: no tackle data exists before 1999, so a pre-1999 DB's tackling is body and experience, and his poor-tackler reputation is in no dataset we can use. Man Coverage 99 on the DAL stint is unchanged.
@@ -96,7 +97,6 @@ OVR confidence: high 1990, medium 1635, low 671.
 - **Lamar Jackson (BAL)** (fails): Round 2 moved his 4.34 from an uncited estimate (read as electronic: Speed 96.5) to the cited time in his Wikipedia article ("reportedly clocked in a 4.34 40 yard dash time in 2017 at Louisville"). The source gives no timing, so the engine applies the standard correction for reported times (+0.06 s, as for every commonly cited time): 4.40, Speed 94.5, a hair under the approved 95+. I have not changed the rule for one player; your call (a Louisville laser time would make it +0.05 or less).
 - **Jerry Rice (SF)** (fails): Rice's 1980s stint is Deep Route 99, Catching 99 and Short Route rank 4 (97). The 1990s stint covers ages 28–37: short routes rank 1 (99), but his deep game (about 14 yards per catch) ranks 13th behind deep specialists. I think 97+ deep for the 1990s stint over-rates it; the 1980s stint is the 99.
 - **Tyreek Hill (KC, MIA)** (fails): Still fails at the proposed band on one check: MIA Acceleration 92.2 (want 93+). His measured 1.50 10-yard split gives 94.6 at KC; the wide-receiver aging curve takes 2.5 points by age 30. The flag's own numbers were 94 / 92 (speed / acceleration) at MIA, so "93+ at MIA" fits speed, not acceleration. I'm not inventing a new band: your call (92+ acceleration at MIA would pass).
-- **Cris Carter (1990s MIN)** (fails): Side effect of the M4.5 added stints: Catch in Traffic 96.7 → 96.4 (want 97+; it passed at 96.7, which rounds to 97). Carter's own inputs are unchanged; adding Terrell Owens (SF 2000s) and Randy Moss (MIN 2000s) to the WR pool moves the pool mean and SD every WR attribute is standardized against (Fitzgerald's Catch in Traffic moved 94.6 → 94.3 the same way). I have not changed the band or the formula: your call.
 - **Darrelle Revis (NYJ)**: Still fails at the proposed band on one check: NYJ 2000s Press 92.4 (want 93+). Press has no stat trace (honors, strength, length and passes defensed); the 2000s stint (2007–09: 1× All-Pro, 2× Pro Bowl in 3 seasons, his rookie year without honors) sits below the honors density of this elite pool, so honors pull it down 2 points. Man Coverage passes for both stints and Press passes for 2010s (93.1). I'm not inventing a new band: your call. After the M4.5 added stints (four more CB stints in the pool) NYJ 2000s Press reads 92.6, which rounds to 93 and passes; the flag stays until you clear it.
 
 ### Throw Power (ratings follow-up)
