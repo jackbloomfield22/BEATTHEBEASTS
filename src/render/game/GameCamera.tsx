@@ -119,9 +119,10 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   }
   const ax = b.aim.x;
   const ay = b.aim.y;
-  // Progress through the flight, eased so the push-in lands with the ball.
+  // Progress through the flight, eased out: the camera moves off with the
+  // ball the moment it's thrown and settles as the ball arrives.
   const p = Math.min(1, Math.max(0, 1 - (b.arrive - s.t) / flight.total));
-  const e = p * p * (3 - 2 * p);
+  const e = 1 - (1 - p) * (1 - p);
   // The camera's line: the throw's direction, leaning downfield.
   const dx = ax - flight.x0;
   const dy = ay - flight.y0;
