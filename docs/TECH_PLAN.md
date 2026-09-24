@@ -486,13 +486,21 @@ Every milestone ends with: tests passing, the screenshot matrix captured and cri
 - Clips: QB, RB, WR/TE, tackling, ball events.
 - **Exit:** scripted browser tests (snap, throw, catch, tackle, score); the determinism hash matches Node and the browser.
 
-### M6 Full game
-- Downs, drives, scoring, PAT and 2-point, FG kick mechanic, punts, turnovers, pick-six and scoop-and-score, the two-minute drill, OT, the playbook (≥ 30 plays, ≥ 6 formations) + play-call UI + Suggested tab + audibles, hot routes, motion and flip, the full Beasts AI (all coverages, blitzes, disguise, tendencies, difficulty), Beasts possessions ("Meanwhile" cuts), the results screen.
+### M5.5 Game feel (added after the M5 play test)
+- On-screen prompts in every phase (binding- and device-aware), open/covered receiver icons, a landing reticle, a first-play tutorial, a slowed first catch.
+- More pocket time (median no-throw sack ~4.5 s at Pro), carrier plant/buffer/cut weight, blended transitions, latency measured under 100 ms.
+- Field boundaries as hard rules; touchdowns only in bounds.
+- Route preview (hold Tab / RT) and **hot routes** (pulled forward from M6).
+- A video recorder for scripted plays (the owner judges feel between play sessions).
+
+### M6 Full game (the draft room first)
+- **Starts with the draft room** (pulled forward from M7 at the owner's request): the 3D draft over the stadium, the slot machine on the video board, the draft rules as ported from the legacy engine, the Scouting panel with ratings and traits. **The Practice Field plays with the drafted roster.**
+- Then: downs, drives, scoring, PAT and 2-point, FG kick mechanic, punts, turnovers, pick-six and scoop-and-score, the two-minute drill, OT, the playbook (≥ 30 plays, ≥ 6 formations) + play-call UI + Suggested tab + audibles, motion and flip (hot routes landed in M5.5), the full Beasts AI (all coverages, blitzes, disguise, tendencies, difficulty), Beasts possessions ("Meanwhile" cuts), the results screen.
 - Clips: OL/DL line play, LB, DB, kicking.
 - **Exit:** headless auto-play of 1,000 full games with no stuck states; browser end-to-end play of a full game.
 
 ### M7 Presentation
-- Tunnel reveal, the 3D draft presentation with the video-board slot machine and pick materialization, Scouting panel, pre-game, broadcast overlay, replays + slow-mo, celebrations, officials, commentary, full audio. The animation library is complete, with every clip gated.
+- Tunnel reveal, pick materialization, pre-game cinematics, broadcast overlay, replays + slow-mo, celebrations, officials, commentary, full audio. The animation library is complete, with every clip gated. (The draft room and Scouting panel moved to the start of M6.)
 
 ### M8 Polish and ship
 - Balance harness + tuning + sensitivity checks (`BALANCE.md`), performance pass, accessibility, gamepad polish, tutorial, Daily Challenge, share card with the 3D hero render, history, optional leaderboard.

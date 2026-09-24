@@ -51,3 +51,4 @@ Nothing third-party yet. The sky, ocean, terrain, stadium, crowd and field are p
 |---|---|---|
 | Blender, as the `bpy` Python module 5.0.1 (PyPI) | GPL-2.0-or-later (the program); files it outputs belong to their author | Running `tools/blender` headless to build `player.glb` and `anims.glb` |
 | Playwright + Chromium | Apache-2.0 / BSD-3-Clause | Browser tests, screenshot matrix, contact sheets |
+| FFmpeg 7.0.2 static build, via the `imageio-ffmpeg` Python package (PyPI) | FFmpeg: GPL-3.0 build (the program); `imageio-ffmpeg`: BSD-2-Clause. The videos it encodes are the project's own renders | Encoding the feel videos in `docs/screenshots/m5.5/` (`tools/shots/video.spec.ts`); any ffmpeg on the PATH works too |

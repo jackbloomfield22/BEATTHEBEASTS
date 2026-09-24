@@ -30,6 +30,10 @@ export interface Body {
   fallen: boolean;
   /** A clip that ends with him lying down (the tackle, the dive) is playing. */
   lyingClip: boolean;
+  /** The drawn facing (rad), turned toward the sim's at a limited rate so a change of heading is a turn, not a snap. */
+  yaw: number;
+  /** The speed fed to the gait, eased (a move's sidestep shouldn't jolt the stride). */
+  gaitSpeed: number;
 }
 
 /** Upper body, for a throw on the run (the legs keep running). */

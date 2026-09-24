@@ -17,6 +17,12 @@ const BONES = ['pelvis', 'spine_03', 'head', 'upperarm_l', 'upperarm_r', 'forear
  * near 20; 30 rad/s (a quarter turn in 1/20 s) is past anything we author.
  */
 export const POP_RATE = 30;
+/**
+ * Legs run faster: a sprinter's knee swings at ~20–25 rad/s and, sampled at
+ * 30 fps with foot IK, reads up to ~40. A leg pop is past 45.
+ */
+export const LEG_RATE = 45;
+const isLeg = (bone: string) => bone.startsWith('calf') || bone.startsWith('thigh');
 /** The root turning faster than this (rad/s) is a yaw snap (a sprinter's hardest cut is ~6–8 rad/s). */
 export const YAW_RATE = 14;
 
@@ -57,7 +63,7 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
     now.forEach((q, k) => {
       const rate = (2 * Math.acos(Math.min(1, Math.abs(q.dot(prev[k]!))))) / dt;
       worst = Math.max(worst, rate);
-      if (rate > POP_RATE) pops.spikes.push({ frame, slot: b.slot, bone: BONES[k]!, rate: Math.round(rate), ...ctx });
+      if (rate > (isLeg(BONES[k]!) ? LEG_RATE : POP_RATE)) pops.spikes.push({ frame, slot: b.slot, bone: BONES[k]!, rate: Math.round(rate), ...ctx });
     });
     pops.rates.push(worst);
     pops.worst = Math.max(pops.worst, worst);

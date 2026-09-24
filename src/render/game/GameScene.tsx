@@ -76,7 +76,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: 'royal' | 'beasts
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false };
+    return { player, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0 };
   });
 }
 
@@ -85,6 +85,8 @@ const _q = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
 const _X = new THREE.Vector3(1, 0, 0);
 const _dir = new THREE.Vector3();
+/** Fastest the drawn facing turns (rad/s): a sharp pivot, ~180° in a quarter second. */
+const YAW_MAX = 12;
 const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move: null, down: false, stamina: 1 };
 
 export function GameScene() {
@@ -167,7 +169,9 @@ export function GameScene() {
         b.animator.setStance(STANCE[b.slot] ?? 'stance_idle');
         b.animator.update(10, { speed: 0 });
         b.lastYaw = yawOf(a.face);
+        b.yaw = b.lastYaw;
         b.lastSpeed = 0;
+        b.gaitSpeed = 0;
       });
       if (urlFlags.pops) resetPops();
       lastSimT.current = cur.t;
@@ -203,7 +207,18 @@ export function GameScene() {
       const along = tmp.vx * Math.cos(face) + tmp.vy * Math.sin(face);
       const d = drive(b, i, s, simT, sp > 0.05 ? along : 0, sp);
       const heading = d.faceVelocity ? Math.atan2(tmp.vy, tmp.vx) : face;
-      const yaw = yawOf(heading);
+      // The drawn facing turns toward the sim's: eased, and no faster than a
+      // quick pivot (a back turning out of his pedal turns his hips, he
+      // doesn't flip in a frame). The sim's facing already turns smoothly;
+      // this catches the switches between facing and running direction.
+      const want = yawOf(heading);
+      const dy = lerpAngle(0, want - b.yaw, 1);
+      const turn = Math.max(-YAW_MAX * animDt, Math.min(YAW_MAX * animDt, dy * (1 - Math.exp(-animDt * 22))));
+      b.yaw = animDt > 0 ? b.yaw + turn : want;
+      const yaw = b.yaw;
+      // The gait's speed, eased over ~60 ms (a juke's sidestep changes the speed along his facing in a tick).
+      b.gaitSpeed += (d.speed - b.gaitSpeed) * (1 - Math.exp(-animDt / 0.06));
+      d.speed = b.gaitSpeed;
       const root = b.player.root;
       root.position.set(worldX(tmp.y), 0, worldZ(tmp.x));
       root.rotation.y = yaw;
