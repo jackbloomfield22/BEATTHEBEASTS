@@ -91,3 +91,41 @@ test('every key shows its response within 100 ms at 60 fps', async ({ page }) =>
   for (const k of ['snap', 'move', 'throwHold', 'throwRelease']) expect(kinds).toContain(k);
   for (const r of out.summary) expect(r.f95 * (1000 / 60), `${r.kind}: ${r.f95} frames`).toBeLessThan(100);
 });
+
+test('the ball carrier: sprint, juke, stiff arm, spin and protect show within 100 ms at 60 fps', async ({ page }) => {
+  test.setTimeout(2_400_000);
+  await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
+  await page.goto('/?screen=practice&nointro&seed=1&quality=low&shot=practice');
+  await waitReady(page);
+  await page.waitForFunction(() => (window as unknown as W).__btbPracticeUi?.getState().stage === 'call', null, { timeout: 120_000 });
+  // The recorded completion (src/game/clips.ts), stepped to the catch; from there the page runs frame by frame and the keys are real.
+  await page.evaluate(async () => {
+    const w = window as unknown as { __btbClips(): Promise<{ id: string }[]>; __btbPractice: { callClip(c: unknown): void } };
+    w.__btbPractice.callClip((await w.__btbClips()).find((c) => c.id === 'completion-rac'));
+  });
+  await page.waitForFunction(() => (window as unknown as W).__btbGameReady === true, null, { timeout: 150_000 });
+  await page.evaluate(async () => {
+    const w = window as unknown as { __btbClips(): Promise<{ id: string; script(s: unknown): unknown }[]>; __btbPractice: { runner: { paused: boolean; state: { phase: string } }; tickWith(f: unknown): void } };
+    const c = (await w.__btbClips()).find((x) => x.id === 'completion-rac')!;
+    const r = w.__btbPractice.runner;
+    r.paused = true;
+    for (let k = 0; k < 900 && r.state.phase !== 'carrier'; k++) w.__btbPractice.tickWith(c.script(r.state));
+    r.paused = false;
+  });
+  expect(await phase(page)).toBe('carrier');
+  await page.evaluate(() => (window as unknown as W & { __btbLatency: { clear(): void } }).__btbLatency.clear());
+  await page.keyboard.down('ArrowUp');
+  await ready(page);
+  await press(page, 'ShiftRight', 20);
+  for (const k of ['KeyQ', 'KeyW', 'KeyE', 'KeyC']) {
+    await ready(page);
+    if ((await phase(page)) !== 'carrier') break;
+    await press(page, k, k === 'KeyC' ? 12 : 2);
+  }
+  await page.keyboard.up('ArrowUp');
+  const out = await page.evaluate(() => ({ samples: (window as unknown as W).__btbLatency.samples, summary: (window as unknown as W).__btbLatency.summary() }));
+  writeFileSync('docs/screenshots/m5.5/latency-carrier.json', JSON.stringify({ note: 'frames on a fixed 60 Hz frame clock; ms = frames × 16.7 on hardware that holds 60 fps', ...out }, null, 1) + '\n');
+  console.log(out.summary.map((r) => `${r.kind.padEnd(13)} n=${r.n} frames p50 ${r.f50} p95 ${r.f95} → ${(r.f95 * 16.7).toFixed(0)} ms`).join('\n'));
+  expect(out.summary.map((r) => r.kind)).toContain('juke');
+  for (const r of out.summary) expect(r.f95 * (1000 / 60), `${r.kind}: ${r.f95} frames`).toBeLessThan(100);
+});

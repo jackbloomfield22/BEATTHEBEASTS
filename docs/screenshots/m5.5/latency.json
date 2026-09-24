@@ -1,0 +1,77 @@
+{
+ "note": "frames on a fixed 60 Hz frame clock; ms = frames × 16.7 on hardware that holds 60 fps",
+ "samples": [
+  {
+   "kind": "snap",
+   "ms": 1080.2000000011176,
+   "frames": 1
+  },
+  {
+   "kind": "move",
+   "ms": 3816.5,
+   "frames": 3
+  },
+  {
+   "kind": "move",
+   "ms": 3862.5,
+   "frames": 3
+  },
+  {
+   "kind": "throwHold",
+   "ms": 1264.300000000745,
+   "frames": 1
+  },
+  {
+   "kind": "throwRelease",
+   "ms": 1170.300000000745,
+   "frames": 1
+  },
+  {
+   "kind": "catch",
+   "ms": 2555,
+   "frames": 2
+  }
+ ],
+ "summary": [
+  {
+   "kind": "snap",
+   "n": 1,
+   "p50": 1080.2000000011176,
+   "p95": 1080.2000000011176,
+   "f50": 1,
+   "f95": 1
+  },
+  {
+   "kind": "move",
+   "n": 2,
+   "p50": 3862.5,
+   "p95": 3862.5,
+   "f50": 3,
+   "f95": 3
+  },
+  {
+   "kind": "throwHold",
+   "n": 1,
+   "p50": 1264.300000000745,
+   "p95": 1264.300000000745,
+   "f50": 1,
+   "f95": 1
+  },
+  {
+   "kind": "throwRelease",
+   "n": 1,
+   "p50": 1170.300000000745,
+   "p95": 1170.300000000745,
+   "f50": 1,
+   "f95": 1
+  },
+  {
+   "kind": "catch",
+   "n": 1,
+   "p50": 2555,
+   "p95": 2555,
+   "f50": 2,
+   "f95": 2
+  }
+ ]
+}
