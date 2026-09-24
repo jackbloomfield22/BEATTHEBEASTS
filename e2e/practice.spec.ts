@@ -91,19 +91,19 @@ test('the catch call: 1–3 while the ball is in the air, and the called one lig
   await page.keyboard.press('Digit2');
   await tick(page, 1);
   expect(await page.evaluate(() => (window as unknown as P).__btbPracticeUi.getState().catchType)).toBe('possession');
-  await expect(page.locator('.catch-opt.on')).toContainText('Secure it');
+  await expect(page.locator('.catch-opt.on')).toContainText('Secure');
   await expect(page.locator('.catch-opt.off')).toHaveCount(2);
 });
 
 test('pre-snap: the prompts, the route preview key, and a hot route the sim runs', async ({ page }) => {
   await open(page, 5, 0); // Stick
   // First play: the tutorial's first step and the snap prompt with the route and hot-route keys.
-  await expect(page.locator('.tutorial-card')).toContainText('snap');
+  await expect(page.locator('.tutorial-card')).toContainText('Snap');
   await expect(page.locator('.snap-call')).toContainText('Tab');
   await expect(page.locator('.snap-call')).toContainText('Hot route');
   // H, then receiver 1, then route 3 (In).
   await page.keyboard.press('KeyH');
-  await expect(page.locator('.hot-picker')).toContainText('Which receiver');
+  await expect(page.locator('.hot-picker')).toContainText('Receiver');
   await page.keyboard.press('Digit1');
   await expect(page.locator('.hot-item')).toHaveCount(8);
   await page.keyboard.press('Digit3');

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useApp } from '@/app/appStore';
 import { useSettings } from '@/app/settings';
 import { urlFlags } from '@/app/platform';
@@ -137,11 +137,21 @@ const ICON_COLOR: Record<string, string> = { WR: '#00e5ff', TE: '#bd6bff', RB: '
 const PAD_GLYPH = ['A', 'B', 'X', 'Y', 'RB'];
 const PAD_SHAPE = ['▼', '●', '■', '▲', '◆'];
 
-/** The three catches, in their key order (1, 2, 3 on the keyboard). */
+/** The three catch calls, in key order (1, 2, 3). Prompts are a key and a word or two; How to Play explains them. */
 const CATCHES = [
-  { type: 'aggressive', action: 'air.aggressive', name: 'Go up and get it', sub: 'Aggressive' },
-  { type: 'possession', action: 'air.possession', name: 'Secure it, go down', sub: 'Possession' },
-  { type: 'rac', action: 'air.rac', name: 'Catch and run', sub: 'Run after catch' },
+  { type: 'aggressive', action: 'air.aggressive', word: 'Go up' },
+  { type: 'possession', action: 'air.possession', word: 'Secure' },
+  { type: 'rac', action: 'air.rac', word: 'Run' },
+] as const;
+
+/** The carrier's moves, in key order (1–6). */
+const MOVES = [
+  { action: 'carrier.juke', word: 'Juke', pad: 'R-Stick ←→' },
+  { action: 'carrier.stiffArm', word: 'Stiff arm' },
+  { action: 'carrier.spin', word: 'Spin' },
+  { action: 'carrier.truck', word: 'Truck' },
+  { action: 'carrier.dive', word: 'Dive' },
+  { action: 'carrier.protect', word: 'Protect' },
 ] as const;
 
 /** The key (or button) bound to an action, for prompts. */
@@ -155,20 +165,30 @@ function useKey() {
   };
 }
 
+/** One prompt: a key and a word or two. */
+function Cue({ k, w, className }: { k: string; w: string; className?: string }) {
+  return (
+    <span className={`cue${className ? ` ${className}` : ''}`}>
+      <kbd>{k}</kbd>
+      <span className="cue-w">{w}</span>
+    </span>
+  );
+}
+
 function PlayHud() {
   const ui = usePractice();
   const device = useDevice();
   const colorblind = useSettings((s) => s.settings.accessibility.colorblind !== 'off');
   const key = useKey();
+  const pad = device === 'gamepad';
   // The four move keys as one label (↑←↓→ by default), or the stick.
-  const moveKeys = (p: string) =>
-    device === 'gamepad' ? 'L-Stick' : (p === 'carrier.' ? ['up', 'left', 'down', 'right'] : ['Up', 'Left', 'Down', 'Right']).map((d) => key(p + d)).join('');
+  const moveKeys = (p: string) => (pad ? 'L-Stick' : (p === 'carrier.' ? ['up', 'left', 'down', 'right'] : ['Up', 'Left', 'Down', 'Right']).map((d) => key(p + d)).join(''));
+  const receivers = pad ? 'A B X Y RB' : `${key('pocket.throw1')}–${key('pocket.throw5')}`;
   const runner = practice.runner;
   const icons = runner ? runner.state.icons.map((i) => runner.state.agents[i]!) : [];
   const phase = ui.phase;
   const inPocket = phase === 'snap' || phase === 'dropback' || phase === 'pocket';
   const live = ui.stage === 'live';
-  const pad = device === 'gamepad';
   return (
     <div className="play-hud">
       <div className="bug">
@@ -189,55 +209,47 @@ function PlayHud() {
           </div>
         ))}
         <div className="aim-reticle" ref={(el) => void (hudDom.reticle = el)} />
-        {/* Under the ball carrier, the whole time he has it: stamina and his moves. */}
+        {/* Under the ball carrier, the whole time he has it: his stamina and his moves, 1–6. */}
         <div className="carrier-hud" ref={(el) => void (hudDom.carrierHud = el)}>
           <div className="stamina" ref={(el) => void (hudDom.stamina = el)}>
             <span className="stamina-fill" ref={(el) => void (hudDom.staminaFill = el)} />
           </div>
           <div className="carrier-keys">
-            <span><kbd>{pad ? 'R-Stick ←→' : key('carrier.juke')}</kbd>Juke</span>
-            <span><kbd>{key('carrier.stiffArm')}</kbd>Stiff arm</span>
-            <span><kbd>{key('carrier.spin')}</kbd>Spin</span>
-            <span><kbd>{key('carrier.sprint')}</kbd>Sprint</span>
+            {MOVES.map((m) => (
+              <Cue key={m.action} k={pad && 'pad' in m ? m.pad : key(m.action)} w={m.word} />
+            ))}
           </div>
         </div>
       </div>
       {ui.stage === 'presnap' && !ui.hot ? (
         <div className="snap-call">
-          <div className="snap-key">
-            <kbd>{key('preSnap.snap')}</kbd> Snap
-          </div>
-          <div className="snap-sub">
-            {pad ? 'A B X Y RB' : `${key('pocket.throw1')}–${key('pocket.throw5')}`} are your receivers, in read order
-          </div>
-          <div className="snap-more">
-            <span>
-              Hold <kbd>{key('preSnap.routes')}</kbd> to see the routes
-            </span>
-            <span>
-              <kbd>{key('preSnap.hotRoute')}</kbd> Hot route
-            </span>
+          <Cue className="big" k={key('preSnap.snap')} w="Snap" />
+          <div className="cue-row">
+            <Cue k={receivers} w="Receivers" />
+            <Cue k={key('preSnap.routes')} w="Routes" />
+            <Cue k={key('preSnap.hotRoute')} w="Hot route" />
           </div>
         </div>
       ) : null}
       {ui.stage === 'presnap' && ui.hot ? <HotRoutePicker /> : null}
       {live && inPocket ? (
-        <div className="prompt-row">
-          <span><kbd>{moveKeys('pocket.move')}</kbd> Move</span>
-          <span><kbd>{pad ? 'A B X Y RB' : `${key('pocket.throw1')}–${key('pocket.throw5')}`}</kbd> Throw: tap for touch, hold for a bullet</span>
-          <span>{pad ? 'Left stick while holding: placement' : 'Mouse off the icon: placement'}</span>
-          <span><kbd>{key('pocket.pumpFake')}</kbd> Pump</span>
-          <span><kbd>{key('pocket.throwAway')}</kbd> Throw away</span>
-          <span className="legend"><i className="dot open" /> open <i className="dot covered" /> covered</span>
+        <div className="prompt-row cue-row">
+          <Cue k={moveKeys('pocket.move')} w="Move" />
+          <Cue k={receivers} w="Throw" />
+          <Cue k={pad ? 'L-Stick' : 'Mouse'} w="Aim" />
+          <Cue k={key('pocket.pumpFake')} w="Pump" />
+          <Cue k={key('pocket.throwAway')} w="Throw away" />
+          <Cue k={key('pocket.scramble')} w="Scramble" />
+          <span className="legend">
+            <i className="dot open" /> Open <i className="dot covered" /> Covered
+          </span>
         </div>
       ) : null}
       {live && phase === 'air' ? <CatchCall called={ui.catchType} keyOf={key} /> : null}
       {live && phase === 'carrier' && ui.carrier ? (
-        <div className="prompt-row">
-          <span><kbd>{moveKeys('carrier.')}</kbd> Run</span>
-          <span><kbd>{key('carrier.truck')}</kbd> Truck</span>
-          <span><kbd>{key('carrier.dive')}</kbd> Dive</span>
-          <span><kbd>{key('carrier.protect')}</kbd> Protect (hold)</span>
+        <div className="prompt-row cue-row">
+          <Cue k={moveKeys('carrier.')} w="Run" />
+          <Cue k={key('carrier.sprint')} w="Burst" />
         </div>
       ) : null}
       <Tutorial />
@@ -246,9 +258,9 @@ function PlayHud() {
 }
 
 /**
- * The first-play tutorial card: one line per step, under the score bug, with
- * the keys as they're bound for the device in use. It follows the play and
- * never waits for the player.
+ * The first-play tutorial: which step of the down you're on and its keys,
+ * in the prompts' words. It follows the play and never waits; How to Play
+ * explains the rest.
  */
 function Tutorial() {
   const step = usePractice((s) => s.tutorial);
@@ -256,32 +268,13 @@ function Tutorial() {
   const key = useKey();
   if (!step) return null;
   const pad = device === 'gamepad';
-  const k = (a: string) => <kbd>{key(a)}</kbd>;
-  const lit = (label: string) => <kbd>{label}</kbd>;
-  const body: Record<string, ReactNode> = {
-    snap: (
-      <>
-        Press {k('preSnap.snap')} to snap the ball.
-      </>
-    ),
-    read: <>Read the field while you drop back. A glowing icon is an open man; a dim one is covered.</>,
-    throw: (
-      <>
-        {pad ? 'Press his button' : <>Press {lit(`${key('pocket.throw1')}–${key('pocket.throw5')}`)}</>} to throw to him: tap for touch, hold for a bullet.{' '}
-        {pad ? 'The left stick' : 'The mouse off his icon'} places it; the ring on the field is where it lands.
-      </>
-    ),
-    catch: (
-      <>
-        Call the catch while it's in the air: {k('air.aggressive')} go up and get it, {k('air.possession')} secure it, {k('air.rac')} catch and run. Slowed down this once.
-      </>
-    ),
-    run: (
-      <>
-        Run with {pad ? lit('L-Stick') : lit(['up', 'left', 'down', 'right'].map((d) => key(`carrier.${d}`)).join(''))}, {k('carrier.sprint')} to sprint. {pad ? lit('R-Stick ←→') : k('carrier.juke')} juke,{' '}
-        {k('carrier.stiffArm')} stiff arm, {k('carrier.spin')} spin.
-      </>
-    ),
+  const receivers = pad ? 'A B X Y RB' : `${key('pocket.throw1')}–${key('pocket.throw5')}`;
+  const cues: Record<string, [string, string][]> = {
+    snap: [[key('preSnap.snap'), 'Snap']],
+    read: [['Glow', 'Open'], ['Dim', 'Covered']],
+    throw: [[receivers, 'Throw'], ['Hold', 'Bullet']],
+    catch: CATCHES.map((c) => [key(c.action), c.word]),
+    run: [[pad ? 'R-Stick' : `${key('carrier.juke')}–${key('carrier.protect')}`, 'Moves'], [key('carrier.sprint'), 'Burst']],
   };
   const order = ['snap', 'read', 'throw', 'catch', 'run'];
   return (
@@ -289,15 +282,17 @@ function Tutorial() {
       <span className="tutorial-step">
         {order.indexOf(step) + 1}/{order.length}
       </span>
-      <span className="tutorial-text">{body[step]}</span>
+      {cues[step]!.map(([k, w]) => (
+        <Cue key={w} k={k} w={w} />
+      ))}
     </div>
   );
 }
 
 /**
- * The hot-route picker: first which receiver (his number), then his new
- * route from the list (its number, or up/down and confirm; on a gamepad the
- * D-pad and A). The route art on the field previews the focused route.
+ * The hot-route picker: which receiver (his number), then his route (its
+ * number, or up/down and confirm; on a gamepad the D-pad and A). The route
+ * art on the field previews the focused route.
  */
 function HotRoutePicker() {
   const hot = usePractice((s) => s.hot);
@@ -311,11 +306,9 @@ function HotRoutePicker() {
     return (
       <div className="hot-picker">
         <div className="hot-head">Hot route</div>
-        <div className="hot-sub">
-          Which receiver? {pad ? 'His button' : <kbd>{`${key('hot.n1')}–${key(`hot.n${s.icons.length}`)}`}</kbd>}
-        </div>
-        <div className="hot-foot">
-          <kbd>{key('hot.cancel')}</kbd> Close
+        <div className="cue-row">
+          <Cue k={pad ? 'A B X Y RB' : `${key('hot.n1')}–${key(`hot.n${s.icons.length}`)}`} w="Receiver" />
+          <Cue k={key('hot.cancel')} w="Close" />
         </div>
       </div>
     );
@@ -325,7 +318,7 @@ function HotRoutePicker() {
   return (
     <div className="hot-picker">
       <div className="hot-head">
-        {a.p.name} <span className="hot-now">now: {current ? ROUTE_LABEL[current] : ''}</span>
+        {a.p.name.split(' ').slice(-1)[0]} <span className="hot-now">{current ? ROUTE_LABEL[current] : ''}</span>
       </div>
       <ol className="hot-list">
         {HOT_ROUTES.map((r, i) => (
@@ -335,14 +328,16 @@ function HotRoutePicker() {
           </li>
         ))}
       </ol>
-      <div className="hot-foot">
+      <div className="cue-row">
         {pad ? (
           <>
-            <kbd>D-Pad</kbd> choose <kbd>A</kbd> call <kbd>B</kbd> back
+            <Cue k="A" w="Call" />
+            <Cue k="B" w="Back" />
           </>
         ) : (
           <>
-            <kbd>{key('hot.confirm')}</kbd> call <kbd>{key('hot.cancel')}</kbd> close
+            <Cue k={key('hot.confirm')} w="Call" />
+            <Cue k={key('hot.cancel')} w="Close" />
           </>
         )}
       </div>
@@ -350,24 +345,21 @@ function HotRoutePicker() {
   );
 }
 
-/** The catch call: large and centered the moment the ball is thrown; the called one lights up. */
+/** The catch call: large and centred the moment the ball is thrown; the called one lights up. */
 function CatchCall({ called, keyOf }: { called: string | null; keyOf: (action: string) => string }) {
   useLayoutEffect(() => {
     if (called) latency.respond('catch');
   }, [called]);
   return (
     <div className="catch-call" data-called={called ?? 'none'}>
-      <div className="catch-head">{called ? 'Catch called' : 'Call the catch'}</div>
       <div className="catch-opts">
         {CATCHES.map((c) => (
           <div key={c.type} className={`catch-opt${called === c.type ? ' on' : called ? ' off' : ''}`}>
             <kbd>{keyOf(c.action)}</kbd>
-            <span className="catch-name">{c.name}</span>
-            <span className="catch-sub">{c.sub}</span>
+            <span className="catch-name">{c.word}</span>
           </div>
         ))}
       </div>
-      {!called ? <div className="catch-foot">No call: catch and run</div> : null}
     </div>
   );
 }

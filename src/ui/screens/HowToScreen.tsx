@@ -9,7 +9,7 @@ import { Hints, useDevice } from '../components/controls';
 // Reference pages. The interactive tutorial arrives with core play; these
 // pages already reflect the live keybinds, including rebinds.
 
-const PAGES = ['The Game', 'The Draft', 'Controls'] as const;
+const PAGES = ['The Game', 'The Draft', 'On the Field', 'Controls'] as const;
 
 export function HowToScreen() {
   const back = useApp((s) => s.back);
@@ -63,7 +63,7 @@ export function HowToScreen() {
         </div>
       </header>
       <div className="howto-body" ref={scroller}>
-        {page === 0 ? <GamePage /> : page === 1 ? <DraftPage /> : <ControlsPage />}
+        {page === 0 ? <GamePage /> : page === 1 ? <DraftPage /> : page === 2 ? <FieldPage /> : <ControlsPage />}
       </div>
       <Hints items={[{ kb: 'Q / E', pad: 'LB / RB', label: 'Pages' }, { kb: '↑ ↓', pad: 'Stick', label: 'Scroll' }, { kb: 'Esc', pad: 'B', label: 'Back' }]} />
     </div>
@@ -98,6 +98,47 @@ function DraftPage() {
         <li>Classic shows every rating and stat. Film Room hides the numbers: draft from memory.</li>
         <li>The Daily Challenge gives everyone the same Beasts and the same draft sequence each day.</li>
       </ul>
+    </div>
+  );
+}
+
+/**
+ * On the Field: what the prompts on the field mean. The field only ever
+ * shows a key and a word or two; the explanations live here, with the keys
+ * as they're bound now.
+ */
+function FieldPage() {
+  const kb = useSettings((s) => s.settings.controls.keyboard);
+  const pad = useSettings((s) => s.settings.controls.gamepad);
+  const device = useDevice();
+  const k = (a: string) => <kbd>{((device === 'gamepad' ? pad[a] : kb[a]) ?? []).map(inputLabel)[0] ?? '—'}</kbd>;
+  return (
+    <div className="prose">
+      <p className="lead">The number row does the work. What the numbers mean changes with the phase of the play, and the prompts on the field always say which.</p>
+      <h3>Before the snap</h3>
+      <p>
+        {k('pocket.throw1')}–{k('pocket.throw5')} are your receivers, in read order (1 is the first read). Hold {k('preSnap.routes')} to see every route drawn on the field. {k('preSnap.hotRoute')} calls a hot route: press it, then the receiver's number, then his new route
+        (go, out, in, slant, curl, comeback, flat, hitch). {k('preSnap.snap')} snaps the ball.
+      </p>
+      <h3>In the pocket</h3>
+      <p>
+        Move with {k('pocket.moveUp')}{k('pocket.moveLeft')}{k('pocket.moveDown')}{k('pocket.moveRight')}. A receiver's number throws to him: tap it for a touch pass over the top, hold it for a bullet (the ring fills). Move the mouse off his icon while you hold it to place the
+        ball: along his path leads him or throws back shoulder, up the screen is high. The ring on the field shows where it will come down, sized to the error you can expect. A glowing icon is an open man; a dim one is covered. {k('pocket.pumpFake')} pump-fakes, {k('pocket.throwAway')} throws
+        it away, and {k('pocket.scramble')} tucks it and runs.
+      </p>
+      <h3>Ball in the air</h3>
+      <p>
+        {k('air.aggressive')} <b>Go up</b>: attack the ball at its highest point. Best in traffic, costs his momentum. {k('air.possession')} <b>Secure</b>: both hands, go down with it; the sure catch, and the only one that can tap both feet on the sideline. {k('air.rac')} <b>Run</b>: catch it in stride and
+        keep going. With no call he catches and runs.
+      </p>
+      <h3>With the ball</h3>
+      <p>
+        He runs hard on his own: flat out in space, a controlled run when a tackler is close (so cuts and moves land), a jog only when he's protecting the ball. {k('carrier.sprint')} is a burst past that for a moment, at a cost in stamina. The moves: {k('carrier.juke')} <b>Juke</b> (toward the side you
+        steer, else away from the nearest tackler), {k('carrier.stiffArm')} <b>Stiff arm</b>, {k('carrier.spin')} <b>Spin</b>, {k('carrier.truck')} <b>Truck</b>, {k('carrier.dive')} <b>Dive</b> (a quarterback slides to give himself up), {k('carrier.protect')} <b>Protect</b> (hold: two hands on the ball,
+        a little slower, far harder to strip). A move pressed a beat early still fires when he can make it.
+      </p>
+      <h3>Big hits</h3>
+      <p>A hard-hitting defender at full speed can send a carrier flying. Big hits are rare, shake the ball loose more often, and leave the runner a step short of breath.</p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, defaultBindings, findConflicts, inputLabel, KB_DEFAULTS_V2, KB_DEFAULTS_V3 } from '@/input/actions';
+import { ACTIONS, defaultBindings, findConflicts, inputLabel, KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4 } from '@/input/actions';
 import { defaultSettings, migrate } from '@/app/settings';
 import { validateCharacterization } from '@/engine/data/characterizationSchema';
 import bundled from '@data/characterization.json';
@@ -23,7 +23,7 @@ describe('action map', () => {
     const kb = defaultBindings('kb');
     expect(kb['preSnap.snap']).toEqual(['Space']);
     expect(kb['pocket.throw1']).toEqual(['Digit1']);
-    expect(kb['carrier.truck']).toEqual(['KeyR']);
+    expect(kb['carrier.truck']).toEqual(['Digit4', 'KeyR']);
     expect(kb['global.replay']).toEqual(['KeyP', 'Backspace']);
   });
 
@@ -36,8 +36,10 @@ describe('action map', () => {
     expect(kb['carrier.right']).toEqual(['ArrowRight']);
     expect(kb['carrier.sprint']).toEqual(['ShiftRight', 'ShiftLeft']);
     expect([kb['air.aggressive'], kb['air.possession'], kb['air.rac']]).toEqual([['Digit1'], ['Digit2'], ['Digit3']]);
-    expect([kb['carrier.juke'], kb['carrier.stiffArm'], kb['carrier.spin']]).toEqual([['KeyQ'], ['KeyW'], ['KeyE']]);
-    expect([kb['carrier.truck'], kb['carrier.dive'], kb['carrier.protect']]).toEqual([['KeyR'], ['KeyF'], ['KeyC']]);
+    // The number row first (v5), the letters as second keys.
+    expect([kb['carrier.juke'], kb['carrier.stiffArm'], kb['carrier.spin']]).toEqual([['Digit1', 'KeyQ'], ['Digit2', 'KeyW'], ['Digit3', 'KeyE']]);
+    expect([kb['carrier.truck'], kb['carrier.dive'], kb['carrier.protect']]).toEqual([['Digit4', 'KeyR'], ['Digit5', 'KeyF'], ['Digit6', 'KeyC']]);
+    expect(kb['pocket.scramble']).toEqual(['ShiftLeft', 'ShiftRight']);
     // The directional jukes stay on the right stick only.
     expect(kb['carrier.jukeLeft']).toEqual([]);
     expect(defaultBindings('pad')['carrier.jukeLeft']).toEqual(['Pad:RSLeft']);
@@ -47,7 +49,7 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V2, 'carrier.spin': ['KeyX'] }, defaultBindings('pad'));
     (old as { version: number }).version = 2;
     const m = migrate(old);
-    expect(m.version).toBe(4);
+    expect(m.version).toBe(5);
     // Still on the old default: dropped, so the merge with the defaults fills in the new one.
     expect(m.controls.keyboard['carrier.up']).toBeUndefined();
     expect(m.controls.keyboard['air.possession']).toBeUndefined();
@@ -64,6 +66,14 @@ describe('action map', () => {
     expect(migrate(rebound).controls.keyboard['preSnap.flip']).toEqual(['KeyL']);
     expect(defaultBindings('kb')['preSnap.routes']).toEqual(['Tab']);
     expect(defaultBindings('pad')['preSnap.routes']).toEqual(['Pad:RT']);
+  });
+
+  it('v4 settings put the carrier moves on the number row, keeping a rebound move', () => {
+    const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V4, 'carrier.spin': ['KeyX'] }, defaultBindings('pad'));
+    (old as { version: number }).version = 4;
+    const m = migrate(old);
+    expect(m.controls.keyboard['carrier.juke']).toBeUndefined();
+    expect(m.controls.keyboard['carrier.spin']).toEqual(['KeyX']);
   });
 
   it('labels inputs readably', () => {

@@ -85,6 +85,7 @@ export const ACTIONS: ActionDef[] = [
   a('pocket.throwClick', 'pocket', 'Throw to clicked receiver', ['Mouse0'], [], true),
   a('pocket.pumpFake', 'pocket', 'Pump fake', ['Mouse2'], ['Pad:LB']),
   a('pocket.throwAway', 'pocket', 'Throw it away', ['KeyQ'], ['Pad:RS']),
+  a('pocket.scramble', 'pocket', 'Scramble: tuck it and run', ['ShiftLeft', 'ShiftRight'], ['Pad:RT']),
 
   // Ball in air
   a('air.switch', 'ballInAir', 'Switch to target', ['Tab'], ['Pad:B']),
@@ -97,15 +98,16 @@ export const ACTIONS: ActionDef[] = [
   a('carrier.down', 'carrier', 'Run back', ['ArrowDown'], ['Pad:LSDown']),
   a('carrier.left', 'carrier', 'Run left', ['ArrowLeft'], ['Pad:LSLeft']),
   a('carrier.right', 'carrier', 'Run right', ['ArrowRight'], ['Pad:LSRight']),
-  a('carrier.sprint', 'carrier', 'Sprint', ['ShiftRight', 'ShiftLeft'], ['Pad:RT']),
-  a('carrier.juke', 'carrier', 'Juke (toward the side you steer, else away from the tackler)', ['KeyQ'], []),
+  // The number row is the moves (1–6, as the prompts show); Q W E R F C stay as second keys.
+  a('carrier.sprint', 'carrier', 'Burst (a short extra gear, costs stamina)', ['ShiftRight', 'ShiftLeft'], ['Pad:RT']),
+  a('carrier.juke', 'carrier', 'Juke (toward the side you steer, else away from the tackler)', ['Digit1', 'KeyQ'], []),
   a('carrier.jukeLeft', 'carrier', 'Juke left', [], ['Pad:RSLeft']),
   a('carrier.jukeRight', 'carrier', 'Juke right', [], ['Pad:RSRight']),
-  a('carrier.stiffArm', 'carrier', 'Stiff arm', ['KeyW'], ['Pad:X']),
-  a('carrier.spin', 'carrier', 'Spin', ['KeyE'], ['Pad:B']),
-  a('carrier.truck', 'carrier', 'Truck', ['KeyR'], ['Pad:RSUp']),
-  a('carrier.dive', 'carrier', 'Dive / QB slide', ['KeyF'], ['Pad:A']),
-  a('carrier.protect', 'carrier', 'Protect ball (hold)', ['KeyC'], ['Pad:LB']),
+  a('carrier.stiffArm', 'carrier', 'Stiff arm', ['Digit2', 'KeyW'], ['Pad:X']),
+  a('carrier.spin', 'carrier', 'Spin', ['Digit3', 'KeyE'], ['Pad:B']),
+  a('carrier.truck', 'carrier', 'Truck', ['Digit4', 'KeyR'], ['Pad:RSUp']),
+  a('carrier.dive', 'carrier', 'Dive / QB slide', ['Digit5', 'KeyF'], ['Pad:A']),
+  a('carrier.protect', 'carrier', 'Protect ball (hold)', ['Digit6', 'KeyC'], ['Pad:LB']),
 
   // Kicking
   a('kick.aim', 'kick', 'Aim and power (drag)', ['Mouse0'], ['Pad:RSDown'], true),
@@ -161,6 +163,16 @@ export const KB_DEFAULTS_V2: Record<string, string[]> = {
 /** Keyboard defaults that changed in settings v4 (route preview on Tab), with their v3 values. */
 export const KB_DEFAULTS_V3: Record<string, string[]> = {
   'preSnap.flip': ['Tab'],
+};
+
+/** Keyboard defaults that changed in settings v5 (carrier moves on the number row), with their v4 values. */
+export const KB_DEFAULTS_V4: Record<string, string[]> = {
+  'carrier.juke': ['KeyQ'],
+  'carrier.stiffArm': ['KeyW'],
+  'carrier.spin': ['KeyE'],
+  'carrier.truck': ['KeyR'],
+  'carrier.dive': ['KeyF'],
+  'carrier.protect': ['KeyC'],
 };
 
 export const ACTIONS_BY_ID = new Map(ACTIONS.map((d) => [d.id, d]));

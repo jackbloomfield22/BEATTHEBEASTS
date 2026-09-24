@@ -56,13 +56,13 @@ test('every How to Play page opens by click, Q/E and arrows, with the stage aliv
   await expectPage(page, 0);
 
   // Mouse: each tab, the Draft first (the reported case).
-  for (const i of [1, 2, 0, 1]) {
+  for (const i of [1, 2, 3, 0, 1]) {
     await page.locator('.tab', { hasText: PAGES[i]![0] }).click();
     await expectPage(page, i);
     await expectStageAlive(page);
   }
   // Keyboard: E / Q cycle forward and back, arrows too.
-  for (const [key, expected] of [['KeyE', 2], ['KeyE', 0], ['KeyQ', 2], ['ArrowLeft', 1], ['ArrowRight', 2], ['ArrowRight', 0]] as const) {
+  for (const [key, expected] of [['KeyE', 2], ['KeyE', 3], ['KeyE', 0], ['KeyQ', 3], ['ArrowLeft', 2], ['ArrowRight', 3], ['ArrowRight', 0]] as const) {
     await page.keyboard.press(key);
     await expectPage(page, expected);
   }

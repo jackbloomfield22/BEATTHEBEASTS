@@ -112,3 +112,15 @@
 .hot-item.current { color: var(--ink-2); }
 .hot-item.focus { border-color: var(--lime); background: color-mix(in srgb, var(--lime) 18%, transparent); color: var(--ink); }
 .hot-foot { display: flex; gap: .5rem; align-items: center; font-size: .78rem; color: var(--ink-2); }
+
+/* Prompts: a key and a word or two, uppercase, one style everywhere. */
+.cue { display: inline-flex; align-items: center; gap: .4rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; font-size: .82rem; color: var(--ink); }
+.cue kbd { min-width: 1.5rem; text-align: center; letter-spacing: 0; }
+.cue.big { font-size: 1.6rem; letter-spacing: .3em; animation: snap-pulse 1.6s ease-in-out infinite; }
+.cue.big kbd { font-size: 1.3rem; padding: .3rem .8rem; }
+.cue-row { display: flex; gap: 1.3rem; align-items: center; justify-content: center; }
+.snap-call .cue-row { color: var(--ink-2); }
+.carrier-keys .cue { padding: .2rem .45rem .2rem .2rem; border-radius: .35rem; background: var(--panel); font-size: .74rem; }
+.tutorial-card .cue { font-size: .82rem; }
+.catch-opt { grid-template-columns: auto auto; grid-template-rows: auto; min-width: 0; }
+.catch-opt .catch-name { text-transform: uppercase; letter-spacing: .1em; font-weight: 800; font-size: 1.5rem; }
