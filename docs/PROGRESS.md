@@ -6,7 +6,8 @@
 - **M2 Ratings:** merged (PR #2 and the follow-up PR #3: traits overhaul, Throw Power, consensus check, anchor bands, the approved fixes and round 2).
 - **M3 The look:** merged (PR #4). Perf re-test passed on your M1 Pro: Medium at 100% resolution, 80–113 fps in the three menu views.
 - **M4 Characters and animation:** merged (PR #5).
-- **M4.5 Character and animation quality pass:** built on `claude/m4.5-quality`, PR open. Screenshots in `docs/screenshots/m4.5/`, critique below. **Needs your M1 Pro re-test** for the 60 fps broadcast gate (I can't measure GPU time here).
+- **M4.5 Character and animation quality pass:** built on `claude/m4.5-quality`, PR #6 open. You'll merge it and do the perf re-test on the M5 preview.
+- **M5 Core play:** built on `claude/m5-core-play` (branched from M4.5, so it includes that work), PR open. A full play runs snap to whistle and the Practice Field is playable. Screenshots in `docs/screenshots/m5/`, critique below. **Needs your perf re-test and play test.**
 
 ## Known legacy issues (do not rebuild)
 
@@ -30,7 +31,84 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 
 ## Milestone log
 
-### M4.5 Character and animation quality pass (built, PR open)
+### M5 Core play (built, PR open)
+
+Built in the order you asked, so the parts you can't test here didn't wait on the parts I can.
+
+**0. Carried over from M4.5**
+- Cris Carter's anchor accepts 96+, kept on Catch in Traffic (38 of 42 anchors pass, as before).
+- The two perf cuts for the 60 fps broadcast gate:
+  - Medium's ambient occlusion already ran at a quarter of the pixels (half resolution each way); it now also uses the smallest sample set (N8AO 'performance').
+  - On Low and Medium, a camera above 7 m draws 75% of the crowd (`CROWD_HIGH_CAMERA`): from there a spectator is a few pixels. The threshold sits under the play's broadcast camera (8.5 m), so the cut applies during play.
+
+**1. The pure simulation (`src/sim`, no GPU, no React)**
+- Fixed 60 Hz, seeded streams and the deterministic math only (ESLint now also bans `Math.sin/cos/atan2/exp/log/pow` and `**` in the sim).
+- **Ratings to physics** (`effects.ts`): top speed and the sprint time constant are solved from each player's own 40 and 10-yard split (the inverse of the ratings scale), so a 4.30 man runs a 4.30. Cuts and turns come from Agility; release time, arm speed, range and the error cone from the passing ratings (GDD §9.1).
+- **The ball:** 3D flight with drag. A throw is solved to a lead point (touch or bullet) and moved by placement and the accuracy cone (depth, on the run, pressure, footwork). A touch pass lofts by distance: ~1.1 s at 15 yd, ~2.3 s at 35 from a 90 arm.
+- **Catching:** the closest approach of the ball to the hands, a contest strength from nearby defenders, the catch type and the catching ratings; defenders break up or intercept by position and Ball Skills. Linemen are ineligible.
+- **Plays as data:** two formations (Shotgun Trips, Shotgun Doubles), four passes (Stick, Four Verticals, Smash, Mesh), and Cover 1, 2 and 3 from a base 4-3 aligned to the formation.
+- **AI:** routes with break sharpness from route running; pass protection; the QB's reads and clock; man coverage on a delayed read of the receiver; zone drops with read steps and pass-offs; pursuit angles; a ball-carrier lane read by Vision.
+- **Pass rush vs OL:** engagements whose leverage drifts with the matchup. Bull rushes push the pocket back; speed rushes arc round.
+- **Tackling:** separation, then a resolution from the approach, mass and ratings (form tackle, arm tackle, dive, big hit, broken, missed); carrier moves with cooldowns and spam fatigue; fumbles.
+- **Harness** (`npm run sim:harness`, 720 AI-vs-AI plays against the all-time defense): 63% completions, 3% interceptions, 3% sacks, 11.1 yards per attempt, no stuck plays. When the QB never throws, the median time to a sack is 3.7 s.
+- **Tests:** determinism, the 40 from the rating, the throw solve, every play vs every coverage reaching a whistle, outcome bands, and a measurable 10-point gap for Speed and for pass-rush moves.
+- **Designed runs moved to M6.** Inside zone is built and tested, but the run game needs M6's schemes and run fits before it's honest, so the M5 book is passes only.
+
+**2. Input and cameras: the Practice Field (Main menu → Practice Field)**
+- **Free play against the Beasts:** pick a play, a start spot (own 25 to the goal line), a down and distance, and a coverage (or let the Beasts choose). The series carries on from each result, and resets on a score, a turnover or a failed fourth down.
+- **Play call over the live stadium:** the play art is drawn from the sim's own route data, with the read numbers.
+- **Controls** (GDD §8), keyboard, mouse and gamepad:
+  - snap;
+  - pocket movement (camera-relative);
+  - receiver icons 1–5 or A/B/X/Y/RB, or click an icon: a tap throws a touch pass, a hold charges a bullet (the power ring fills);
+  - placement from the mouse's offset from the icon, or the left stick (the reticle shows it);
+  - pump fake, throw away;
+  - catch type while the ball is in the air (aggressive, run after catch, possession);
+  - carrier sprint (a stamina bar), juke, spin, stiff arm, truck, dive, protect.
+- **Cameras:**
+  - Broadcast: behind the offense, pulling up and back while the ball is in the air, following the carrier with look-ahead, and swinging to a high sideline angle on a long run (the controls keep their frame through that swing).
+  - All-22 and field level on F2 and F3.
+  - Hits shake the camera by their force (Reduce Camera Shake scales it down).
+- **HUD:** score bug, the line of scrimmage and the line to gain on the turf, the prompts from your current bindings, the result card (next play, run it back, leave), a pause menu. The crowd reacts to touchdowns, turnovers, sacks and big hits.
+- **Runtime:** the sim runs at a fixed 60 Hz in a top-priority frame callback, at most five ticks a frame, and the render interpolates. React only sees stage and phase changes. Every input frame is recorded.
+
+**3. The M5 animation set (`tools/blender/lib/actions.py`; 58 of 58 clips pass, `docs/ANIMATION.md`)**
+- **QB:**
+  - three- and five-step shotgun drops, planned by distance (each plant stays down while the body passes within 22 cm of it);
+  - the pocket set;
+  - the throw: load, stride, the elbow at shoulder height, release at frame 11, follow-through across the body. It plays full-body when he's set and upper-body only on the run, and it's time-scaled so the release frame lands on the sim's release.
+- **Upper-body overlays** (masked to the arms and trunk, laid over whatever the legs do): the ball tucked high and tight, protect, the QB's two-hand hold, the catch at the chest and overhead (secured at frame 6, timed to the ball's arrival, then tucked), the stiff arm, the truck's forearm shield, the pump fake.
+- **Carrier moves out of the run:** jukes both ways (plant wide, sink, push off the other way), the spin (a pivot on the ball of the foot through 360°), the dive.
+- **Tackles:** the tackler's form tackle (breakdown, contact at frame 8, wrap, drive, down). The tackled player falls through an **in-house verlet ragdoll** (18 points, torso bracing, knee and elbow limits, the turf with friction), seeded from his pose plus the hit's push along the tackler's line. It blends in over 0.12 s, and once he's down it hands over to the lying clip (face down or on his back) where he came to rest. After the whistle, players on the ground get up (from face down or from the back).
+- **Also:** defensive backs use the backpedal cycle instead of turning to run backward, and the ball rides in the hands (between them in the QB's hold, in the fingers through the throw, tucked along the forearm).
+- **Ball events:** the snap, the release, a catch secured, a hit's contact. The sim decides each moment; the clips are timed to it.
+
+**4. Close-up polish (from the M4.5 critique)**
+- **Shoulder pads:** flat-topped caps with squared corners and a lip over the deltoid, instead of the pool-float ellipsoid.
+- **Jersey:** a knit-mesh micro-pattern (a 3D lattice, no UVs, faded out by the pixel footprint so it can't shimmer), and soft folds where the fabric bunches (the tuck and the sleeves).
+- **Forearms:** the flexor mass, the brachioradialis ridge and the wrist tendons in the relief, with the grooves slightly darker so the shape reads under flat light.
+- **Gloves:** a darker grip palm and a trim-colored cuff, so a hand reads as a hand at mid distance.
+- **Sets into stances:** a small hop onto the balls of the feet and a settle a little past the stance (linemen just sink and settle).
+
+**5. The M5 exit (TECH_PLAN §17)**
+- **Scripted browser plays** (`e2e/practice.spec.ts`, real keyboard input with the sim stepped tick by tick so the play replays exactly): snap, throw, catch, run, tackle and the result card; a tackle and the next snap at the new spot; a 75-yard catch-and-run touchdown that ends the series.
+- **The determinism hash matches Node and the browser:** 24 fixed plays (every play vs every coverage, AI and a scripted user). Node pins the hashes in `tests/golden/sim-hashes.json`, and the browser reproduces them bit for bit.
+- `npm run check` passes (409 tests), and the browser suite passes. One presets test timed out once while Blender renders were running alongside it, then passed on its own.
+
+**Critique:** follows with the Practice Field screenshots (rendering now).
+
+**Needs you**
+- **The perf re-test**, on this preview (it includes M4.5): the Practice Field from the broadcast camera during a play is now the real gate (`?perf` shows the numbers). If it misses 60 at Medium, the perf screen's internal resolution and draw calls will tell me what to cut next.
+- **The play test:** Main menu → Practice Field. Things I'd most like your feel on: the pocket timing against the four-man rush, touch against bullet, the catch buttons, the juke and spin timing, and the broadcast camera's height.
+
+**Known issues and limits**
+- Designed runs are held to M6, and the play book is four passes (M6 grows it to 30+).
+- "Ball in the air: Assist/Full" (taking over the receiver) isn't in yet; the catch buttons work while the ball is in the air. The bullet-hold setting isn't wired to the sim yet (the tap window is 0.18 s).
+- The QB can't hand off or run a designed QB run; he can scramble.
+- OL and DL engagements use the stances and gaits (the line-play clips are M6).
+- No sound for the play yet (M7).
+
+### M4.5 Character and animation quality pass (built, PR #6 open)
 
 Your seven priorities, in order, plus the M4 weak spots and the ratings stints (the stints are in the ratings section below).
 

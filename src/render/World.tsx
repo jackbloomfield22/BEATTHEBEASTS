@@ -107,7 +107,8 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   const thinHigh = quality.tier === 'low' || quality.tier === 'medium';
   useFrame(({ camera }) => {
     const g = crowd.mesh.geometry as THREE.InstancedBufferGeometry;
-    const high = thinHigh && camera.position.y > 10;
+    // 7 m: the play's broadcast camera (8.5 m, render/game/GameCamera.tsx) counts as high.
+    const high = thinHigh && camera.position.y > 7;
     g.instanceCount = Math.round(crowdBase.current * (high ? CROWD_HIGH_CAMERA : 1));
   });
   const plaza = useMemo(() => buildPlazaGeometry(), []);

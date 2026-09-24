@@ -13,7 +13,6 @@ type P = {
   __btbGameReady?: boolean;
   __btbReady?: boolean;
 };
-const W = () => window as unknown as P;
 const OUT = 'tools/shots/out/practice';
 const LIGHTING = process.env.BTB_LIGHTING ?? 'golden';
 
@@ -27,13 +26,13 @@ const phase = (page: Page) => page.evaluate(() => (window as unknown as P).__btb
 
 test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   await page.goto(`/?screen=practice&nointro&seed=37&quality=${process.env.BTB_QUALITY ?? 'high'}&shot=practice&lighting=${LIGHTING}`);
-  await page.waitForFunction(() => W().__btbReady === true, null, { timeout: 300_000 });
-  await page.waitForFunction(() => W().__btbPracticeUi?.getState().stage === 'call', null, { timeout: 120_000 });
+  await page.waitForFunction(() => (window as unknown as P).__btbReady === true, null, { timeout: 300_000 });
+  await page.waitForFunction(() => (window as unknown as P).__btbPracticeUi?.getState().stage === 'call', null, { timeout: 120_000 });
   await page.keyboard.press('ArrowDown');
   await shot(page, '01-play-call');
   await page.keyboard.press('Enter');
-  await page.waitForFunction(() => W().__btbGameReady === true, null, { timeout: 300_000 });
-  await page.evaluate(() => void (W().__btbPractice.runner!.paused = true));
+  await page.waitForFunction(() => (window as unknown as P).__btbGameReady === true, null, { timeout: 300_000 });
+  await page.evaluate(() => void ((window as unknown as P).__btbPractice.runner!.paused = true));
   await shot(page, '02-presnap');
   await page.keyboard.press('Space');
   await tick(page, 40);
@@ -75,8 +74,8 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
-  await page.waitForFunction(() => W().__btbPracticeUi.getState().stage === 'presnap');
-  await page.evaluate(() => void (W().__btbPractice.runner!.paused = true));
+  await page.waitForFunction(() => (window as unknown as P).__btbPracticeUi.getState().stage === 'presnap');
+  await page.evaluate(() => void ((window as unknown as P).__btbPractice.runner!.paused = true));
   await shot(page, '12-next-snap');
   await page.keyboard.press('Escape');
   await shot(page, '13-pause');
@@ -85,10 +84,10 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
 test(`practice tackle and fall · ${LIGHTING}`, async ({ page }) => {
   // Stick: a short completion and a tackle, from field level.
   await page.goto(`/?screen=practice&nointro&seed=5&quality=${process.env.BTB_QUALITY ?? 'high'}&shot=practice&lighting=${LIGHTING}`);
-  await page.waitForFunction(() => W().__btbPracticeUi?.getState().stage === 'call', null, { timeout: 300_000 });
+  await page.waitForFunction(() => (window as unknown as P).__btbPracticeUi?.getState().stage === 'call', null, { timeout: 300_000 });
   await page.keyboard.press('Enter');
-  await page.waitForFunction(() => W().__btbGameReady === true, null, { timeout: 300_000 });
-  await page.evaluate(() => void (W().__btbPractice.runner!.paused = true));
+  await page.waitForFunction(() => (window as unknown as P).__btbGameReady === true, null, { timeout: 300_000 });
+  await page.evaluate(() => void ((window as unknown as P).__btbPractice.runner!.paused = true));
   await page.keyboard.press('F3');
   await page.keyboard.press('Space');
   await tick(page, 78);
