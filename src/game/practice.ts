@@ -250,4 +250,12 @@ class PracticeSession {
 
 export const practice = new PracticeSession();
 
-if (import.meta.env.DEV) Object.assign(globalThis, { __btbPractice: practice, __btbPracticeUi: usePractice, __btbInput: Input });
+if (import.meta.env.DEV) {
+  Object.assign(globalThis, {
+    __btbPractice: practice,
+    __btbPracticeUi: usePractice,
+    __btbInput: Input,
+    // The browser half of the determinism check (e2e/practice.spec.ts).
+    __btbSimHashes: async () => (await import('./determinism')).simHashes(await loadPracticeRosters()),
+  });
+}

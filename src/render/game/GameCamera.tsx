@@ -153,12 +153,16 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       camera.fov = fov;
       camera.updateProjectionMatrix();
     }
-    // The sticks are camera-relative: tell the input layer where "up" points on the field.
-    const fx = v[3]! - v[0]!;
+    // The sticks are camera-relative: tell the input layer where "up" points
+    // on the field. Once the ball carrier has it, that frame holds for the
+    // rest of the play (the camera swinging to the sideline on a long run
+    // mustn't turn his controls 90 degrees mid-stride).
+    const ph = practice.runner?.cur.phase;
+    const fx = ph === 'carrier' || ph === 'dead' ? NaN : v[3]! - v[0]!;
     const fz = v[5]! - v[2]!;
     const [gx, gy] = fieldDir(fx, fz);
     const m = Math.hypot(gx, gy);
-    if (m > 1e-6) {
+    if (m > 1e-6 && Number.isFinite(m)) {
       view.fwd.x = gx / m;
       view.fwd.y = gy / m;
     }
