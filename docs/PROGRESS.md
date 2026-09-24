@@ -120,6 +120,14 @@ Built in the order you asked, so the parts you can't test here didn't wait on th
 - OL and DL engagements use the stances and gaits (the line-play clips are M6).
 - No sound for the play yet (M7).
 
+**Quick pass before the play test (your four notes)**
+1. **Pass camera:** once the pass is out, the broadcast camera rides behind the ball on its line to the receiver and pushes in (about 20 yd back and 8 m up at the release, about 9 yd and 3.4 m at the catch, the lens narrowing from 50° to 38°), then settles behind the carrier. The line leans downfield, so a throw to the flat never turns the camera round to face the offense. The wide shot stays for the pre-snap read and the pocket, where you need to see every receiver. After the throw the controls keep the pocket's "up", so the camera's move never turns the carrier's arrows.
+2. **Catches on 1, 2, 3:** 1 is go up and get it (aggressive), 2 is secure it and go down (possession), 3 is catch and run. A catch-call panel comes up the moment the ball is thrown; the called one lights lime and scales up, and the other two fade. No call means catch and run, and the panel says so. The mouse and Space no longer call catches.
+3. **Movement on the arrows**, with sprint on either Shift (the prompts show R-Shift).
+4. **Carrier moves on the left hand:** Q juke, W stiff arm, E spin, R truck, F dive, hold C to protect. The one-button juke is new in the sim: it goes to the side you're steering (relative to his heading), or with no steer, away from the nearest free defender in front of him. On a gamepad the directional jukes stay on the right stick. The HUD prompts, How to Play and the GDD's controls table all read the new keys, and rebinding still works. Saved settings move to v3: a binding still on its old default takes the new one, and a key you rebound stays.
+- Checks: `npm run check` passes (413 tests: new ones cover the defaults, the v2→v3 migration and the juke side). The browser plays pass on the new keys (arrows, right Shift), including the 75-yard touchdown, and a new test presses 2 in the air and checks the panel.
+- **Screenshots** (`BTB_PRACTICE=1 npm run shots`, frames `06a`–`06c`): at release the frame is still close to the broadcast view, mid-flight it has moved downfield with the ball, and at arrival the contested catch fills the right-centre of the frame above the panel. One thing to watch in play: a teammate running under the camera can cross the near foreground at the catch.
+
 **Next:** M6 Full game, after your perf re-test and play test.
 
 ### M4.5 Character and animation quality pass (built, PR #6 open)
