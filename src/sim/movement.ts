@@ -1,0 +1,119 @@
+// Acceleration-limited steering (TECH_PLAN §10 "Movement"). An agent asks
+// for a velocity; he gets there within his limits: speeding up along his run
+// follows the sprint model (dv/dt = (vmax − v)/tau), braking and turning are
+// capped by his cut acceleration (Agility). The player-controlled agent goes
+// through exactly the same limits, so a slow player feels slow.
+
+import { angleDiff, clamp, heading, len, type V2 } from './vec';
+import { TICK, type Agent } from './types';
+
+/** Share of top speed an AI agent uses when not in a hurry (jogging a route stem, drifting in zone). */
+export const CRUISE = 0.82;
+
+/** How many ticks of history agents keep for delayed perception (0.6 s). */
+export const HIST = 36;
+
+export interface SteerOpts {
+  /** Speed cap as a share of top speed (0–1). Default 1. */
+  pace?: number;
+  /** Face this direction (rad) instead of the direction of travel (backpedal, QB set). */
+  face?: number;
+  /** Extra speed multiplier (carrying the ball, protecting it, stamina). */
+  mult?: number;
+}
+
+export function steer(a: Agent, want: V2, opts: SteerOpts = {}): void {
+  const fx = a.fx;
+  const cap = fx.vmax * (opts.pace ?? 1) * (opts.mult ?? 1) * (0.86 + 0.14 * a.stamina);
+  let wx = want.x;
+  let wy = want.y;
+  const wl = Math.sqrt(wx * wx + wy * wy);
+  if (wl > cap) {
+    wx = (wx / wl) * cap;
+    wy = (wy / wl) * cap;
+  }
+  const v = a.vel;
+  const sp = len(v);
+  // Direction the agent is running (or wants to run from a standstill).
+  let hx: number;
+  let hy: number;
+  if (sp > 0.05) {
+    hx = v.x / sp;
+    hy = v.y / sp;
+  } else if (wl > 1e-6) {
+    hx = wx / Math.max(wl, 1e-9);
+    hy = wy / Math.max(wl, 1e-9);
+  } else {
+    hx = 1;
+    hy = 0;
+  }
+  const dvx = wx - v.x;
+  const dvy = wy - v.y;
+  let along = dvx * hx + dvy * hy;
+  let px = dvx - hx * along;
+  let py = dvy - hy * along;
+  // Speeding up: the sprint model. Braking: cut acceleration.
+  const upMax = (Math.max(0, fx.vmax - sp) / fx.tau) * TICK;
+  const downMax = fx.cutAccel * TICK;
+  along = clamp(along, -downMax, upMax);
+  // Turning: lateral acceleration, a little less at speed (a faster runner
+  // can't change direction as sharply: centripetal limit).
+  const latMax = fx.cutAccel * TICK * (1 - 0.35 * Math.min(1, sp / fx.vmax));
+  const pl = Math.sqrt(px * px + py * py);
+  if (pl > latMax) {
+    px = (px / pl) * latMax;
+    py = (py / pl) * latMax;
+  }
+  v.x += hx * along + px;
+  v.y += hy * along + py;
+  a.pos.x += v.x * TICK;
+  a.pos.y += v.y * TICK;
+  // Facing.
+  const target = opts.face ?? (len(v) > 0.6 ? heading(v) : a.face);
+  const d = angleDiff(target, a.face);
+  const maxTurn = fx.turnRate * TICK;
+  a.face += clamp(d, -maxTurn, maxTurn);
+  // Stamina: sprinting drains it, anything slower recovers (GDD §9.3).
+  const effort = sp / fx.vmax;
+  const drain = (0.018 + 0.02 * (1 - fx.a('stamina'))) * TICK;
+  a.stamina = clamp(a.stamina + (effort > 0.9 ? -drain : 0.01 * TICK), 0, 1);
+}
+
+/** Record this tick's position and velocity for other agents' delayed perception. */
+export function remember(a: Agent): void {
+  a.hist.push({ pos: { x: a.pos.x, y: a.pos.y }, vel: { x: a.vel.x, y: a.vel.y } });
+  if (a.hist.length > HIST) a.hist.shift();
+}
+
+/** Where an agent was `delay` seconds ago (clamped to the history). */
+export function seen(a: Agent, delay: number): { pos: V2; vel: V2 } {
+  const k = Math.min(a.hist.length - 1, Math.max(0, Math.round(delay / TICK)));
+  const h = a.hist[a.hist.length - 1 - k];
+  return h ?? { pos: a.pos, vel: a.vel };
+}
+
+/** Velocity toward a point, slowing to arrive (m/s² braking at cutAccel). */
+export function arrive(a: Agent, to: V2, pace = 1, slowRadius = 0): V2 {
+  const dx = to.x - a.pos.x;
+  const dy = to.y - a.pos.y;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  if (d < 1e-4) return { x: 0, y: 0 };
+  // Speed that can still stop in the remaining distance: v = sqrt(2 a d).
+  const stop = Math.sqrt(2 * a.fx.cutAccel * 0.8 * d);
+  const sp = Math.min(a.fx.vmax * pace, slowRadius > 0 ? stop : Infinity);
+  return { x: (dx / d) * sp, y: (dy / d) * sp };
+}
+
+/** Time for an agent at his current velocity to reach a point (rough, for pursuit and reads). */
+export function timeTo(a: Agent, to: V2): number {
+  const dx = to.x - a.pos.x;
+  const dy = to.y - a.pos.y;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  const sp = len(a.vel);
+  // Already moving that way helps; turning costs roughly a tau.
+  const toward = sp > 0.1 ? (a.vel.x * dx + a.vel.y * dy) / (sp * Math.max(d, 1e-6)) : 0;
+  const v0 = Math.max(0, sp * toward);
+  const vm = a.fx.vmax;
+  const tAcc = (a.fx.tau * (vm - v0)) / vm;
+  return d / vm + tAcc * 0.8 + (toward < 0 ? 0.25 : 0);
+}
