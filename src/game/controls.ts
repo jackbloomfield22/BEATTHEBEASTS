@@ -80,7 +80,8 @@ function notePress(id: string, time: number): void {
 export class Controls {
   private edges = new Set<string>();
   private edgeDevice = new Map<string, string>();
-  private hold: { icon: number; src: HoldSource } | null = null;
+  /** The icon held; `fresh` on the tick it started (a tap shorter than a tick still throws: it's held for that tick). */
+  private hold: { icon: number; src: HoldSource; fresh?: boolean } | null = null;
   /** The placement being chosen for the held icon (lead/back shoulder, high/low). */
   aim: V2 = { x: 0, y: 0 };
   private off: () => void;
@@ -188,11 +189,11 @@ export class Controls {
       // Start a hold: a receiver key or button, or a click near an icon.
       if (!this.hold) {
         THROW_ACTIONS.forEach((a, k) => {
-          if (!this.hold && e.has(a)) this.hold = { icon: k + 1, src: this.edgeDevice.get(a) === 'gamepad' ? { kind: 'pad', action: a } : { kind: 'key', action: a } };
+          if (!this.hold && e.has(a)) this.hold = { icon: k + 1, fresh: true, src: this.edgeDevice.get(a) === 'gamepad' ? { kind: 'pad', action: a } : { kind: 'key', action: a } };
         });
         if (!this.hold && e.has('pocket.throwClick')) {
           const icon = this.nearestIcon(Input.mouse.x, Input.mouse.y);
-          if (icon) this.hold = { icon, src: { kind: 'mouse' } };
+          if (icon) this.hold = { icon, fresh: true, src: { kind: 'mouse' } };
         }
       }
       const h = this.hold;
@@ -210,7 +211,9 @@ export class Controls {
           this.aim = Math.hypot(ox, oy) < AIM_RADIUS * 2.5 ? this.placement(ox, oy, h.icon) : this.placement(0, 0, h.icon);
         }
         f.aim = { ...this.aim };
-        if (still) f.throwHeld = h.icon;
+        const fresh = !!h.fresh;
+        h.fresh = false;
+        if (still || fresh) f.throwHeld = h.icon;
         else {
           // Released this tick: the sim throws with this frame's placement.
           latency.press('throwRelease', h.src.kind === 'mouse' ? Input.releasedAt('pocket.throwClick') : Input.releasedAt(h.src.action));
