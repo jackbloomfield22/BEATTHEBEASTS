@@ -1,7 +1,7 @@
 [
  {
   "key": "trips-stick/cover3/11",
-  "hash": 3852342286,
+  "hash": 24102675,
   "ticks": 171,
   "reason": "tackle"
  },
@@ -25,8 +25,8 @@
  },
  {
   "key": "trips-stick/cover2/11",
-  "hash": 2043858512,
-  "ticks": 171,
+  "hash": 2987060132,
+  "ticks": 170,
   "reason": "tackle"
  },
  {
@@ -49,8 +49,8 @@
  },
  {
   "key": "trips-four-verts/cover1/11",
-  "hash": 3082076979,
-  "ticks": 352,
+  "hash": 2088919519,
+  "ticks": 310,
   "reason": "tackle"
  },
  {
@@ -79,8 +79,8 @@
  },
  {
   "key": "doubles-smash/cover3/4242/user",
-  "hash": 3662380401,
-  "ticks": 233,
+  "hash": 4111238268,
+  "ticks": 223,
   "reason": "tackle"
  },
  {
@@ -97,14 +97,14 @@
  },
  {
   "key": "doubles-smash/cover2/11",
-  "hash": 1015061074,
+  "hash": 1493389357,
   "ticks": 177,
   "reason": "tackle"
  },
  {
   "key": "doubles-smash/cover2/4242/user",
-  "hash": 4231140543,
-  "ticks": 238,
+  "hash": 2419962884,
+  "ticks": 224,
   "reason": "tackle"
  },
  {
@@ -115,8 +115,8 @@
  },
  {
   "key": "doubles-mesh/cover3/4242/user",
-  "hash": 2700783441,
-  "ticks": 273,
+  "hash": 1998564309,
+  "ticks": 272,
   "reason": "tackle"
  },
  {
@@ -133,8 +133,8 @@
  },
  {
   "key": "doubles-mesh/cover2/11",
-  "hash": 1227745493,
-  "ticks": 276,
+  "hash": 3976451031,
+  "ticks": 277,
   "reason": "tackle"
  },
  {

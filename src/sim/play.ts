@@ -24,14 +24,14 @@ import {
 } from './ai';
 import { stepFlight } from './ball';
 import { blockOf, stepBlocks } from './blocks';
-import { fumbles, resolveTackle, separate, startMove, tickMoves } from './contact';
+import { applyImpulse, fumbles, resolveTackle, separate, startMove, tickMoves } from './contact';
 import { releaseTime } from './effects';
 import { BULLET_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { remember, steer } from './movement';
 import { planThrow, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import type { PlayState } from './state';
-import { FIELD_HALF_W, GOAL_X, TICK, type Agent, type PlayResult, type WhistleReason } from './types';
+import { FIELD_HALF_W, GOAL_X, TICK, type Agent, type Move, type PlayResult, type WhistleReason } from './types';
 import { dist, len, norm, sub, v2, type V2 } from './vec';
 
 /** Seconds the play keeps animating after the whistle. */
@@ -207,6 +207,43 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
   }
 }
 
+/** Ticks a carrier move stays pressed when he can't start it yet (0.15 s). */
+const MOVE_BUFFER = 9;
+/**
+ * A carrier move pressed this tick (or null). One pressed while he's still in
+ * the last one stays pressed for MOVE_BUFFER ticks and fires on the first
+ * tick he can start it, so a press a few frames early isn't lost.
+ */
+export function bufferedMove(s: PlayState, c: Agent, pressed: Move | null): void {
+  if (pressed) {
+    c.moveBuf = startMove(s, c, pressed) ? null : { mv: pressed, left: MOVE_BUFFER };
+  } else if (c.moveBuf) {
+    if (startMove(s, c, c.moveBuf.mv) || --c.moveBuf.left <= 0) c.moveBuf = null;
+  }
+}
+
+/**
+ * Braking when the carrier lets go of the stick, as a share of his cut
+ * deceleration: he coasts down over a few strides instead of stopping dead.
+ */
+const CARRIER_COAST = 0.55;
+
+/**
+ * Weight in a cut: a ball carrier asked to change direction sharply at
+ * speed slows into the plant first (the want is scaled down, so the steer
+ * brakes before it turns), up to 40% for a reversal at full speed and
+ * nothing for a gentle bend. A 90° cut at full speed asks for ~77% speed.
+ */
+export function cutWeight(c: Agent, want: V2): V2 {
+  const sp = len(c.vel);
+  const wl = len(want);
+  if (sp < 0.3 || wl < 0.1) return want;
+  const cos = (c.vel.x * want.x + c.vel.y * want.y) / (sp * wl);
+  const plant = Math.max(0, Math.min(1, (0.7 - cos) / 1.2));
+  const k = 1 - 0.4 * plant * Math.min(1, sp / c.fx.vmax);
+  return { x: want.x * k, y: want.y * k };
+}
+
 /**
  * The side of a one-button juke. jukeL steps to the carrier's left of his
  * heading. Steering more than a little across the heading picks that side;
@@ -247,13 +284,22 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
   if (userCarrier) {
     const sp = inp.sprint && c.stamina > 0.05 ? 1 : 0.84;
     want = { x: inp.move.x * c.fx.vmax * sp, y: inp.move.y * c.fx.vmax * sp };
-    if (inp.jukeL) startMove(s, c, 'jukeL');
-    else if (inp.jukeR) startMove(s, c, 'jukeR');
-    else if (inp.juke) startMove(s, c, jukeSide(s, c, inp.move, attack));
-    else if (inp.spin) startMove(s, c, 'spin');
-    else if (inp.stiffArm) startMove(s, c, 'stiffArm');
-    else if (inp.truck) startMove(s, c, 'truck');
-    else if (inp.dive) startMove(s, c, 'dive');
+    const pressed: Move | null = inp.jukeL
+      ? 'jukeL'
+      : inp.jukeR
+        ? 'jukeR'
+        : inp.juke
+          ? jukeSide(s, c, inp.move, attack)
+          : inp.spin
+            ? 'spin'
+            : inp.stiffArm
+              ? 'stiffArm'
+              : inp.truck
+                ? 'truck'
+                : inp.dive
+                  ? 'dive'
+                  : null;
+    bufferedMove(s, c, pressed);
     if (inp.protect && !c.move) c.move = 'protect';
     if (!inp.protect && c.move === 'protect') c.move = null;
   } else {
@@ -279,11 +325,12 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
       }
     }
   }
-  // Committed moves carry him; protecting costs speed.
+  // Committed moves carry him (their velocity change builds over the plant); protecting costs speed.
+  applyImpulse(c);
   if (c.busy > 0 && c.move && c.move !== 'protect' && c.move !== 'stiffArm') {
     steer(c, c.vel, { mult: 1 });
   } else {
-    steer(c, want, { mult: c.move === 'protect' ? 0.88 : 1 });
+    steer(c, cutWeight(c, want), { mult: c.move === 'protect' ? 0.88 : 1, brake: len(want) < 0.1 ? CARRIER_COAST : 1 });
   }
   if (c.anim !== 'juke' && c.anim !== 'spin' && c.anim !== 'stiffArm' && c.anim !== 'truck' && c.anim !== 'dive') c.anim = 'carry';
   if (c.move === 'dive' && c.busy <= 1) {

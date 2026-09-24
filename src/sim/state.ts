@@ -106,6 +106,8 @@ function makeAgent(i: number, side: 'off' | 'def', slot: OffSlot | DefSlot, p: S
     move: null,
     moveCooldown: 0,
     moveFatigue: 0,
+    moveBuf: null,
+    impulse: null,
     stamina: 1,
     down: false,
     hist: [],

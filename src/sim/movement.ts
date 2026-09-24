@@ -20,6 +20,8 @@ export interface SteerOpts {
   face?: number;
   /** Extra speed multiplier (carrying the ball, protecting it, stamina). */
   mult?: number;
+  /** Braking as a share of the cut deceleration (a carrier coasting off the stick). Default 1. */
+  brake?: number;
 }
 
 export function steer(a: Agent, want: V2, opts: SteerOpts = {}): void {
@@ -54,7 +56,7 @@ export function steer(a: Agent, want: V2, opts: SteerOpts = {}): void {
   let py = dvy - hy * along;
   // Speeding up: the sprint model. Braking: cut acceleration.
   const upMax = (Math.max(0, fx.vmax - sp) / fx.tau) * TICK;
-  const downMax = fx.cutAccel * TICK;
+  const downMax = fx.cutAccel * TICK * (opts.brake ?? 1);
   along = clamp(along, -downMax, upMax);
   // Turning: lateral acceleration, a little less at speed (a faster runner
   // can't change direction as sharply: centripetal limit).

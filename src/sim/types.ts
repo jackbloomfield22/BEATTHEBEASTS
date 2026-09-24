@@ -76,6 +76,10 @@ export interface Agent {
   moveCooldown: number;
   /** Recent moves (spamming loses effectiveness). */
   moveFatigue: number;
+  /** A move pressed while he couldn't start it yet, and the ticks it stays pressed (input buffer). */
+  moveBuf: { mv: Move; left: number } | null;
+  /** A move's velocity change still being applied, per tick, over its plant (not in one tick). */
+  impulse: { x: number; y: number; left: number } | null;
   /** Sprint stamina 0–1. */
   stamina: number;
   /** On the ground (tackled, dove, cut). */

@@ -102,9 +102,17 @@ export function fumbles(s: PlayState, d: Agent, c: Agent, big: boolean): boolean
   return s.rng.contact() < p;
 }
 
-/** A carrier's move: commits him for a few frames and sets a cooldown. */
-export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>): void {
-  if (c.busy > 0 || c.moveCooldown > 0 || c.down) return;
+/**
+ * Ticks over which a move's change of velocity is applied: the plant. A cut
+ * at speed takes one or two foot contacts (~80–100 ms at a sprint's ~4.5
+ * steps/s), so the juke's sidestep and the spin's slowdown build over that
+ * instead of teleporting the velocity in one tick.
+ */
+const PLANT: Record<string, number> = { jukeL: 5, jukeR: 5, spin: 6, dive: 3 };
+
+/** A carrier's move: commits him for a few frames and sets a cooldown. False if he can't start it now. */
+export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>): boolean {
+  if (c.busy > 0 || c.moveCooldown > 0 || c.down) return false;
   const frames: Record<string, number> = { jukeL: 16, jukeR: 16, spin: 24, stiffArm: 20, truck: 18, dive: 30, protect: 1 };
   c.move = mv;
   c.busy = frames[mv] ?? 12;
@@ -115,19 +123,33 @@ export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>
   const sp = len(c.vel);
   const hx = sp > 0.3 ? c.vel.x / sp : 1;
   const hy = sp > 0.3 ? c.vel.y / sp : 0;
+  let tx = c.vel.x;
+  let ty = c.vel.y;
   if (mv === 'jukeL' || mv === 'jukeR') {
     const side = mv === 'jukeL' ? 1 : -1;
     const k = 1.6 + 1.4 * c.fx.a('elusiveness');
-    c.vel.x = hx * sp * 0.75 - hy * side * k;
-    c.vel.y = hy * sp * 0.75 + hx * side * k;
+    tx = hx * sp * 0.75 - hy * side * k;
+    ty = hy * sp * 0.75 + hx * side * k;
   } else if (mv === 'spin') {
-    c.vel.x *= 0.7;
-    c.vel.y *= 0.7;
+    tx *= 0.7;
+    ty *= 0.7;
   } else if (mv === 'dive') {
-    c.vel.x = hx * Math.max(sp, 4);
-    c.vel.y = hy * Math.max(sp, 4);
+    tx = hx * Math.max(sp, 4);
+    ty = hy * Math.max(sp, 4);
   }
+  const n = PLANT[mv];
+  if (n) c.impulse = { x: (tx - c.vel.x) / n, y: (ty - c.vel.y) / n, left: n };
   s.events.push({ t: s.t, type: 'move', who: [c.i], data: { move: mv } });
+  return true;
+}
+
+/** One tick of a move's velocity change (see PLANT). */
+export function applyImpulse(a: Agent): void {
+  const m = a.impulse;
+  if (!m) return;
+  a.vel.x += m.x;
+  a.vel.y += m.y;
+  if (--m.left <= 0) a.impulse = null;
 }
 
 /** Per-tick bookkeeping for moves: timers, fatigue recovery. */

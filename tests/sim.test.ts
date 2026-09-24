@@ -24,7 +24,8 @@ import {
 } from '@/sim';
 import { flyFor, solveLaunch } from '@/sim/ball';
 import { steer } from '@/sim/movement';
-import { jukeSide } from '@/sim/play';
+import { bufferedMove, cutWeight, jukeSide } from '@/sim/play';
+import { applyImpulse, startMove, tickMoves } from '@/sim/contact';
 import { simPlayer } from '@/sim/roster';
 
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
@@ -265,5 +266,56 @@ describe('sim: one-button juke', () => {
     expect(jukeSide(s, c, { x: 1, y: 0 }, 1)).toBe('jukeR');
     d.pos = { x: c.pos.x + 3, y: c.pos.y - 1 }; // ahead, to his right
     expect(jukeSide(s, c, { x: 1, y: 0 }, 1)).toBe('jukeL');
+  });
+});
+
+describe('sim: carrier feel (M5.5)', () => {
+  const carrier = () => {
+    const s = setup(3, playById('trips-stick'), defById('cover3'), true);
+    const c = s.agents[s.icons[0]!]!;
+    c.vel = { x: c.fx.vmax, y: 0 };
+    return { s, c };
+  };
+  it('a juke builds its sidestep over the plant instead of in one tick', () => {
+    const { s, c } = carrier();
+    expect(startMove(s, c, 'jukeL')).toBe(true);
+    expect(c.vel.y).toBe(0);
+    applyImpulse(c);
+    const one = c.vel.y;
+    expect(one).toBeGreaterThan(0);
+    for (let k = 0; k < 10; k++) applyImpulse(c);
+    expect(c.impulse).toBeNull();
+    expect(c.vel.y).toBeGreaterThan(one * 4);
+  });
+  it('a move pressed during the last one fires when he can start it (the buffer)', () => {
+    const { s, c } = carrier();
+    const tick = () => {
+      tickMoves(c);
+      bufferedMove(s, c, null);
+    };
+    expect(startMove(s, c, 'jukeL')).toBe(true);
+    // Spin pressed 5 ticks before the juke's cooldown ends: buffered, then fires.
+    while (c.moveCooldown > 5) tickMoves(c);
+    bufferedMove(s, c, 'spin');
+    expect(c.moveBuf?.mv).toBe('spin');
+    for (let k = 0; k < 6; k++) tick();
+    expect(c.move).toBe('spin');
+    expect(c.moveBuf).toBeNull();
+    // Pressed too early (more than the buffer before he can): dropped.
+    while (c.moveCooldown > 20) tickMoves(c);
+    bufferedMove(s, c, 'jukeR');
+    for (let k = 0; k < 12; k++) tick();
+    expect(c.moveBuf).toBeNull();
+    expect(c.move === 'jukeR').toBe(false);
+  });
+  it('a sharp cut at speed slows him into the plant; a gentle bend does not', () => {
+    const { c } = carrier();
+    const v = c.fx.vmax;
+    const bend = cutWeight(c, { x: v, y: v * 0.2 });
+    expect(Math.hypot(bend.x, bend.y)).toBeCloseTo(Math.hypot(v, v * 0.2), 5);
+    const cut = cutWeight(c, { x: 0, y: v });
+    expect(Math.hypot(cut.x, cut.y) / v).toBeCloseTo(0.77, 1);
+    const back = cutWeight(c, { x: -v, y: 0 });
+    expect(Math.hypot(back.x, back.y) / v).toBeCloseTo(0.6, 2);
   });
 });
