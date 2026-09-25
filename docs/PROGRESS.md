@@ -234,6 +234,69 @@ Now the ball's forward point crossing the plane in bounds scores before any dead
 
 All 71 clips pass the Blender gates (foot slide, loops, clearance). The Practice screen crash that blanked the page on load (the box score's initial state used before definition) was caught by the screenshot run and fixed before this round was declared done.
 
+#### Round two on PR #8 (your second play test)
+
+A new standing principle heads CLAUDE.md: **football is art**. The harness numbers are a floor. A play is right when it would look right on a broadcast. Every change below was watched moving, not just measured.
+
+**1. Diagonals.**
+- **What I found:** the sim already gave a carrier the same speed at 45° as straight ahead. I measured it with real arrow keys in the browser: 9.37 yd/s both ways.
+- **The likely cause:** a gamepad. The sim scaled speed by how far the stick was pushed, and many pads report a full diagonal push at only 0.85–0.9, which after the dead zone is about 87% speed.
+- **The fix:** for a ball carrier (and a scrambling QB) the stick is now a **direction only**; his speed always comes from the situation.
+- **The test:** a carrier at 45°, from the keyboard and from a pad reading 0.62/0.62, runs exactly as fast as one going straight.
+
+**2. No burst key.**
+- **Removed:** Shift is gone from the carrier, the prompts, the tutorial card and How to Play.
+- **The automatic burst:** he finds it himself coming out of a cut (asked to run 35°+ off his line), a juke or spin, or when he clears the last tackler near him.
+- **How it works:** it lasts 0.3 s at 0 Acceleration up to 0.6 s at 99, costs 5% stamina, needs 20% stamina left, and can't come again for 1.5 s.
+- **What it does:** he gets back to top speed sooner (the sprint model's acceleration compressed). He doesn't go past top speed. My first version ran 4% over, and pursuers could never close: runs went +0.85 yd a carry. I watched it and took the over-speed out.
+- **The scramble:** the tuck moves to **R** (RT on a gamepad). Settings v6 moves your binding unless you rebound it and drops the old burst key.
+
+**3. The ball is driven.**
+- **The default throw:** a tap is a **driven ball**. Hang time comes from distance and the arm: ~0.6 s to 10 yd and ~0.9 s to 20 from a 90 arm, a 40-yard rope in ~1.8 s. A weaker arm takes longer in proportion to its top speed.
+- **Touch:** a **hold** adds 15–35% more hang, less loft than before (a 10-yard touch pass took 0.9 s; now 0.69–0.81 s).
+- **Automatic loft:** the QB puts air under a driven ball on his own when a defender near the throw could reach it.
+- **The AI QB:** throws the driven ball and reads windows on the same hang time.
+- **The deep curve:** past 20 yd it's kept gentle on purpose. Hang time sets the lead, and the lead sets the distance. A steeper curve ran away: go routes were being led to the end line and deep reads never came open, so sacks hit 25%.
+- **The harness check:** hang at 10 yd and 20 yd, normalised to a 90 arm, is in `tests/outcomes.test.ts`. It measures **0.60 s and 0.88 s**.
+
+**4. No hitch at the catch.**
+- **Found three causes:**
+  - The receiver slowed to arrive exactly with the ball.
+  - A secure catch cost 20% of his speed and a high-point one 45%.
+  - The first catch of a session played at 0.6×.
+- **Now:**
+  - He never brakes for a ball led to him; only a ball well short of him makes him throttle down.
+  - Run and secure catches keep all his speed; going up for it keeps 90%.
+  - The first-catch slow motion is a setting, **off** by default (Settings → Gameplay → Slow first catch).
+  - The catch clips were already upper-body overlays over the running legs.
+
+**5. The defense flows instead of piling in.**
+- **The cause:** every defender within 20 yd of the catch point used to break straight for it.
+- **Now, at the throw:** **at most two** rally to the ball: the man covering the target, then whoever can get to the catch point soonest, and only if he can be there within 0.35 s of the ball.
+- **Everyone else near the throw** runs to a leverage point 5 yd past the catch, along the receiver's run, going around the catch point rather than through it. That's where the tackle after the catch is made.
+- **A beaten defender** still takes his angle downfield, but on his own side of the runner, never across or through him.
+- **The harness check:** more than two defenders within 2 yd of the catch point on **0.0%** of completions (the test allows under 3%).
+
+**6. The catch camera** ends its push-in 10.5 yd off the catch at 3.9 yd up (was 9 and 3.4), a frame about 17% wider at the same field of view.
+
+**Numbers, before → after round two** (AI vs AI at Pro, 20 per cell, 16 passes × 6 coverages, 6 runs × 6 coverages):
+
+| | Before | After | NFL |
+|---|---|---|---|
+| Completion | 73.6% | 72.4% | 60–65% |
+| Yards per attempt | 8.3 | 9.6 | ~7 |
+| Completions of 20+ / 40+ | 12.3% / 6.2% | 12.9% / 6.7% | ~10% / a few % |
+| YAC on short routes | 5.1 | 5.2 | 4–6 |
+| Driven ball, 10 yd / 20 yd (90 arm) | ~0.43 s bullet / ~0.9 s touch at 10 yd | 0.60 s / 0.88 s | — |
+| More than two defenders at the catch | not measured | 0.0% | — |
+| Sacks / scrambles | 8.8% / 4.6% | 8.8% / 4.9% | 6–7% / 4–6% |
+| Runs: yards per carry, 10+, 20+ | 4.63, 16.7%, 3.9% | 4.97, 17.9%, 4.0% | 4.3, ~11%, ~2.5% |
+
+**Honest gaps.**
+1. **Yards per attempt rose to 9.6.** The driven ball opens more 10–19 yd windows, and receivers keep their speed through the catch. Completion is still high (72%). Soft zones underneath remain the next coverage job.
+2. **Runs** are a little richer again (4.97 yd per carry) from the burst out of cuts, still boom-or-bust with a low median.
+3. **The "Touch pass hold" setting** (formerly "Bullet pass hold") isn't wired to anything; the tap threshold is a fixed 0.18 s. That predates this round. Wiring it means making it part of the recorded input, which I left for a later pass.
+
 ### M5 Core play (merged, PR #7)
 
 Built in the order you asked, so the parts you can't test here didn't wait on the parts I can.
