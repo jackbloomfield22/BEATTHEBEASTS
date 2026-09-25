@@ -20,7 +20,7 @@ Play them raw on a loop (no foot lock). ~2.8-3.5 s each.
 - sig_te: three-point stance, fire out and strike the block (frame 9),
   drive, release off it into the route, stop, back into the stance.
 - sig_ol: the two-point (hands on the thighs), settle into the
-  three-point, a kick-slide and punch (frame 50), then walk back up to
+  three-point, a kick-slide and punch (frame 55), then walk back up to
   the spot into the two-point.
 """
 
@@ -352,7 +352,7 @@ def sig_te() -> Clip:
 
 def sig_ol() -> Clip:
     """Two-point, settle into the three-point, hold, one kick-slide back
-    and out with the hands coming up, punch (frame 50), hold, then walk
+    and out with the hands coming up, punch (frame 55), hold, then walk
     back up to the spot into the two-point. Really moves."""
     from .actions_m6_line import settle
 
