@@ -8,7 +8,7 @@ import { test, type Page } from '@playwright/test';
 // software-rendered frame still shows the shot as played). Into tools/shots/out/game.
 
 type W = {
-  __btbDraft: { getState(): { begin(mode: string, o?: { seed?: number }): Promise<void> } };
+  __btbDraft: { getState(): { phase: string; begin(mode: string, o?: { seed?: number }): Promise<void>; finishWalkout(go: (s: string) => void): void } };
   __btbApp: { getState(): { screen: string; go(s: string): void } };
   __btbGameUi: { getState(): { stage: string } };
   __btbPracticeUi: { getState(): { stage: string } };
@@ -28,6 +28,13 @@ test('game screens', async ({ page }) => {
     const w = window as unknown as W;
     void w.__btbDraft.getState().begin('quick', { seed: 11 });
     w.__btbApp.getState().go('draft');
+  });
+  // Quick Play drafts all nine, then walks out; the walk-out has its own
+  // video (m6video.spec.ts), so once it starts, cut straight to kickoff.
+  await page.waitForFunction(() => ['walkout', 'complete'].includes((window as unknown as W).__btbDraft.getState().phase), null, { timeout: 600_000 });
+  await page.evaluate(() => {
+    const w = window as unknown as W;
+    if (w.__btbApp.getState().screen !== 'game') w.__btbDraft.getState().finishWalkout(w.__btbApp.getState().go);
   });
   await page.waitForFunction(() => (window as unknown as W).__btbApp.getState().screen === 'game', null, { timeout: 600_000 });
   const seen = new Set<string>();
