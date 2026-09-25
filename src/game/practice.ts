@@ -169,6 +169,8 @@ export interface GameHooks {
   defCall(sit: Situation, seed: number): DefCall;
   /** A snap's whistle: the game scores it and says where the next snap is. */
   onResult(s: PlayState, r: PlayResult, endY: number): { next: Situation; over: boolean };
+  /** Each tick of a snap, before it steps (read-only: the box score's coverage snapshot). */
+  onTick?(s: PlayState): void;
 }
 
 type Rosters = { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> };
@@ -232,7 +234,8 @@ class PracticeSession {
     this.firstCatch = true;
     set({ stage: 'loading', result: null, error: null });
     this.offPause ??= Input.onAction((id, info) => {
-      if (id !== 'global.pause' || info.repeat) return;
+      // In a game the game screen owns the pause (its menu can come up over a card too).
+      if (id !== 'global.pause' || info.repeat || this.game) return;
       const st = get().stage;
       // The same Esc that just resumed (menu.back fires first) doesn't pause again.
       if ((st === 'presnap' || st === 'live') && !this.resuming) this.pause();
@@ -492,23 +495,48 @@ class PracticeSession {
     if (s.phase === 'air') this.sawAir = true;
     else if (this.sawAir) this.firstCatch = false;
     this.stepTutorial(s);
-    if (s.result && get().stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) {
-      const ui = get();
-      const endY = s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y;
-      const g = this.game ? this.game.onResult(s, s.result, endY) : null;
-      const next = g ? (g.over ? null : g.next) : nextSituation(ui.situation, s.result, endY);
-      this.setContext(null);
-      // Fatigue for the next play: last play's toll recovers by half; a big hit adds his.
-      const f: Partial<Record<OffSlot, number>> = {};
-      for (const [k, v] of Object.entries(this.fatigue)) if (v && v / 2 > 0.02) f[k as OffSlot] = v / 2;
-      const bh = s.result.bigHit;
-      if (bh && s.agents[bh.on]!.side === 'off') {
-        const slot = s.agents[bh.on]!.slot as OffSlot;
-        f[slot] = Math.min(0.6, (f[slot] ?? 0) + hitToll(bh.force));
-      }
-      this.fatigue = f;
-      set({ stage: 'result', result: describe(s), situation: next ?? (g ? g.next : startSituation(ui.startSpot, ui.startDowns)), seriesOver: next === null, box: addToBox(ui.box, s.result) });
+    this.game?.onTick?.(s);
+    if (s.result && get().stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) this.report();
+  }
+
+  /**
+   * A paused snap whose whistle has already blown (the dead-ball hold was
+   * still running): score it now, as if the hold had run out. Leaving a game
+   * from the pause menu after the last play's whistle ends it properly.
+   * True if there was one.
+   */
+  settle(): boolean {
+    const s = this.runner?.state;
+    if (!s?.result || (get().stage !== 'paused' && get().stage !== 'live') || this.reported === this.playId) return false;
+    if (get().stage === 'paused') {
+      this.runner!.paused = false;
+      set({ stage: 'live' });
     }
+    this.report();
+    return true;
+  }
+
+  /** The whistle's result goes to the game (or the practice series) and the result card. */
+  private reported = -1;
+  private report(): void {
+    const s = this.runner!.state;
+    if (!s.result || this.reported === this.playId) return;
+    this.reported = this.playId;
+    const ui = get();
+    const endY = s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y;
+    const g = this.game ? this.game.onResult(s, s.result, endY) : null;
+    const next = g ? (g.over ? null : g.next) : nextSituation(ui.situation, s.result, endY);
+    this.setContext(null);
+    // Fatigue for the next play: last play's toll recovers by half; a big hit adds his.
+    const f: Partial<Record<OffSlot, number>> = {};
+    for (const [k, v] of Object.entries(this.fatigue)) if (v && v / 2 > 0.02) f[k as OffSlot] = v / 2;
+    const bh = s.result.bigHit;
+    if (bh && s.agents[bh.on]!.side === 'off') {
+      const slot = s.agents[bh.on]!.slot as OffSlot;
+      f[slot] = Math.min(0.6, (f[slot] ?? 0) + hitToll(bh.force));
+    }
+    this.fatigue = f;
+    set({ stage: 'result', result: describe(s), situation: next ?? (g ? g.next : startSituation(ui.startSpot, ui.startDowns)), seriesOver: next === null, box: addToBox(ui.box, s.result) });
   }
 
   private stepTutorial(s: PlayState): void {

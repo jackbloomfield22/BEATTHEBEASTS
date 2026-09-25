@@ -15,6 +15,7 @@ import { PracticeScreen } from '@/ui/screens/PracticeScreen';
 import { DraftScreen } from '@/ui/screens/DraftScreen';
 import { GameScreen } from '@/ui/screens/GameScreen';
 import { ResultsScreen } from '@/ui/screens/ResultsScreen';
+import { HistoryScreen } from '@/ui/screens/HistoryScreen';
 import { FpsCounter, PerfScreen } from '@/dev/PerfOverlay';
 import { AppBoundary, StageBoundary } from './Recovery';
 import '@/ui/styles/menus.css';
@@ -179,6 +180,7 @@ function Game() {
         {screen === 'draft' ? <DraftScreen /> : null}
         {screen === 'game' ? <GameScreen /> : null}
         {screen === 'results' ? <ResultsScreen /> : null}
+        {screen === 'history' ? <HistoryScreen /> : null}
         {toast ? (
           <div className="toast" key={toast.id}>
             {toast.text}

@@ -15,6 +15,7 @@ import {
   passBlock,
   openness,
   pressureOn,
+  pressureFrom,
   pursue,
   qbRead,
   reaction,
@@ -704,6 +705,26 @@ function autoBurst(s: PlayState, c: Agent, pace: number, want: V2): void {
 /** Protecting the ball: a jog, ~78% (two hands on it, pads over it). */
 const PROTECT_PACE = 0.78;
 
+/**
+ * The box score's pressures (the game layer's per-defender tallies): each
+ * defender the first time his own share of the pressure on the QB reaches
+ * the harness's 0.45 (pressureT's threshold), and the blocker he beat: the
+ * man still on him (a collapsing pocket) or the last one he shed, −1 if he
+ * came free. Bookkeeping only: nothing in the sim reads it, and it isn't hashed.
+ */
+function notePressures(s: PlayState): void {
+  const qb = s.agents[s.qb]!;
+  for (const i of s.def) {
+    if (pressureFrom(s, qb, i) < 0.45 || s.pressures.some((p) => p.by === i)) continue;
+    let beat = blockOf(s, i)?.b ?? -1;
+    for (let k = s.events.length - 1; beat < 0 && k >= 0; k--) {
+      const e = s.events[k]!;
+      if (e.type === 'shed' && e.who?.[0] === i) beat = e.who[1] ?? -1;
+    }
+    s.pressures.push({ by: i, beat, t: s.t });
+  }
+}
+
 /** Tackles on the ball carrier (or the QB in the pocket). */
 function contactStep(s: PlayState): void {
   const holder = s.ball.mode === 'held' ? s.ball.holder : -1;
@@ -1278,6 +1299,7 @@ export function stepPlay(s: PlayState, inp: InputFrame): void {
   defenseRoles(s);
   // Pressure (the harness's time to pressure): a free rusher within ~3 yd of him (pressureOn 0.45), NGS's "pressure" radius.
   if (s.pressureT < 0 && (s.phase === 'dropback' || s.phase === 'pocket') && pressureOn(s, s.agents[s.qb]!) >= 0.45) s.pressureT = s.t;
+  if (s.phase === 'dropback' || s.phase === 'pocket') notePressures(s);
   const goal = s.carrier >= 0 ? s.agents[s.carrier]!.pos : s.agents[s.qb]!.pos;
   stepBlocks(s, goal);
   // Where the carrier's own move took him, before bodies push apart: a ball
