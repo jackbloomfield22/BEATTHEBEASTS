@@ -35,7 +35,7 @@ export class VideoWall {
   private dirty = true;
   /** Seconds the room has run (the wall's clock). */
   now = 0;
-  brightness = 2.3;
+  brightness = 2.2;
 
   constructor() {
     this.canvas = document.createElement('canvas');
@@ -82,9 +82,9 @@ export class VideoWall {
     // brief: the room sits around a third of the wall), lime-green at the
     // center falling to deep green at the edges, then the scanline and frame.
     const g = ctx.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, W * 0.62);
-    g.addColorStop(0, '#5c7a30');
-    g.addColorStop(0.55, '#2c3d19');
-    g.addColorStop(1, '#101609');
+    g.addColorStop(0, '#46602a');
+    g.addColorStop(0.55, '#1f2d13');
+    g.addColorStop(1, '#0b1006');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = 'rgba(255,255,255,0.018)';
@@ -105,7 +105,12 @@ export class VideoWall {
     ctx.fillStyle = color;
     ctx.textAlign = align;
     ctx.textBaseline = 'middle';
+    // A dark halo keeps type crisp on the lit field.
+    ctx.shadowColor = 'rgba(0,0,0,0.85)';
+    ctx.shadowBlur = size * 0.35;
     ctx.fillText(s, x, y);
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
   }
 
   private header(round: number, label: string): void {
