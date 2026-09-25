@@ -87,7 +87,7 @@ export function suggestPlays(sit: Situation, opts: { twoMinute?: boolean; clockR
       const list = byType(t);
       if (!list.length) return;
       for (let j = 0; j < list.length; j++) {
-        const p = list[(los + down * 3 + pass + j) % list.length]!;
+        const p = list[(Math.floor(los) + down * 3 + pass + j) % list.length]!;
         if (seen.has(p.id)) continue;
         seen.add(p.id);
         out.push({ play: p, why });
