@@ -133,5 +133,10 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `ref_first_down_r` | transition | 54 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `ref_incomplete` | transition | 45 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `ref_whistle` | transition | 45 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `sig_qb` | signature | 82 | 0.0 | 0.01 | 0.00 | 23.7 | — | pass |
+| `sig_wr` | signature | 89 | 0.0 | 0.00 | 0.00 | 19.0 | — | pass |
+| `sig_rb` | signature | 93 | 0.0 | 0.00 | 0.00 | 17.2 | — | pass |
+| `sig_te` | signature | 105 | 0.0 | 0.00 | 0.00 | 18.6 | — | pass |
+| `sig_ol` | signature | 86 | 0.0 | 0.00 | 0.00 | 35.0 | — | pass |
 
-**127 of 127 clips pass.**
+**132 of 132 clips pass.**
