@@ -8,8 +8,9 @@
 - **M4 Characters and animation:** merged (PR #5).
 - **M4.5 Character and animation quality pass:** merged (PR #6).
 - **M5 Core play:** merged (PR #7), with the quick pass (pass camera, 1/2/3 catches, arrows, Q–F moves).
-- **M5.5 Game feel:** built on `claude/m5.5-game-feel`, PR open. Prompts in every phase, open receivers, the landing reticle, the tutorial, more pocket time, field boundaries, route preview and hot routes, blended transitions, latency measured, and three feel videos in `docs/screenshots/m5.5/`. Then your feedback round: short prompts and number keys, context speed and burst, the scramble and slide, big hits, a 22-play book with designed runs, and passing outcomes from separation and geometry (plus the touchdown fix). **Needs your play test.**
-- **Next: M6**, which opens with the draft room (3D draft over the stadium, the video-board slot machine, the ported draft rules, the Scouting panel), with the Practice Field playing the drafted roster. The tunnel reveal and pre-game cinematics stay in M7.
+- **M5.5 Game feel:** merged (PR #8), with the round-two fixes (diagonal speed, the automatic burst, driven throws, no slowdown at the catch, defenders that don't bunch).
+- **M6 Full game:** built on `claude/trusting-ptolemy-m2i78d`, PR open. The draft in the Contenders' locker room, and a full game against the Beasts from Quick Play, Classic, Film Room or the Daily through the walk-out, every possession, kicks, the two-minute drill and overtime to the results screen. **Needs your play test.**
+- **Next: M7** (presentation): the tunnel reveal grows from the walk-out, pre-game, broadcast overlay, replays, celebrations, commentary, audio.
 
 ## Known legacy issues (do not rebuild)
 
@@ -33,7 +34,60 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 
 ## Milestone log
 
-### M5.5 Game feel (built, PR open)
+### M6 Full game (built, PR open)
+
+The whole game runs end to end: pick a mode, draft nine lockers in the Contenders' locker room, walk out the tunnel, play a six-round game against the Beasts, and land on the results screen. The browser test `e2e/game.spec.ts` plays a full Quick Play game that way with no dead ends (it found two real bugs on the way: a second draft started over Quick Play's while the catalog loaded, and the play suggestions crashed on a fractional yard line; both fixed).
+
+**1. The locker room** (`src/render/locker/`, GDD §6.2)
+- Nine stalls on an arc in draft order (QB, RB, RB2, WR1, WR2, WR3, TE, TE2, and a double-wide OL stall with five nameplates), a bench, the video wall on the left, the tunnel door on the right with the stadium in daylight at the end of it. Black and lime, no marks.
+- It's its own scene in the one canvas: the composer's render pass draws the room instead of the stadium while it's up (`src/render/view.ts`), so the post chain, its buffers and every program stay as they are, and the stadium stays built for the walk-out.
+- The lockers are the light: 27 analytic lights (a lamp, a position-colored underlight and a ceiling washer per stall) run through three's physical BRDF inside the room's materials, not three.js lights, so the room adds no light-loop cost to anything else. Two moods: pregame (house lights up) and lights down (the night preset).
+- A pick dresses its stall over ~3 s: the lamp flickers on, the nameplate lights with his name and number, the jersey drops onto the hanger (name and number on the back), the helmet lands on the shelf, gloves and a towel go over the lip, the cleats land, and stickers go on one by one (team+decade tag, up to two trait badges, first-team All-Pro count from `data/augment/honors.json`, generated from the cited accolades). His signature move plays as a lime hologram in front of the stall (the new `sig_*` clips).
+- The video wall runs the slot machine (team and decade reels, the lock), the Beasts' lineup (flip the pages) and the pick card.
+- After the ninth stall the camera pulls back down the row and walks out the tunnel; the exposure blooms into daylight and hands over to the stadium at the tunnel mouth. The M7 tunnel reveal can start from there.
+- **Locker Room** is on the main menu (and the results screen) once a draft exists.
+
+**2. The draft** (`src/game/draft.ts`, `src/app/draftStore.ts`, `src/ui/screens/DraftScreen.tsx`)
+- The legacy rules exactly: 9 rounds, any open slot from the rolled pair, one Team Skip and one Era Skip, no duplicate people (person ids), at most one 1970s pull, the Daily's fixed sequence (and a seeded backup pair if a round offers nothing), Auto-Draft that keeps your picks and isn't offered in the Daily.
+- The pick panel: the pair, both skips, position tabs, search (`/`), the list (open slots first, by OVR; Film Room by position and name so the order doesn't leak numbers) and the Scouting card: OVR and confidence, the key attributes, traits with their why lines, an era line, and for an OL unit its five linemen and block grades. Film Room hides every number.
+- Real jersey numbers where the data has them: nflverse rosters, then the Wikipedia infobox for the seasons nflverse leaves blank (3,537 of 4,296 stints); the rest get a position-typical number, marked estimated.
+- Keyboard, mouse and pad throughout (a new `menu.alt2` action: F / X for Era Skip).
+
+**3. The game** (`src/game/match.ts` pure, `src/game/game.ts` over the play engine, `src/ui/screens/GameScreen.tsx`)
+- Rounds per the GDD: the Beasts go first each round; your drive starts at the 25 (a short field after a Beasts turnover, deeper after their punt); 4/6/10 rounds; the presentational clock advances by round.
+- The Beasts' possessions: legacy's whole-game model (19.5 + (rating − 80)·0.53, its noise and the answer-back that makes shootouts) turned into per-possession outcomes that aim at the points still owed, re-read each possession so the answer-back follows your score. Tested: the Beasts' mean over 400 games lands within ±2.5 points (per 10 drives) of legacy's for 4, 6 and 10 rounds, and a high-scoring offense faces 8+ more points. Each is a Meanwhile cut: result, plays, yards, time, the next spot. Their two-point chart follows the score late.
+- Downs, first downs, sacks, turnovers end the drive, safeties (+2 Beasts), pick-sixes (+7). After a TD: the PAT (a 33-yard kick) or a two-point play from the 3. Fourth down: go, punt (auto-simmed, ~41 yd net) or a field goal with the make % from the kicker's leg and the wind.
+- Field goals and PATs: the drag kick (pull back like a sling: length is power, lean is aim; overcooked slices) or hold-to-charge on keys and pad. The flight is `src/game/kick.ts`: the sim's drag and gravity, wind that drifts a 45-yarder ~2 yd in a 12 mph crosswind, NFL post dimensions. The kicking unit plays the new snap, hold and kick clips before the ball flies. The stadium now has goalposts.
+- The two-minute drill on your last drive when trailing or tied: a live clock that runs between plays after an in-bounds play (up to the 40-second play clock), three timeouts (T), spike (K), kneel (J); Victory Formation when you lead. Overtime: one possession each from the 25 until someone leads; from the third OT, two-point tries.
+- Grades on legacy's margins scaled to game length (GDD §7.6).
+- Personnel and the Beasts' AI from the sim work below are wired in: each play lines up its own eleven (an FB or a second TE in I-Form and Heavy; bodies re-dress when the man in a slot changes), the Beasts call package, coverage and pressure from the situation and chart your tendencies across the game, and the play call's Suggested tab ranks this roster's plays with a coach's reason under each.
+- Results: the final score counting up, win or loss, the grade, the box score with legacy's per-player grades (yardage scaled to game length) and the big hits taken, key matchups from `buildMatchups` on the new ratings (verdict from how those targets went), the drive strip, and for the Daily the perfect-team comparison.
+
+**4. The sim** (a background pass, merged)
+- 9 formations and 40 plays across personnel 11/12/21/22 (I-Form, Pistol, Heavy, Ace; sneaks and a Hail Mary only in their moment).
+- The Beasts' coordinator: nickel and dime by situation, Tampa 2, fire zones and sim pressure, disguise at higher difficulty, run fits, pass-rush move sets by trait, and brackets on the receiver you keep targeting.
+- Pattern-matching zones, the pass rush retimed, sideline rules (a route never crosses the sideline; a man who steps out is out of the play).
+- The Touch pass hold setting, unwired until now, drives the sim's touch threshold (default 180 ms, the tuned value).
+- Harness at Pro (AI vs AI, the full book × 10 calls, both hashes and flipped): completion **63.5%**, **6.9** yd/att, 20+ yd 13.3% of completions, sacks **5.7%**, first pressure **3.1 s**, no-throw sack median **3.8 s**, **4.35** ypc, stuffs 18.6%, runs of 10+ **7.0%**, median carry **2.3**. Sideline audit over 2,400 plays: nobody stepped out.
+- The open/covered receiver icons are re-measured on it (`tools/sim/calib.ts`, 1,314 throws): open at 2+ yd completes 55–70% with 0–2% picked; covered (below 0) ~40% with 5–8% picked.
+
+**5. Animation** (a background pass, merged): line play (kick-slide, set, punch-mirror, anchor, fire and drive, pulls), the rush moves (swim, rip, club, spin, bull rush, engage, shed), linebacker reads, fills, scrapes and hook drops, press jams, the hip flip and the break, the kicking game (long snap, hold, place kick, punt), officials' signals (touchdown, first down, incomplete, whistle), an official character (striped shirt, cap), and the five signature clips. All gated in the build (132 clips). In play: the tackles kick-slide on pass sets and the others set, runs fire off and pull, the rush moves and sheds come from the sim's block events, linebackers read-step, pressed corners jam, DBs flip their hips out of the pedal, and a four-man crew sets with the ball and signals the result.
+
+**Gate media** (`docs/screenshots/m6/`): the locker room empty, half and full, a stall close-up and the pick panel, in both moods; `pick.mp4` (the reels, the camera to the stall, the dressing, the hologram); `walk.mp4` (the pull-back and the walk-out into the stadium); the game screens.
+
+**Critique (honest)**
+- *The room reads as a locker room, and the pick is a moment.* The stalls in a warm row with lit nameplates and jerseys on hangers is the image from ref-06; the dressing sequence and the hologram make a pick feel like signing day. The walk-out into golden-hour light through the tunnel is the best transition in the game so far.
+- *Too much empty room in the wide shot.* The row is wide and short, so the home shot is half ceiling and carpet. The carpet ring is cut off under the UI. A tighter framing or a lower ceiling line would help; ref-04's room feels fuller because stalls wrap all around it.
+- *Bare stalls are still very dark,* and the lights-down mood barely differs from pregame in the wide shot (it shows in the underlights and the dark ceiling, but not enough). The lighting pass needs a second look with the owner.
+- *Props are simple.* The towel is a flat grey fold; the gloves read as gloves only up close; the cleats are small. They're right in scale and place but not yet premium. The helmet reads now (it was black on black until the shell went gunmetal).
+- *The hologram* is striking but big in the foreground of the stall shot, and the WR and RB signature clips spend ~60% of their loop resetting (the animation pass's own note).
+- *The kick* has the unit and the flight, but no rush and no crowd reaction yet; the punt is a text cut, not a picture.
+- *The game layer* plays cleanly end to end, but the Beasts' possessions are text cuts (the M7 broadcast package gives them pictures), and a turnover isn't returned live yet (GDD §7.2: the pick-six is scored, not played).
+- *The sim numbers:* passing is in band. Runs are short on explosives (10+ yard runs 7% against ~11%) and the median carry low (2.3 against ~3). Pressure comes at 3.1 s but the no-throw sack median is 3.8 s, under the 4.5 s we set in M5.5: the two can't both hit target with the current rush model, so pressure timing won. Short-route YAC is a little high (6.5). These are the next sim tuning targets.
+- *Not done in M6:* PlayArt still draws a fullback or second TE in the SLOT spot as a receiver; no goal-line package for the Beasts against Heavy; History and share cards are M7+.
+
+
+### M5.5 Game feel (merged, PR #8)
 
 Your notes from the M5 play test, in the order they affect play: prompts and readability first, then the pocket, the field's edges and the fluidity work, and last the videos so you can judge feel between sessions.
 
