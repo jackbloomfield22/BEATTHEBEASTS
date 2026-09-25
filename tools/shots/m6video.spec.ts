@@ -98,3 +98,55 @@ if (which.includes('walk'))
     await rec.frames(Math.round(FPS * 10.5));
     rec.encode();
   });
+
+if (which.includes('drive'))
+  test('drive: one full drive in a game, from the Meanwhile cut to the end of the possession', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
+    await page.goto(`/?screen=draft&nointro&quality=${QUALITY}&video=${FPS}&seed=7&fill=9&autokick`);
+    await pump(page, `window.__btbReady === true && window.__btbDraft?.getState().phase === 'complete'`);
+    // Straight to kickoff (the walk-out has its own video).
+    await page.evaluate(() => {
+      const w = window as unknown as { __btbDraft: { getState(): { finishWalkout(go: (s: string) => void): void } }; __btbApp: { getState(): { go(s: string): void } } };
+      w.__btbDraft.getState().finishWalkout(w.__btbApp.getState().go);
+    });
+    await pump(page, `window.__btbGameUi?.getState().stage === 'meanwhile'`);
+    const rec = await recorder(page, 'drive');
+    const stage = () => page.evaluate(() => (window as unknown as { __btbGameUi: { getState(): { stage: string } } }).__btbGameUi.getState().stage);
+    const pstage = () => page.evaluate(() => (window as unknown as { __btbPracticeUi: { getState(): { stage: string } } }).__btbPracticeUi.getState().stage);
+    await rec.frames(FPS * 3); // the Meanwhile cut
+    if ((await stage()) === 'meanwhile') await page.keyboard.press('Enter');
+    let drives = 0;
+    for (let play = 0; play < 16; play++) {
+      const st = await stage();
+      if (st === 'meanwhile' || st === 'final') {
+        if (++drives > 1 || play > 0) break;
+      }
+      if (st === 'try' || st === 'fourth') {
+        await rec.frames(FPS);
+        await page.keyboard.press('Enter');
+        continue;
+      }
+      if (st === 'kick' || st === 'punt') {
+        await rec.frames(FPS * 5);
+        continue;
+      }
+      if (st !== 'call') {
+        await rec.frames(5);
+        continue;
+      }
+      await rec.frames(FPS); // the play call
+      await page.keyboard.press('Enter');
+      await pump(page, `window.__btbPracticeUi.getState().stage === 'presnap' && window.__btbGameReady === true`);
+      await rec.frames(Math.round(FPS * 1.2)); // set
+      await page.keyboard.press('Space');
+      // Throw to the first read on rhythm (a run ignores it).
+      await rec.frames(Math.round(FPS * 1.7));
+      await page.keyboard.press('Digit1');
+      for (let k = 0; k < FPS * 12 && (await pstage()) !== 'result'; k += 5) await rec.frames(5);
+      await rec.frames(Math.round(FPS * 1.5)); // the whistle and the result card
+      await page.keyboard.press('Enter');
+    }
+    await rec.frames(FPS * 2);
+    rec.encode();
+  });
