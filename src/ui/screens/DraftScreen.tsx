@@ -81,7 +81,9 @@ export function DraftScreen() {
   }, [draft]);
 
   // Phase timing: the reels land, then the choice; a dressing ends in "ready".
+  // (A video recording steps the phases itself: its frames aren't wall time.)
   useEffect(() => {
+    if (urlFlags.video) return;
     if (d.phase === 'spinning') {
       const t = setTimeout(() => useDraft.getState().setPhase('choosing'), urlFlags.shot ? 0 : (SPIN_S + 0.35) * 1000);
       return () => clearTimeout(t);

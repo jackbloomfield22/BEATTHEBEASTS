@@ -13,9 +13,9 @@ import { Player, type PlayerAsset } from '../players/playerAsset';
 // light: an additive fresnel shell in the position's color with scan lines,
 // fading up on a floor projector and dissolving out when the move ends.
 //
-// The signature clips are `sig_<pos>` (tools/blender, in place). Until a clip
-// exists the move is sequenced from the base set (stance, set, get-off,
-// drop, throw, juke).
+// The signature clips are `sig_<pos>` (tools/blender, in place), played raw
+// for one pass of their loop. A position without one sequences the move
+// from the base set (stance, set, get-off, drop, throw, juke).
 
 export type SigPos = 'QB' | 'RB' | 'WR' | 'TE' | 'OL';
 
@@ -45,6 +45,8 @@ export class Hologram {
   private seq: { at: number; run: (a: PlayerAnimator) => void }[] = [];
   private duration = 0;
   private speedAt: (t: number) => number = () => 0;
+  /** The authored signature clip, played raw on its own mixer (in place, no foot lock). */
+  private raw: THREE.AnimationMixer | null = null;
   readonly pad: THREE.Mesh;
 
   constructor(
@@ -87,24 +89,27 @@ export class Hologram {
     this.player = player;
     const a = new PlayerAnimator(player, this.lib);
     this.animator = a;
-    this.plan(p.pos, a);
-    a.update(10, { speed: 0 });
+    const sig = this.lib.clips.get(`sig_${p.pos.toLowerCase()}`);
+    this.raw = null;
+    if (sig) {
+      // One pass of the signature loop, raw: its own mixer drives every bone.
+      this.raw = new THREE.AnimationMixer(player.root);
+      this.raw.clipAction(sig).play();
+      this.raw.update(0);
+      this.seq = [];
+      this.duration = 0.45 + this.lib.meta[`sig_${p.pos.toLowerCase()}`]!.duration + 0.3;
+    } else {
+      this.plan(p.pos, a);
+      a.update(10, { speed: 0 });
+    }
     this.t = 0;
     this.root.visible = true;
   }
 
   /** The move: the authored signature clip, or a sequence of base clips. */
   private plan(pos: SigPos, a: PlayerAnimator): void {
-    const sig = `sig_${pos.toLowerCase()}`;
-    const has = (n: string) => !!this.lib.meta[n];
     this.speedAt = () => 0;
     const lead = 0.45; // the figure resolves before it moves
-    if (has(sig)) {
-      a.setStance('stance_idle');
-      this.seq = [{ at: lead, run: (x) => x.play(sig, { now: true }) }];
-      this.duration = lead + this.lib.meta[sig]!.duration + 0.5;
-      return;
-    }
     const d = (n: string) => this.lib.meta[n]?.duration ?? 0.8;
     switch (pos) {
       case 'QB':
@@ -157,7 +162,9 @@ export class Hologram {
     const t = this.t;
     for (const s of this.seq) if (t0 < s.at && t >= s.at) s.run(this.animator);
     // In place: the move plays where the projector is (root motion isn't applied).
-    this.animator.update(dt, { speed: this.speedAt(t) });
+    if (this.raw) {
+      if (t > 0.45) this.raw.update(dt);
+    } else this.animator.update(dt, { speed: this.speedAt(t) });
     const fadeIn = Math.min(1, t / 0.4);
     const fadeOut = Math.min(1, Math.max(0, (this.duration - t) / 0.45));
     this.uniforms.uHoloAlpha.value = fadeIn * fadeOut;
