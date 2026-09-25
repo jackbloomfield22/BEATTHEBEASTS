@@ -22,6 +22,9 @@ const DB_READ = 0.05;
 /** Deep zones are pass-first: a beat more still (s; M5.5 0.2, which left the deep safeties backpedalling as backs reached the second level). */
 const DEEP_READ = 0.1;
 
+/** How deep a linebacker sits over his gap before the back gets to the line (yd): level at depth, then downhill as he arrives. */
+const LB_FIT = 1;
+
 /** Gap offsets from the ball (yd): A (center–guard), B (guard–tackle), C (outside the tackle), D (outside the tight end). */
 export const GAPS = [0.7, 2.0, 3.4, 5.2];
 
@@ -288,7 +291,7 @@ export function backToMesh(s: PlayState, rb: Agent): void {
   if (run.scheme === 'toss') {
     // The toss: the back opens and runs for the edge from the snap, a yard
     // or two deeper than the QB so the pitch comes back to him on the run.
-    const edge = v2(s.setup.los - 4.2, (s.setup.ballY ?? 0) + run.aim * 0.75);
+    const edge = v2(s.setup.los - 4.5, (s.setup.ballY ?? 0) + run.aim);
     steer(rb, arrive(rb, edge, 1), {});
     rb.anim = 'run';
     return;
@@ -465,7 +468,7 @@ export function runFit(s: PlayState, d: Agent): void {
     // gap, and downhill only as the back gets to the line (read and flow,
     // then fill: attack too early and the back cuts behind him).
     const toLine = Math.max(0, los - ball.pos.x);
-    const depth = Math.max(1, Math.min(4, 1 + toLine * 0.6));
+    const depth = Math.max(LB_FIT, Math.min(4.5, LB_FIT + toLine * 0.5));
     const flow = (ball.pos.y - by) * 0.6;
     steer(d, arrive(d, v2(los + depth, gap + flow), 1, 0.6), {});
     return;

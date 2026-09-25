@@ -96,7 +96,8 @@ export function resolveTackle(s: PlayState, d: Agent, c: Agent): { out: TackleOu
 
 /** Fumble on contact: Ball Security against Hit Power; protecting halves it. */
 export function fumbles(s: PlayState, d: Agent, c: Agent, big: boolean): boolean {
-  const base = 0.008 + 0.03 * Math.max(0, d.fx.a('hitPower') - c.fx.a('ballSecurity') * 0.8);
+  // NFL backs fumble on ~1–1.5% of carries (about half lost); M6 trimmed this from 0.008 + 0.03·(…), which ran ~2.8% against the Beasts' hitters.
+  const base = 0.004 + 0.02 * Math.max(0, d.fx.a('hitPower') - c.fx.a('ballSecurity') * 0.8);
   // A big hit jars it loose far more often (~5–8% for a sure-handed back,
   // double for a loose one), more again from a Bone Crusher; Ball Security resists.
   const jar = big ? 0.07 * (1.4 - 0.9 * c.fx.a('ballSecurity')) * (has(d, 'bone-crusher') ? 1.1 : 1) : 0;

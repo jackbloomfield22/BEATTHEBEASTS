@@ -1018,7 +1018,8 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
     const gapRun = sc === 'power' || sc === 'counter' || sc === 'iso' || sc === 'toss' || sc === 'sneak';
     const designed = carrier.slot === 'RB' || (sc === 'sneak' && carrier.i === s.qb);
     if (play.run && designed && carrier.pos.x < s.setup.los - (sc === 'sneak' ? 0 : 0.8) && (gapRun || s.t - s.runReadT < 0.35) && !freeNear) {
-      const aim = v2(s.setup.los + 1, (s.setup.ballY ?? 0) + play.run.aim);
+      // The toss gets to the edge first (outside the tight end's block, still behind the line), then turns it up.
+      const aim = sc === 'toss' && Math.abs(carrier.pos.y - (s.setup.ballY ?? 0) - play.run.aim * 1.2) > 1.5 ? v2(s.setup.los - 0.5, (s.setup.ballY ?? 0) + play.run.aim * 1.2) : v2(s.setup.los + 1, (s.setup.ballY ?? 0) + play.run.aim * (sc === 'toss' ? 1.2 : 1));
       steer(carrier, { x: (aim.x - carrier.pos.x) * 3, y: (aim.y - carrier.pos.y) * 3 });
       carrier.anim = 'carry';
     } else carrierStep(s, inp);

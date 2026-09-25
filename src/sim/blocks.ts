@@ -34,7 +34,7 @@ const BASE = 0.3;
 /** A rusher picked up again soon after beating his man starts the new rep this far ahead (leverage). */
 const REPICK_LEV = 0.2;
 /** A run block's rep-to-rep spread (σ of skill edge): some reps the lineman wins cleanly, some he's beaten at once (penetration: the stuffs). M5.5 had 0.3. */
-const RUN_BIAS = 0.45;
+const RUN_BIAS = 0.7;
 /** A pass set's rep-to-rep spread (σ of skill edge), M6: without it every rep of a matchup took the same time, and the rush never won early. */
 const PASS_BIAS = 0.4;
 /**

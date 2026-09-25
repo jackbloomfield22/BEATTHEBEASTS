@@ -2,10 +2,12 @@
 //   node tools/run-ts.mjs tools/sim/ascii.ts <play> <def> [seed] [every-ticks]
 import { readFileSync } from 'node:fs';
 import { createPlay, defById, NEUTRAL, playById, practiceRosters, stepPlay, type SnapshotLike } from '../../src/sim/index.ts';
+import { sidesFor } from '../../src/sim/outcomes.ts';
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const r = practiceRosters(snap);
 const [play = 'trips-inside-zone', def = 'cover1', seed = '1000', every = '15'] = process.argv.slice(2);
-const s = createPlay({ seed: Number(seed), offense: r.offense, defense: r.defense, play: playById(play), def: defById(def), los: 35, toGo: 10, user: false });
+const sd = sidesFor(r, playById(play), defById(def));
+const s = createPlay({ seed: Number(seed), offense: sd.offense, defense: sd.defense, play: playById(play), def: sd.def, los: 35, toGo: 10, user: false });
 const code = (slot: string, side: string) => {
   const m: Record<string, string> = { QB: 'Q', RB: 'R', X: 'X', Z: 'Z', SLOT: 'S', TE: 'T', LT: 'o', LG: 'o', C: 'c', RG: 'o', RT: 'o', LE: 'E', RE: 'E', LDT: 'D', RDT: 'D', WLB: 'W', MLB: 'M', SLB: 'L', LCB: 'C', RCB: 'C', FS: 'F', SS: 'H' };
   return m[slot] ?? (side === 'off' ? '?' : '!');
