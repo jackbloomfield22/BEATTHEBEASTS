@@ -25,7 +25,8 @@ export interface Matchup {
   rec: string;
   def: string;
   line: string;
-  verdict: 'REC WON' | 'DEF WON' | 'EVEN';
+  /** UNTESTED: never thrown at, so no verdict (a ratings edge isn't a result). */
+  verdict: 'REC WON' | 'DEF WON' | 'EVEN' | 'UNTESTED';
 }
 
 /** What the replay system needs to run a snap again: the sim's setup (the rosters come from the record's ids) and your inputs, run-length encoded. */
@@ -189,9 +190,8 @@ export function keyMatchups(cat: Catalog, roster: Roster, beasts: RatedBeasts, b
       const tgt = vs?.tgt ?? rec?.tgt ?? 0;
       const yds = vs?.yds ?? rec?.yds ?? 0;
       const ypt = tgt ? yds / tgt : null;
-      const edge = (c.rec.sep + c.rec.big) / 2 - c.defender.cover;
-      const verdict: Matchup['verdict'] = ypt === null ? (edge > 4 ? 'REC WON' : edge < -4 ? 'DEF WON' : 'EVEN') : ypt >= 8 ? 'REC WON' : ypt < 4 ? 'DEF WON' : 'EVEN';
-      return { slot: c.slot, rec: c.rec.name, def: c.defender.n, line: tgt ? `${tgt} tgt, ${Math.round(yds)} yd` : 'not targeted', verdict };
+      const verdict: Matchup['verdict'] = ypt === null ? 'UNTESTED' : ypt >= 8 ? 'REC WON' : ypt < 4 ? 'DEF WON' : 'EVEN';
+      return { slot: c.slot, rec: c.rec.name, def: c.defender.n, line: tgt ? `${tgt} tgt, ${Math.round(yds)} yd` : 'never thrown at', verdict };
     });
   } catch {
     return [];

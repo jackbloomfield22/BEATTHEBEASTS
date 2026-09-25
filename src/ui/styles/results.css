@@ -98,6 +98,7 @@
 .v-rec { color: #0a0a0a; background: var(--lime); }
 .v-def { color: #fff; background: #ff2a4d; }
 .v-even { color: #fff; background: rgba(255,255,255,.15); }
+.v-untested { color: var(--ink-3); background: none; border: 1px solid rgba(255,255,255,.12); }
 .res-perfect li { display: grid; grid-template-columns: 3rem 1fr auto; gap: .8rem; padding: .25rem 0; font-size: .85rem; }
 .res-perfect li.same .you { color: var(--lime); font-weight: 800; }
 .res-perfect .you { color: var(--ink-3); }
@@ -169,6 +170,8 @@
 
 /* The game's pause menu. */
 .game-pause { z-index: 40; }
+/* Paused: the menu's header carries the score, so the bug steps aside. */
+.game-screen:has(.game-pause) .score-bug { display: none; }
 .game-pause .menu-item-sub { display: block; margin-left: .8rem; font-size: .85rem; font-weight: 600; color: var(--ink-2); letter-spacing: 0; text-transform: none; }
 
 /* A loss grades in the Beasts red. */
