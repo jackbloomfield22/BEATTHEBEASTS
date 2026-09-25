@@ -10,7 +10,7 @@ import { downLabel, spotLabel } from '@/game/situation';
 import { aimFor } from '@/game/kick';
 import { PLAY_TYPE_LABEL, PLAYS, playById, suggestPlays, type PlayType } from '@/sim';
 import { Input } from '@/input/InputManager';
-import { kickView } from '@/render/game/kickView';
+import { kickView, KICK_CONTACT } from '@/render/game/kickView';
 import { useMenuNav } from '../nav';
 import { Hints, MenuItem } from '../components/controls';
 import { PlayArt } from '../game/PlayArt';
@@ -357,6 +357,7 @@ function KickPanel() {
   const [drag, setDrag] = useState<{ x0: number; y0: number; x: number; y: number } | null>(null);
   const [aim, setAim] = useState(0);
   const [power, setPower] = useState(0);
+  const [reveal, setReveal] = useState(false);
   const charging = useRef(false);
   const done = useRef(false);
   useEffect(() => {
@@ -376,7 +377,9 @@ function KickPanel() {
     const res = game.strike(p, a);
     kickView.path = res.path;
     kickView.t = 0;
-    setTimeout(() => game.endKick(), urlFlags.shot ? 200 : (res.hang + 1.6) * 1000);
+    // The snap and hold, then the flight; the call shows as it reaches the posts.
+    setTimeout(() => setReveal(true), urlFlags.shot ? 100 : (KICK_CONTACT + res.hang * 0.75) * 1000);
+    setTimeout(() => game.endKick(), urlFlags.shot ? 200 : (KICK_CONTACT + res.hang + 1.6) * 1000);
   };
   // Keyboard and pad: aim with left/right; hold confirm to build power, release to kick.
   useEffect(() => {
@@ -439,8 +442,8 @@ function KickPanel() {
         <h2 className="result-head">{k.distance} yards</h2>
         <div className="kick-pct">{Math.round(k.pct * 100)}% for a clean strike</div>
       </div>
-      {!res ? (
-        <div className="kick-meter">
+      {!res || !reveal ? (
+        <div className="kick-meter" style={res ? { opacity: 0.35 } : undefined}>
           <div className="km-power">
             <span style={{ height: `${Math.min(1, dp) * 100}%` }} className={dp > 1 ? 'over' : ''} />
           </div>

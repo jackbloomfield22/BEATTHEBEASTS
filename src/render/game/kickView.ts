@@ -12,3 +12,10 @@ export const kickView: {
   /** Seconds since the strike. */
   t: number;
 } = { active: false, spotX: 0, path: null, t: 0 };
+
+/**
+ * Seconds from the strike (the snap) to the foot meeting the ball: the snap
+ * (0.17 s release, ~0.55 s to the holder) and the hold, ~1.3 s snap to
+ * kick, the NFL operation time.
+ */
+export const KICK_CONTACT = 1.3;

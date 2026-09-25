@@ -33,6 +33,7 @@ import { createFootball } from './football';
 import { createFieldMarks } from './fieldMarks';
 import { frameEvents } from './frameEvents';
 import { ballInHands, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
+import { Officials } from './officials';
 
 // The live play (TECH_PLAN §4.3): one top-priority frame callback advances
 // the sim through the Practice session, then every player, the ball, the
@@ -116,6 +117,7 @@ export function GameScene() {
   const [ball] = useState(createFootball);
   const [routeArt] = useState(createRouteArt);
   const shownPlay = useRef(-1);
+  const officials = useRef<Officials | null>(null);
   const lastSimT = useRef(0);
   const snapped = useRef(false);
 
@@ -136,6 +138,10 @@ export function GameScene() {
         b.player.root.visible = false;
         g.add(b.player.root);
       }
+      const crew = new Officials(asset, lib);
+      crew.group.visible = false;
+      g.add(crew.group);
+      officials.current = crew;
       await prepareLate(g, gl, camera, scene);
       if (!alive) return;
       group = g;
@@ -161,6 +167,7 @@ export function GameScene() {
     marks.group.visible = show && r!.cur.phase !== 'dead';
     ball.visible = show;
     frameEvents.length = 0;
+    if (officials.current) officials.current.group.visible = show;
     if (!show) {
       if (bodies) for (const b of bodies) b.player.root.visible = false;
       for (const el of hudDom.icons) if (el) el.style.visibility = 'hidden';
@@ -194,6 +201,7 @@ export function GameScene() {
       });
       if (urlFlags.pops) resetPops();
       lastSimT.current = cur.t;
+      officials.current?.place(s.setup.los, s.setup.ballY ?? 0);
     }
     // The snap: everyone who has a get-off out of his stance plays it.
     if (!snapped.current && cur.phase !== 'presnap') {
@@ -263,6 +271,7 @@ export function GameScene() {
       if (urlFlags.pops) measure(b, animDt, latency.frame, s.agents[i]!.anim, cur.phase);
     });
 
+    officials.current?.update(animDt, cur.ball, s.result, s.result ? s.result.spot - s.setup.los : 0, s.setup.toGo, camera, viewportPx);
     placeBall(s.snapT, s.t);
     placeMarks(s.setup.los, s.setup.toGo);
     // The route preview: held key, the hot-route picker, or just after a hot route is called.
