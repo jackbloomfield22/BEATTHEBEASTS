@@ -108,7 +108,9 @@ export interface BoxScore {
   /** Big hits the Beasts put on you. */
   bigHits: number;
 }
-export const emptyBox = (): BoxScore => ({ plays: 0, yards: 0, att: 0, comp: 0, passYds: 0, rushes: 0, rushYds: 0, sacks: 0, turnovers: 0, bigHits: 0 });
+export function emptyBox(): BoxScore {
+  return { plays: 0, yards: 0, att: 0, comp: 0, passYds: 0, rushes: 0, rushYds: 0, sacks: 0, turnovers: 0, bigHits: 0 };
+}
 
 function addToBox(b: BoxScore, r: PlayResult): BoxScore {
   const n = { ...b, plays: b.plays + 1 };
