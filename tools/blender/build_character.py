@@ -76,6 +76,115 @@ def covered(co: Vector) -> bool:
     return False
 
 
+def covered_official(co: Vector) -> bool:
+    """Official's body skin that no camera can see: under the shirt, the
+    long pants or the shoes. The head, neck, forearms and lower upper arms
+    stay (no helmet, short sleeves)."""
+    if co.z < 0.10:
+        return True  # inside the shoes
+    if gear.OFFICIAL_PANTS_HEM_Z + 0.02 < co.z < 1.0 and abs(co.x) < 0.24:
+        return True  # legs and hips, under the pants
+    # Keep the neck column above the chest; the traps and shoulders under
+    # the shirt are hidden (skin swung with the clavicles pokes through
+    # fabric that rides the chest, as under the player's pads).
+    # (The neck column starts just under the collar's top: lower, the upper
+    # back's skin stood proud of the shirt.)
+    if co.z > gear.SHIRT_COLLAR_Z - 0.045 and math.hypot(co.x, co.y - 0.02) < 0.086:
+        return False
+    if 0.95 <= co.z < gear.SHIRT_COLLAR_Z:
+        for s in ("l", "r"):
+            if (co.x > 0) == (s == "l") and abs(co.x) > 0.16:
+                t, _ = gear.along_upper_arm(co, s)
+                if t > gear.SHIRT_SLEEVE_END - 0.03:
+                    return False  # bare arm below the sleeve (3 cm up inside the hem)
+        return abs(co.x) < 0.33  # torso and upper arm, under the shirt
+    return False
+
+
+# The official's triangle budgets (no pads, helmet, mask or gloves).
+OFFICIAL_BUDGET = [
+    {"body": 7000, "shirt": 4200, "pants": 2600, "cleats": 1200, "hand": 900, "cap": 900},
+    {"body": 3000, "shirt": 1800, "pants": 1100, "cleats": 500, "hand": 260, "cap": 360},
+    {"body": 1000, "shirt": 600, "pants": 400, "cleats": 200, "hand": 70, "cap": 120},
+]
+
+
+def build_official(rig, full_body, src, mat) -> tuple[list, list]:
+    """The official variant (M6): same rig and skeleton, his own kit. Three
+    LODs named official_lod<i> in the same file; the runtime keeps the
+    variant a Player asks for (src/render/players/playerAsset.ts)."""
+    from lib.body import hand_parts
+    from lib.geo import union_remesh
+
+    visible = duplicate(full_body, "official_body_visible")
+    delete_verts(visible, covered_official)
+    pieces = {"shirt": gear.shirt(), "pants": gear.official_pants(), "cleats": gear.cleats(), "cap": gear.cap()}
+    hands = {}
+    for s in ("l", "r"):
+        # Bare hands: the glove's hand shapes with no cuff, skinned the same way.
+        hands[s] = union_remesh(hand_parts(s, grow=0.0006), f"ohand_{s}", voxel=0.0028, smooth_iters=4)
+        bind_glove(hands[s], rig, s)
+    lods, stats = [], []
+    for i, b in enumerate(OFFICIAL_BUDGET):
+        parts = []
+        body = decimate_to(duplicate(visible, f"obody_{i}"), b["body"])
+        tag(body, lambda co: gear.PARTS["skin"])
+        transfer_weights(src, body, rig)
+        traps_to_chest(body)
+        parts.append(body)
+        finish = {"shirt": gear.cut_shirt, "pants": gear.cut_official_pants, "cleats": lambda ob: None}
+        for name, pid in (("shirt", "shirt"), ("pants", "pants"), ("cleats", "cleat")):
+            p = decimate_to(duplicate(pieces[name], f"o{name}_{i}"), b[name])
+            finish[name](p)
+            tag(p, lambda co, pid=pid: gear.PARTS[pid])
+            transfer_weights(src, p, rig)
+            if name == "shirt":
+                # The collar rides the chest like the skin under it (the
+                # same hand-over to the neck above 1.60 m): skinned to the
+                # neck alone it swung off the skin and bared the cut.
+                remap_weights(p, {"head": "neck_02"})
+                traps_to_chest(p)
+                limit_weights(p, 4)
+            if name == "pants":
+                crotch_weights(p)
+                smooth_weights(p, repeat=6, where=lambda co: co.z > 0.78)
+                sharpen_knees(p)
+                limit_weights(p, 4)
+            parts.append(p)
+        for s in ("l", "r"):
+            h = decimate_to(duplicate(hands[s], f"ohand_{s}_{i}"), b["hand"])
+            for m in list(h.modifiers):
+                h.modifiers.remove(m)
+            for vg in list(h.vertex_groups):
+                h.vertex_groups.remove(vg)
+            tag(h, lambda co: gear.PARTS["skin"])
+            transfer_weights(hands[s], h, rig)
+            parts.append(h)
+        c = decimate_to(duplicate(pieces["cap"], f"ocap_{i}"), b["cap"])
+        gear.cut_cap(c)
+        tag(c, lambda co: gear.PARTS["cap"])
+        rigid(c, rig, "head")
+        parts.append(c)
+        ob = join(parts, f"official_lod{i}")
+        for m in list(ob.modifiers)[1:]:
+            ob.modifiers.remove(m)
+        limit_weights(ob, 4)
+        ob.data.validate(clean_customdata=False)
+        for p in ob.data.polygons:
+            p.use_smooth = True
+        ob.data.materials.clear()
+        ob.data.materials.append(mat)
+        deform = {bb.name for bb in rig.data.bones if bb.use_deform}
+        fill_bare(ob, deform)
+        names = {g.index: g.name for g in ob.vertex_groups}
+        bare = [v for v in ob.data.vertices if not any(names[g.group] in deform and g.weight > 0 for g in v.groups)]
+        assert not bare, f"official lod{i}: {len(bare)} vertices without deform weights"
+        add_shapes(ob)
+        stats.append({"lod": i, "triangles": tri_count(ob), "vertices": len(ob.data.vertices)})
+        lods.append(ob)
+    return lods, stats
+
+
 def body_part(co: Vector) -> int:
     if co.z < gear.PANTS_HEM_Z + 0.06:
         return gear.PARTS["sock"]
@@ -375,6 +484,9 @@ def main() -> None:
         stats.append({"lod": i, "triangles": tri_count(ob), "vertices": len(ob.data.vertices)})
         lods.append(ob)
 
+    official, official_stats = build_official(rig, full_body, src, mat)
+    lods += official
+
     for o in list(bpy.data.objects):
         if o not in lods and o is not rig:
             bpy.data.objects.remove(o, do_unlink=True)
@@ -402,6 +514,8 @@ def main() -> None:
     info = {
         "file": "player.glb",
         "lods": stats,
+        # The official variant's meshes (official_lod<i>), same rig.
+        "official": official_stats,
         "bones": len([b for b in rig.data.bones if b.use_deform]),
         "runtimeBones": RUNTIME_BONES,
         "parts": gear.PARTS,

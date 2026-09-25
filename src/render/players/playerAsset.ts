@@ -5,13 +5,15 @@ import { createPlayerMaterial, setPlayerLook, type PlayerLook } from './playerMa
 import { bodyShape, type BodyShape } from './bodyShape';
 import { loadGlyphAtlas } from './glyphAtlas';
 import type { Variety } from './variety';
+import { OFFICIAL_KIT, REFEREE_KIT } from './kits';
 
 /** Bones whose rest position variety.ts scales: upperarm (shoulder width), forearm and hand (arm length). */
 const PROPORTION_BONES = ['upperarm_l', 'upperarm_r', 'forearm_l', 'forearm_r', 'hand_l', 'hand_r'];
 
 // The player asset (tools/blender/build_character.py → public/assets/
 // characters/player.glb): one armature and three LOD skinned meshes sharing
-// it. Every Player is a clone with its own skeleton, material uniforms and
+// it (and three more, official_lod<i>, for the officials: PlayerVariant).
+// Every Player is a clone with its own skeleton, material uniforms and
 // morph weights; geometry is shared.
 
 export const PLAYER_URL = `${import.meta.env.BASE_URL}assets/characters/player.glb`;
@@ -59,9 +61,43 @@ export function loadPlayerAsset(url = PLAYER_URL): Promise<PlayerAsset> {
 /** Draws nothing in the main pass: no color, no depth. */
 const SHADOW_ONLY = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
 
+/**
+ * Which body the asset's meshes dress: a player (player_lod<i>: pads,
+ * helmet, facemasks) or an official (official_lod<i>: striped shirt,
+ * cap, long pants; tools/blender/build_character.py). Same skeleton and
+ * clips either way.
+ */
+export type PlayerVariant = 'player' | 'official';
+
 export interface PlayerOptions extends PlayerLook {
   heightM: number;
   weightKg: number;
+  /** Default 'player'. */
+  variant?: PlayerVariant;
+}
+
+export interface OfficialOptions {
+  skin: string;
+  /** The referee wears the white cap. */
+  referee?: boolean;
+  heightM?: number;
+  weightKg?: number;
+}
+
+/**
+ * Spawn an official: the official meshes with the officials' kit (no
+ * numbers or names). Animate him like any Player (ref_idle, ref_run and
+ * the signal clips in anims.json).
+ */
+export function createOfficial(asset: PlayerAsset, opts: OfficialOptions): Player {
+  return new Player(asset, {
+    variant: 'official',
+    kit: opts.referee ? REFEREE_KIT : OFFICIAL_KIT,
+    skin: opts.skin,
+    // An official's build: ~6'0", 200 lb unless given.
+    heightM: opts.heightM ?? 1.83,
+    weightKg: opts.weightKg ?? 91,
+  });
 }
 
 /** One player on the field: a skinned clone, three LODs, its own look and body shape. */
@@ -85,8 +121,18 @@ export class Player {
   /** Rest positions of the bones variety.ts re-proportions. */
   private readonly restPos = new Map<string, THREE.Vector3>();
 
+  readonly variant: PlayerVariant;
+
   constructor(asset: PlayerAsset, opts: PlayerOptions) {
     this.root = cloneSkinned(asset.scene);
+    this.variant = opts.variant ?? 'player';
+    // Keep only this variant's meshes (the clone shares their geometry).
+    const prefix = `${this.variant}_lod`;
+    const other: THREE.Object3D[] = [];
+    this.root.traverse((o) => {
+      if ((o as THREE.SkinnedMesh).isSkinnedMesh && !o.name.startsWith(prefix)) other.push(o);
+    });
+    for (const o of other) o.removeFromParent();
     this.material = createPlayerMaterial(opts);
     this.lods = [];
     this.root.traverse((o) => {
@@ -97,6 +143,7 @@ export class Player {
       }
       if ((o as THREE.Bone).isBone) this.bones.set(o.name, o as THREE.Bone);
     });
+    if (this.lods.length < 3 || this.lods.some((m) => !m)) throw new Error(`player asset has no ${prefix}0..2 meshes`);
     const low = this.lods[2]!;
     this.shadowProxy = new THREE.SkinnedMesh(low.geometry, SHADOW_ONLY);
     this.shadowProxy.name = 'shadow_proxy';
