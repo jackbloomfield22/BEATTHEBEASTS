@@ -1,0 +1,46 @@
+{
+ "note": "frames on a fixed 60 Hz frame clock; ms = frames × 16.7 on hardware that holds 60 fps",
+ "samples": [
+  {
+   "kind": "juke",
+   "ms": 1220.199999999255,
+   "frames": 1
+  },
+  {
+   "kind": "move",
+   "ms": 6755.60000000149,
+   "frames": 5
+  },
+  {
+   "kind": "stiffArm",
+   "ms": 1477,
+   "frames": 1
+  }
+ ],
+ "summary": [
+  {
+   "kind": "juke",
+   "n": 1,
+   "p50": 1220.199999999255,
+   "p95": 1220.199999999255,
+   "f50": 1,
+   "f95": 1
+  },
+  {
+   "kind": "move",
+   "n": 1,
+   "p50": 6755.60000000149,
+   "p95": 6755.60000000149,
+   "f50": 5,
+   "f95": 5
+  },
+  {
+   "kind": "stiffArm",
+   "n": 1,
+   "p50": 1477,
+   "p95": 1477,
+   "f50": 1,
+   "f95": 1
+  }
+ ]
+}

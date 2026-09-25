@@ -26,15 +26,29 @@ const phase = (page: Page) => page.evaluate(() => (window as unknown as P).__btb
 
 test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   test.setTimeout(1_800_000);
-  await page.goto(`/?screen=practice&nointro&seed=37&quality=${process.env.BTB_QUALITY ?? 'high'}&shot=practice&lighting=${LIGHTING}`);
+  await page.goto(`/?screen=practice&nointro&seed=98&quality=${process.env.BTB_QUALITY ?? 'high'}&shot=practice&lighting=${LIGHTING}`);
   await page.waitForFunction(() => (window as unknown as P).__btbReady === true, null, { timeout: 300_000 });
   await page.waitForFunction(() => (window as unknown as P).__btbPracticeUi?.getState().stage === 'call', null, { timeout: 120_000 });
-  await page.keyboard.press('ArrowDown');
+  // Four Verticals: the first play under Shots (two tabs over from the quick game).
+  await page.keyboard.press('KeyE');
+  await page.keyboard.press('KeyE');
   await shot(page, '01-play-call');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => (window as unknown as P).__btbGameReady === true, null, { timeout: 300_000 });
   await page.evaluate(() => void ((window as unknown as P).__btbPractice.runner!.paused = true));
   await shot(page, '02-presnap');
+  // Hold Tab: every route on the field. Then the hot-route picker on receiver 4, focused on a slant.
+  await page.keyboard.down('Tab');
+  await page.waitForTimeout(400);
+  await shot(page, '02b-route-preview');
+  await page.keyboard.up('Tab');
+  await page.keyboard.press('KeyH');
+  await page.keyboard.press('Digit4');
+  await page.keyboard.press('ArrowDown');
+  await page.waitForTimeout(400);
+  await shot(page, '02c-hot-route');
+  await page.keyboard.press('KeyH');
+  await page.waitForTimeout(300);
   await page.keyboard.press('Space');
   await tick(page, 40);
   await shot(page, '03-drop');
@@ -64,7 +78,6 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   }
   await shot(page, '06c-air-arrival');
   for (let k = 0; k < 40 && (await phase(page)) === 'air'; k++) await tick(page, 6);
-  await page.keyboard.down('ShiftRight');
   await page.keyboard.down('ArrowUp');
   await page.keyboard.down('ArrowRight');
   await tick(page, 20);
@@ -74,7 +87,6 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   await shot(page, '08-long-run');
   for (let k = 0; k < 80 && (await phase(page)) !== 'dead'; k++) await tick(page, 6);
   await page.keyboard.up('ArrowUp');
-  await page.keyboard.up('ShiftRight');
   await tick(page, 30);
   await page.keyboard.press('F3');
   await shot(page, '09-field-level-dead-ball');
@@ -85,7 +97,7 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   await shot(page, '11-all22');
   await page.keyboard.press('F1');
   await page.keyboard.press('Enter');
-  await page.keyboard.press('ArrowDown');
+  // The call opens on the play just run (Four Verticals, under Shots); down one is Dagger.
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => (window as unknown as P).__btbPracticeUi.getState().stage === 'presnap');

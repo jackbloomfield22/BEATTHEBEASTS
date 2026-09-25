@@ -77,8 +77,14 @@ function targetPose(mode: Mode): Pose | null {
     base.ly += (qb.y - by) * 0.3;
     return base;
   }
-  if (cur.phase === 'air' || (cur.phase === 'dead' && !c)) {
+  // A dead ball after a throw holds on the catch point; after a sack (no
+  // throw, no carrier) it holds on the ball where he went down.
+  const thrown = s.ball.thrower >= 0 && s.ball.arrive > s.snapT;
+  if (cur.phase === 'air' || (cur.phase === 'dead' && !c && thrown)) {
     return airPose(s, cur);
+  }
+  if (cur.phase === 'dead' && !c) {
+    return { ex: ball.x - 13, ey: ball.y * 0.75, eh: 6.8, lx: ball.x + 2, ly: ball.y, lh: 0.6, fov: 52 };
   }
   if (c) {
     // Follow the carrier with look-ahead; he runs toward his own attack direction.
@@ -138,12 +144,14 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   const cy = r ? (ay + r.y) / 2 : ay;
   const lx = ball.x + (cx - ball.x) * (0.3 + 0.7 * e);
   const ly = ball.y + (cy - ball.y) * (0.3 + 0.7 * e);
-  // Back off along the line: wide at release, about 9 yd off the catch at arrival.
-  const back = 20 - 11 * e;
+  // Back off along the line: wide at release, 10.5 yd off the catch at
+  // arrival (round two: the push-in ends ~17% wider than M5.5's 9 yd, 3.4 up,
+  // so the receiver and the nearest defenders are all in frame).
+  const back = 20 - 9.5 * e;
   return {
     ex: lx - ux * back,
     ey: ly - uy * back,
-    eh: 8 - 4.6 * e,
+    eh: 8 - 4.1 * e,
     lx,
     ly,
     // Low enough that the catch sits just above center, clear of the catch-call panel.
@@ -151,6 +159,9 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
     fov: 50 - 12 * e,
   };
 }
+
+/** Game time the video camera last stepped to. */
+const videoClock = { t: 0 };
 
 export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
@@ -169,11 +180,24 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
   }, []);
 
   useFrame((_, dt) => {
-    const step = urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    // Video recording: the camera moves by the game time that passed (the
+    // page renders freely between recorded frames), so its easing is as in play.
+    let step = urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    if (urlFlags.video) {
+      const r = practice.runner;
+      const now = r ? r.cur.t : 0;
+      step = Math.max(0, Math.min(0.1, now - videoClock.t));
+      videoClock.t = now;
+      if (!springs.current) step = 0;
+    }
     const goal = targetPose(modeSetting);
     if (!goal) return;
     // World-space target: eye and look.
     const t = [worldX(goal.ey), goal.eh, worldZ(goal.ex), worldX(goal.ly), goal.lh, worldZ(goal.lx), goal.fov];
+    if (!springs.current && urlFlags.video) {
+      // A recorded clip opens on the broadcast shot (in play, the glide in from the menu happens during the play call).
+      springs.current = t.map((v) => new Spring(v));
+    }
     if (!springs.current) {
       // Start from wherever the menu camera was: the first move is a glide in.
       const dir = new THREE.Vector3();
@@ -182,7 +206,7 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       springs.current = [camera.position.x, camera.position.y, camera.position.z, look.x, look.y, look.z, camera.fov].map((v) => new Spring(v));
     }
     // Screenshots and browser tests cut straight to the pose every frame.
-    if (urlFlags.shot !== null) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
+    if (urlFlags.shot !== null && !urlFlags.video) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
     const sp = springs.current;
     // Eye slower than the look: the lens leads, the dolly follows.
     // In the air the whole rig tightens up so it keeps pace with the ball.

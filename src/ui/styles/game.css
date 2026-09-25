@@ -47,19 +47,41 @@
 .prompt-row span { display: flex; align-items: center; gap: .4rem; }
 .prompt-row.catch { font-size: 1rem; color: var(--ink); }
 /* The catch call: up the moment the ball is thrown; the called catch lights and the others fade. */
-.catch-call { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .6rem; text-shadow: 0 .1rem .8rem rgba(0,0,0,.9); animation: catch-in .12s ease-out; }
-.catch-head { font-size: .8rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-2); }
-.catch-opts { display: flex; gap: .9rem; }
-.catch-opt { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: .6rem; align-items: center; min-width: 12rem; padding: .6rem .9rem; border: 2px solid var(--line); border-radius: .5rem; background: var(--panel); transition: transform .1s ease-out, opacity .15s, border-color .1s, background .1s; }
-.catch-opt kbd { grid-row: 1 / span 2; font-size: 1.3rem; min-width: 2.2rem; text-align: center; }
-.catch-name { font-size: 1.05rem; color: var(--ink); font-weight: 700; }
-.catch-sub { font-size: .75rem; color: var(--ink-2); }
+.catch-call { position: absolute; top: 58%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .6rem; text-shadow: 0 .1rem .8rem rgba(0,0,0,.9); animation: catch-in .12s ease-out; }
+.catch-head { font-size: 1rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-2); }
+.catch-opts { display: flex; gap: 1.2rem; }
+.catch-opt { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: .6rem; align-items: center; min-width: 15rem; padding: .9rem 1.2rem; border: 2px solid var(--line); border-radius: .5rem; background: var(--panel); transition: transform .1s ease-out, opacity .15s, border-color .1s, background .1s; }
+.catch-opt kbd { grid-row: 1 / span 2; font-size: 1.9rem; min-width: 3rem; padding: .2rem .5rem; text-align: center; }
+.catch-name { font-size: 1.3rem; color: var(--ink); font-weight: 700; }
+.catch-sub { font-size: .85rem; color: var(--ink-2); }
 .catch-opt.on { transform: scale(1.1); border-color: var(--lime); color: var(--lime); background: color-mix(in srgb, var(--lime) 28%, var(--panel-strong)); box-shadow: 0 0 1.4rem color-mix(in srgb, var(--lime) 55%, transparent); animation: catch-pop .18s ease-out; }
 .catch-opt.off { opacity: .35; }
-.catch-foot { font-size: .75rem; color: var(--ink-2); }
-@keyframes catch-in { from { opacity: 0; transform: translate(-50%, .6rem); } to { opacity: 1; transform: translate(-50%, 0); } }
+.catch-foot { font-size: .85rem; color: var(--ink-2); }
+/* Slides in without fading: a prompt is readable from its first frame (it answers a key press). */
+@keyframes catch-in { from { transform: translate(-50%, .6rem); } to { transform: translate(-50%, 0); } }
 @keyframes catch-pop { 0% { transform: scale(1); } 60% { transform: scale(1.18); } 100% { transform: scale(1.1); } }
-.stamina { position: absolute; bottom: 5rem; left: 50%; width: 12rem; height: .35rem; margin-left: -6rem; background: rgba(8,7,15,.7); visibility: hidden; }
+/* The carrier's cluster: placed under his feet by the render loop. */
+.carrier-hud { position: absolute; left: 0; top: 0; width: 0; height: 0; visibility: hidden; will-change: transform; }
+.carrier-hud .stamina { position: absolute; left: -3.5rem; top: .5rem; width: 7rem; height: .3rem; background: rgba(8,7,15,.7); }
+.carrier-keys { position: absolute; left: 50%; top: 1.2rem; transform: translateX(-50%); display: flex; gap: .45rem; white-space: nowrap; }
+.carrier-keys span { display: flex; align-items: center; gap: .3rem; padding: .22rem .5rem .22rem .25rem; border-radius: .35rem; background: var(--panel); font-size: .78rem; font-weight: 700; color: var(--ink); text-shadow: none; }
+.carrier-keys kbd { min-width: 1.5rem; text-align: center; }
+/* Pre-snap: the snap key, large, and what the numbers mean. */
+.snap-call { position: absolute; bottom: 4.5rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .5rem; text-shadow: 0 .1rem 1rem rgba(0,0,0,.8); }
+.snap-key { display: flex; align-items: center; gap: .9rem; font-weight: 800; font-size: 1.6rem; letter-spacing: .3em; text-transform: uppercase; animation: snap-pulse 1.6s ease-in-out infinite; }
+@keyframes snap-pulse { 0%, 100% { opacity: .78; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
+.snap-key kbd { font-size: 1.3rem; padding: .3rem .8rem; }
+.snap-sub { font-size: .85rem; color: var(--ink-2); letter-spacing: .06em; }
+/* Open / covered: the icon glows and pulses when the man is open, dims when he's covered. */
+.rec-icon[data-open='open'] .ring-base { stroke: var(--lime); stroke-width: 4; filter: drop-shadow(0 0 .35rem var(--lime)); }
+.rec-icon[data-open='open'] .rec-ring { animation: open-pulse .9s ease-in-out infinite; }
+.rec-icon[data-open='covered'] { opacity: .58; filter: saturate(.25); }
+.rec-icon[data-open='covered'] .rec-name { opacity: .7; }
+@keyframes open-pulse { 0%, 100% { transform: rotate(-90deg) scale(1); } 50% { transform: rotate(-90deg) scale(1.16); } }
+.prompt-row .legend { gap: .35rem; color: var(--ink-3); }
+.prompt-row .dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; margin-left: .3rem; }
+.prompt-row .dot.open { background: var(--lime); box-shadow: 0 0 .4rem var(--lime); }
+.prompt-row .dot.covered { background: var(--ink-3); opacity: .6; }
 .stamina-fill { display: block; height: 100%; background: var(--lime); transform-origin: left; box-shadow: 0 0 .6rem rgba(170,255,0,.5); }
 
 /* Result card */
@@ -74,3 +96,34 @@
 .result-actions { display: flex; justify-content: center; gap: .6rem; }
 .result-actions .menu-item { white-space: nowrap; }
 .result-actions .menu-item.is-focused { transform: none; }
+/* The first-play tutorial: a slim card under the score bug, out of the play's way. */
+.tutorial-card { position: absolute; top: 6.2rem; left: 50%; transform: translateX(-50%); max-width: 46rem; display: flex; align-items: baseline; gap: .8rem; padding: .7rem 1.1rem; border-left: 3px solid var(--lime); background: var(--panel-strong); font-size: .95rem; line-height: 1.5; color: var(--ink); animation: catch-in .18s ease-out; }
+.tutorial-step { font-weight: 800; font-size: .75rem; letter-spacing: .14em; color: var(--lime); white-space: nowrap; }
+.tutorial-text kbd { margin: 0 .15rem; }
+.snap-more { display: flex; gap: 1.4rem; font-size: .82rem; color: var(--ink-2); }
+.snap-more span { display: flex; align-items: center; gap: .35rem; }
+/* The hot-route picker: bottom centre, over the play, keys on every line. */
+.hot-picker { position: absolute; bottom: 3.5rem; left: 50%; transform: translateX(-50%); min-width: 20rem; padding: .9rem 1.1rem; background: var(--panel-strong); border-top: 3px solid var(--lime); display: flex; flex-direction: column; gap: .55rem; animation: catch-in .12s ease-out; }
+.hot-head { font-weight: 800; font-size: 1.05rem; letter-spacing: .06em; }
+.hot-now { font-weight: 600; font-size: .8rem; color: var(--ink-2); margin-left: .5rem; }
+.hot-sub { font-size: .95rem; color: var(--ink); }
+.hot-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: .35rem; }
+.hot-item { display: flex; align-items: center; gap: .45rem; padding: .35rem .5rem; border: 1px solid var(--line); border-radius: .3rem; cursor: pointer; font-weight: 700; font-size: .9rem; }
+.hot-item.current { color: var(--ink-2); }
+.hot-item.focus { border-color: var(--lime); background: color-mix(in srgb, var(--lime) 18%, transparent); color: var(--ink); }
+.hot-foot { display: flex; gap: .5rem; align-items: center; font-size: .78rem; color: var(--ink-2); }
+
+/* Prompts: a key and a word or two, uppercase, one style everywhere. */
+.cue { display: inline-flex; align-items: center; gap: .4rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; font-size: .82rem; color: var(--ink); }
+.cue kbd { min-width: 1.5rem; text-align: center; letter-spacing: 0; }
+.cue.big { font-size: 1.6rem; letter-spacing: .3em; animation: snap-pulse 1.6s ease-in-out infinite; }
+.cue.big kbd { font-size: 1.3rem; padding: .3rem .8rem; }
+.cue-row { display: flex; gap: 1.3rem; align-items: center; justify-content: center; }
+.snap-call .cue-row { color: var(--ink-2); }
+.carrier-keys .cue { padding: .2rem .45rem .2rem .2rem; border-radius: .35rem; background: var(--panel); font-size: .74rem; }
+.tutorial-card .cue { font-size: .82rem; }
+.catch-opt { grid-template-columns: auto auto; grid-template-rows: auto; min-width: 0; }
+.catch-opt .catch-name { text-transform: uppercase; letter-spacing: .1em; font-weight: 800; font-size: 1.5rem; }
+
+/* The session box score under the result (feedback item 5: big hits are counted). */
+.result-box { margin: .2rem 0 .8rem; font-size: .92rem; color: rgba(244,240,255,.62); letter-spacing: .02em; }

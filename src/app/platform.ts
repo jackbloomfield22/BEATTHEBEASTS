@@ -65,6 +65,9 @@ export const urlFlags = (() => {
     vfxAge: p.has('vfxAge') ? Number(p.get('vfxAge')) : 0, // backdate preview bursts (s)
     fly: p.has('fly'), // free flythrough camera (render/cameras/FlyCamera.tsx)
     shot: p.get('shot'), // screenshot harness: jump straight to a named state
+    // Video recording (tools/shots/video.spec.ts): every rendered frame is 1/N s of game time, cameras ease as in play.
+    video: p.has('video') ? Number(p.get('video')) || 30 : null,
+    pops: p.has('pops'), // log animation pops (render/game/popMeter.ts)
     lighting: p.get('lighting'),
     quality: p.get('quality'),
     noIntro: p.has('nointro'),

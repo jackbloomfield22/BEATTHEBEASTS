@@ -64,8 +64,11 @@ interface TransitionState {
   travel: number;
 }
 
-const TRANS_IN = 0.08; // s: each transition starts from the pose it leaves, so a short fade
-const TRANS_OUT = 0.1;
+// s: each transition starts from the pose it leaves, so a short fade; long
+// enough that the change spans ~4 frames at 30 fps and ~8 at 60 (M5.5: at
+// 0.08 s the get-offs and jukes popped in two frames).
+const TRANS_IN = 0.14;
+const TRANS_OUT = 0.16;
 
 /**
  * An upper-body overlay (a carry, a catch, a stiff arm): its clip, sampled
@@ -89,8 +92,8 @@ interface OverlayTrack {
   interp: THREE.Interpolant;
 }
 
-const OVERLAY_IN = 0.1;
-const OVERLAY_OUT = 0.15;
+const OVERLAY_IN = 0.13;
+const OVERLAY_OUT = 0.16;
 const _oq = new THREE.Quaternion();
 
 export class PlayerAnimator {

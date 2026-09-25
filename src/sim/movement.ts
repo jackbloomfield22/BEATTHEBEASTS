@@ -4,8 +4,12 @@
 // capped by his cut acceleration (Agility). The player-controlled agent goes
 // through exactly the same limits, so a slow player feels slow.
 
+import { atan2, cos, sin } from '@/engine/math/detmath';
 import { angleDiff, clamp, heading, len, type V2 } from './vec';
 import { TICK, type Agent } from './types';
+
+/** Top backpedal (facing away from where he's going) as a share of top speed. */
+export const BACKPEDAL = 0.62;
 
 /** Share of top speed an AI agent uses when not in a hurry (jogging a route stem, drifting in zone). */
 export const CRUISE = 0.82;
@@ -20,17 +24,46 @@ export interface SteerOpts {
   face?: number;
   /** Extra speed multiplier (carrying the ball, protecting it, stamina). */
   mult?: number;
+  /** Braking as a share of the cut deceleration (a carrier coasting off the stick). Default 1. */
+  brake?: number;
+  /**
+   * A burst (a carrier out of a cut or into open field): he gets back to top
+   * speed faster. From the sprint model: the acceleration phase compressed
+   * (τ × 0.55), not a higher top end (the ratings' "Burst" trait: top speed
+   * ~0.15 s sooner out of a cut). Round two's automatic burst ran 4% over top
+   * speed at first; pursuers could never close, and runs went +0.85 yd a carry.
+   */
+  burst?: boolean;
 }
 
 export function steer(a: Agent, want: V2, opts: SteerOpts = {}): void {
   const fx = a.fx;
-  const cap = fx.vmax * (opts.pace ?? 1) * (opts.mult ?? 1) * (0.86 + 0.14 * a.stamina);
+  const vTop = fx.vmax;
+  const tau = fx.tau * (opts.burst ? 0.55 : 1);
+  const cap = vTop * (opts.pace ?? 1) * (opts.mult ?? 1) * (0.86 + 0.14 * a.stamina);
   let wx = want.x;
   let wy = want.y;
   const wl = Math.sqrt(wx * wx + wy * wy);
   if (wl > cap) {
     wx = (wx / wl) * cap;
     wy = (wy / wl) * cap;
+  }
+  // Facing one way and moving the other (a defensive back's backpedal, a
+  // lineman's kick-slide): the pedal tops out at ~62% of his top speed (DBs
+  // pedal at ~6 yd/s against ~10 flat out). Asked to go faster than that
+  // backward, he turns and runs: the hip flip, at his turn rate.
+  let faceTo = opts.face;
+  if (faceTo !== undefined && wl > 1e-6) {
+    const back = (wx * cos(faceTo) + wy * sin(faceTo)) / wl < -0.3;
+    if (back && wl > fx.vmax * BACKPEDAL) faceTo = atan2(wy, wx);
+  }
+  if (faceTo !== undefined) {
+    const vl = len(a.vel);
+    const wc = Math.sqrt(wx * wx + wy * wy);
+    if (vl > 0.5 && (a.vel.x * cos(a.face) + a.vel.y * sin(a.face)) / vl < -0.3 && wc > fx.vmax * BACKPEDAL) {
+      wx = (wx / wc) * fx.vmax * BACKPEDAL;
+      wy = (wy / wc) * fx.vmax * BACKPEDAL;
+    }
   }
   const v = a.vel;
   const sp = len(v);
@@ -53,8 +86,8 @@ export function steer(a: Agent, want: V2, opts: SteerOpts = {}): void {
   let px = dvx - hx * along;
   let py = dvy - hy * along;
   // Speeding up: the sprint model. Braking: cut acceleration.
-  const upMax = (Math.max(0, fx.vmax - sp) / fx.tau) * TICK;
-  const downMax = fx.cutAccel * TICK;
+  const upMax = (Math.max(0, vTop - sp) / tau) * TICK;
+  const downMax = fx.cutAccel * TICK * (opts.brake ?? 1);
   along = clamp(along, -downMax, upMax);
   // Turning: lateral acceleration, a little less at speed (a faster runner
   // can't change direction as sharply: centripetal limit).
@@ -69,7 +102,7 @@ export function steer(a: Agent, want: V2, opts: SteerOpts = {}): void {
   a.pos.x += v.x * TICK;
   a.pos.y += v.y * TICK;
   // Facing.
-  const target = opts.face ?? (len(v) > 0.6 ? heading(v) : a.face);
+  const target = faceTo ?? (len(v) > 0.6 ? heading(v) : a.face);
   const d = angleDiff(target, a.face);
   const maxTurn = fx.turnRate * TICK;
   a.face += clamp(d, -maxTurn, maxTurn);

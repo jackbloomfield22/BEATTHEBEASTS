@@ -130,6 +130,22 @@ class AudioEngine {
     this.tone(180, 0.16, 'square', 0.03, 'ui', 140);
   }
 
+  /**
+   * Pads meeting (synthesized: a band of noise for the crack of the pads, a
+   * sine thump underneath), by the hit's force; a big hit adds a deeper
+   * thump and the crowd's roar swelling after it.
+   */
+  hit(force: number, big: boolean): void {
+    if (!this.ctx) return;
+    const k = Math.min(1, force / 10);
+    this.noiseHit(0.09 + 0.05 * k, 900 + 500 * k, 0.9, 0.12 + 0.2 * k, 'sfx');
+    this.tone(70 + 30 * k, 0.16, 'sine', 0.12 + 0.15 * k, 'sfx', 45);
+    if (big) {
+      this.tone(48, 0.35, 'sine', 0.3, 'sfx', 32);
+      this.noiseHit(1.4, 700, 0.5, 0.18, 'crowd', 0.12);
+    }
+  }
+
   /** Stadium horn + sub hit for the title reveal. */
   titleSting(): void {
     const ctx = this.ctx;

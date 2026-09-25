@@ -14,14 +14,14 @@ for (let k = 0; k < Number(process.argv[2] ?? 1500); k++) {
   const s = createPlay({ seed: 5000 + k * 104729, offense: r.offense, defense: r.defense, play, def, los: 35, toGo: 10, user: true });
   const icon = 1 + Math.floor(rng() * s.icons.length);
   const at = 0.9 + rng() * 2.4;
-  const bullet = rng() < 0.5;
+  const touch = rng() < 0.5;
   let released = false; let sep = 0; let air = 0;
   while (!s.result && s.tick < 2400) {
     const t = s.tick / 60;
-    const holding = !released && t >= at && t < at + (bullet ? 0.45 : 0.08);
-    if (!released && t >= at + (bullet ? 0.45 : 0.08)) {
+    const holding = !released && t >= at && t < at + (touch ? 0.45 : 0.08);
+    if (!released && t >= at + (touch ? 0.45 : 0.08)) {
       released = true;
-      const o = openness(s, s.agents[s.qb]!, s.agents[s.icons[icon - 1]!]!, bullet);
+      const o = openness(s, s.agents[s.qb]!, s.agents[s.icons[icon - 1]!]!);
       sep = o.sep; air = o.at.x - 35;
     }
     stepPlay(s, input({ snap: s.tick === 0, throwHeld: holding ? icon : 0 }));

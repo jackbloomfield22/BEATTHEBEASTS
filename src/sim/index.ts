@@ -7,3 +7,4 @@ export * from './play';
 export * from './hash';
 export * from './roster';
 export { effects, speedToForty, accelToSplit, solveSprint, sprintTime } from './effects';
+export { blockRoles, pullers, type BlockRole } from './runs';

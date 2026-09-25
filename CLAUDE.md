@@ -2,6 +2,10 @@
 
 Read `docs/BRIEF.md`, `docs/GDD.md` and `docs/TECH_PLAN.md` before large changes. `docs/PROGRESS.md` says where things stand.
 
+## Football is art
+
+Football is art. The harness numbers are a floor, not the goal. A play is right when it would look right on a broadcast: the timing of a route and a throw, the spacing of a concept, the rhythm of a drop, the way a runner presses a hole and cuts, the way a defense flows to the ball. When a number is in range but the play looks wrong, the play is wrong. When you tune anything on the field, watch it move before you call it done, and ask whether a coach or a fan would recognize it. Build for the moments: the ball in the air, the cut, the hit, the breakaway. If it isn't beautiful, it isn't finished.
+
 ## Non-negotiables
 
 1. **Legacy data is never edited in place.** `legacy/beat-the-beasts.jsx` is untouched forever. Generated data in `data/legacy/` is only ever produced by `npm run extract`. Every fix goes through `data/corrections.json` (id, field, old, new, reason, source), and the loader rejects a correction whose `old` doesn't match.

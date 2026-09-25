@@ -9,6 +9,17 @@ import type { Effects } from './effects';
 export const TICK = 1 / 60;
 export const FIELD_HALF_W = 160 / 6; // 26.667 yd
 export const GOAL_X = 100;
+/** The end lines: the back of each end zone (10 yd deep). Past them is out of bounds. */
+export const END_X = GOAL_X + 10;
+export const BACK_X = -10;
+/**
+ * A carrier is out the moment a foot touches the line: his center within
+ * this far of it (half a stride's foot placement, ~0.2 yd). The white line
+ * itself is out of bounds.
+ */
+export const OOB_FOOT = 0.2;
+/** Anyone else may drift at most a step past a line while the play is live (then he's held there). */
+export const STEP_OUT = 1;
 
 export type Side = 'off' | 'def';
 
@@ -76,6 +87,13 @@ export interface Agent {
   moveCooldown: number;
   /** Recent moves (spamming loses effectiveness). */
   moveFatigue: number;
+  /** A burst (automatic, out of a cut or into open field): ticks left, and ticks until he can burst again. */
+  burst: number;
+  burstCd: number;
+  /** A move pressed while he couldn't start it yet, and the ticks it stays pressed (input buffer). */
+  moveBuf: { mv: Move; left: number } | null;
+  /** A move's velocity change still being applied, per tick, over its plant (not in one tick). */
+  impulse: { x: number; y: number; left: number } | null;
   /** Sprint stamina 0–1. */
   stamina: number;
   /** On the ground (tackled, dove, cut). */
@@ -100,16 +118,19 @@ export interface Ball {
   target: number;
   aim: { x: number; y: number; z: number };
   arrive: number;
+  /** Where the QB meant it to go (his lead and placement, before the error cone), and when it left his hand. */
+  meant: { x: number; y: number };
+  releaseT: number;
   thrower: number;
-  /** 'touch' | 'bullet' of the last throw. */
-  kind: 'touch' | 'bullet' | null;
+  /** 'driven' (the default, flat) | 'touch' (held, or lofted over a defender) of the last throw. */
+  kind: 'driven' | 'touch' | null;
   /** Nose-over-tail spin phase for the render (radians). */
   spin: number;
 }
 
 export type Phase = 'presnap' | 'snap' | 'dropback' | 'pocket' | 'air' | 'carrier' | 'loose' | 'dead';
 
-export type WhistleReason = 'tackle' | 'sack' | 'incomplete' | 'outOfBounds' | 'touchdown' | 'interceptionDown' | 'safety' | 'fumbleOut' | 'timeout';
+export type WhistleReason = 'tackle' | 'sack' | 'incomplete' | 'outOfBounds' | 'touchdown' | 'touchback' | 'interceptionDown' | 'safety' | 'fumbleOut' | 'timeout';
 
 export interface SimEvent {
   t: number;
@@ -133,6 +154,8 @@ export interface SimEvent {
     | 'recovery'
     | 'touchdown'
     | 'outOfBounds'
+    | 'catchOutOfBounds'
+    | 'hotRoute'
     | 'whistle';
   /** Agents involved (actor first). */
   who?: number[];
@@ -151,7 +174,18 @@ export interface PlayResult {
   offenseBall: boolean;
   touchdown: boolean;
   /** Pass result for stats. */
-  pass?: { attempted: boolean; complete: boolean; intercepted: boolean; airYards: number; target: number };
+  pass?: {
+    attempted: boolean;
+    complete: boolean;
+    intercepted: boolean;
+    airYards: number;
+    target: number;
+    /** When the ball reached the target: the nearest defender to it (yd) and how hard it was contested (0–1). Unset if it never got to him. */
+    sep?: number;
+    contest?: number;
+  };
   sack: boolean;
   ticks: number;
+  /** A big hit on this play: who delivered it, who took it, and its force. */
+  bigHit?: { by: number; on: number; force: number };
 }

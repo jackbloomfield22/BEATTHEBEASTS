@@ -10,17 +10,22 @@ import { trackErrors, waitReady } from './helpers';
 // rendered browser that draws one frame a second.
 
 type P = {
-  __btbPractice: { runner: { paused: boolean; state: S } | null; tick(n: number): void };
-  __btbPracticeUi: { getState(): { stage: string; result: { headline: string } | null; catchType: string | null } };
+  __btbPractice: { runner: { paused: boolean; state: S & { hot: Record<string, string>; agents: { slot: string }[] } } | null; tick(n: number): void };
+  __btbPracticeUi: { getState(): { stage: string; result: { headline: string } | null; catchType: string | null; hot: { stage: string } | null; tutorial: string | null } };
   __btbGameReady?: boolean;
   __btbSimHashes(): Promise<{ key: string; hash: number; ticks: number; reason: string }[]>;
 };
 type S = { tick: number; t: number; phase: string; icons: number[]; carrier: number; events: { type: string; who?: number[] }[]; result: { reason: string; yards: number; touchdown: boolean } | null };
 
-async function open(page: Page, seed: number, downs: number) {
+/** The play call's tabs from the first (quick game): 2 is Shots (Four Verticals first). */
+const PLAY: Record<string, [tabs: number, downs: number]> = { stick: [0, 0], fourVerts: [2, 0] };
+
+async function open(page: Page, seed: number, play: keyof typeof PLAY) {
   await page.goto(`/?screen=practice&nointro&seed=${seed}&quality=low&shot=practice`);
   await waitReady(page);
   await page.waitForFunction(() => (window as unknown as P).__btbPracticeUi?.getState().stage === 'call', null, { timeout: 120_000 });
+  const [tabs, downs] = PLAY[play]!;
+  for (let i = 0; i < tabs; i++) await page.keyboard.press('KeyE');
   for (let i = 0; i < downs; i++) await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => (window as unknown as P).__btbGameReady === true, null, { timeout: 150_000 });
@@ -44,7 +49,7 @@ async function tickUntil(page: Page, pred: (s: Awaited<ReturnType<typeof state>>
 
 test('a full play: snap, throw, catch, run, tackle or score, result card', async ({ page }) => {
   const errors = trackErrors(page);
-  await open(page, 37, 1); // Four Verticals against the coverage seed 37 draws (Cover 2)
+  await open(page, 98, 'fourVerts'); // Four Verticals against the coverage seed 98 draws (Cover 3)
   await page.keyboard.press('Space');
   await tick(page, 1);
   let s = await state(page);
@@ -60,12 +65,10 @@ test('a full play: snap, throw, catch, run, tackle or score, result card', async
   expect(thr.who![1]).toBe(s.icons[0]);
   s = await tickUntil(page, (x) => x.phase === 'carrier' || x.phase === 'dead');
   expect(s.events.some((e) => e.type === 'catch')).toBe(true);
-  // Run it: sprint upfield.
+  // Run it upfield (he sets his own pace).
   await page.keyboard.down('ArrowUp');
-  await page.keyboard.down('ShiftRight');
   s = await tickUntil(page, (x) => x.result !== null);
   await page.keyboard.up('ArrowUp');
-  await page.keyboard.up('ShiftRight');
   expect(['tackle', 'touchdown', 'outOfBounds']).toContain(s.result!.reason);
   expect(s.result!.yards).toBeGreaterThan(10);
   // The dead ball settles and the result card comes up.
@@ -76,7 +79,7 @@ test('a full play: snap, throw, catch, run, tackle or score, result card', async
 });
 
 test('the catch call: 1–3 while the ball is in the air, and the called one lights up', async ({ page }) => {
-  await open(page, 37, 1);
+  await open(page, 98, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');
@@ -91,12 +94,37 @@ test('the catch call: 1–3 while the ball is in the air, and the called one lig
   await page.keyboard.press('Digit2');
   await tick(page, 1);
   expect(await page.evaluate(() => (window as unknown as P).__btbPracticeUi.getState().catchType)).toBe('possession');
-  await expect(page.locator('.catch-opt.on')).toContainText('Secure it');
+  await expect(page.locator('.catch-opt.on')).toContainText('Secure');
   await expect(page.locator('.catch-opt.off')).toHaveCount(2);
 });
 
+test('pre-snap: the prompts, the route preview key, and a hot route the sim runs', async ({ page }) => {
+  await open(page, 5, 'stick'); // Stick
+  // First play: the tutorial's first step and the snap prompt with the route and hot-route keys.
+  await expect(page.locator('.tutorial-card')).toContainText('Snap');
+  await expect(page.locator('.snap-call')).toContainText('Tab');
+  await expect(page.locator('.snap-call')).toContainText('Hot route');
+  // H, then receiver 1, then route 3 (In).
+  await page.keyboard.press('KeyH');
+  await expect(page.locator('.hot-picker')).toContainText('Receiver');
+  await page.keyboard.press('Digit1');
+  await expect(page.locator('.hot-item')).toHaveCount(8);
+  await page.keyboard.press('Digit3');
+  await expect(page.locator('.hot-picker')).toHaveCount(0);
+  await tick(page, 1);
+  const hot = await page.evaluate(() => {
+    const s = (window as unknown as P).__btbPractice.runner!.state;
+    return { hot: s.hot, slot: s.agents[s.icons[0]!]!.slot };
+  });
+  expect(hot.hot[hot.slot]).toBe('in');
+  // The snap still works afterwards, and the play runs the new route.
+  await page.keyboard.press('Space');
+  await tick(page, 2);
+  expect((await state(page)).phase).not.toBe('presnap');
+});
+
 test('a tackle: the carrier goes down and the next snap is at the new spot', async ({ page }) => {
-  await open(page, 5, 0); // Stick
+  await open(page, 5, 'stick'); // Stick
   await page.keyboard.press('Space');
   await tick(page, 78);
   await page.keyboard.down('Digit1');
@@ -117,23 +145,21 @@ test('a tackle: the carrier goes down and the next snap is at the new spot', asy
 });
 
 test('scores: a touchdown run ends the series with a touchdown card', async ({ page }) => {
-  await open(page, 37, 1);
+  await open(page, 234, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');
   await tick(page, 3);
   await page.keyboard.up('Digit1');
   await tickUntil(page, (x) => x.phase === 'carrier' || x.phase === 'dead');
-  // Weave: angle away from the nearest defender (the stick right), sprinting.
-  await page.keyboard.down('ShiftRight');
+  // Weave: angle away from the nearest defender (the stick right).
   await page.keyboard.down('ArrowUp');
   await page.keyboard.down('ArrowRight');
   await tick(page, 20);
   await page.keyboard.up('ArrowRight');
   const s = await tickUntil(page, (x) => x.result !== null);
   await page.keyboard.up('ArrowUp');
-  await page.keyboard.up('ShiftRight');
-  // Seed 37 with these inputs is a 75-yard catch and run (the replay is exact).
+  // Seed 234 (Cover 2) with these inputs is a 75-yard catch and run (the replay is exact).
   expect(s.result!.touchdown).toBe(true);
   expect(s.events.some((e) => e.type === 'touchdown')).toBe(true);
   await tick(page, 120);

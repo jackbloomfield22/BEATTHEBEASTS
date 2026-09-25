@@ -4,7 +4,7 @@
 import { deriveStream } from '@/engine/rng';
 import { effects } from './effects';
 import { type Streams, streams } from './rand';
-import { DEF_SLOTS, OFF_SLOTS, type DefCall, type OffPlay, type ZoneName, ZONES } from './plays';
+import { DEF_SLOTS, OFF_SLOTS, type DefCall, type OffPlay, type RouteName, type ZoneName, ZONES } from './plays';
 import type { CatchType } from './input';
 import { FIELD_HALF_W, type Agent, type Ball, type DefSlot, type OffSlot, type Phase, type PlayResult, type SimEvent, type SimPlayer } from './types';
 import { v2, type V2 } from './vec';
@@ -35,6 +35,8 @@ export interface PlaySetup {
   difficulty?: Difficulty;
   /** AI snaps immediately; the user snaps with the Snap input. */
   autoSnap?: boolean;
+  /** Stamina each player starts the play without (0–1), e.g. still shaking off a big hit. */
+  fatigue?: Partial<Record<OffSlot | DefSlot, number>>;
 }
 
 export interface Block {
@@ -46,6 +48,8 @@ export interface Block {
   kind: 'pass' | 'run';
   move: 'bull' | 'speed' | 'swim' | 'spin' | 'drive';
   t: number;
+  /** This rep's edge at contact (hands, pad level, footwork): the same matchup doesn't play out the same every snap. */
+  bias: number;
 }
 
 export interface PlayState {
@@ -76,17 +80,36 @@ export interface PlayState {
   /** A throw wound up: released at `at` (play time). */
   windup: { at: number; icon: number; charge: number; aim: V2; away: boolean } | null;
   catchType: CatchType | null;
+  /** Hot routes called at the line, by offensive slot (they replace the play's route at the snap). */
+  hot: Partial<Record<OffSlot, RouteName>>;
   /** Agents that already tried to play the ball on this throw. */
   touched: number[];
   /** Forward progress (x) of the ball carrier. */
   maxX: number;
   /** Whistle time (play keeps animating the dead ball after). */
   whistleT: number;
-  /** The run read: time the defense diagnosed a run (−1 before). */
+  /** The handoff (play time; −1 before one). */
   runReadT: number;
+  /**
+   * When the offense showed run (the line firing out, a handoff, a fake) and
+   * pass (the line setting, the QB's drop, the ball pulled out of a fake);
+   * −1 if it hasn't. Each defender believes the latest he has read (runs.ts).
+   */
+  runShow: number;
+  passShow: number;
+  /** The QB tucked it and is running (a scramble), since this play time; −1 if not. */
+  scrambleT: number;
+  /** The QB left the pocket (outside the tackles, or tucked it), since this play time; −1 if not. The rush reacts to it. */
+  escapeT: number;
+  /** First time a free defender got on the QB (pressure ≥ 0.7), for the harness; −1 if never. */
+  pressureT: number;
+  /** The defenders who rally to this throw (decided at the release, keyed by it); the rest keep their men and zones. */
+  rally: { at: number; who: number[] } | null;
   /** Throw bookkeeping for the result. */
   pass: PlayResult['pass'];
   sack: boolean;
+  /** A big hit on this play (for the result). */
+  bigHit: PlayResult['bigHit'];
   /** AI QB read state. */
   read: { idx: number; since: number };
 }
@@ -106,6 +129,10 @@ function makeAgent(i: number, side: 'off' | 'def', slot: OffSlot | DefSlot, p: S
     move: null,
     moveCooldown: 0,
     moveFatigue: 0,
+    burst: 0,
+    burstCd: 0,
+    moveBuf: null,
+    impulse: null,
     stamina: 1,
     down: false,
     hist: [],
@@ -200,6 +227,8 @@ export function createPlay(s: PlaySetup): PlayState {
     target: -1,
     aim: { x: 0, y: 0, z: 0 },
     arrive: 0,
+    meant: { x: 0, y: 0 },
+    releaseT: -1,
     thrower: -1,
     kind: null,
     spin: 0,
@@ -208,6 +237,7 @@ export function createPlay(s: PlaySetup): PlayState {
   // Effort on this snap: ±2% top speed per player (seeded), so no two plays run alike.
   const effort = deriveStream(s.seed, 'effort');
   for (const a of agents) a.fx.vmax *= 1 + (effort() - 0.5) * 0.04;
+  for (const a of agents) a.stamina = Math.max(0.2, 1 - (s.fatigue?.[a.slot] ?? 0));
   return {
     setup: s,
     t: 0,
@@ -231,12 +261,20 @@ export function createPlay(s: PlaySetup): PlayState {
     hold: { icon: 0, ticks: 0 },
     windup: null,
     catchType: null,
+    hot: {},
     touched: [],
     maxX: -Infinity,
     whistleT: -1,
     runReadT: -1,
+    runShow: -1,
+    passShow: -1,
+    scrambleT: -1,
+    escapeT: -1,
+    pressureT: -1,
+    rally: null,
     pass: undefined,
     sack: false,
+    bigHit: undefined,
     read: { idx: 0, since: 0 },
   };
 }

@@ -1,0 +1,177 @@
+{
+ "frames": 5794,
+ "worst": 80,
+ "p99": 32,
+ "spikes": [
+  {
+   "frame": 42,
+   "slot": "TE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_ol_3pt",
+   "overlay": "",
+   "anim": "run",
+   "phase": "snap"
+  },
+  {
+   "frame": 42,
+   "slot": "LE",
+   "bone": "upperarm_r",
+   "rate": 34,
+   "clip": "getoff_dl_3pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 42,
+   "slot": "LDT",
+   "bone": "upperarm_r",
+   "rate": 33,
+   "clip": "getoff_dl_4pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 42,
+   "slot": "RDT",
+   "bone": "upperarm_r",
+   "rate": 33,
+   "clip": "getoff_dl_4pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 42,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 34,
+   "clip": "getoff_dl_3pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 88,
+   "slot": "QB",
+   "bone": "upperarm_l",
+   "rate": 80,
+   "clip": "qb_throw",
+   "overlay": "",
+   "anim": "throw",
+   "phase": "pocket"
+  },
+  {
+   "frame": 92,
+   "slot": "QB",
+   "bone": "upperarm_l",
+   "rate": 37,
+   "clip": "qb_throw",
+   "overlay": "",
+   "anim": "throw",
+   "phase": "pocket"
+  },
+  {
+   "frame": 92,
+   "slot": "QB",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "qb_throw",
+   "overlay": "",
+   "anim": "throw",
+   "phase": "pocket"
+  },
+  {
+   "frame": 95,
+   "slot": "QB",
+   "bone": "upperarm_r",
+   "rate": 34,
+   "clip": "qb_throw",
+   "overlay": "",
+   "anim": "throw",
+   "phase": "air"
+  },
+  {
+   "frame": 156,
+   "slot": "SLOT",
+   "bone": "calf_l",
+   "rate": 52,
+   "clip": "juke_r",
+   "overlay": "",
+   "anim": "juke",
+   "phase": "carrier"
+  },
+  {
+   "frame": 176,
+   "slot": "SLOT",
+   "bone": "calf_l",
+   "rate": 52,
+   "clip": "juke_r",
+   "overlay": "",
+   "anim": "juke",
+   "phase": "carrier"
+  },
+  {
+   "frame": 196,
+   "slot": "FS",
+   "bone": "thigh_l",
+   "rate": 46,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "dead"
+  },
+  {
+   "frame": 206,
+   "slot": "FS",
+   "bone": "forearm_l",
+   "rate": 41,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "dead"
+  },
+  {
+   "frame": 206,
+   "slot": "FS",
+   "bone": "forearm_r",
+   "rate": 44,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "dead"
+  },
+  {
+   "frame": 207,
+   "slot": "FS",
+   "bone": "forearm_l",
+   "rate": 39,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "dead"
+  },
+  {
+   "frame": 207,
+   "slot": "FS",
+   "bone": "forearm_r",
+   "rate": 43,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "dead"
+  },
+  {
+   "frame": 236,
+   "slot": "SLOT",
+   "bone": "thigh_r",
+   "rate": 53,
+   "clip": "getup_supine",
+   "overlay": "",
+   "anim": "tackled",
+   "phase": "dead"
+  }
+ ]
+}

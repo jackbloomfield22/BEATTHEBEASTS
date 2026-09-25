@@ -64,7 +64,10 @@ describe('M5 action clips', () => {
   });
   it('overlays drive only the upper body (their masks never touch the legs or the pelvis)', () => {
     const overlays = Object.entries(clips).filter(([, m]) => m.kind === 'overlay');
-    expect(overlays.map(([n]) => n).sort()).toEqual(['ovl_carry_r', 'ovl_catch', 'ovl_catch_high', 'ovl_protect', 'ovl_pump', 'ovl_qb_hold', 'ovl_stiff_arm', 'ovl_truck']);
+    expect(overlays.map(([n]) => n).sort()).toEqual([
+      'ovl_carry_r', 'ovl_catch', 'ovl_catch_high', 'ovl_getoff', 'ovl_handoff_l', 'ovl_handoff_r', 'ovl_pa_fake_l', 'ovl_pa_fake_r',
+      'ovl_protect', 'ovl_pump', 'ovl_qb_hold', 'ovl_stiff_arm', 'ovl_take_l', 'ovl_take_r', 'ovl_truck', 'ovl_tuck',
+    ]);
     for (const [n, m] of overlays) {
       expect(m.mask!.length, n).toBeGreaterThan(5);
       for (const b of m.mask!) expect(/^(pelvis|root|thigh|calf|foot|toe|spine_01)/.test(b), `${n}: ${b}`).toBe(false);

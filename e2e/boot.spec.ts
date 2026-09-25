@@ -79,7 +79,7 @@ test('skin-tone editor is reachable from settings and edits entries', async ({ p
   await waitReady(page);
   for (let i = 0; i < 4; i++) await page.keyboard.press('KeyE'); // Gameplay tab
   await expect(page.locator('.tab.is-active')).toHaveText('Gameplay');
-  for (let i = 0; i < 7; i++) await page.keyboard.press('ArrowDown');
+  for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowDown');
   await expect(page.locator('.setting-row.is-focused .setting-label')).toHaveText('Skin-tone editor');
   await page.keyboard.press('Enter');
   await expect(page.locator('.char-screen')).toBeVisible();

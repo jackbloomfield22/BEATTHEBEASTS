@@ -80,6 +80,11 @@ export class Ragdoll {
   private min: number[] = [];
   /** Blend weight 0..1 (the fall takes over from the animation). */
   w = 0;
+  /** A big hit's fall: limbs trail, the body slides on landing. */
+  private big = false;
+  private landed = false;
+  /** Where the body first hit the turf hard (m, world), for the dust; the caller takes it and clears it. */
+  landing: THREE.Vector3 | null = null;
   active = false;
   private t = 0;
   /** Per-bone local rotations the fall ended on (held once it settles). */
@@ -109,11 +114,18 @@ export class Ragdoll {
    * velocity (m/s, world), `push` the hit's impulse as a velocity change on
    * the upper body (m/s, world).
    */
-  start(vel: THREE.Vector3, push: THREE.Vector3): void {
+  start(vel: THREE.Vector3, push: THREE.Vector3, big = false): void {
     this.player.root.updateMatrixWorld(true);
     const dt = 1 / 60;
+    // A big hit (feedback item 5): the torso braced and taking the blow,
+    // the limbs trailing it (they take half their share), and a slide on
+    // landing (the turf holds him less while he's still moving fast).
+    this.big = big;
+    this.landed = false;
+    this.landing = null;
     this.pos = PTS.map((p) => this.at(p, new THREE.Vector3()));
-    this.prev = this.pos.map((x, i) => x.clone().addScaledVector(vel, -dt).addScaledVector(push, -dt * PTS[i]!.push));
+    const share = (i: number) => PTS[i]!.push * (big && i >= 4 && i !== 10 && i !== 13 ? 0.5 : 1);
+    this.prev = this.pos.map((x, i) => x.clone().addScaledVector(vel, -dt).addScaledVector(push, -dt * share(i)));
     this.rest = LINKS.map(([a, b]) => this.pos[a]!.distanceTo(this.pos[b]!));
     this.min = MIN_REACH.map(([a, b, k]) => {
       // Full chain length through the middle joint.
@@ -159,15 +171,22 @@ export class Ragdoll {
     for (let k = 0; k < ITER; k++) {
       LINKS.forEach(([a, b], j) => this.keep(a, b, this.rest[j]!, 'eq'));
       MIN_REACH.forEach(([a, b], j) => this.keep(a, b, this.min[j]!, 'min'));
-      // The turf: no point below its radius; on contact, friction takes the slide out.
+      // The turf: no point below its radius; on contact, friction takes the
+      // slide out (a big hit's body slides further: less grip at speed).
+      const grip = this.big ? 0.12 : 0.35;
       for (let i = 0; i < P.length; i++) {
         const r = PTS[i]!.r;
         const p = P[i]!;
         if (p.y < r) {
-          p.y = r;
           const q = Q[i]!;
-          q.x += (p.x - q.x) * 0.35;
-          q.z += (p.z - q.z) * 0.35;
+          // The hips or the chest landing hard: that's where the dust goes up.
+          if (!this.landed && (i === 0 || i === 1) && (q.y - p.y) / dt > 1.2) {
+            this.landed = true;
+            this.landing = p.clone().setY(0.02);
+          }
+          p.y = r;
+          q.x += (p.x - q.x) * grip;
+          q.z += (p.z - q.z) * grip;
         }
       }
     }

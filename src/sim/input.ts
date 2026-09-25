@@ -3,19 +3,20 @@
 // directions before recording). This is exactly what gets recorded, so a
 // play replays from its seed plus these frames.
 
+import type { RouteName } from './plays';
 import type { V2 } from './vec';
 
 export type CatchType = 'aggressive' | 'rac' | 'possession';
 
 export interface InputFrame {
   /** Desired move direction in the field frame, length 0..1. */
+  /** For a ball carrier only its direction counts: his speed is the situation's (and his burst is his own). */
   move: V2;
-  sprint: boolean;
   /** Snap (pressed this tick). */
   snap: boolean;
   /**
-   * Receiver icon held (1..5, 0 = none). A throw goes on release: a tap is a
-   * touch pass, holding charges the bullet (the power ring).
+   * Receiver icon held (1..5, 0 = none). A throw goes on release: a tap is
+   * the driven ball, holding adds touch (the ring fills with the loft).
    */
   throwHeld: number;
   /**
@@ -40,11 +41,14 @@ export interface InputFrame {
   dive: boolean;
   /** Protect the ball (held). */
   protect: boolean;
+  /** In the pocket: tuck it and run (pressed this tick). He can still throw on the run until he crosses the line. */
+  scramble: boolean;
+  /** Pre-snap: change a receiver's route (icon 1..5 and one of HOT_ROUTES). Applied before the snap. */
+  hotRoute: { icon: number; route: RouteName } | null;
 }
 
 export const NEUTRAL: InputFrame = Object.freeze({
   move: Object.freeze({ x: 0, y: 0 }) as V2,
-  sprint: false,
   snap: false,
   throwHeld: 0,
   aim: Object.freeze({ x: 0, y: 0 }) as V2,
@@ -59,11 +63,13 @@ export const NEUTRAL: InputFrame = Object.freeze({
   truck: false,
   dive: false,
   protect: false,
+  scramble: false,
+  hotRoute: null,
 }) as InputFrame;
 
 export const input = (patch: Partial<InputFrame>): InputFrame => ({ ...NEUTRAL, ...patch });
 
-/** Seconds of hold that fully charge a bullet. */
-export const BULLET_CHARGE = 0.5;
+/** Seconds of hold past a tap that give a touch pass its full loft. */
+export const LOFT_CHARGE = 0.5;
 /** A hold shorter than this is a tap: a touch pass. */
 export const TAP_MAX = 0.18;

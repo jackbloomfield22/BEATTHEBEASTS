@@ -6,7 +6,8 @@ import { ACTIONS, type Bindings, type InputContext } from './actions';
 // 'global' are active.
 
 export type Device = 'keyboard' | 'mouse' | 'gamepad';
-type Listener = (actionId: string, info: { repeat: boolean; device: Device }) => void;
+/** `time`: the input's timestamp (performance.now() timebase), for latency measurement. */
+type Listener = (actionId: string, info: { repeat: boolean; device: Device; time: number }) => void;
 
 const PAD_BUTTONS = ['Pad:A', 'Pad:B', 'Pad:X', 'Pad:Y', 'Pad:LB', 'Pad:RB', 'Pad:LT', 'Pad:RT', 'Pad:View', 'Pad:Menu', 'Pad:LS', 'Pad:RS', 'Pad:Up', 'Pad:Down', 'Pad:Left', 'Pad:Right'];
 const STICK_THRESHOLD = 0.55;
@@ -22,6 +23,8 @@ class InputManagerImpl {
   private contexts: InputContext[] = ['menu'];
   private listeners = new Set<Listener>();
   private held = new Set<string>();
+  /** Last release time per input code. */
+  private upAt = new Map<string, number>();
   private kb: Bindings = {};
   private pad: Bindings = {};
   private reverse = new Map<string, string[]>(); // input code -> action ids
@@ -87,6 +90,14 @@ class InputManagerImpl {
     return this.held.has(code);
   }
 
+  /** When an action's input was last released (performance.now() timebase), or now if never seen. */
+  releasedAt(actionId: string): number {
+    const codes = [...(this.kb[actionId] ?? []), ...(this.pad[actionId] ?? [])];
+    let t = -Infinity;
+    for (const c of codes) t = Math.max(t, this.upAt.get(c) ?? -Infinity);
+    return Number.isFinite(t) ? t : performance.now();
+  }
+
   private setDevice(d: Device): void {
     if (d !== this.lastDevice) {
       this.lastDevice = d;
@@ -94,7 +105,7 @@ class InputManagerImpl {
     }
   }
 
-  private fire(code: string, repeat: boolean, device: Device): boolean {
+  private fire(code: string, repeat: boolean, device: Device, time = performance.now()): boolean {
     const ids = this.reverse.get(code);
     if (!ids) return false;
     const ctx = this.activeContext;
@@ -103,7 +114,7 @@ class InputManagerImpl {
       const def = ACTIONS.find((d) => d.id === id);
       if (!def || (def.context !== ctx && def.context !== 'global')) continue;
       handled = true;
-      this.listeners.forEach((l) => l(id, { repeat, device }));
+      this.listeners.forEach((l) => l(id, { repeat, device, time }));
     }
     return handled;
   }
@@ -131,9 +142,12 @@ class InputManagerImpl {
         return;
       }
       if (!e.repeat) this.held.add(e.code);
-      if (this.fire(e.code, e.repeat, 'keyboard')) e.preventDefault();
+      if (this.fire(e.code, e.repeat, 'keyboard', e.timeStamp)) e.preventDefault();
     });
-    window.addEventListener('keyup', (e) => this.held.delete(e.code));
+    window.addEventListener('keyup', (e) => {
+      this.held.delete(e.code);
+      this.upAt.set(e.code, e.timeStamp);
+    });
     window.addEventListener('blur', () => this.held.clear());
 
     window.addEventListener('mousedown', (e) => {
@@ -142,9 +156,12 @@ class InputManagerImpl {
       if (this.captureCb && this.handleCapture(code)) return;
       this.held.add(code);
       // Menus take clicks from their own elements; gameplay contexts bind mouse buttons.
-      if (this.activeContext !== 'menu') this.fire(code, false, 'mouse');
+      if (this.activeContext !== 'menu') this.fire(code, false, 'mouse', e.timeStamp);
     });
-    window.addEventListener('mouseup', (e) => this.held.delete(`Mouse${e.button}`));
+    window.addEventListener('mouseup', (e) => {
+      this.held.delete(`Mouse${e.button}`);
+      this.upAt.set(`Mouse${e.button}`, e.timeStamp);
+    });
     window.addEventListener(
       'mousemove',
       (e) => {
@@ -207,7 +224,7 @@ class InputManagerImpl {
         this.held.add(code);
         if (this.captureCb) {
           if (code.startsWith('Pad:')) this.handleCapture(code);
-        } else this.fire(code, false, 'gamepad');
+        } else this.fire(code, false, 'gamepad', now);
         this.padRepeatAt.set(code, now + REPEAT_DELAY_MS);
       } else {
         const at = this.padRepeatAt.get(code) ?? Infinity;
@@ -220,6 +237,7 @@ class InputManagerImpl {
     for (const code of this.padPrev) {
       if (!pressed.has(code)) {
         this.held.delete(code);
+        this.upAt.set(code, now);
         this.padRepeatAt.delete(code);
       }
     }

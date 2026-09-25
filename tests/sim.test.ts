@@ -6,11 +6,13 @@ import {
   defById,
   effects,
   hashPlay,
+  HOT_ROUTES,
   input,
   NEUTRAL,
   PLAYS,
   playById,
   practiceRosters,
+  ROUTES,
   runToWhistle,
   solveSprint,
   speedToForty,
@@ -18,13 +20,21 @@ import {
   stepPlay,
   TICK,
   type InputFrame,
+  type OffSlot,
   type PlayState,
   type SimPlayer,
   type SnapshotLike,
 } from '@/sim';
 import { flyFor, solveLaunch } from '@/sim/ball';
 import { steer } from '@/sim/movement';
-import { jukeSide } from '@/sim/play';
+import { bufferedMove, carrierPace, cutWeight, jukeSide, outAt } from '@/sim/play';
+import { lead } from '@/sim/passing';
+import { belief, blockRoles, pullers } from '@/sim/runs';
+import { v2 } from '@/sim/vec';
+import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT } from '@/sim/types';
+import { applyImpulse, startMove, tickMoves } from '@/sim/contact';
+import { simPlayer } from '@/sim/roster';
+import { CLIPS } from '@/game/clips';
 
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const rosters = practiceRosters(snap);
@@ -133,9 +143,35 @@ describe('sim: a play snap to whistle', () => {
     }
     times.sort((a, b) => a - b);
     const median = times[20]!;
-    // NFL: pressure in ~2.5 s, a QB holding the ball is down in ~3.5–4.5 s.
-    expect(median).toBeGreaterThan(2.8);
-    expect(median).toBeLessThan(5);
+    // Tuned for play (M5.5): a QB who never throws goes down at a median of
+    // ~4.5 s at Pro against the four-man rush.
+    expect(median).toBeGreaterThan(4.1);
+    expect(median).toBeLessThan(4.9);
+  });
+});
+
+describe('sim: pass protection follows the linemen', () => {
+  it('the best pass-blocking unit holds clearly longer than the worst', () => {
+    const OL = ['LT', 'LG', 'C', 'RG', 'RT'] as const;
+    const grade = (ids: string[]) => ids.reduce((a, id) => {
+      const p = simPlayer(snap.entries.find((e) => e.id === id)!, 70);
+      return a + p.attrs.pbPower! + p.attrs.pbFinesse! + p.attrs.anchor!;
+    }, 0);
+    const units = snap.units.filter((u) => u.linemen.length >= 5).sort((a, b) => grade(a.linemen) - grade(b.linemen));
+    const median = (ids: string[]) => {
+      const offense = { ...rosters.offense };
+      OL.forEach((k, j) => (offense[k] = simPlayer(snap.entries.find((e) => e.id === ids[j])!, 70 + j)));
+      const ts: number[] = [];
+      for (let k = 0; k < 60; k++) {
+        const s = createPlay({ seed: 9000 + k * 7919, offense, defense: rosters.defense, play: PLAYS[k % PLAYS.length]!, def: DEF_CALLS[k % DEF_CALLS.length]!, los: 35, toGo: 10, user: true });
+        runToWhistle(s, (st) => input({ snap: st.tick === 0 }));
+        ts.push(s.t);
+      }
+      return ts.sort((a, b) => a - b)[30]!;
+    };
+    const best = median(units[units.length - 1]!.linemen);
+    const worst = median(units[0]!.linemen);
+    expect(best - worst).toBeGreaterThan(0.5);
   });
 });
 
@@ -238,5 +274,457 @@ describe('sim: one-button juke', () => {
     expect(jukeSide(s, c, { x: 1, y: 0 }, 1)).toBe('jukeR');
     d.pos = { x: c.pos.x + 3, y: c.pos.y - 1 }; // ahead, to his right
     expect(jukeSide(s, c, { x: 1, y: 0 }, 1)).toBe('jukeL');
+  });
+});
+
+describe('sim: carrier feel (M5.5)', () => {
+  const carrier = () => {
+    const s = setup(3, playById('trips-stick'), defById('cover3'), true);
+    const c = s.agents[s.icons[0]!]!;
+    c.vel = { x: c.fx.vmax, y: 0 };
+    return { s, c };
+  };
+  it('a juke builds its sidestep over the plant instead of in one tick', () => {
+    const { s, c } = carrier();
+    expect(startMove(s, c, 'jukeL')).toBe(true);
+    expect(c.vel.y).toBe(0);
+    applyImpulse(c);
+    const one = c.vel.y;
+    expect(one).toBeGreaterThan(0);
+    for (let k = 0; k < 10; k++) applyImpulse(c);
+    expect(c.impulse).toBeNull();
+    expect(c.vel.y).toBeGreaterThan(one * 4);
+  });
+  it('a move pressed during the last one fires when he can start it (the buffer)', () => {
+    const { s, c } = carrier();
+    const tick = () => {
+      tickMoves(c);
+      bufferedMove(s, c, null);
+    };
+    expect(startMove(s, c, 'jukeL')).toBe(true);
+    // Spin pressed 5 ticks before the juke's cooldown ends: buffered, then fires.
+    while (c.moveCooldown > 5) tickMoves(c);
+    bufferedMove(s, c, 'spin');
+    expect(c.moveBuf?.mv).toBe('spin');
+    for (let k = 0; k < 6; k++) tick();
+    expect(c.move).toBe('spin');
+    expect(c.moveBuf).toBeNull();
+    // Pressed too early (more than the buffer before he can): dropped.
+    while (c.moveCooldown > 20) tickMoves(c);
+    bufferedMove(s, c, 'jukeR');
+    for (let k = 0; k < 12; k++) tick();
+    expect(c.moveBuf).toBeNull();
+    expect(c.move === 'jukeR').toBe(false);
+  });
+  it('a sharp cut at speed slows him into the plant; a gentle bend does not', () => {
+    const { c } = carrier();
+    const v = c.fx.vmax;
+    const bend = cutWeight(c, { x: v, y: v * 0.2 });
+    expect(Math.hypot(bend.x, bend.y)).toBeCloseTo(Math.hypot(v, v * 0.2), 5);
+    const cut = cutWeight(c, { x: 0, y: v });
+    expect(Math.hypot(cut.x, cut.y) / v).toBeCloseTo(0.77, 1);
+    const back = cutWeight(c, { x: -v, y: 0 });
+    expect(Math.hypot(back.x, back.y) / v).toBeCloseTo(0.6, 2);
+  });
+});
+
+describe('sim: the field has edges (M5.5)', () => {
+  // Every player within a step of the field while the play is live, and no
+  // live ball carrier past an end line: AI plays everywhere on the field,
+  // and a user who runs for the sideline and the back of the end zone.
+  const bounds = (s: PlayState) => {
+    for (const a of s.agents) {
+      expect(Math.abs(a.pos.y)).toBeLessThanOrEqual(FIELD_HALF_W + STEP_OUT + 1e-6);
+      expect(a.pos.x).toBeLessThanOrEqual(END_X + STEP_OUT + 1e-6);
+      expect(a.pos.x).toBeGreaterThanOrEqual(BACK_X - STEP_OUT - 1e-6);
+    }
+    if (s.carrier >= 0) {
+      const c = s.agents[s.carrier]!;
+      expect(c.pos.x).toBeLessThanOrEqual(END_X);
+      expect(c.pos.x).toBeGreaterThanOrEqual(BACK_X);
+    }
+  };
+  const live = (s: PlayState, inputAt: (s: PlayState) => InputFrame) => {
+    for (let k = 0; k < 60 * 30 && !s.result; k++) {
+      stepPlay(s, inputAt(s));
+      if (!s.result) bounds(s);
+    }
+    expect(s.result).toBeDefined();
+    return s;
+  };
+  const at = (seed: number, los: number, play = PLAYS[seed % PLAYS.length]!, def = DEF_CALLS[seed % DEF_CALLS.length]!, user = false) =>
+    createPlay({ seed, offense: rosters.offense, defense: rosters.defense, play, def, los, ballY: ((seed % 3) - 1) * 6, toGo: 10, user });
+
+  it('AI plays from their own goal line to the opponent 5 stay on the field', () => {
+    for (let k = 0; k < 60; k++) live(at(700 + k, [5, 35, 60, 85, 95][k % 5]!), () => NEUTRAL);
+  });
+
+  it('a user carrier who runs for the sideline or the end line is dead there, never past it', () => {
+    for (let k = 0; k < 30; k++) {
+      const side = k % 2 ? 1 : -1;
+      const s = live(at(900 + k, [30, 70, 92][k % 3]!, PLAYS[k % PLAYS.length], DEF_CALLS[k % DEF_CALLS.length], true), (st) =>
+        input({ snap: st.tick === 0, throwHeld: st.tick >= 70 && st.tick < 74 ? 1 : 0, move: st.phase === 'carrier' ? { x: k % 3 === 2 ? 1 : 0.3, y: k % 3 === 2 ? 0 : side } : { x: 0, y: 0 } }),
+      );
+      const r = s.result!;
+      if (r.reason === 'outOfBounds') {
+        const ev = s.events.find((e) => e.type === 'outOfBounds')!;
+        // Spotted where he went out: on the line, within a foot.
+        expect(Math.abs(Math.abs(ev.at!.y) - FIELD_HALF_W) < OOB_FOOT + 0.05 || Math.abs(ev.at!.x - END_X) < OOB_FOOT + 0.05).toBe(true);
+        expect(r.spot).toBeLessThanOrEqual(ev.at!.x + 1e-6);
+      }
+    }
+  });
+
+  /**
+   * A play with the user's receiver already carrying the ball at a spot,
+   * running a velocity. `tackler`: one defender standing there (everyone
+   * else is down); `inp` overrides the input on a tick (a dive).
+   */
+  const carrying = (pos: { x: number; y: number }, vel: { x: number; y: number }, opt: { tackler?: { x: number; y: number }; inp?: (k: number) => Partial<InputFrame> } = {}) => {
+    const s = at(4, 80, PLAYS[0], DEF_CALLS[0], true);
+    stepPlay(s, input({ snap: true }));
+    // Past the first 0.4 s after the snap, when tackles can happen.
+    for (let k = 0; k < 30; k++) stepPlay(s, NEUTRAL);
+    const c = s.agents[s.icons[0]!]!;
+    for (const i of s.def) s.agents[i]!.down = true; // nobody to tackle him
+    s.blocks.length = 0;
+    if (opt.tackler) {
+      const d = s.agents[s.def[0]!]!;
+      d.down = false;
+      d.busy = 0;
+      d.pos = { ...opt.tackler };
+      d.vel = { x: 0, y: 0 };
+      d.hist.push({ pos: { ...opt.tackler }, vel: { x: 0, y: 0 } });
+    }
+    c.pos = { ...pos };
+    c.vel = { ...vel };
+    c.hist.push({ pos: { ...pos }, vel: { ...vel } });
+    s.ball.mode = 'held';
+    s.ball.holder = c.i;
+    s.carrier = c.i;
+    s.phase = 'carrier';
+    const n = Math.hypot(vel.x, vel.y);
+    for (let k = 0; k < 120 && !s.result; k++) stepPlay(s, input({ move: { x: vel.x / n, y: vel.y / n }, ...opt.inp?.(k) }));
+    return s;
+  };
+
+  // Touchdowns (owner's bug: a catch in the end zone spotted at the 1). The
+  // rule: the ball's forward point breaking the plane in bounds, checked
+  // before any tackle in the same tick; a catch with the ball in the end
+  // zone scores at the catch.
+  it('a dive that gets the ball across the plane scores, though his body lands short', () => {
+    const s = carrying({ x: 98.2, y: 0 }, { x: 5, y: 0 }, { inp: (k) => ({ dive: k === 0 }) });
+    const c = s.agents[s.carrier]!;
+    expect(s.result!.touchdown).toBe(true);
+    expect(s.result!.reason).toBe('touchdown');
+    expect(c.pos.x).toBeLessThan(GOAL_X);
+  });
+
+  it('a runner hit at the goal line with the ball across scores (the tackle does not win the tick)', () => {
+    // Ball already over, body short, a tackler on him.
+    const a = carrying({ x: 99.65, y: 0 }, { x: 2, y: 0 }, { tackler: { x: 100.3, y: 0 } });
+    expect(a.result!.touchdown).toBe(true);
+    expect(a.events.some((e) => e.type === 'tackle')).toBe(false);
+    // The ball breaks the plane during the same tick he's hit.
+    const b = carrying({ x: 99.5, y: 0 }, { x: 7, y: 0 }, { tackler: { x: 100.2, y: 0.3 } });
+    expect(b.result!.touchdown).toBe(true);
+    // Short of it, hit: down at the ball's spot, short of the goal line.
+    const c = carrying({ x: 98.6, y: 0 }, { x: 1, y: 0 }, { tackler: { x: 99.2, y: 0 } });
+    if (!c.result!.touchdown) expect(c.result!.spot).toBeLessThan(GOAL_X);
+  });
+
+  it('a catch in the end zone is a touchdown at the catch, even with a tackler on him', () => {
+    let inside = 0;
+    for (const los of [80, 88, 94]) {
+      for (const play of PLAYS) {
+        for (let k = 0; k < 12; k++) {
+          const s = createPlay({ seed: 1000 + k * 7919, offense: rosters.offense, defense: rosters.defense, play, def: DEF_CALLS[k % DEF_CALLS.length]!, los, toGo: 10, user: false });
+          runToWhistle(s, () => NEUTRAL);
+          const c = s.events.find((e) => e.type === 'catch');
+          if (!c || c.at!.x + 0.4 < GOAL_X || s.events.some((e) => e.type === 'catchOutOfBounds')) continue;
+          inside++;
+          expect(s.result!.touchdown).toBe(true);
+          expect(s.result!.reason).toBe('touchdown');
+          // Scored on the catch tick: nothing after it but the whistle.
+          const tdT = s.events.find((e) => e.type === 'touchdown')!.t;
+          expect(tdT).toBe(c.t);
+        }
+      }
+    }
+    expect(inside).toBeGreaterThan(5);
+  });
+
+  it('a carrier who steps out before the pylon does not score', () => {
+    // Two yards out, a foot from the sideline, angling out: he's out before the goal line.
+    const s = carrying({ x: 98, y: FIELD_HALF_W - 0.5 }, { x: 6, y: 2.5 });
+    expect(s.result!.touchdown).toBe(false);
+    expect(s.result!.reason).toBe('outOfBounds');
+    expect(s.result!.spot).toBeLessThan(GOAL_X);
+  });
+
+  it('a carrier who crosses the goal line in bounds, then goes out, scores', () => {
+    const s = carrying({ x: 99.6, y: FIELD_HALF_W - 0.8 }, { x: 7, y: 1 });
+    expect(s.result!.touchdown).toBe(true);
+    expect(s.events.find((e) => e.type === 'touchdown')!.at!.x).toBeCloseTo(GOAL_X, 1);
+  });
+
+  it('a carrier already out the back of the end zone does not score', () => {
+    expect(outAt({ x: 109.7, y: 0 }, { x: 110.1, y: 0 })).not.toBeNull();
+    // Holding the ball past the end line (out of bounds) is never a touchdown, even though he's past the goal line.
+    const s = carrying({ x: END_X + 0.3, y: 0 }, { x: 2, y: 0 });
+    expect(s.result!.touchdown).toBe(false);
+    // Nor is one who's already out over the sideline when he reaches the goal line.
+    const t = carrying({ x: 99.9, y: FIELD_HALF_W + 0.1 }, { x: 5, y: 0 });
+    expect(t.result!.touchdown).toBe(false);
+  });
+
+  it('a catch behind the end line is incomplete, never a touchdown', () => {
+    let deep = 0;
+    for (let k = 0; k < 80; k++) {
+      const s = at(3000 + k, 97, playById('trips-four-verts'), DEF_CALLS[k % DEF_CALLS.length], true);
+      live(s, (st) => input({ snap: st.tick === 0, throwHeld: st.tick >= 80 && st.tick < 104 ? 1 + (k % 4) : 0, aim: { x: 1, y: 0.5 } }));
+      const td = s.events.find((e) => e.type === 'touchdown');
+      if (td) expect(td.at!.x).toBeLessThanOrEqual(END_X);
+      const out = s.events.find((e) => e.type === 'catchOutOfBounds');
+      if (out && out.at!.x > END_X - OOB_FOOT) {
+        deep++;
+        expect(s.result!.reason).toBe('incomplete');
+        expect(s.result!.touchdown).toBe(false);
+      }
+    }
+    expect(deep).toBeGreaterThan(0);
+  });
+});
+
+describe('sim: hot routes (M5.5)', () => {
+  it('a hot route at the line replaces the play route from the snap, and replays exactly', () => {
+    for (const route of HOT_ROUTES) {
+      const make = () => setup(41, playById('trips-stick'), defById('cover3'), true);
+      const script = (st: PlayState) => input({ hotRoute: st.tick === 0 ? { icon: 1, route } : null, snap: st.tick === 2, throwHeld: st.tick >= 90 && st.tick < 94 ? 1 : 0 });
+      const s = make();
+      stepPlay(s, script(s));
+      stepPlay(s, script(s));
+      stepPlay(s, script(s));
+      const r = s.agents[s.icons[0]!]!;
+      expect(s.hot[r.slot as OffSlot]).toBe(route);
+      expect(r.route!.pts.length).toBe(ROUTES[route].length);
+      expect(s.events.some((e) => e.type === 'hotRoute')).toBe(true);
+      runToWhistle(s, script);
+      const again = runToWhistle(make(), script);
+      expect(hashPlay(again)).toBe(hashPlay(s));
+      // Every hot route stays on the field.
+      for (const q of r.route!.pts) expect(Math.abs(q.y)).toBeLessThan(FIELD_HALF_W);
+    }
+  });
+  it('ignores a hot route that is not on the list or for an icon that does not exist', () => {
+    const s = setup(41, playById('trips-stick'), defById('cover3'), true);
+    stepPlay(s, input({ hotRoute: { icon: 9, route: 'go' } }));
+    stepPlay(s, input({ hotRoute: { icon: 1, route: 'wheel' } }));
+    expect(Object.keys(s.hot)).toEqual([]);
+  });
+});
+
+describe('feel clips (M5.5): the scripted plays behind the videos', () => {
+  const run = (c: (typeof CLIPS)[number]) => runToWhistle(createPlay({ seed: c.seed, offense: rosters.offense, defense: rosters.defense, play: playById(c.play), def: defById(c.def), los: c.los, toGo: 10, user: true }), c.script);
+  it('each clip still shows what it is named for', () => {
+    const [rac, sack, broken] = CLIPS.map(run);
+    const racCatch = rac!.events.find((e) => e.type === 'catch')!;
+    expect(rac!.agents[rac!.carrier]!.pos.x - racCatch.at!.x).toBeGreaterThan(12);
+    expect(sack!.result!.sack).toBe(true);
+    expect(broken!.events.some((e) => e.type === 'brokenTackle')).toBe(true);
+  });
+});
+
+describe('sim: M5.5 feedback round (items 3–7)', () => {
+  const pass = (seed: number, play: string, def: string) => createPlay({ seed, offense: rosters.offense, defense: rosters.defense, play: playById(play), def: defById(def), los: 35, toGo: 10, user: false });
+
+  it('catches in stride: a go route is flat out when the ball gets there (no stopping to wait)', () => {
+    let seen = 0;
+    for (let k = 0; k < 40 && seen < 5; k++) {
+      const s = createPlay({ seed: 300 + k, offense: rosters.offense, defense: rosters.defense, play: playById('trips-four-verts'), def: defById('cover3'), los: 35, toGo: 10, user: true });
+      stepPlay(s, input({ snap: true }));
+      const icon = 1 + (k % 4);
+      let before = -1;
+      let caught = false;
+      for (let t = 0; t < 2400 && !s.result && !caught; t++) {
+        const f = t < 95 ? NEUTRAL : t < 100 ? input({ throwHeld: icon }) : NEUTRAL;
+        const r = s.agents[s.icons[icon - 1]!]!;
+        before = Math.hypot(r.vel.x, r.vel.y) / r.fx.vmax;
+        const n = s.events.length;
+        stepPlay(s, f);
+        caught = s.events.slice(n).some((e) => e.type === 'catch' && e.who![0] === r.i);
+      }
+      if (!caught || (s.pass?.airYards ?? 0) < 15) continue;
+      seen++;
+      // Led to where he'll be at full speed: the ball meets him on the run.
+      expect(before).toBeGreaterThan(0.75);
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+
+  it('leads a receiver where he will be flat out, and a break costs him ground', () => {
+    const s = pass(1, 'trips-four-verts', 'cover3');
+    for (let t = 0; t < 60; t++) stepPlay(s, NEUTRAL);
+    const r = s.agents[s.icons[2]!]!; // the Z's go route: straight
+    const T = 1.2;
+    const at = lead(r, T);
+    expect(at.x - r.pos.x).toBeGreaterThan(Math.hypot(r.vel.x, r.vel.y) * T * 0.99);
+    // The same run through a 90° break covers less ground than straight.
+    const bent = { ...r, route: { pts: [v2(r.pos.x + 2, r.pos.y), v2(r.pos.x + 2, r.pos.y - 20)], sit: [false, false], idx: 0 } } as typeof r;
+    const b = lead(bent, T);
+    expect(Math.hypot(b.x - r.pos.x, b.y - r.pos.y)).toBeLessThan(Math.hypot(at.x - r.pos.x, at.y - r.pos.y));
+  });
+
+  it('context speed: flat out in space, controlled with a tackler on him, protect is the jog', () => {
+    const s = pass(1, 'trips-stick', 'cover3');
+    stepPlay(s, NEUTRAL);
+    const c = s.agents[s.icons[0]!]!;
+    for (const i of s.def) s.agents[i]!.down = true;
+    expect(carrierPace(s, c, 1)).toBe(1);
+    const d = s.agents[s.def[0]!]!;
+    d.down = false;
+    d.pos = v2(c.pos.x + 1.2, c.pos.y);
+    s.blocks.length = 0;
+    expect(carrierPace(s, c, 1)).toBeLessThan(0.9);
+    d.pos = v2(c.pos.x - 1.5, c.pos.y); // behind him: run away from him
+    expect(carrierPace(s, c, 1)).toBe(1);
+  });
+
+  /** A carrier alone in open field at the 40, standing, the defense down. */
+  const openField = () => {
+    const s = createPlay({ seed: 4, offense: rosters.offense, defense: rosters.defense, play: PLAYS[0]!, def: DEF_CALLS[0]!, los: 30, toGo: 10, user: true });
+    stepPlay(s, input({ snap: true }));
+    for (let t = 0; t < 30; t++) stepPlay(s, NEUTRAL);
+    const c = s.agents[s.icons[0]!]!;
+    for (const i of s.def) s.agents[i]!.down = true;
+    c.pos = v2(40, 0);
+    c.vel = v2(0, 0);
+    s.ball.mode = 'held';
+    s.ball.holder = c.i;
+    s.carrier = c.i;
+    s.phase = 'carrier';
+    return { s, c };
+  };
+
+  it('a diagonal is as fast as straight ahead, whatever the stick reads', () => {
+    const speedAfter = (move: { x: number; y: number }) => {
+      const { s, c } = openField();
+      for (let t = 0; t < 90; t++) stepPlay(s, input({ move }));
+      return Math.hypot(c.vel.x, c.vel.y);
+    };
+    const straight = speedAfter({ x: 1, y: 0 });
+    expect(straight).toBeGreaterThan(8);
+    // 45° from the keyboard (normalised) and from a pad whose full diagonal reads ~0.87.
+    expect(speedAfter({ x: Math.SQRT1_2, y: Math.SQRT1_2 })).toBeCloseTo(straight, 6);
+    expect(speedAfter({ x: 0.62, y: -0.62 })).toBeCloseTo(straight, 6);
+  });
+
+  it('the burst is his own: out of a cut into open field, not from a key, and not again for a while', () => {
+    const { s, c } = openField();
+    for (let t = 0; t < 60; t++) stepPlay(s, input({ move: { x: 1, y: 0 } }));
+    // Running straight in space: nothing to burst out of.
+    expect(s.events.some((e) => e.data?.move === 'burst')).toBe(false);
+    // A hard cut (to 60° off his line), then straightening out of it.
+    const st = c.stamina;
+    for (let t = 0; t < 40; t++) stepPlay(s, input({ move: { x: 0.5, y: 0.866 } }));
+    const bursts = s.events.filter((e) => e.data?.move === 'burst');
+    expect(bursts.length).toBe(1);
+    expect(st - c.stamina).toBeGreaterThan(0.04);
+    // Another cut straight away: still cooling down.
+    for (let t = 0; t < 40; t++) stepPlay(s, input({ move: { x: 1, y: 0 } }));
+    expect(s.events.filter((e) => e.data?.move === 'burst').length).toBe(1);
+    // A quicker back's burst lasts longer (Acceleration).
+    const { s: s2, c: slow } = openField();
+    (slow.fx as { a: (k: string) => number }).a = (k: string) => (k === 'acceleration' ? 0 : 0.8);
+    for (let t = 0; t < 60; t++) stepPlay(s2, input({ move: { x: 1, y: 0 } }));
+    let len = 0;
+    for (let t = 0; t < 60; t++) {
+      stepPlay(s2, input({ move: { x: 0.5, y: 0.866 } }));
+      if (slow.burst > len) len = slow.burst;
+    }
+    expect(len).toBe(18);
+    expect(c.fx.a('acceleration')).toBeGreaterThan(0.5);
+  });
+
+  it('the scramble: tuck it, throw on the run before the line, a runner past it', () => {
+    const s = createPlay({ seed: 4, offense: rosters.offense, defense: rosters.defense, play: playById('trips-stick'), def: defById('cover3'), los: 30, toGo: 10, user: true });
+    stepPlay(s, input({ snap: true }));
+    for (let t = 0; t < 50; t++) stepPlay(s, NEUTRAL);
+    stepPlay(s, input({ scramble: true }));
+    expect(s.scrambleT).toBeGreaterThan(0);
+    expect(s.events.some((e) => e.data?.move === 'tuck')).toBe(true);
+    // Still behind the line: a throw on the run goes.
+    for (let t = 0; t < 12; t++) stepPlay(s, input({ move: { x: 0.3, y: 1 }, throwHeld: 1 }));
+    for (let t = 0; t < 30 && !s.events.some((e) => e.type === 'throw'); t++) stepPlay(s, input({ move: { x: 0.3, y: 1 } }));
+    expect(s.events.some((e) => e.type === 'throw')).toBe(true);
+    // Another snap: run it past the line and he's a ball carrier.
+    const r = createPlay({ seed: 4, offense: rosters.offense, defense: rosters.defense, play: playById('trips-stick'), def: defById('cover3'), los: 30, toGo: 10, user: true });
+    stepPlay(r, input({ snap: true }));
+    for (let t = 0; t < 30; t++) stepPlay(r, NEUTRAL);
+    for (const i of r.def) r.agents[i]!.down = true;
+    stepPlay(r, input({ scramble: true }));
+    for (let t = 0; t < 240 && r.phase !== 'carrier' && !r.result; t++) stepPlay(r, input({ move: { x: 1, y: 0 } }));
+    expect(r.phase).toBe('carrier');
+    expect(r.carrier).toBe(r.qb);
+  });
+
+  it('a QB slide: down where it began, and nobody may hit him', () => {
+    const s = createPlay({ seed: 4, offense: rosters.offense, defense: rosters.defense, play: playById('trips-stick'), def: defById('cover3'), los: 30, toGo: 10, user: true });
+    stepPlay(s, input({ snap: true }));
+    for (let t = 0; t < 30; t++) stepPlay(s, NEUTRAL);
+    const qb = s.agents[s.qb]!;
+    for (const i of s.def) s.agents[i]!.down = true;
+    qb.pos = v2(38, 0);
+    qb.vel = v2(7, 0);
+    qb.hist.push({ pos: { ...qb.pos }, vel: { ...qb.vel } });
+    s.ball.holder = qb.i;
+    s.carrier = qb.i;
+    s.phase = 'carrier';
+    // A tackler right on him as he slides.
+    const d = s.agents[s.def[0]!]!;
+    d.down = false;
+    d.pos = v2(40, 0.3);
+    s.blocks.length = 0;
+    stepPlay(s, input({ move: { x: 1, y: 0 }, dive: true }));
+    expect(s.events.some((e) => e.data?.move === 'slide')).toBe(true);
+    const from = qb.mem.slideX as number;
+    for (let t = 0; t < 120 && !s.result; t++) stepPlay(s, input({ move: { x: 1, y: 0 } }));
+    expect(s.events.some((e) => e.type === 'hit')).toBe(false);
+    // The spot is the ball's nose where the slide began (BALL_NOSE 0.4 ahead of him at most).
+    expect(s.result!.spot).toBeLessThan(from + 0.41);
+  });
+
+  it('run schemes: gap schemes pull the backside guard (and counter the tackle), zone steps play-side', () => {
+    expect(pullers(playById('singleback-power'))).toEqual({ kick: 'LG' });
+    expect(pullers(playById('singleback-counter'))).toEqual({ kick: 'LG', lead: 'LT' });
+    expect(pullers(playById('singleback-inside-zone'))).toEqual({});
+    const roles = blockRoles(playById('singleback-power'));
+    expect(roles.RT).toBe('down');
+    expect(roles.LT).toBe('hinge');
+    expect(roles.TE).toBe('climb');
+    expect(blockRoles(playById('singleback-outside-zone')).LG).toBe('reach');
+    // The handoff happens and the back carries it.
+    const s = pass(3, 'singleback-power', 'cover3');
+    runToWhistle(s, () => NEUTRAL);
+    expect(s.events.some((e) => e.type === 'handoff')).toBe(true);
+  });
+
+  it('play action: the linebackers read run off the fake, then pass once the ball comes out', () => {
+    const s = pass(3, 'singleback-pa-post', 'cover3');
+    const mlb = s.agents[s.slot.MLB!]!;
+    const beliefs: string[] = [];
+    for (let t = 0; t < 120; t++) {
+      stepPlay(s, NEUTRAL);
+      beliefs.push(belief(s, mlb));
+    }
+    const firstRun = beliefs.indexOf('run');
+    expect(firstRun).toBeGreaterThan(0);
+    expect(beliefs.slice(firstRun).includes('pass')).toBe(true);
+  });
+
+  it('fatigue from a big hit carries into the next play', () => {
+    const s = createPlay({ seed: 4, offense: rosters.offense, defense: rosters.defense, play: PLAYS[0]!, def: DEF_CALLS[0]!, los: 30, toGo: 10, user: true, fatigue: { X: 0.3 } });
+    expect(s.agents[s.slot.X!]!.stamina).toBeCloseTo(0.7, 5);
+    expect(s.agents[s.slot.Z!]!.stamina).toBe(1);
   });
 });

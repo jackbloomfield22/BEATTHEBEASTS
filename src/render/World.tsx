@@ -14,6 +14,7 @@ import { CROWD_DRAWN, CROWD_HIGH_CAMERA, createCrowd } from './crowd/crowd';
 import { crowdEnergy } from './crowd/reactions';
 import { createPrecipitation, PRECIP_COUNT } from './weather/precip';
 import { createParticlePool } from './vfx/particles';
+import { setActiveVfx } from './vfx/active';
 import type { EffectId } from './vfx/effects';
 import { urlFlags } from '@/app/platform';
 import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, createRoofMaterial, createSeatingMaterial, stadiumUniforms } from './stadium/materials';
@@ -93,6 +94,10 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
 
   const precip = useMemo(() => createPrecipitation(), []);
   const vfx = useMemo(() => createParticlePool(), []);
+  useEffect(() => {
+    setActiveVfx(vfx);
+    return () => setActiveVfx(null);
+  }, [vfx]);
   // Spectators drawn: the density setting's share of the (shuffled) seats.
   // On Low and Medium, a high camera (broadcast, All-22) draws 75% of that:
   // from there a spectator is a few pixels and a thinner crowd reads the

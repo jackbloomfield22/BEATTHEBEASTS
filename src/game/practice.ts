@@ -6,12 +6,16 @@
 
 import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
+import { loadJSON, saveJSON } from '@/app/storage';
 import type { InputContext } from '@/input/actions';
-import { createPlay, DEAD_HOLD, DEF_CALLS, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type SimPlayer } from '@/sim';
+import { createPlay, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type DefCall, type InputFrame, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayResult, type PlayState, type SimPlayer } from '@/sim';
+import { getSettings } from '@/app/settings';
 import { Controls } from './controls';
 import { describe, type ResultCard } from './describe';
 import { loadPracticeRosters } from './rosters';
 import { SimRunner } from './runner';
+import type { Clip } from './clips';
+import { routeOf } from '@/sim/ai';
 import { nextSituation, startSituation, type Situation } from './situation';
 
 export type PracticeStage = 'loading' | 'call' | 'presnap' | 'live' | 'result' | 'paused';
@@ -30,8 +34,16 @@ export interface PracticeUi {
   phase: Phase;
   /** The user's ball carrier (offense) or null. */
   carrier: string | null;
+  /** The QB has tucked it and is scrambling (he can still throw until the line). */
+  scrambling: boolean;
+  /** The session's box score. */
+  box: BoxScore;
   /** The catch the user called while the ball is in the air (null = none yet). */
   catchType: CatchType | null;
+  /** The first-play tutorial's step, or null when it's off (done once, or skipped). */
+  tutorial: TutorialStep | null;
+  /** The hot-route picker, when open: choosing the receiver, then his route. */
+  hot: HotPicker | null;
   result: ResultCard | null;
   /** The coverage the Beasts played on the last snap (revealed with the result). */
   lastCover: string | null;
@@ -50,14 +62,85 @@ export const usePractice = create<PracticeUi>(() => ({
   playId: PLAYS[0]!.id,
   phase: 'presnap',
   carrier: null,
+  scrambling: false,
+  box: emptyBox(),
   catchType: null,
+  tutorial: null,
+  hot: null,
   result: null,
   lastCover: null,
   seriesOver: false,
   error: null,
 }));
 
+/**
+ * The first-play tutorial (M5.5): one pass through snap, read, throw, catch
+ * and run on the first Practice Field play, then never again unless asked
+ * for (pause menu). Each step shows while it applies and moves on with the
+ * play; it never waits for the player.
+ */
+export type HotPicker = { stage: 'receiver' } | { stage: 'route'; icon: number; focus: number };
+
+export type TutorialStep = 'snap' | 'read' | 'throw' | 'catch' | 'run';
+const TUTORIAL_KEY = 'practice.tutorialDone';
+/** Seconds of the read step before it hands to the throw step (sooner if he picks a receiver). */
+const READ_STEP = 1.6;
+/**
+ * The session's first catch plays at this speed (the ball's flight and the
+ * catch), so the catch buttons register before they're second nature. The
+ * speed eases in and out rather than cutting.
+ */
+const FIRST_CATCH_SPEED = 0.6;
+
 const set = (p: Partial<PracticeUi>) => usePractice.setState(p);
+
+/** The practice session's box score (the offense's side). */
+export interface BoxScore {
+  plays: number;
+  yards: number;
+  att: number;
+  comp: number;
+  passYds: number;
+  rushes: number;
+  rushYds: number;
+  sacks: number;
+  turnovers: number;
+  /** Big hits the Beasts put on you. */
+  bigHits: number;
+}
+export function emptyBox(): BoxScore {
+  return { plays: 0, yards: 0, att: 0, comp: 0, passYds: 0, rushes: 0, rushYds: 0, sacks: 0, turnovers: 0, bigHits: 0 };
+}
+
+function addToBox(b: BoxScore, r: PlayResult): BoxScore {
+  const n = { ...b, plays: b.plays + 1 };
+  const y = r.offenseBall ? r.yards : 0;
+  n.yards += y;
+  if (r.sack) n.sacks++;
+  if (r.pass?.attempted) {
+    n.att++;
+    if (r.pass.complete && !r.pass.intercepted) {
+      n.comp++;
+      n.passYds += y;
+    }
+  } else if (!r.sack) {
+    n.rushes++;
+    n.rushYds += y;
+  }
+  if (!r.offenseBall) n.turnovers++;
+  if (r.bigHit) n.bigHits++;
+  return n;
+}
+
+/**
+ * A big hit's toll (feedback item 5): the man who took it starts the next
+ * play down this much stamina (by the hit's force), and gets half of it
+ * back each play after.
+ */
+const hitToll = (force: number) => Math.min(0.45, 0.15 + force * 0.02);
+/** Hit-stop on a big hit (wall-clock s at ~5% speed), and the slow motion on the biggest (force ≥ 9) if it's on. */
+const HIT_STOP = 0.09;
+const SLOWMO = { force: 9, secs: 0.8, speed: 0.35 };
 const get = () => usePractice.getState();
 
 function contextFor(phase: Phase, userCarrier: boolean): InputContext {
@@ -88,23 +171,43 @@ class PracticeSession {
   private seedBase = 0;
   private snaps = 0;
   private offPause: (() => void) | null = null;
+  private offHot: (() => void) | null = null;
   private resuming = false;
   private stageBeforePause: PracticeStage = 'presnap';
   /** The situation of the last snap (Run It Back replays from here). */
   private lastSit: Situation = startSituation(0, 0);
   /** Bumped whenever a new play is set up (the render re-reads the runner). */
   playId = 0;
+  /** The tutorial runs on the next play. */
+  private tutorialNext = !loadJSON<boolean>(TUTORIAL_KEY);
+  private readSince = -1;
+  private hotPop: (() => void) | null = null;
+  /** The route art stays up this long after a hot route is called (performance.now() ms). */
+  routeFlashUntil = 0;
+  /** The session's first catch is still to come (it plays slowed). */
+  private firstCatch = true;
+  /** Stamina each offensive player is down going into the next play (a big hit's toll). */
+  private fatigue: Partial<Record<OffSlot, number>> = {};
+  /** Sim events already looked at this play (for the hit-stop). */
+  private seenEvents = 0;
+  private hitStop = 0;
+  private slowmo = 0;
+  private sawAir = false;
 
   /** Enter the Practice Field: load the rosters, open the play call. */
   async enter(seed?: number): Promise<void> {
     this.seedBase = seed ?? (Math.random() * 0x7fffffff) | 0;
     this.snaps = 0;
+    this.firstCatch = true;
     set({ stage: 'loading', result: null, error: null });
     this.offPause ??= Input.onAction((id, info) => {
       if (id !== 'global.pause' || info.repeat) return;
       const st = get().stage;
       // The same Esc that just resumed (menu.back fires first) doesn't pause again.
       if ((st === 'presnap' || st === 'live') && !this.resuming) this.pause();
+    });
+    this.offHot ??= Input.onAction((id, info) => {
+      if (!info.repeat) this.onHot(id, info.device);
     });
     try {
       this.rosters ??= await loadPracticeRosters();
@@ -115,9 +218,12 @@ class PracticeSession {
   }
 
   leave(): void {
+    this.closeHot();
     this.setContext(null);
     this.offPause?.();
     this.offPause = null;
+    this.offHot?.();
+    this.offHot = null;
     this.runner = null;
     this.playId++;
     this.controls.clear();
@@ -132,6 +238,26 @@ class PracticeSession {
     this.snaps++;
     const def = ui.cover === 'random' ? DEF_CALLS[(seed >>> 4) % DEF_CALLS.length]! : defById(ui.cover);
     const sit = ui.seriesOver ? startSituation(ui.startSpot, ui.startDowns) : ui.situation;
+    this.setUp(playId, seed, def, sit);
+  }
+
+  /** A scripted clip's play (the feel videos): its seed, coverage and spot. Step it with tickWith. */
+  callClip(c: Clip): void {
+    set({ playId: c.play });
+    this.setUp(c.play, c.seed, defById(c.def), { ...startSituation(0, 0), los: c.los, ballY: 0, toGo: 10, down: 1 });
+  }
+
+  /** Step one tick with a given input (a scripted clip), through the same path as tick(). */
+  tickWith(inp: InputFrame): void {
+    if (!this.live()) return;
+    this.sync();
+    this.runner!.step(inp);
+    this.sync();
+  }
+
+  private setUp(playId: string, seed: number, def: DefCall, sit: Situation): void {
+    if (!this.rosters) return;
+    this.closeHot();
     const state = createPlay({
       seed,
       offense: this.rosters.offense,
@@ -143,13 +269,87 @@ class PracticeSession {
       toGo: sit.toGo,
       user: true,
       difficulty: this.difficulty,
+      fatigue: { ...this.fatigue },
     });
     this.runner = new SimRunner(state);
+    this.seenEvents = 0;
+    this.hitStop = 0;
+    this.slowmo = 0;
     this.lastSit = sit;
     this.playId++;
     this.controls.clear();
     this.setContext('preSnap');
-    set({ stage: 'presnap', playId, situation: sit, playSit: sit, phase: 'presnap', carrier: null, result: null, lastCover: def.name, seriesOver: false });
+    this.readSince = -1;
+    this.sawAir = false;
+    set({ stage: 'presnap', playId, situation: sit, playSit: sit, phase: 'presnap', carrier: null, scrambling: false, result: null, lastCover: def.name, seriesOver: false, tutorial: this.tutorialNext ? 'snap' : null });
+  }
+
+  /**
+   * The hot-route picker (pre-snap): the hot-route key opens it; a
+   * receiver's number picks him; a route's number (or up/down and confirm)
+   * calls it. The call goes to the sim with the next tick, so a replay has it.
+   */
+  private onHot(id: string, device: string): void {
+    const ui = get();
+    if (ui.stage !== 'presnap' || !this.runner) return;
+    const s = this.runner.state;
+    const hot = ui.hot;
+    if (!hot) {
+      if (id === 'preSnap.hotRoute') {
+        this.hotPop = Input.pushContext('hotRoute');
+        set({ hot: { stage: 'receiver' } });
+      }
+      return;
+    }
+    if (id === 'hot.cancel') return this.closeHot();
+    const n = id.startsWith('hot.n') ? Number(id.slice(5)) : 0;
+    if (hot.stage === 'receiver') {
+      if (n >= 1 && n <= s.icons.length) {
+        const cur = routeOf(s, s.agents[s.icons[n - 1]!]!);
+        set({ hot: { stage: 'route', icon: n, focus: Math.max(0, HOT_ROUTES.indexOf(cur as RouteName)) } });
+      }
+      return;
+    }
+    const pad = device === 'gamepad';
+    if (id === 'hot.up' || id === 'hot.down') {
+      const k = HOT_ROUTES.length;
+      set({ hot: { ...hot, focus: (hot.focus + (id === 'hot.up' ? k - 1 : 1)) % k } });
+    } else if (id === 'hot.confirm' || (pad && n === 1)) this.callHot(hot.icon, HOT_ROUTES[hot.focus]!);
+    else if (pad && n === 2) set({ hot: { stage: 'receiver' } });
+    else if (!pad && n >= 1 && n <= HOT_ROUTES.length) this.callHot(hot.icon, HOT_ROUTES[n - 1]!);
+  }
+
+  /** A route clicked in the picker. */
+  pickHot(icon: number, route: RouteName): void {
+    if (get().hot) this.callHot(icon, route);
+  }
+
+  private callHot(icon: number, route: RouteName): void {
+    this.controls.queueHot(icon, route);
+    this.routeFlashUntil = performance.now() + 1600;
+    this.closeHot();
+  }
+
+  closeHot(): void {
+    this.hotPop?.();
+    this.hotPop = null;
+    if (get().hot) set({ hot: null });
+  }
+
+  /** Stop the tutorial now and don't show it again. */
+  skipTutorial(): void {
+    this.tutorialNext = false;
+    saveJSON(TUTORIAL_KEY, true);
+    set({ tutorial: null });
+  }
+
+  /** Show the tutorial again on the next play. */
+  replayTutorial(): void {
+    this.tutorialNext = true;
+  }
+
+  get tutorialPending(): boolean {
+    return this.tutorialNext;
   }
 
   /** Run the same play again from the same spot (a new seed). */
@@ -166,6 +366,7 @@ class PracticeSession {
 
   pause(): void {
     if (!this.runner) return;
+    this.closeHot();
     this.stageBeforePause = get().stage;
     this.runner.paused = true;
     this.setContext(null);
@@ -195,7 +396,26 @@ class PracticeSession {
     if (!this.live()) return;
     // The UI and the input context follow the play tick by tick (a frame can
     // step several ticks: a catch and the carrier's first move can land in one).
-    this.runner!.advance(dt, () => {
+    const r = this.runner!;
+    // The session's first catch, if it's switched on (off by default: the play must never hitch at the catch).
+    const slow = this.firstCatch && getSettings().gameplay.firstCatchSlowmo && r.state.phase === 'air';
+    // A big hit: a beat of hit-stop, then (the biggest, if it's on) a moment of slow motion.
+    for (; this.seenEvents < r.state.events.length; this.seenEvents++) {
+      const e = r.state.events[this.seenEvents]!;
+      if (e.type !== 'hit' || !e.data?.big) continue;
+      this.hitStop = HIT_STOP;
+      if (getSettings().gameplay.bigHitSlowmo && Number(e.data.force ?? 0) >= SLOWMO.force) this.slowmo = SLOWMO.secs;
+    }
+    if (this.hitStop > 0) {
+      this.hitStop -= dt;
+      r.timeScale = 0.05;
+    } else {
+      if (this.slowmo > 0) this.slowmo -= dt;
+      const want = this.slowmo > 0 ? SLOWMO.speed : slow ? FIRST_CATCH_SPEED : 1;
+      r.timeScale += (want - r.timeScale) * (1 - Math.exp(-dt * 10));
+      if (Math.abs(r.timeScale - 1) < 1e-3) r.timeScale = 1;
+    }
+    r.advance(dt, () => {
       this.sync();
       return this.controls.sample();
     });
@@ -228,12 +448,46 @@ class PracticeSession {
       this.syncContext(false);
     }
     if (s.catchType !== get().catchType) set({ catchType: s.catchType });
+    if (s.scrambleT >= 0 !== get().scrambling) set({ scrambling: s.scrambleT >= 0 });
+    if (s.phase === 'air') this.sawAir = true;
+    else if (this.sawAir) this.firstCatch = false;
+    this.stepTutorial(s);
     if (s.result && get().stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) {
       const ui = get();
       const next = nextSituation(ui.situation, s.result, s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y);
       this.setContext(null);
-      set({ stage: 'result', result: describe(s), situation: next ?? startSituation(ui.startSpot, ui.startDowns), seriesOver: next === null });
+      // Fatigue for the next play: last play's toll recovers by half; a big hit adds his.
+      const f: Partial<Record<OffSlot, number>> = {};
+      for (const [k, v] of Object.entries(this.fatigue)) if (v && v / 2 > 0.02) f[k as OffSlot] = v / 2;
+      const bh = s.result.bigHit;
+      if (bh && s.agents[bh.on]!.side === 'off') {
+        const slot = s.agents[bh.on]!.slot as OffSlot;
+        f[slot] = Math.min(0.6, (f[slot] ?? 0) + hitToll(bh.force));
+      }
+      this.fatigue = f;
+      set({ stage: 'result', result: describe(s), situation: next ?? startSituation(ui.startSpot, ui.startDowns), seriesOver: next === null, box: addToBox(ui.box, s.result) });
     }
+  }
+
+  private stepTutorial(s: PlayState): void {
+    if (s.phase !== 'presnap' && get().hot) this.closeHot();
+    const step = get().tutorial;
+    if (!step) return;
+    let next: TutorialStep | null = step;
+    const pocket = s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket';
+    const c = s.carrier >= 0 ? s.agents[s.carrier]! : null;
+    if (s.result) {
+      // The play is over: the tutorial has done its one pass.
+      this.skipTutorial();
+      return;
+    }
+    if (pocket && step === 'snap') {
+      next = 'read';
+      this.readSince = s.t;
+    } else if (pocket && step === 'read' && (s.t - this.readSince > READ_STEP || this.controls.heldIcon)) next = 'throw';
+    else if (s.phase === 'air') next = 'catch';
+    else if (s.phase === 'carrier' && c?.side === 'off') next = 'run';
+    if (next !== step) set({ tutorial: next });
   }
 
   private syncContext(force: boolean): void {
@@ -259,6 +513,7 @@ if (import.meta.env.DEV) {
     __btbPractice: practice,
     __btbPracticeUi: usePractice,
     __btbInput: Input,
+    __btbClips: async () => (await import('./clips')).CLIPS,
     // The browser half of the determinism check (e2e/practice.spec.ts).
     __btbSimHashes: async () => (await import('./determinism')).simHashes(await loadPracticeRosters()),
   });
