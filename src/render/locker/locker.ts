@@ -4,7 +4,7 @@ import type { Slot } from '@data/legacy/types';
 import { ARC_R, CEILING_Y, LOCKER_D, LOCKER_H, ROD_Y, SEAT_H, SHELF_Y, TOP_H, frontOf, onArc, type LockerPlace } from './layout';
 import { lockerLit, lockerLightsWorld, lockerLightUniforms } from './lockerLights';
 import { cleatGeometry, gloveGeometry, hangerGeometry, helmetGeometry, jerseyGeometry, towelGeometry } from './props';
-import { canvasTexture, drawJersey, drawNameplate, drawStickers, makeCanvas, washTexture, type PlateLine, type StickerSpec } from './textures';
+import { canvasTexture, drawJersey, drawNameplate, drawStallScreen, drawStickers, makeCanvas, washTexture, type PlateLine, type ScreenSpec, type StickerSpec } from './textures';
 
 // One stall of the Contenders' locker room and the way it dresses itself
 // when its man is drafted (M6 brief): the nameplate lights with his name and
@@ -55,7 +55,8 @@ export function createSharedLockerAssets(lit: <M extends THREE.MeshStandardMater
     // Gloss black with some metal, so the frames pick up the lit room and the edge strips (0x0e0e10 at 0.05 read as holes).
     lacquer: std({ color: 0x17171b, roughness: 0.3, metalness: 0.3 }),
     back: std({ color: 0x3a3a3e, map: backTex, roughness: 0.75 }),
-    cushion: std({ color: 0x151517, roughness: 0.55 }),
+    // Cognac leather (the second reference's seats), warm against the black lacquer.
+    cushion: std({ color: 0x7a4322, roughness: 0.42 }),
     chrome: std({ color: 0xd8d8dc, roughness: 0.25, metalness: 1 }),
     helmetShell: std({ color: 0x3a3d43, roughness: 0.14, metalness: 0.3 }), // satin black reads as gunmetal under a stall lamp (0x111214 vanished)
     helmetStripe: std({ color: 0xaaff00, roughness: 0.3, emissive: new THREE.Color(0xaaff00), emissiveIntensity: 0.12 }),
@@ -97,6 +98,8 @@ function drop(t: number, start: number, land: number, h: number, bounce = 0.02):
 const WARM = new THREE.Color(1, 0.8, 0.58);
 /** The Contenders' lime (#aaff00) for a bare stall's edge frame. */
 const LIME_EDGE = new THREE.Color(0xaaff00);
+/** The interiors' glow: amber, warmer than the lamp, so a lit stall reads as warm light, not grey (ref-04). */
+const AMBER = new THREE.Color(1, 0.62, 0.32);
 const _tint = new THREE.Color();
 
 export class Locker {
@@ -114,6 +117,8 @@ export class Locker {
   private backMat: THREE.MeshStandardMaterial;
   /** What a blank nameplate says: the slot waiting to be filled. */
   private blank: string;
+  /** The display over the stall. */
+  private screen: { canvas: HTMLCanvasElement; tex: THREE.CanvasTexture; mat: THREE.MeshBasicMaterial };
   private lightIdx: number;
   private kit = new THREE.Group();
   private jerseys: { mesh: THREE.Mesh; canvas: HTMLCanvasElement; tex: THREE.CanvasTexture; hanger: THREE.Mesh; baseY: number }[] = [];
@@ -132,7 +137,7 @@ export class Locker {
    * edge, a soft interior wash and a dim plate; a dressed one brightens and
    * takes its position's color.
    */
-  levels = { stall: 14, under: 9, emptyStall: 4, plate: 2.2, plateEmpty: 0.7, wash: 5, pool: 0.5, edge: 3.2, edgeEmpty: 1.4, inner: 1.1, innerEmpty: 0.45 };
+  levels = { stall: 14, under: 9, emptyStall: 4, plate: 2.2, plateEmpty: 0.7, wash: 5, pool: 0.5, edge: 3.2, edgeEmpty: 1.4, inner: 0.6, innerEmpty: 0.25, screen: 1, screenEmpty: 0.6 };
   private pool: THREE.MeshBasicMaterial;
 
   constructor(place: LockerPlace, shared: SharedLockerAssets) {
@@ -219,6 +224,22 @@ export class Locker {
     edgeBox(W - 0.1, 0.016, 0, LOCKER_H - TOP_H - 0.008);
     edgeBox(W - 0.1, 0.016, 0, SEAT_H + 0.004);
 
+    // The screen over the stall, in a thin black bezel on the wall above it.
+    const sc2 = makeCanvas(place.slot === 'OL' ? 1280 : 512, 320);
+    const stex2 = canvasTexture(sc2);
+    const smat = new THREE.MeshBasicMaterial({ map: stex2, color: 0x000000 });
+    this.screen = { canvas: sc2, tex: stex2, mat: smat };
+    const SCREEN_H = 0.66;
+    const bezel = new THREE.Mesh(geo.box, shared.lacquer);
+    bezel.scale.set(W - 0.02, SCREEN_H + 0.05, 0.05);
+    bezel.position.set(0, LOCKER_H + 0.24 + SCREEN_H / 2, -D + 0.02);
+    g.add(bezel);
+    const scr = new THREE.Mesh(geo.plane, smat);
+    scr.scale.set(W - 0.07, SCREEN_H, 1);
+    scr.position.set(0, LOCKER_H + 0.24 + SCREEN_H / 2, -D + 0.046);
+    g.add(scr);
+    this.drawScreen();
+
     // The underlight's pool on the carpet (additive; the light loop lights
     // the carpet too, but a soft decal keeps the color reading at a distance).
     this.pool = new THREE.MeshBasicMaterial({ map: shared.poolTex, color: 0x000000, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -303,6 +324,13 @@ export class Locker {
     this.clear();
   }
 
+  private drawScreen(): void {
+    const o = this.occupant;
+    const spec: ScreenSpec | null = o ? { men: o.men.map((m) => ({ name: m.name, num: m.num })), team: o.stickers.tag?.team ?? '', decade: o.stickers.tag?.decade ?? '' } : null;
+    drawStallScreen(this.screen.canvas, spec, this.blank, `#${this.posColor.getHexString()}`);
+    this.screen.tex.needsUpdate = true;
+  }
+
   /** Dress the stall for a drafted man (or men). `instant` skips the animation. */
   dress(o: LockerOccupant, instant = false): void {
     this.occupant = o;
@@ -316,6 +344,7 @@ export class Locker {
       j.tex.needsUpdate = true;
     });
     this.kit.visible = true;
+    this.drawScreen();
     this.t = instant ? 99 : 0;
     this.stickersShown = instant ? 99 : 0;
     drawStickers(this.stickers.canvas, o.stickers, this.stickersShown);
@@ -331,6 +360,7 @@ export class Locker {
     this.plate.tex.needsUpdate = true;
     drawStickers(this.stickers.canvas, null);
     this.stickers.tex.needsUpdate = true;
+    this.drawScreen();
     this.kit.visible = true;
     // Only the hanger(s) stay.
     for (const j of this.jerseys) j.mesh.visible = false;
@@ -355,6 +385,7 @@ export class Locker {
     }
     this.plate.tex.needsUpdate = true;
     this.stickers.tex.needsUpdate = true;
+    this.drawScreen();
   }
 
   get dressing(): boolean {
@@ -420,7 +451,8 @@ export class Locker {
     this.strip.color.copy(WARM).multiplyScalar(1.4 + 3.8 * on);
     // The edge frame: lime when bare, the position's color as he moves in.
     this.edge.color.copy(LIME_EDGE).lerp(this.posColor, under).multiplyScalar(L.edgeEmpty + (L.edge - L.edgeEmpty) * under);
-    this.backMat.emissive.copy(WARM).lerp(_tint.copy(WARM).lerp(this.posColor, 0.3), under);
+    this.backMat.emissive.copy(AMBER).lerp(_tint.copy(AMBER).lerp(this.posColor, 0.3), under);
+    this.screen.mat.color.setScalar(L.screenEmpty + (L.screen - L.screenEmpty) * under);
     this.backMat.emissiveIntensity = L.innerEmpty + (L.inner - L.innerEmpty) * on;
     if (!this.occupant) this.plate.mat.emissiveIntensity = L.plateEmpty;
     const ul = lockerLightsWorld[9 + this.lightIdx]!;

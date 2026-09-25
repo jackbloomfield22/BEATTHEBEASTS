@@ -33,14 +33,20 @@ export const SHOTS = {
   choose: { pos: onArc(WALL_ANGLE + 0.62, ARC_R - 6.2, 1.7), look: onArc(WALL_ANGLE + 0.36, ARC_R, WALL.base + WALL.height / 2 - 0.1), fov: 52 },
 } satisfies Record<string, Pose>;
 
-/** A stall's shot: square on, a little right of center so the hologram stands clear at left. */
+/**
+ * A stall's shot: square on from ~5 m, low, looking a little up, so the
+ * stall holds the middle of the frame with its neighbors, the screens and
+ * the ceiling above, and the bench and the carpet below (the room stays in
+ * the picture; a tight close-up lost it). A touch right of center so the
+ * hologram stands clear at left.
+ */
 export function stallShot(slot: Slot): Pose {
   const l = LOCKER_OF[slot];
   const ol = slot === 'OL';
   return {
-    pos: onArc(l.angle + (ol ? 0.2 : 0.45) / ARC_R, ARC_R - (ol ? 4.3 : 3.25), 1.5),
-    look: onArc(l.angle - (ol ? 0 : 0.18) / ARC_R, ARC_R, 1.28),
-    fov: ol ? 46 : 44,
+    pos: onArc(l.angle + 0.3 / ARC_R, ARC_R - (ol ? 5.9 : 5.2), 1.35),
+    look: onArc(l.angle - 0.1 / ARC_R, ARC_R, 1.75),
+    fov: ol ? 57 : 55,
   };
 }
 

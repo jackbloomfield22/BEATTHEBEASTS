@@ -39,6 +39,14 @@ export interface MoodSpec {
   plateEmpty: number;
   /** A bare stall's lamp, as a share of a dressed one's. */
   emptyStall: number;
+  /** The screens over the stalls: bare and dressed. */
+  screenEmpty: number;
+  screen: number;
+  /** The wood paneling's warm wash (emissive), and the lime cove strip where wall meets ceiling. */
+  wood: number;
+  cove: number;
+  /** The downlights' pools on the carpet. */
+  downPool: number;
   /** Stall lamp and underlight levels. */
   stall: number;
   under: number;
@@ -77,6 +85,11 @@ export const MOODS: Record<RoomMood, MoodSpec> = {
     inner: 1.2,
     plateEmpty: 0.8,
     emptyStall: 0.4,
+    screenEmpty: 0.7,
+    screen: 1.15,
+    wood: 0.22,
+    cove: 2.2,
+    downPool: 0.5,
     stall: 12,
     under: 7,
     plate: 2.4,
@@ -101,6 +114,11 @@ export const MOODS: Record<RoomMood, MoodSpec> = {
     inner: 1.1,
     plateEmpty: 0.9,
     emptyStall: 0.25,
+    screenEmpty: 0.55,
+    screen: 1.1,
+    wood: 0.03,
+    cove: 1.2,
+    downPool: 0.04,
     stall: 16,
     under: 10,
     plate: 3,
@@ -119,7 +137,21 @@ const WARM = new THREE.Color(1, 0.78, 0.55);
 /** The dropped ceiling panel's radius: over the middle of the room, clear of the row's lamps. */
 const PANEL_R = 5.4;
 
-type GlowKind = 'ceiling' | 'accent' | 'tunnel' | 'panel' | 'bench';
+type GlowKind = 'ceiling' | 'accent' | 'tunnel' | 'panel' | 'bench' | 'cove';
+
+/** A downlight's pool on the carpet: a soft round falloff. */
+function spotTexture(): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const ctx = c.getContext('2d')!;
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.4, 'rgba(255,255,255,0.45)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
 
 /** A strip of pool light: bright along one long edge (the plinth), fading across the carpet. */
 function poolStrip(): THREE.Texture {
@@ -177,7 +209,9 @@ export class Room {
     const doorHalf = (DOOR.width / 2 + 0.25) / ROOM_R;
     const slat = slatTexture();
     slat.repeat.set((2 * Math.PI * ROOM_R) / 1.1, 1);
-    const wallMat = lockerLit(new THREE.MeshStandardMaterial({ map: slat, roughness: 0.62, side: THREE.BackSide }));
+    // Oak paneling with a warm wash of its own (the cove and downlights grazing it), so it reads as wood, not a dark gap.
+    const wallMat = lockerLit(new THREE.MeshStandardMaterial({ map: slat, roughness: 0.55, side: THREE.BackSide, emissive: new THREE.Color(1, 0.86, 0.7), emissiveMap: slat, emissiveIntensity: 0 }));
+    this.woodMat = wallMat;
     // CylinderGeometry's theta starts at +Z and runs toward +X; our angles run from -Z toward +X.
     const toTheta = (a: number) => Math.PI - a;
     const wallGeo = new THREE.CylinderGeometry(ROOM_R + 0.05, ROOM_R + 0.05, CEILING_Y, 128, 1, true, toTheta(DOOR_ANGLE - doorHalf), 2 * Math.PI - 2 * doorHalf);
@@ -204,7 +238,7 @@ export class Room {
     // room, its holes lit from above with the mark picked out in lime, a lit
     // reveal around its edge, and the plaster around it warm with bounce
     // from the panel and the row.
-    this.bounceMat = new THREE.MeshStandardMaterial({ color: 0x1c1a18, roughness: 0.9, emissive: new THREE.Color(1, 0.9, 0.78), emissiveMap: bounceTexture(), emissiveIntensity: 0 });
+    this.bounceMat = new THREE.MeshStandardMaterial({ color: 0x6e6a64, roughness: 0.9, emissive: new THREE.Color(1, 0.9, 0.78), emissiveMap: bounceTexture(), emissiveIntensity: 0 });
     const ceil = new THREE.Mesh(new THREE.CircleGeometry(ROOM_R + 0.1, 96).rotateX(Math.PI / 2), this.bounceMat);
     ceil.position.y = CEILING_Y;
     s.add(ceil);
@@ -221,13 +255,25 @@ export class Room {
     const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(PANEL_R + 0.03, 0.03, 6, 160).rotateX(Math.PI / 2), ring.mat);
     ringMesh.position.y = CEILING_Y - 0.16;
     s.add(ringMesh);
+    // The cove: a lime strip where the wall meets the ceiling, all the way round
+    // (the second reference's red cove, in our lime).
+    const cove = this.glow(LIMEC, 'cove');
+    const coveMesh = new THREE.Mesh(new THREE.TorusGeometry(ROOM_R - 0.06, 0.035, 6, 192).rotateX(Math.PI / 2), cove.mat);
+    coveMesh.position.y = CEILING_Y - 0.06;
+    s.add(coveMesh);
+    // Recessed downlights: a ring over the row and one around the panel, each
+    // with its pool on the carpet.
     const dl = this.glow(WARM, 'ceiling');
-    const downs = new THREE.InstancedMesh(new THREE.CircleGeometry(0.07, 16).rotateX(Math.PI / 2), dl.mat, 28);
-    for (let i = 0; i < 28; i++) {
-      const a = (i / 28) * Math.PI * 2;
-      downs.setMatrixAt(i, new THREE.Matrix4().makeTranslation(7.3 * Math.sin(a), CEILING_Y - 0.005, -7.3 * Math.cos(a)));
-    }
+    const spots: THREE.Vector3[] = [];
+    for (let i = 0; i < 36; i++) spots.push(onArc(((i + 0.5) / 36) * Math.PI * 2, 7.6, CEILING_Y - 0.005));
+    for (let i = 0; i < 16; i++) spots.push(onArc((i / 16) * Math.PI * 2, PANEL_R + 0.55, CEILING_Y - 0.005));
+    const downs = new THREE.InstancedMesh(new THREE.CircleGeometry(0.065, 16).rotateX(Math.PI / 2), dl.mat, spots.length);
+    spots.forEach((p, i) => downs.setMatrixAt(i, new THREE.Matrix4().makeTranslation(p.x, p.y, p.z)));
     s.add(downs);
+    this.downPool = new THREE.MeshBasicMaterial({ map: spotTexture(), color: 0x000000, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    const spotPools = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.7, 1.7).rotateX(-Math.PI / 2), this.downPool, spots.length);
+    spots.forEach((p, i) => spotPools.setMatrixAt(i, new THREE.Matrix4().makeTranslation(p.x, 0.006, p.z)));
+    s.add(spotPools);
 
     // Bench in front of the row: an upholstered arc with a lime welt.
     const r1 = ARC_R - 2.45;
@@ -345,6 +391,8 @@ export class Room {
 
   private benchPool: THREE.MeshBasicMaterial;
   private panelMat: THREE.MeshBasicMaterial;
+  private downPool: THREE.MeshBasicMaterial;
+  private woodMat: THREE.MeshStandardMaterial;
 
   /** Redraw the carpet's and the ceiling's marks once the display face has loaded. */
   redrawMarks(): void {
@@ -388,14 +436,16 @@ export class Room {
   applyMood(mood: RoomMood, pmrem: THREE.PMREMGenerator): void {
     this.mood = mood;
     const m = MOODS[mood];
-    const glowLevel: Record<GlowKind, number> = { ceiling: m.ceiling, accent: m.accent, tunnel: 2.5, panel: m.panel, bench: m.bench };
+    const glowLevel: Record<GlowKind, number> = { ceiling: m.ceiling, accent: m.accent, tunnel: 2.5, panel: m.panel, bench: m.bench, cove: m.cove };
     for (const e of this.emissive) e.mat.color.copy(e.base).multiplyScalar(glowLevel[e.kind]);
     for (const e of this.envMats) e.mat.color.copy(e.base).multiplyScalar(e.kind === 'ceiling' ? m.ceiling / 2.2 : e.kind === 'accent' ? m.accent / 2.2 : e.kind === 'panel' ? m.panel : m.stall / 16);
     this.carpetMat.emissiveIntensity = m.carpet;
     this.bounceMat.emissiveIntensity = m.bounce;
+    this.woodMat.emissiveIntensity = m.wood;
+    this.downPool.color.setRGB(1, 0.86, 0.68).multiplyScalar(m.downPool);
     this.benchPool.color.setRGB(0.85, 1, 0.55).multiplyScalar(m.bench * 0.22);
     for (const l of this.lockers) {
-      l.levels = { stall: m.stall, under: m.under, emptyStall: m.stall * m.emptyStall, plate: m.plate, plateEmpty: m.plateEmpty, wash: m.wash, pool: m.pool, edge: m.edge, edgeEmpty: m.edgeEmpty, inner: m.inner, innerEmpty: m.innerEmpty };
+      l.levels = { stall: m.stall, under: m.under, emptyStall: m.stall * m.emptyStall, plate: m.plate, plateEmpty: m.plateEmpty, wash: m.wash, pool: m.pool, edge: m.edge, edgeEmpty: m.edgeEmpty, inner: m.inner, innerEmpty: m.innerEmpty, screen: m.screen, screenEmpty: m.screenEmpty };
       l.applyLights();
     }
     const prev = this.scene.environment;

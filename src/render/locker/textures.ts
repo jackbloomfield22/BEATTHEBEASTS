@@ -317,13 +317,24 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, fi
  */
 export function carpetTexture(): THREE.CanvasTexture {
   const [c, ctx] = canvas(2048, 2048);
-  ctx.fillStyle = '#26272b';
+  ctx.fillStyle = '#56585d';
   ctx.fillRect(0, 0, 2048, 2048);
-  grain(ctx, 2048, 2048, 0.09, 3, 2);
+  // Cut-pile chevrons (the second reference's patterned grey), ~0.5 m a row.
+  ctx.strokeStyle = '#46484d';
+  ctx.lineWidth = 9;
+  for (let y = -60; y < 2108; y += 52)
+    for (let x = -60; x < 2108; x += 104) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + 26);
+      ctx.lineTo(x + 52, y);
+      ctx.lineTo(x + 104, y + 26);
+      ctx.stroke();
+    }
+  grain(ctx, 2048, 2048, 0.1, 3, 2);
   const cx = 1024;
   const cy = 1024;
   // Outer border band follows the room's wall.
-  ctx.strokeStyle = '#0d0d0e';
+  ctx.strokeStyle = '#2c2d31';
   ctx.lineWidth = 60;
   ctx.beginPath();
   ctx.arc(cx, cy, 990, 0, Math.PI * 2);
@@ -338,7 +349,7 @@ export function carpetTexture(): THREE.CanvasTexture {
   ctx.beginPath();
   ctx.arc(cx, cy, 318, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.fillStyle = '#0e0f10';
+  ctx.fillStyle = '#1b1c1f';
   ctx.beginPath();
   ctx.arc(cx, cy, 300, 0, Math.PI * 2);
   ctx.fill();
@@ -373,29 +384,32 @@ export function carpetTexture(): THREE.CanvasTexture {
   return t;
 }
 
-/** Dark stained wood slats for the walls between and behind the stalls. */
+/**
+ * Warm oak slats for the walls between and above the stalls (the second
+ * reference: wood paneling that warms the room around the lit lockers).
+ */
 export function slatTexture(): THREE.CanvasTexture {
   const [c, ctx] = canvas(512, 512);
-  ctx.fillStyle = '#1b1411';
+  ctx.fillStyle = '#6a4629';
   ctx.fillRect(0, 0, 512, 512);
   for (let x = 0; x < 512; x += 32) {
     const g = ctx.createLinearGradient(x, 0, x + 32, 0);
-    g.addColorStop(0, '#0c0908');
-    g.addColorStop(0.12, '#2a1e18');
-    g.addColorStop(0.5, '#231913');
-    g.addColorStop(0.92, '#1a120e');
-    g.addColorStop(1, '#070505');
+    g.addColorStop(0, '#24170d');
+    g.addColorStop(0.1, '#7c5534');
+    g.addColorStop(0.5, '#936a43');
+    g.addColorStop(0.9, '#6f4b2d');
+    g.addColorStop(1, '#1c1209');
     ctx.fillStyle = g;
     ctx.fillRect(x, 0, 32, 512);
   }
   // Grain streaks.
   let s = 99;
   const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
-  for (let i = 0; i < 900; i++) {
+  for (let i = 0; i < 1400; i++) {
     const x = rnd() * 512;
     const y = rnd() * 512;
-    ctx.fillStyle = `rgba(${rnd() > 0.5 ? '255,220,190' : '0,0,0'},${0.03 + rnd() * 0.05})`;
-    ctx.fillRect(x, y, 1, 20 + rnd() * 80);
+    ctx.fillStyle = `rgba(${rnd() > 0.5 ? '255,214,170' : '40,22,10'},${0.04 + rnd() * 0.07})`;
+    ctx.fillRect(x, y, 1, 20 + rnd() * 90);
   }
   const t = canvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -490,6 +504,89 @@ export function washTexture(): THREE.CanvasTexture {
     }
   ctx.putImageData(img, 0, 0);
   return canvasTexture(c, false);
+}
+
+/** What a stall's screen shows: its man (or five), or nothing yet. */
+export interface ScreenSpec {
+  men: { name: string; num: number }[];
+  team: string;
+  decade: string;
+}
+
+/**
+ * The display over each stall (the second reference's player screens): a
+ * dressed stall shows its man's number and name on his position's color,
+ * with the team and decade; an empty one shows the slot waiting, dimly.
+ * No photos: type and color only.
+ */
+export function drawStallScreen(c: HTMLCanvasElement, spec: ScreenSpec | null, slot: string, posHex: string): void {
+  const ctx = c.getContext('2d')!;
+  const { width: w, height: h } = c;
+  const bg = ctx.createLinearGradient(0, 0, w, h);
+  bg.addColorStop(0, '#07080a');
+  bg.addColorStop(1, spec ? '#111317' : '#0a0b0d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+  // Scan lines, faint.
+  ctx.fillStyle = 'rgba(255,255,255,0.025)';
+  for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 1);
+  ctx.textBaseline = 'middle';
+  if (!spec) {
+    ctx.strokeStyle = 'rgba(170,255,0,0.25)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(10, 10, w - 20, h - 20);
+    ctx.fillStyle = 'rgba(170,255,0,0.4)';
+    ctx.textAlign = 'center';
+    fitFont(ctx, slot, 'Bungee', h * 0.34, w * 0.7);
+    ctx.fillText(slot, w / 2, h * 0.46);
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    fitFont(ctx, 'CONTENDERS', 'Bungee', h * 0.1, w * 0.6);
+    ctx.fillText('CONTENDERS', w / 2, h * 0.76);
+    return;
+  }
+  // His position's color sweeping in from the lower left.
+  const sweep = ctx.createLinearGradient(0, h, w * 0.75, 0);
+  sweep.addColorStop(0, posHex);
+  sweep.addColorStop(0.55, 'rgba(0,0,0,0)');
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = sweep;
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = LIME;
+  ctx.fillRect(0, h - 10, w, 10);
+  const one = spec.men.length === 1;
+  if (one) {
+    const m = spec.men[0]!;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = posHex;
+    fitFont(ctx, String(m.num), 'Bungee', h * 0.62, w * 0.36);
+    ctx.fillText(String(m.num), w * 0.05, h * 0.46);
+    const parts = m.name.split(' ');
+    const last = (parts.length > 1 ? parts.slice(1).join(' ') : m.name).toUpperCase();
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    fitFont(ctx, parts[0]!.toUpperCase(), 'Bungee', h * 0.11, w * 0.5);
+    ctx.fillText(parts[0]!.toUpperCase(), w * 0.45, h * 0.24);
+    ctx.fillStyle = INK;
+    fitFont(ctx, last, 'Bungee', h * 0.24, w * 0.52);
+    ctx.fillText(last, w * 0.45, h * 0.44);
+  } else {
+    ctx.textAlign = 'center';
+    const colW = w / spec.men.length;
+    spec.men.forEach((m, i) => {
+      ctx.fillStyle = posHex;
+      fitFont(ctx, String(m.num), 'Bungee', h * 0.4, colW * 0.8);
+      ctx.fillText(String(m.num), colW * (i + 0.5), h * 0.34);
+      ctx.fillStyle = INK;
+      const last = (m.name.split(' ').slice(-1)[0] ?? m.name).toUpperCase();
+      fitFont(ctx, last, 'Bungee', h * 0.1, colW * 0.9);
+      ctx.fillText(last, colW * (i + 0.5), h * 0.6);
+    });
+  }
+  ctx.textAlign = one ? 'left' : 'center';
+  ctx.fillStyle = 'rgba(170,255,0,0.9)';
+  const tag = `${spec.team} · ${spec.decade}`;
+  fitFont(ctx, tag, 'Bungee', h * 0.1, w * 0.5);
+  ctx.fillText(tag, one ? w * 0.45 : w / 2, h * (one ? 0.66 : 0.8));
 }
 
 export function makeCanvas(w: number, h: number): HTMLCanvasElement {
