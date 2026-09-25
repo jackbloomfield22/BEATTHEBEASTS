@@ -35,7 +35,7 @@ export class VideoWall {
   private dirty = true;
   /** Seconds the room has run (the wall's clock). */
   now = 0;
-  brightness = 1.6;
+  brightness = 2.3;
 
   constructor() {
     this.canvas = document.createElement('canvas');
@@ -78,10 +78,13 @@ export class VideoWall {
 
   private draw(): void {
     const ctx = this.ctx;
-    // Screen base: near-black with a faint scanline and a lime frame line.
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#07090a');
-    g.addColorStop(1, '#030404');
+    // Screen base: a lit field, the room's brightest surface (the owner's
+    // brief: the room sits around a third of the wall), lime-green at the
+    // center falling to deep green at the edges, then the scanline and frame.
+    const g = ctx.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, W * 0.62);
+    g.addColorStop(0, '#5c7a30');
+    g.addColorStop(0.55, '#2c3d19');
+    g.addColorStop(1, '#101609');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = 'rgba(255,255,255,0.018)';
