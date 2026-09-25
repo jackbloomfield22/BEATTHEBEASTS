@@ -292,6 +292,18 @@ A new standing principle heads CLAUDE.md: **football is art**. The harness numbe
 | Sacks / scrambles | 8.8% / 4.6% | 8.8% / 4.9% | 6–7% / 4–6% |
 | Runs: yards per carry, 10+, 20+ | 4.63, 16.7%, 3.9% | 4.97, 17.9%, 4.0% | 4.3, ~11%, ~2.5% |
 
+**Watched, not just measured** (the Practice screenshots and the re-recorded `completion-rac.mp4`, stick against Cover 2):
+- **The throw:** the ball to the stick is in the air about 0.6 s. It reads as a thrown ball, not a lob.
+- **The catch:** he catches it on the move and keeps going; there's no stop-and-start.
+- **The camera:** it ends its push-in with the receiver and his defender comfortably in frame.
+- **At the catch:** one defender is on him, and nobody else converges on the ball.
+- **After the catch:** the defense flows to him, and three are around him at the tackle about 2 s later. That's a gang tackle at the end of a run, which is football, not the pile at the catch you saw.
+- **The prompts:** the pocket row reads "Hold Touch" and "R Scramble"; the carrier row has no burst.
+- **Weak:**
+  - The catch-call panel still sits over the receiver's legs in the arrival shot.
+  - The screenshot play (a held touch pass into Cover 3) is now intercepted by the deep safety. That's right for a floated ball into Cover 3, but the stills no longer show a completion; the video does.
+- **Latency:** re-measured, still under 100 ms. A carrier's move reads 5 frames (83 ms) in the new clip because the test's Up key is now a 90° cut at full speed. The tool now counts the plant into the cut as the visible response, the first thing you see. Juke and stiff arm are 1 frame; spin and protect weren't reached before the tackle this run.
+
 **Honest gaps.**
 1. **Yards per attempt rose to 9.6.** The driven ball opens more 10–19 yd windows, and receivers keep their speed through the catch. Completion is still high (72%). Soft zones underneath remain the next coverage job.
 2. **Runs** are a little richer again (4.97 yd per carry) from the burst out of cuts, still boom-or-bust with a low median.
