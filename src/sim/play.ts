@@ -559,8 +559,11 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
         }
       }
     }
-    // A defender squaring up close: try a move that suits him (AI).
-    if (c.moveCooldown === 0 && c.busy === 0) {
+    // A defender squaring up close: try a move that suits him (AI). Not a
+    // QB on a sneak still in the pile (within a yard of the line): he
+    // lowers his pads and pushes; a juke there looked like a stumble.
+    const inPile = s.setup.play.run?.scheme === 'sneak' && c.i === s.qb && (c.pos.x - s.setup.los) * attack < 1;
+    if (c.moveCooldown === 0 && c.busy === 0 && !inPile) {
       for (const i of attack > 0 ? s.def : s.off) {
         const d = s.agents[i]!;
         if (d.down || blockOf(s, i)) continue;
