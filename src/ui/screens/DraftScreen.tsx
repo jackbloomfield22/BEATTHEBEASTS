@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { SLOT_ORDER } from '@data/legacy/constants';
+import { DECADES, SLOT_ORDER } from '@data/legacy/constants';
 import { POS_HEX, DECADE_HEX } from '@data/legacy/palette';
+import { PLAYERS } from '@data/legacy/players';
 import type { Slot } from '@data/legacy/types';
 import { useApp } from '@/app/appStore';
 import { useDraft, SPIN_S, isComplete } from '@/app/draftStore';
 import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
-import { autoAllowed, skipsAllowed, type Candidate } from '@/game/draft';
+import { autoAllowed, skipsAllowed, type Candidate, type Pair, type Roster } from '@/game/draft';
 import { compareForList, highlights, plainTraits } from '@/game/draftView';
 import { DRESS_DELAY } from '@/render/locker/LockerRoom';
 import { DRESS_END } from '@/render/locker/locker';
 import { useMenuNav } from '../nav';
-import { Hints } from '../components/controls';
+import { Hints, KeyCap } from '../components/controls';
 import { TraitList } from '../scouting/TraitBadge';
 import '../styles/draft.css';
 
@@ -24,6 +25,12 @@ import '../styles/draft.css';
 // Room shows name, position, team and decade only. Each pick dresses its
 // locker. Keyboard, mouse and gamepad drive all of it through the shared
 // menu actions.
+//
+// The stage (.draft-stage) is one spot at the center of the frame, between
+// the locker row and the CONTENDERS mark on the carpet: the Spin button with
+// the round counter above it, the reel readout while the reels turn, the
+// Draft confirm while a pair is on the wall, and Walk out once the row is
+// full, so the eye never has to move. Its height is --stage-y in draft.css.
 
 const POS_TABS = ['All', 'QB', 'RB', 'WR', 'TE', 'OL'] as const;
 type PosTab = (typeof POS_TABS)[number];
@@ -258,34 +265,52 @@ export function DraftScreen() {
 
       {phase === 'loading' ? <div className="draft-center">Opening the locker room…</div> : null}
 
-      {phase === 'intro' ? (
-        <div className="draft-card intro">
-          <div className="kicker">Tonight's opponent</div>
-          <h2>The Beasts</h2>
-          <p>An all-time defense, on the wall. Draft nine lockers from the reels and beat them.</p>
-          <div className="draft-actions">
-            <button className="btn primary" onClick={doSpin}>
-              Spin round 1
+      {draft && (phase === 'intro' || phase === 'ready' || phase === 'spinning' || (choosing && draft.pair) || phase === 'complete' || phase === 'viewing') ? (
+        <div className={`draft-stage stage-${phase}`}>
+          <div className="stage-top">
+            {phase === 'intro' ? (
+              <div className="stage-caption">
+                Tonight: <b>The Beasts</b>, an all-time defense
+              </div>
+            ) : null}
+            <div className="stage-round">{phase === 'viewing' ? 'Your last roster' : complete ? 'Nine lockers, full' : `Round ${round} of 9`}</div>
+          </div>
+          {phase === 'spinning' && draft.pair ? (
+            <div className="stage-btn is-reels">
+              <Reels key={d.version} pair={draft.pair} roster={draft.roster} />
+            </div>
+          ) : choosing ? (
+            <button className={`stage-btn is-draft ${cur?.slot ? '' : 'is-off'}`} tabIndex={-1} onClick={() => doPick(cur)} style={cur ? { ['--pc' as string]: POS_HEX[cur.pos]!.solid } : undefined}>
+              <span className="stage-text">
+                <span className="stage-verb">{cur ? (cur.slot ? `Draft → ${SLOT_LABEL[cur.slot]}` : `${cur.pos} is full`) : 'Choose a player'}</span>
+                <span className={`stage-label ${cur && stageName(cur).length > 16 ? 'is-long' : ''}`}>{cur ? stageName(cur) : '—'}</span>
+              </span>
+              <KeyCap kb="Enter" pad="A" className="stage-key" />
             </button>
-            {canAuto ? (
-              <button className="btn" onClick={doAuto}>
-                Auto-Draft
+          ) : phase === 'complete' || phase === 'viewing' ? (
+            <button className="stage-btn" tabIndex={-1} onClick={walkOut}>
+              <span className="stage-text">
+                <span className="stage-label">Walk out</span>
+              </span>
+              <KeyCap kb="Enter" pad="A" className="stage-key" />
+            </button>
+          ) : (
+            <button className="stage-btn" tabIndex={-1} onClick={doSpin} disabled={phase === 'spinning'}>
+              <span className="stage-text">
+                <span className="stage-label">Spin</span>
+              </span>
+              <KeyCap kb="Enter" pad="A" className="stage-key" />
+            </button>
+          )}
+          <div className="stage-sub">
+            {(phase === 'intro' || phase === 'ready') && canAuto ? (
+              <button className="btn sm stage-alt" tabIndex={-1} onClick={doAuto}>
+                <KeyCap kb="R" pad="Y" /> {phase === 'intro' ? 'Auto-Draft' : 'Auto-Draft the rest'}
               </button>
             ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {phase === 'ready' ? (
-        <div className="draft-card ready">
-          <div className="kicker">Round {round} of 9</div>
-          <div className="draft-actions">
-            <button className="btn primary" onClick={doSpin}>
-              Spin
-            </button>
-            {canAuto ? (
-              <button className="btn" onClick={doAuto}>
-                Auto-Draft the rest
+            {phase === 'complete' || phase === 'viewing' ? (
+              <button className="btn sm stage-alt" tabIndex={-1} onClick={() => go('main')}>
+                Main menu
               </button>
             ) : null}
           </div>
@@ -313,11 +338,11 @@ export function DraftScreen() {
             </div>
             {canSkip ? (
               <div className="skips">
-                <button className="btn sm" disabled={draft.teamSkipUsed} onClick={() => useDraft.getState().skipTeam()}>
-                  <kbd>R</kbd> Team Skip
+                <button className="btn sm" tabIndex={-1} disabled={draft.teamSkipUsed} onClick={() => useDraft.getState().skipTeam()}>
+                  <KeyCap kb="R" pad="Y" /> Team Skip
                 </button>
-                <button className="btn sm" disabled={draft.eraSkipUsed} onClick={() => useDraft.getState().skipEra()}>
-                  <kbd>F</kbd> Era Skip
+                <button className="btn sm" tabIndex={-1} disabled={draft.eraSkipUsed} onClick={() => useDraft.getState().skipEra()}>
+                  <KeyCap kb="F" pad="X" /> Era Skip
                 </button>
               </div>
             ) : (
@@ -350,20 +375,7 @@ export function DraftScreen() {
         </aside>
       ) : null}
 
-      {phase === 'complete' || phase === 'viewing' ? (
-        <div className="draft-card ready">
-          <div className="kicker">{phase === 'viewing' ? 'Your last roster' : 'Nine lockers, full'}</div>
-          <div className="draft-actions">
-            <button className="btn primary" onClick={walkOut}>
-              Walk out
-            </button>
-            <button className="btn" onClick={() => go('main')}>
-              Main menu
-            </button>
-          </div>
-        </div>
-      ) : null}
-
+      {/* Enter (Spin, Draft, Walk out) and Auto-Draft show on the stage itself. */}
       <Hints
         items={
           choosing
@@ -371,26 +383,20 @@ export function DraftScreen() {
                 { kb: '↑↓', pad: 'D-Pad', label: 'Browse' },
                 { kb: 'Q E', pad: 'LB RB', label: 'Position' },
                 { kb: '/', pad: '—', label: 'Search' },
-                { kb: 'Enter', pad: 'A', label: 'Draft' },
                 ...(canSkip ? [{ kb: 'R', pad: 'Y', label: 'Team Skip' }, { kb: 'F', pad: 'X', label: 'Era Skip' }] : []),
               ]
             : phase === 'intro'
               ? [
-                  { kb: 'Enter', pad: 'A', label: 'Spin' },
                   { kb: 'Q E', pad: 'LB RB', label: 'Flip the Beasts' },
-                  ...(canAuto ? [{ kb: 'R', pad: 'Y', label: 'Auto-Draft' }] : []),
                   { kb: 'Esc', pad: 'B', label: 'Back' },
                 ]
               : phase === 'ready'
                 ? [
-                    { kb: 'Enter', pad: 'A', label: 'Spin' },
                     { kb: '← →', pad: 'D-Pad', label: 'Lockers' },
                     { kb: 'F', pad: 'X', label: 'The Beasts' },
-                    ...(canAuto ? [{ kb: 'R', pad: 'Y', label: 'Auto-Draft' }] : []),
                   ]
                 : phase === 'complete' || phase === 'viewing'
                   ? [
-                      { kb: 'Enter', pad: 'A', label: 'Walk out' },
                       { kb: '← →', pad: 'D-Pad', label: 'Lockers' },
                       { kb: 'Esc', pad: 'B', label: 'Back' },
                     ]
@@ -398,6 +404,60 @@ export function DraftScreen() {
         }
       />
     </div>
+  );
+}
+
+/** The name on the Draft confirm. */
+const stageName = (c: Candidate) => (c.kind === 'unit' ? `${c.team} ${c.decade} line` : c.name);
+
+/** Teams on the team reel (as the video wall's, LockerRoom.tsx). */
+const REEL_TEAMS = [...new Set(PLAYERS.map((p) => p.t))].sort();
+
+/**
+ * The reel readout on the stage while the reels turn: the same easing as
+ * the video wall's reels (videoWall.ts drawSlot: ~5 turns, cubic ease-out;
+ * the team reel stops at 82% of the spin, the decade reel at the end), timed
+ * from the moment this mounts (a skip remounts it). Display only.
+ */
+function Reels({ pair, roster }: { pair: Pair; roster: Roster }) {
+  const locked = urlFlags.shot !== null && !urlFlags.video;
+  const [t, setT] = useState(locked ? SPIN_S + 1 : 0);
+  useEffect(() => {
+    if (locked) return;
+    const start = performance.now();
+    let raf = 0;
+    let last = -1;
+    const tick = (now: number) => {
+      const s = (now - start) / 1000;
+      if (s - last >= 1 / 30) {
+        last = s;
+        setT(s);
+      }
+      if (s <= SPIN_S) raf = requestAnimationFrame(tick);
+      else setT(SPIN_S + 1);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [locked]);
+  // Once a '70s man is on the roster the decade reel skips the '70s (as the wall does).
+  const decades = useMemo(() => DECADES.filter((x) => x !== '1970s' || !Object.values(roster).some((p) => p?.decade === '1970s') || pair.d === '1970s'), [roster, pair]);
+  const reel = (items: readonly string[], final: string, stop: number) => {
+    const n = items.length;
+    const fi = Math.max(0, items.indexOf(final));
+    const u = Math.min(1, t / stop);
+    const turns = 5 * n;
+    const pos = fi + turns * (1 - Math.pow(1 - u, 3)) - turns;
+    return { text: u >= 1 ? final : items[((Math.round(pos) % n) + n) % n]!, done: u >= 1 };
+  };
+  const team = reel(REEL_TEAMS, pair.t, SPIN_S * 0.82);
+  const decade = reel(decades, pair.d, SPIN_S);
+  return (
+    <span className="stage-reels">
+      <span className={`reel ${team.done ? 'is-locked' : ''}`}>{team.text}</span>
+      <span className={`reel ${decade.done ? 'is-locked' : ''}`} style={decade.done ? { color: DECADE_HEX[decade.text]?.text } : undefined}>
+        {decade.text}
+      </span>
+    </span>
   );
 }
 
