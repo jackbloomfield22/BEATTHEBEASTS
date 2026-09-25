@@ -9,7 +9,7 @@
 - **M4.5 Character and animation quality pass:** merged (PR #6).
 - **M5 Core play:** merged (PR #7), with the quick pass (pass camera, 1/2/3 catches, arrows, Q–F moves).
 - **M5.5 Game feel:** merged (PR #8), with the round-two fixes (diagonal speed, the automatic burst, driven throws, no slowdown at the catch, defenders that don't bunch).
-- **M6 Full game:** built on `claude/trusting-ptolemy-m2i78d`, PR open. The draft in the Contenders' locker room, and a full game against the Beasts from Quick Play, Classic, Film Room or the Daily through the walk-out, every possession, kicks, the two-minute drill and overtime to the results screen. **Needs your play test.**
+- **M6 Full game:** built on `claude/trusting-ptolemy-m2i78d`, PR open. The draft in the Contenders' locker room, and a full game against the Beasts from Quick Play, Classic, Film Room or the Daily through the walk-out, every possession, kicks, the two-minute drill and overtime to the results screen. **Perf gate closed:** mid-game on the preview, Classic, Ultra (auto-selected) on your M1 Pro at 100% resolution (2029×1023): 88.4 fps average, 11.3 ms, p99 12.8 ms, 206 draw calls, 1.71 M triangles.
 - **Next: M7** (presentation): the tunnel reveal grows from the walk-out, pre-game, broadcast overlay, replays, celebrations, commentary, audio.
 
 ## Known legacy issues (do not rebuild)
