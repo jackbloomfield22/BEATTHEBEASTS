@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { pullers } from '@/sim';
 import type { PlayerAnimator } from '@/anim/animator';
 import type { Ragdoll } from '@/anim/ragdoll';
 import type { PlayState, SimEvent } from '@/sim';
@@ -15,6 +16,9 @@ import { latency } from '@/game/latency';
 // get-up after the whistle.
 
 export interface Body {
+  /** Who the body is dressed as (player id) and in which kit (personnel can change the man in a slot). */
+  who: string;
+  kit: string;
   player: Player;
   animator: PlayerAnimator;
   ragdoll: Ragdoll;
@@ -77,10 +81,39 @@ function fall(b: Body, vel: THREE.Vector3, push: THREE.Vector3, big = false): vo
 
 /** The snap: get-offs out of the stances, the QB's drop. */
 export function onSnap(bodies: Body[], s: PlayState, stanceOf: (slot: string) => string): void {
+  const play = s.setup.play;
+  const pull = pullers(play);
+  const has = (b: Body, n: string) => !!b.animator.lib.meta[n];
   bodies.forEach((b, i) => {
+    const a = s.agents[i]!;
     if (i === s.qb) {
-      const k = s.setup.play.drop.kind;
+      const k = play.drop.kind;
       if (k !== 'handoff') b.animator.play(`qb_drop_${k}`, { now: true });
+      return;
+    }
+    const slot = a.slot as string;
+    // Line play (M6 clips): pass sets kick-slide at the tackles and set at
+    // the guards and center; runs fire off and drive; power and counter
+    // pull the backside guard down the line.
+    if (a.side === 'off' && OL.has(slot)) {
+      if (play.run) {
+        const dirL = play.run.aim >= 0;
+        if ((slot === pull.kick || slot === pull.lead) && has(b, 'ol_pull_l')) b.animator.play(dirL ? 'ol_pull_l' : 'ol_pull_r', { now: true });
+        else if (has(b, 'ol_fire_drive')) b.animator.play('ol_fire_drive', { now: true });
+      } else if ((slot === 'LT' || slot === 'RT') && has(b, 'ol_kick_slide_l')) b.animator.play(slot === 'LT' ? 'ol_kick_slide_l' : 'ol_kick_slide_r', { now: true });
+      else if (has(b, 'stance_ol_pass')) b.animator.setStance('stance_ol_pass');
+      return;
+    }
+    // Linebackers read the backfield before they go.
+    if (a.side === 'def' && LB.has(slot) && has(b, 'lb_read_step')) {
+      b.animator.play('lb_read_step', { now: true });
+      return;
+    }
+    // Pressed corners jam at the line.
+    const asg = s.setup.def.assign[slot as keyof typeof s.setup.def.assign];
+    if (a.side === 'def' && asg && asg.kind === 'man' && asg.press && has(b, 'db_press_jam_l')) {
+      const on = s.agents.find((x) => x.side === 'off' && x.slot === asg.on);
+      b.animator.play(on && on.pos.y > a.pos.y ? 'db_press_jam_l' : 'db_press_jam_r', { now: true });
       return;
     }
     const st = stanceOf(b.slot);
@@ -89,6 +122,12 @@ export function onSnap(bodies: Body[], s: PlayState, stanceOf: (slot: string) =>
     else b.animator.setStance('stance_idle');
   });
 }
+
+const OL = new Set(['LT', 'LG', 'C', 'RG', 'RT']);
+const LB = new Set(['WLB', 'MLB', 'SLB']);
+
+/** Pass-rush moves (sim/blocks.ts RushMove) to the M6 clips; the side is where the rusher goes around the blocker. */
+const RUSH_CLIP: Record<string, string | null> = { bull: 'dl_bull_rush', longArm: 'dl_bull_rush', swim: 'dl_swim', rip: 'dl_rip', club: 'dl_club', spin: 'dl_spin', speed: null };
 
 function worldVel(s: PlayState, i: number): THREE.Vector3 {
   const a = s.agents[i]!;
@@ -102,6 +141,36 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
     const who = e.who ?? [];
     const a = who[0] !== undefined ? bodies[who[0]] : undefined;
     switch (e.type) {
+      case 'engage': {
+        // A block is on: the rusher's move, and a bull rush meets an anchor.
+        const blk = a;
+        const d = who[1] !== undefined ? bodies[who[1]] : undefined;
+        if (!blk || !d) break;
+        const mv = String(e.data?.move ?? '');
+        const clip = RUSH_CLIP[mv];
+        const side = s.agents[who[1]!]!.pos.y > s.agents[who[0]!]!.pos.y ? 'l' : 'r';
+        if (clip) {
+          const name = clip === 'dl_bull_rush' ? clip : `${clip}_${side}`;
+          if (d.animator.lib.meta[name]) d.animator.play(name, { now: true });
+        }
+        if ((mv === 'bull' || mv === 'longArm') && blk.animator.lib.meta.ol_anchor) blk.animator.play('ol_anchor', { now: true });
+        else if (!s.setup.play.run && blk.animator.lib.meta.ol_punch_mirror_l && !blk.once.has('punch')) {
+          blk.once.add('punch');
+          blk.animator.play(side === 'l' ? 'ol_punch_mirror_l' : 'ol_punch_mirror_r', { now: true });
+        }
+        break;
+      }
+      case 'shed': {
+        // Off the block: the rusher throws the blocker by.
+        if (!a || a.fallen || e.data?.whiff) break;
+        const bl = who[1] !== undefined ? s.agents[who[1]] : undefined;
+        const side = bl && s.agents[who[0]!]!.pos.y > bl.pos.y ? 'l' : 'r';
+        const name = `dl_shed_${side}`;
+        // A lineman sheds with the full-body clip; anyone else gets off with pads low into the chase.
+        if (s.agents[who[0]!]!.slot.match(/^(LE|RE|LDT|RDT)$/) && a.animator.lib.meta[name]) a.animator.play(name, { now: true });
+        else a.animator.playOverlay('ovl_getoff');
+        break;
+      }
       case 'move': {
         if (!a) break;
         const mv = e.data?.move;
@@ -126,10 +195,6 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         break;
       case 'missedTackle':
         if (a && e.data?.dive) lyingClip(a, 'dive');
-        break;
-      case 'shed':
-        // Off the block: the get-off, pads low into the chase.
-        if (a && !e.data?.whiff && !a.fallen) a.animator.playOverlay('ovl_getoff');
         break;
       case 'hit': {
         const t = a;
@@ -186,7 +251,14 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     } else {
       out.faceVelocity = true;
       out.speed = sp * YARD;
+      // A defensive back out of his pedal opens his hips and runs (once a play).
+      if (a.side === 'def' && b.once.has('pedal') && !b.once.has('flip') && anim.lib.meta.db_hip_flip_l) {
+        b.once.add('flip');
+        const turnLeft = Math.sin(Math.atan2(a.vel.y, a.vel.x) - a.face) > 0;
+        anim.play(turnLeft ? 'db_hip_flip_l' : 'db_hip_flip_r', { now: true });
+      }
     }
+    if (out.backpedal) b.once.add('pedal');
   }
   // The throw: the release frame lands on the sim's release.
   const w = s.windup;

@@ -19,13 +19,14 @@ export type OpenState = 'open' | 'tight' | 'covered' | 'none';
 
 /**
  * The icon's state from the sim's openness (separation at the catch, yd).
- * Thresholds from `tools/sim/calib.ts` (1,200 scripted throws): 1–3 yd of
- * separation completes ~65–68% with no interceptions, 2+ yd inside the
- * nearest defender ~38–41% with 7–8% intercepted. Open is 1.5 yd or more,
- * covered below −1 yd, tight between.
+ * Thresholds from `tools/sim/calib.ts` on the M6 sim (1,314 scripted
+ * throws, random receiver and timing): 2 yd or more completes 55–70% with
+ * 0–2% intercepted; below 0 (the nearest defender inside him) completes
+ * ~40% with 5–8% intercepted; 0–2 yd is in between (40–53%, 5–6%). Open is
+ * 2 yd or more, covered below 0, tight between.
  */
 export function openState(sep: number): OpenState {
-  return sep >= 1.5 ? 'open' : sep < -1 ? 'covered' : 'tight';
+  return sep >= 2 ? 'open' : sep < 0 ? 'covered' : 'tight';
 }
 
 export const view = {

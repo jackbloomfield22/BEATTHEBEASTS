@@ -165,14 +165,19 @@ export function Slider({
 export const stepValue = (v: number, dir: number, min: number, max: number, step: number, repeat: boolean): number =>
   Number(Math.min(max, Math.max(min, v + dir * step * (repeat ? 2 : 1))).toFixed(4));
 
+/** One button prompt that follows the last-used device (keyboard or gamepad). */
+export function KeyCap({ kb, pad, className = '' }: { kb: string; pad: string; className?: string }) {
+  const device = useDevice();
+  return <kbd className={`${device === 'gamepad' ? `pad pad-${pad}` : ''} ${className}`.trim() || undefined}>{device === 'gamepad' ? pad : kb}</kbd>;
+}
+
 /** Button prompts that follow the last-used device (keyboard or gamepad). */
 export function Hints({ items }: { items: { kb: string; pad: string; label: string }[] }) {
-  const device = useDevice();
   return (
     <div className="hints">
       {items.map((h) => (
         <span key={h.label} className="hint">
-          <kbd className={device === 'gamepad' ? `pad pad-${h.pad}` : ''}>{device === 'gamepad' ? h.pad : h.kb}</kbd>
+          <KeyCap kb={h.kb} pad={h.pad} />
           {h.label}
         </span>
       ))}

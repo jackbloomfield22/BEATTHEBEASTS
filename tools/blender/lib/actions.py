@@ -73,6 +73,7 @@ def mix(a: Pose, b: Pose, t: float) -> Pose:
     p = blend(a, b, t)
     t = min(1.0, max(0.0, t))
     p.yaw = _lerp(a.yaw, b.yaw, t)
+    p.fk_dir = _lerp(a.fk_dir, b.fk_dir, t)
     if a.knee is not None or b.knee is not None:
         ka = a.knee or (0.0, -0.9, 0.0)
         kb = b.knee or (0.0, -0.9, 0.0)
@@ -115,7 +116,7 @@ def mirror_pose(p: Pose) -> Pose:
     elbow = {("r" if s == "l" else "l"): (-e[0], e[1], e[2]) for s, e in p.elbow.items()}
     gaze = (p.gaze[0], -p.gaze[1], *p.gaze[2:]) if p.gaze else None
     knee = (-p.knee[0], p.knee[1], p.knee[2]) if p.knee else None
-    return Pose(pelvis=pel, joints=joints, feet=feet, hands=hands, arms=arms, gaze=gaze, knee=knee, yaw=-p.yaw, elbow=elbow)
+    return Pose(pelvis=pel, joints=joints, feet=feet, hands=hands, arms=arms, gaze=gaze, knee=knee, yaw=-p.yaw, elbow=elbow, fk_dir=-p.fk_dir)
 
 
 def hands_of(state: dict, side: str) -> dict:
@@ -127,7 +128,7 @@ class Clip:
     is the body's (dx, dy) displacement, taken back out so the clip plays in
     place. Metadata: kind, hand-over clips, bone mask, events (frame)."""
 
-    def __init__(self, name, kind, T, pose_world, travel=None, frm=None, to=None, steps=None, mask=None, events=None, to_phase=0.0, loop=False, com=True, contacts=None):
+    def __init__(self, name, kind, T, pose_world, travel=None, frm=None, to=None, steps=None, mask=None, events=None, to_phase=0.0, loop=False, com=True, contacts=None, main_dir=None, turn=0.0, speed=0.0, loco_dir=None, from_phase=None):
         self.name, self.kind, self.frm, self.to = name, kind, frm, to
         self.frames = round(T * FPS)
         self._pose = pose_world
@@ -137,6 +138,18 @@ class Clip:
         self.to_phase = to_phase
         self.loop = loop
         self.com = com
+        # M6: a transition whose main travel is sideways (a pull runs down
+        # the line) names it ([+-1, 0], Blender x); `turn` is how far the
+        # body has turned by the last frame (deg, + left), so the runtime
+        # turns the heading by it at the hand-over. Locomotion loops built
+        # here carry their ground speed and direction (as the gaits do).
+        self.main_dir = main_dir
+        self.turn = turn
+        self.speed = speed
+        self.loco_dir = loco_dir
+        # Out of a gait: the phase of it the clip starts at (0 = left
+        # touch-down), when that isn't implied (M6 clips write it).
+        self.from_phase = from_phase
         if contacts is not None:
             self.contacts = contacts
         elif steps is not None:
@@ -149,11 +162,18 @@ class Clip:
 
     def travel(self, f: int) -> float:
         """Distance along the clip's main direction (forward, or back for a drop)."""
+        if self.kind == "locomotion":
+            return self.speed * f / FPS
         dx, dy = self._travel(f / FPS)
-        return -dy if self.dir[1] < 0 else dy
+        d = self.dir
+        return dx * d[0] + dy * d[1]
 
     @property
     def dir(self) -> list:
+        if self.kind == "locomotion":
+            return list(self.loco_dir)
+        if self.main_dir is not None:
+            return list(self.main_dir)
         dx, dy = self._travel(self.frames / FPS)
         return [0.0, 1.0] if dy > 1e-6 else [0.0, -1.0]
 
@@ -167,6 +187,9 @@ def mirrored(c: Clip, name: str, to_phase: float | None = None) -> Clip:
         name, c.kind, c.frames / FPS, lambda t: mirror_pose(c._pose(t)), travel=lambda t: (-c._travel(t)[0], c._travel(t)[1]),
         frm=c.frm, to=c.to, mask=[_mirror_bone(b) for b in c.mask] if c.mask else None, events=c.events,
         to_phase=c.to_phase if to_phase is None else to_phase, loop=c.loop, com=c.com, contacts={"l": c.contacts["r"], "r": c.contacts["l"]},
+        main_dir=[-c.main_dir[0], c.main_dir[1]] if c.main_dir else None, turn=-c.turn, speed=c.speed,
+        loco_dir=(-c.loco_dir[0], c.loco_dir[1]) if c.loco_dir else None,
+        from_phase=(c.from_phase + 0.5) % 1.0 if c.from_phase is not None else None,
     )
     return m
 
@@ -773,6 +796,7 @@ def getup_supine() -> Clip:
 
 def action_clips() -> list[Clip]:
     from .actions_m55 import m55_clips  # (imports this module's helpers)
+    from .actions_m6 import m6_clips
 
     jl = juke_left()
     return [
@@ -780,8 +804,16 @@ def action_clips() -> list[Clip]:
         carry(), protect(), qb_hold(), catch(False), catch(True), stiff_arm(), truck(), pump(),
         jl, mirrored(jl, "juke_r", to_phase=0.0), spin(), dive(), tackle(), getup_prone(), getup_supine(),
         *m55_clips(),
+        *m6_clips(),
     ]
 
 
 # Stances added here (build_anims.py makes them breathing loops); lying ones skip the balance gate.
 NO_BALANCE = {"down_prone", "down_supine"}
+
+# The M6 modules add stances to the table when imported (the pass set, the
+# snapper, the holder...): import them now so build_anims.py sees them.
+from . import actions_m6_back7, actions_m6_line, actions_m6_special  # noqa: E402,F401
+from .actions_m6 import NO_BALANCE as _M6_NO_BALANCE  # noqa: E402
+
+NO_BALANCE |= _M6_NO_BALANCE

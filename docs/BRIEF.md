@@ -57,6 +57,11 @@ References in `docs/reference/` (use them for look and mood only, never as textu
 - `ref-01-golden-hour-ocean.png`: warm low sun, long soft shadows, glowing horizon haze, calm reflective water, clean sky gradient.
 - `ref-02-broadcast-football.png`: the on-field target. Broadcast camera behind the QB, readable silhouettes, glossy helmets with real reflections, fabric jerseys with folds, a dense crowd with color variation, sharp grass with mowing stripes.
 - `ref-03-open-world-coast.png`: saturated but natural color, deep atmospheric perspective, crisp high-frequency detail in the foreground, soft haze in the distance.
+- `ref-04-locker-room-wide.jpg` (M6, the draft room): a dark room shot from low, the lockers backlit and the only real light, a lit ceiling, a mark in the carpet.
+- `ref-05-locker-detail.jpg` (M6): one locker: nameplate, helmet on a lit shelf, jersey hung facing out, colored underlight.
+- `ref-06-locker-row.jpg` (M6, the third photo sent with them): a row of dressed lockers with screens and nameplates above, helmets and pads on the shelf.
+
+The locker photos are for look and mood only: no logo, wordmark or team branding from them. The draft room is the Contenders' side of the Beasts stadium, in the Contenders' black and lime.
 
 Direction:
 

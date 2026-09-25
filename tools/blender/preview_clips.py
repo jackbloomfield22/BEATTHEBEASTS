@@ -1,7 +1,7 @@
 """Contact sheets for locomotion and transition clips: N evenly spaced
 frames per cycle (loops) or from first to last frame (transitions).
 
-    python3 tools/blender/preview_clips.py <out.png> [gait|transition ...] [--frames 8] [--view side]
+    python3 tools/blender/preview_clips.py <out.png> [gait|transition ...] [--frames 8] [--view side] [--official]
 """
 
 import os
@@ -25,11 +25,12 @@ def main() -> None:
     args = sys.argv[1:]
     n = int(args[args.index("--frames") + 1]) if "--frames" in args else 8
     view = args[args.index("--view") + 1] if "--view" in args else "side"
+    variant = "official" if "--official" in args else "player"
     args = [a for i, a in enumerate(args) if not a.startswith("--") and (i == 0 or not args[i - 1].startswith("--"))]
     out, names = args[0], args[1:] or list(GAITS)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     rig = build_armature("rig")
-    import_player(rig)
+    import_player(rig, variant=variant)
     c = Controls(rig)
     cam = setup_scene(size=300)
     tmp = tempfile.mkdtemp()

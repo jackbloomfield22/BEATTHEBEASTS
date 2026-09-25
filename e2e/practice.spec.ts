@@ -49,7 +49,7 @@ async function tickUntil(page: Page, pred: (s: Awaited<ReturnType<typeof state>>
 
 test('a full play: snap, throw, catch, run, tackle or score, result card', async ({ page }) => {
   const errors = trackErrors(page);
-  await open(page, 98, 'fourVerts'); // Four Verticals against the coverage seed 98 draws (Cover 3)
+  await open(page, 1, 'fourVerts'); // Four Verticals against the coverage seed 1 draws (Cover 3; seeds re-found for M6 with tools/sim/e2eseeds.ts)
   await page.keyboard.press('Space');
   await tick(page, 1);
   let s = await state(page);
@@ -79,7 +79,7 @@ test('a full play: snap, throw, catch, run, tackle or score, result card', async
 });
 
 test('the catch call: 1–3 while the ball is in the air, and the called one lights up', async ({ page }) => {
-  await open(page, 98, 'fourVerts');
+  await open(page, 1, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');
@@ -145,7 +145,7 @@ test('a tackle: the carrier goes down and the next snap is at the new spot', asy
 });
 
 test('scores: a touchdown run ends the series with a touchdown card', async ({ page }) => {
-  await open(page, 234, 'fourVerts');
+  await open(page, 521, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');
@@ -159,7 +159,7 @@ test('scores: a touchdown run ends the series with a touchdown card', async ({ p
   await page.keyboard.up('ArrowRight');
   const s = await tickUntil(page, (x) => x.result !== null);
   await page.keyboard.up('ArrowUp');
-  // Seed 234 (Cover 2) with these inputs is a 75-yard catch and run (the replay is exact).
+  // Seed 521 (Cover 2) with these inputs is a 75-yard catch and run (the replay is exact; tools/sim/e2eseeds.ts).
   expect(s.result!.touchdown).toBe(true);
   expect(s.events.some((e) => e.type === 'touchdown')).toBe(true);
   await tick(page, 120);

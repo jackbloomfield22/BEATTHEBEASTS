@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, N8AO, SMAA } from '@react-three/postprocessing';
+import { RenderPass, type BloomEffect } from 'postprocessing';
 import * as THREE from 'three';
 import type { EffectComposer as EffectComposerImpl } from 'postprocessing';
 import { World, type WorldQuality } from './World';
@@ -9,6 +10,7 @@ import { CameraDirector } from './cameras/CameraDirector';
 import { FlyCamera } from './cameras/FlyCamera';
 import { GameScene } from './game/GameScene';
 import { GameCamera } from './game/GameCamera';
+import { KickBall } from './game/KickBall';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { renderDpr, useSettings, type QualityPreset } from '@/app/settings';
@@ -17,6 +19,10 @@ import { useApp } from '@/app/appStore';
 import { perfStats, recordFrame } from '@/dev/perfStats';
 import { DynamicResolution, FirstLaunchBenchmark } from './perf/Adaptive';
 import { urlFlags } from '@/app/platform';
+import { view } from './view';
+import { LockerRoom } from './locker/LockerRoom';
+import { LockerCamera } from './locker/LockerCamera';
+import { useDraft } from '@/app/draftStore';
 
 // The one WebGL canvas. Everything 3D lives here and persists across screens.
 
@@ -73,9 +79,23 @@ function Post({ preset, quality }: { preset: LightingPreset; quality: QualityPre
   const reduceFlashing = useSettings((s) => s.settings.accessibility.reduceFlashing);
   const color = useMemo(() => new ColorPipelineEffect(), []);
   useEffect(() => {
-    color.setGrade(preset.grade, preset.exposure);
     color.vignette = g.vignette ? 0.38 : 0;
-  }, [color, preset, g.vignette]);
+  }, [color, g.vignette]);
+  // The grade follows what's on screen: the lighting preset in the stadium,
+  // the room's own in the locker room (view.ts), times any transition.
+  const bloom = useRef<BloomEffect | null>(null);
+  const bloomBase = preset.bloom.intensity * (reduceFlashing ? 0.6 : 1);
+  useFrame(() => {
+    const room = view.room && view.grade;
+    color.setGrade(room ? view.grade!.grade : preset.grade, (room ? view.grade!.exposure : preset.exposure) * view.exposureMul);
+    color.fade = view.fade;
+    const b = bloom.current;
+    if (b) {
+      b.intensity = room ? view.grade!.bloom * (reduceFlashing ? 0.6 : 1) : bloomBase;
+      b.luminanceMaterial.threshold = room ? view.grade!.threshold : preset.bloom.threshold;
+    }
+  });
+  const renderPass = useMemo(() => (scene: THREE.Scene, camera: THREE.Camera) => new SwitchRenderPass(scene, camera), []);
   const ao = g.ao !== 'off' && !(import.meta.env.DEV && location.search.includes('noao'));
   // The composer resizes its buffers only when the canvas's CSS size changes,
   // not its pixel ratio, so a preset switch or a dynamic-resolution step
@@ -88,14 +108,27 @@ function Post({ preset, quality }: { preset: LightingPreset; quality: QualityPre
     composer.current?.setSize(size.width, size.height);
   }, [dpr, size]);
   return (
-    <EffectComposer ref={composer} multisampling={g.antialias === 'smaa+msaa' ? 4 : 0} frameBufferType={THREE.HalfFloatType} enableNormalPass={false}>
+    <EffectComposer ref={composer} renderPass={renderPass} multisampling={g.antialias === 'smaa+msaa' ? 4 : 0} frameBufferType={THREE.HalfFloatType} enableNormalPass={false}>
       {/* Medium: half resolution each way (a quarter of the pixels) and the fewest samples (M5 perf, the broadcast gate). */}
       {ao ? <N8AO halfRes={g.ao === 'half'} aoRadius={1.6} distanceFalloff={0.6} intensity={2.2} quality={quality === 'ultra' ? 'high' : quality === 'high' ? 'medium' : quality === 'medium' ? 'performance' : 'low'} /> : <></>}
-      {g.bloom ? <Bloom mipmapBlur intensity={preset.bloom.intensity * (reduceFlashing ? 0.6 : 1)} luminanceThreshold={preset.bloom.threshold} luminanceSmoothing={0.2} radius={0.72} /> : <></>}
+      {g.bloom ? <Bloom ref={bloom} mipmapBlur intensity={bloomBase} luminanceThreshold={preset.bloom.threshold} luminanceSmoothing={0.2} radius={0.72} /> : <></>}
       <primitive object={color} dispose={null} />
       <SMAA />
     </EffectComposer>
   );
+}
+
+/** The composer's scene pass: draws the locker room instead of the stadium while one is set (view.ts). */
+class SwitchRenderPass extends RenderPass {
+  private readonly stadium: THREE.Scene;
+  constructor(scene: THREE.Scene, camera: THREE.Camera) {
+    super(scene, camera);
+    this.stadium = scene;
+  }
+  override render(...args: Parameters<RenderPass['render']>): void {
+    this.mainScene = view.room ?? this.stadium;
+    super.render(...args);
+  }
 }
 
 /** Frame cap: when set, drive R3F manually at the capped rate. */
@@ -131,6 +164,11 @@ function FrameDriver({ cap }: { cap: number }) {
   return null;
 }
 
+function LockerRoomMount({ active, preset }: { active: boolean; preset: LightingPreset }) {
+  const scene = useThree((s) => s.scene);
+  return <LockerRoom active={active} mainScene={scene} preset={preset} />;
+}
+
 export function currentQuality(): QualityPreset {
   const s = useSettings.getState().settings;
   // Custom settings keep the tier the hardware was detected as (render budget,
@@ -141,7 +179,12 @@ export function currentQuality(): QualityPreset {
 export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasElement) => void } = {}) {
   const preset = useLightingPreset();
   const shot = useApp((s) => s.shot);
-  const inGame = useApp((s) => s.screen === 'practice');
+  const inGame = useApp((s) => s.screen === 'practice' || s.screen === 'game');
+  const inRoom = useApp((s) => s.screen === 'draft');
+  const go = useApp((s) => s.go);
+  // The room is built on first entry and kept (its textures and programs stay warm).
+  const [roomMounted, setRoomMounted] = useState(inRoom);
+  if (inRoom && !roomMounted) setRoomMounted(true);
   const setSceneReady = useApp((s) => s.setSceneReady);
   const display = useSettings((s) => s.settings.display);
   const graphics = useSettings((s) => s.settings.graphics);
@@ -195,7 +238,17 @@ export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasEl
       <World preset={preset} quality={worldQuality} onReady={setSceneReady} />
       {urlFlags.lineup ? <Lineup /> : null}
       {inGame ? <GameScene /> : null}
-      {urlFlags.fly ? <FlyCamera /> : inGame ? <GameCamera fovOffset={display.fov} /> : <CameraDirector shot={shot} fovOffset={display.fov} />}
+      {inGame ? <KickBall /> : null}
+      {roomMounted ? <LockerRoomMount active={inRoom} preset={preset} /> : null}
+      {urlFlags.fly ? (
+        <FlyCamera />
+      ) : inGame ? (
+        <GameCamera fovOffset={display.fov} />
+      ) : inRoom ? (
+        <LockerCamera fovOffset={display.fov} onWalkoutDone={() => useDraft.getState().finishWalkout(go)} />
+      ) : (
+        <CameraDirector shot={shot} fovOffset={display.fov} />
+      )}
       <Post preset={preset} quality={quality} />
       <PerfProbe preset={preset.id} />
     </Canvas>

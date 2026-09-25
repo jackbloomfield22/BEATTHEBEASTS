@@ -29,7 +29,15 @@ describe('transition clips', () => {
   it('never travel backward, and hand over at the next clip speed', () => {
     for (const [name, m] of transitions) {
       const tr = m.travel!;
-      for (let i = 1; i < tr.length; i++) expect(tr[i]! - tr[i - 1]!, `${name} frame ${i}`).toBeGreaterThanOrEqual(-1e-4);
+      // Out of the backpedal (a defensive back's break), the body is still
+      // moving back when the clip starts: it may give ground only until it
+      // has stopped on the plant, never after.
+      let stopped = m.from !== 'loco_backpedal';
+      for (let i = 1; i < tr.length; i++) {
+        const d = tr[i]! - tr[i - 1]!;
+        if (!stopped && d >= 0) stopped = true;
+        if (stopped) expect(d, `${name} frame ${i}`).toBeGreaterThanOrEqual(-1e-4);
+      }
       const endSpeed = (tr[tr.length - 1]! - tr[tr.length - 2]!) * json.fps;
       const to = json.clips[m.to!]!;
       // Within the last frame's worth of acceleration of the clip it hands to.

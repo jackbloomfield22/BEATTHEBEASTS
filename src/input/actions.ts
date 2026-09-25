@@ -40,6 +40,7 @@ export const ACTIONS: ActionDef[] = [
   a('menu.tabPrev', 'menu', 'Previous tab', ['KeyQ', 'PageUp'], ['Pad:LB']),
   a('menu.tabNext', 'menu', 'Next tab', ['KeyE', 'PageDown'], ['Pad:RB']),
   a('menu.alt', 'menu', 'Secondary action', ['KeyR'], ['Pad:Y']),
+  a('menu.alt2', 'menu', 'Third action', ['KeyF'], ['Pad:X']),
 
   // Play call
   a('playCall.suggested', 'playCall', 'Suggested plays', ['KeyG'], ['Pad:Y']),

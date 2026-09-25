@@ -376,11 +376,12 @@ def getoff(stance: str) -> Transition:
 STOP_T = {"walk": 0.9, "jog": 1.1, "run": 1.4, "sprint": 1.7}
 
 
-def stop(gait: str) -> Transition:
+def stop(gait: str, T: float | None = None, name: str | None = None) -> Transition:
     """From the gait (at its left touch-down) to standing: decelerating steps
-    that plant ahead of the body, then the feet come together under it."""
+    that plant ahead of the body, then the feet come together under it.
+    `T` shortens the stop (the locker-room clips, actions_m6_sig.py)."""
     g = GAITS[gait]
-    T = STOP_T[gait]
+    T = T or STOP_T[gait]
     v0 = g.speed
     cyc = g.frames / FPS
     idle = _stance("idle")
@@ -462,7 +463,7 @@ def stop(gait: str) -> Transition:
         p.feet = {s: steps.foot(s, t) for s in "lr"}
         return p
 
-    return Transition(f"stop_{gait}", T, pose, travel, f"loco_{gait}", "stance_idle", steps)
+    return Transition(name or f"stop_{gait}", T, pose, travel, f"loco_{gait}", "stance_idle", steps)
 
 
 SET_STANCES = ["ol_3pt", "dl_3pt", "dl_4pt", "wr_2pt", "lb_ready", "db_ready", "rb_2pt", "qb_center", "qb_gun"]

@@ -8,7 +8,7 @@ import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
 import { loadJSON, saveJSON } from '@/app/storage';
 import type { InputContext } from '@/input/actions';
-import { createPlay, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type DefCall, type InputFrame, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayResult, type PlayState, type SimPlayer } from '@/sim';
+import { createPlay, defenseFor, offenseFor, type BeastsDefense, type ContendersRoster, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type DefCall, type InputFrame, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayResult, type PlayState, type SimPlayer } from '@/sim';
 import { getSettings } from '@/app/settings';
 import { Controls } from './controls';
 import { describe, type ResultCard } from './describe';
@@ -161,9 +161,34 @@ function contextFor(phase: Phase, userCarrier: boolean): InputContext {
   }
 }
 
+/** A full game drives the play engine through these (src/game/game.ts). */
+export interface GameHooks {
+  /** Where the next snap is. */
+  situation(): Situation;
+  /** The Beasts' call for this snap. */
+  defCall(sit: Situation, seed: number): DefCall;
+  /** A snap's whistle: the game scores it and says where the next snap is. */
+  onResult(s: PlayState, r: PlayResult, endY: number): { next: Situation; over: boolean };
+  /** Each tick of a snap, before it steps (read-only: the box score's coverage snapshot). */
+  onTick?(s: PlayState): void;
+}
+
+type Rosters = { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> };
+
 class PracticeSession {
+  /** Set while a full game is on (null on the Practice Field). */
+  game: GameHooks | null = null;
+  /**
+   * The two teams as squads: the offense's personnel groupings (each play
+   * lines up its own eleven: an FB or a second TE comes on in I-Form and
+   * Heavy) and the Beasts' sub packages (the nickel and dime come on for the
+   * call). `rosters` stays the base eleven the render builds bodies from.
+   */
+  teams: { team: ContendersRoster; beasts: BeastsDefense } | null = null;
+  /** The offense's uniform: the classic line-up's Royal on the Practice Field, the Contenders' Blackout Lime in a game. */
+  offenseKit = 'royal';
   runner: SimRunner | null = null;
-  rosters: { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> } | null = null;
+  rosters: Rosters | null = null;
   readonly controls = new Controls();
   difficulty: Difficulty = 'pro';
   private ctxPop: (() => void) | null = null;
@@ -171,6 +196,7 @@ class PracticeSession {
   private seedBase = 0;
   private snaps = 0;
   private offPause: (() => void) | null = null;
+  private customRosters = false;
   private offHot: (() => void) | null = null;
   private resuming = false;
   private stageBeforePause: PracticeStage = 'presnap';
@@ -195,13 +221,21 @@ class PracticeSession {
   private sawAir = false;
 
   /** Enter the Practice Field: load the rosters, open the play call. */
-  async enter(seed?: number): Promise<void> {
+  async enter(seed?: number, opts: { rosters?: Rosters; teams?: { team: ContendersRoster; beasts: BeastsDefense }; game?: GameHooks } = {}): Promise<void> {
     this.seedBase = seed ?? (Math.random() * 0x7fffffff) | 0;
+    this.game = opts.game ?? null;
+    // A game brings its own rosters; the Practice Field uses the classic line-up.
+    if (opts.rosters) this.rosters = opts.rosters;
+    else if (!this.game && this.customRosters) this.rosters = null;
+    this.customRosters = !!opts.rosters;
+    this.teams = opts.teams ?? null;
+    this.offenseKit = this.game ? 'blackoutLime' : 'royal';
     this.snaps = 0;
     this.firstCatch = true;
     set({ stage: 'loading', result: null, error: null });
     this.offPause ??= Input.onAction((id, info) => {
-      if (id !== 'global.pause' || info.repeat) return;
+      // In a game the game screen owns the pause (its menu can come up over a card too).
+      if (id !== 'global.pause' || info.repeat || this.game) return;
       const st = get().stage;
       // The same Esc that just resumed (menu.back fires first) doesn't pause again.
       if ((st === 'presnap' || st === 'live') && !this.resuming) this.pause();
@@ -210,14 +244,19 @@ class PracticeSession {
       if (!info.repeat) this.onHot(id, info.device);
     });
     try {
-      this.rosters ??= await loadPracticeRosters();
-      set({ stage: 'call', situation: startSituation(get().startSpot, get().startDowns) });
+      if (!this.rosters || !this.teams) {
+        const r = await loadPracticeRosters();
+        this.rosters ??= r;
+        if (!this.game) this.teams = { team: r.team, beasts: r.beasts };
+      }
+      set({ stage: 'call', situation: this.game ? this.game.situation() : startSituation(get().startSpot, get().startDowns), box: emptyBox() });
     } catch (e) {
       set({ error: `The rosters didn't load (${(e as Error).message}).` });
     }
   }
 
   leave(): void {
+    this.game = null;
     this.closeHot();
     this.setContext(null);
     this.offPause?.();
@@ -236,8 +275,9 @@ class PracticeSession {
     const ui = get();
     const seed = (this.seedBase + this.snaps * 7919) | 0;
     this.snaps++;
-    const def = ui.cover === 'random' ? DEF_CALLS[(seed >>> 4) % DEF_CALLS.length]! : defById(ui.cover);
-    const sit = ui.seriesOver ? startSituation(ui.startSpot, ui.startDowns) : ui.situation;
+    const g = this.game;
+    const sit = g ? g.situation() : ui.seriesOver ? startSituation(ui.startSpot, ui.startDowns) : ui.situation;
+    const def = g ? g.defCall(sit, seed) : ui.cover === 'random' ? DEF_CALLS[(seed >>> 4) % DEF_CALLS.length]! : defById(ui.cover);
     this.setUp(playId, seed, def, sit);
   }
 
@@ -258,11 +298,14 @@ class PracticeSession {
   private setUp(playId: string, seed: number, def: DefCall, sit: Situation): void {
     if (!this.rosters) return;
     this.closeHot();
+    const play = playById(playId);
     const state = createPlay({
       seed,
-      offense: this.rosters.offense,
-      defense: this.rosters.defense,
-      play: playById(playId),
+      offense: this.teams ? offenseFor(play, this.teams.team) : this.rosters.offense,
+      defense: this.teams ? defenseFor(def, this.teams.beasts) : this.rosters.defense,
+      play,
+      // The Touch pass hold setting: how long a receiver key is held before a driven ball becomes touch.
+      tapMax: getSettings().controls.bulletHoldMs / 1000,
       def,
       los: sit.los,
       ballY: sit.ballY,
@@ -452,21 +495,48 @@ class PracticeSession {
     if (s.phase === 'air') this.sawAir = true;
     else if (this.sawAir) this.firstCatch = false;
     this.stepTutorial(s);
-    if (s.result && get().stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) {
-      const ui = get();
-      const next = nextSituation(ui.situation, s.result, s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y);
-      this.setContext(null);
-      // Fatigue for the next play: last play's toll recovers by half; a big hit adds his.
-      const f: Partial<Record<OffSlot, number>> = {};
-      for (const [k, v] of Object.entries(this.fatigue)) if (v && v / 2 > 0.02) f[k as OffSlot] = v / 2;
-      const bh = s.result.bigHit;
-      if (bh && s.agents[bh.on]!.side === 'off') {
-        const slot = s.agents[bh.on]!.slot as OffSlot;
-        f[slot] = Math.min(0.6, (f[slot] ?? 0) + hitToll(bh.force));
-      }
-      this.fatigue = f;
-      set({ stage: 'result', result: describe(s), situation: next ?? startSituation(ui.startSpot, ui.startDowns), seriesOver: next === null, box: addToBox(ui.box, s.result) });
+    this.game?.onTick?.(s);
+    if (s.result && get().stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) this.report();
+  }
+
+  /**
+   * A paused snap whose whistle has already blown (the dead-ball hold was
+   * still running): score it now, as if the hold had run out. Leaving a game
+   * from the pause menu after the last play's whistle ends it properly.
+   * True if there was one.
+   */
+  settle(): boolean {
+    const s = this.runner?.state;
+    if (!s?.result || (get().stage !== 'paused' && get().stage !== 'live') || this.reported === this.playId) return false;
+    if (get().stage === 'paused') {
+      this.runner!.paused = false;
+      set({ stage: 'live' });
     }
+    this.report();
+    return true;
+  }
+
+  /** The whistle's result goes to the game (or the practice series) and the result card. */
+  private reported = -1;
+  private report(): void {
+    const s = this.runner!.state;
+    if (!s.result || this.reported === this.playId) return;
+    this.reported = this.playId;
+    const ui = get();
+    const endY = s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y;
+    const g = this.game ? this.game.onResult(s, s.result, endY) : null;
+    const next = g ? (g.over ? null : g.next) : nextSituation(ui.situation, s.result, endY);
+    this.setContext(null);
+    // Fatigue for the next play: last play's toll recovers by half; a big hit adds his.
+    const f: Partial<Record<OffSlot, number>> = {};
+    for (const [k, v] of Object.entries(this.fatigue)) if (v && v / 2 > 0.02) f[k as OffSlot] = v / 2;
+    const bh = s.result.bigHit;
+    if (bh && s.agents[bh.on]!.side === 'off') {
+      const slot = s.agents[bh.on]!.slot as OffSlot;
+      f[slot] = Math.min(0.6, (f[slot] ?? 0) + hitToll(bh.force));
+    }
+    this.fatigue = f;
+    set({ stage: 'result', result: describe(s), situation: next ?? (g ? g.next : startSituation(ui.startSpot, ui.startDowns)), seriesOver: next === null, box: addToBox(ui.box, s.result) });
   }
 
   private stepTutorial(s: PlayState): void {

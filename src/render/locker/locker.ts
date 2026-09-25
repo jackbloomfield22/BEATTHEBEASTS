@@ -1,0 +1,486 @@
+import * as THREE from 'three';
+import { POS_HEX } from '@data/legacy/palette';
+import type { Slot } from '@data/legacy/types';
+import { ARC_R, CEILING_Y, LOCKER_D, LOCKER_H, ROD_Y, SEAT_H, SHELF_Y, TOP_H, frontOf, onArc, type LockerPlace } from './layout';
+import { lockerLit, lockerLightsWorld, lockerLightUniforms } from './lockerLights';
+import { cleatGeometry, gloveGeometry, hangerGeometry, helmetGeometry, jerseyGeometry, towelGeometry } from './props';
+import { canvasTexture, drawJersey, drawNameplate, drawStallScreen, drawStickers, makeCanvas, washTexture, type PlateLine, type ScreenSpec, type StickerSpec } from './textures';
+
+// One stall of the Contenders' locker room and the way it dresses itself
+// when its man is drafted (M6 brief): the nameplate lights with his name and
+// number, the stall light and the position-colored underlight come on, the
+// jersey drops onto the hanger, the helmet lands on the shelf, gloves and a
+// towel go over the shelf's edge, the cleats land on the floor, and the
+// stickers go on one by one. About 2.8 s; `dress(..., true)` sets the end
+// state at once (a room restored from a finished draft).
+
+export const POS_OF_SLOT: Record<Slot, 'QB' | 'RB' | 'WR' | 'TE' | 'OL'> = { QB: 'QB', RB: 'RB', RB2: 'RB', WR1: 'WR', WR2: 'WR', WR3: 'WR', TE: 'TE', TE2: 'TE', OL: 'OL' };
+
+/** What a dressed stall shows (one man; five for the OL). */
+export interface LockerOccupant {
+  men: { name: string; jerseyName: string; num: number }[];
+  stickers: StickerSpec;
+}
+
+export interface SharedLockerAssets {
+  lacquer: THREE.MeshStandardMaterial;
+  back: THREE.MeshStandardMaterial;
+  cushion: THREE.MeshStandardMaterial;
+  chrome: THREE.MeshStandardMaterial;
+  helmetShell: THREE.MeshStandardMaterial;
+  helmetStripe: THREE.MeshStandardMaterial;
+  helmetMask: THREE.MeshStandardMaterial;
+  cleatUpper: THREE.MeshStandardMaterial;
+  cleatSole: THREE.MeshStandardMaterial;
+  glove: THREE.MeshStandardMaterial;
+  towel: THREE.MeshStandardMaterial;
+  poolTex: THREE.Texture;
+  washTex: THREE.Texture;
+  geo: {
+    box: THREE.BoxGeometry;
+    plane: THREE.PlaneGeometry;
+    rod: THREE.CylinderGeometry;
+    helmet: ReturnType<typeof helmetGeometry>;
+    jersey: THREE.BufferGeometry;
+    hanger: THREE.BufferGeometry;
+    cleat: ReturnType<typeof cleatGeometry>;
+    glove: THREE.BufferGeometry;
+    towel: THREE.BufferGeometry;
+  };
+}
+
+export function createSharedLockerAssets(lit: <M extends THREE.MeshStandardMaterial>(m: M) => M, backTex: THREE.Texture): SharedLockerAssets {
+  const std = (p: THREE.MeshStandardMaterialParameters) => lit(new THREE.MeshStandardMaterial(p));
+  return {
+    // Gloss black with some metal, so the frames pick up the lit room and the edge strips (0x0e0e10 at 0.05 read as holes).
+    lacquer: std({ color: 0x17171b, roughness: 0.3, metalness: 0.3 }),
+    back: std({ color: 0x3a3a3e, map: backTex, roughness: 0.75 }),
+    // Cognac leather (the second reference's seats), warm against the black lacquer.
+    cushion: std({ color: 0x7a4322, roughness: 0.42 }),
+    chrome: std({ color: 0xd8d8dc, roughness: 0.25, metalness: 1 }),
+    helmetShell: std({ color: 0x3a3d43, roughness: 0.14, metalness: 0.3 }), // satin black reads as gunmetal under a stall lamp (0x111214 vanished)
+    helmetStripe: std({ color: 0xaaff00, roughness: 0.3, emissive: new THREE.Color(0xaaff00), emissiveIntensity: 0.12 }),
+    helmetMask: std({ color: 0x0c0c0d, roughness: 0.45, metalness: 0.6 }),
+    cleatUpper: std({ color: 0x141416, roughness: 0.4 }),
+    cleatSole: std({ color: 0xaaff00, roughness: 0.5 }),
+    glove: std({ color: 0x1a1b1e, roughness: 0.6 }),
+    towel: std({ color: 0x5e5c58, roughness: 0.97, side: THREE.DoubleSide }),
+    poolTex: poolTexture(),
+    washTex: washTexture(),
+    geo: {
+      box: new THREE.BoxGeometry(1, 1, 1),
+      plane: new THREE.PlaneGeometry(1, 1),
+      rod: new THREE.CylinderGeometry(0.012, 0.012, 1, 10).rotateZ(Math.PI / 2),
+      helmet: helmetGeometry(),
+      jersey: jerseyGeometry(),
+      hanger: hangerGeometry(),
+      cleat: cleatGeometry(),
+      glove: gloveGeometry(),
+      towel: towelGeometry(),
+    },
+  };
+}
+
+const ease = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : 1 - Math.pow(1 - t, 3));
+const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
+/** A drop under gravity from `h` meters that lands at `land` s after `start`, then a small bounce. */
+function drop(t: number, start: number, land: number, h: number, bounce = 0.02): number {
+  if (t < start) return h;
+  if (t < land) {
+    const u = (t - start) / (land - start);
+    return h * (1 - u * u);
+  }
+  const b = t - land;
+  return bounce * Math.max(0, Math.sin(b * 14)) * Math.exp(-b * 9);
+}
+
+/** Warm white of the stall lights (≈3200 K, as the references' stall lamps). */
+const WARM = new THREE.Color(1, 0.8, 0.58);
+/** The Contenders' lime (#aaff00) for a bare stall's edge frame. */
+const LIME_EDGE = new THREE.Color(0xaaff00);
+/** The interiors' glow: amber, warmer than the lamp, so a lit stall reads as warm light, not grey (ref-04). */
+const AMBER = new THREE.Color(1, 0.62, 0.32);
+const _tint = new THREE.Color();
+
+export class Locker {
+  readonly group = new THREE.Group();
+  readonly place: LockerPlace;
+  readonly pos: 'QB' | 'RB' | 'WR' | 'TE' | 'OL';
+  readonly posColor: THREE.Color;
+  private plate: { canvas: HTMLCanvasElement; tex: THREE.CanvasTexture; mat: THREE.MeshStandardMaterial };
+  private stickers: { canvas: HTMLCanvasElement; tex: THREE.CanvasTexture };
+  private strip: THREE.MeshBasicMaterial;
+  private under: THREE.MeshBasicMaterial;
+  /** The lime frame around the opening (position color once dressed). */
+  private edge: THREE.MeshBasicMaterial;
+  /** The interior back panel, lit from within (its emissive is the wash). */
+  private backMat: THREE.MeshStandardMaterial;
+  /** What a blank nameplate says: the slot waiting to be filled. */
+  private blank: string;
+  /** The display over the stall. */
+  private screen: { canvas: HTMLCanvasElement; tex: THREE.CanvasTexture; mat: THREE.MeshBasicMaterial };
+  private lightIdx: number;
+  private kit = new THREE.Group();
+  private jerseys: { mesh: THREE.Mesh; canvas: HTMLCanvasElement; tex: THREE.CanvasTexture; hanger: THREE.Mesh; baseY: number }[] = [];
+  private helmets: THREE.Group[] = [];
+  private shelfKit = new THREE.Group();
+  private cleats = new THREE.Group();
+  occupant: LockerOccupant | null = null;
+  /** Time since the dressing started (s), or null when idle. */
+  private t: number | null = null;
+  private stickersShown = 0;
+  /** 0..1 how "on" the stall's lights are (a lit, dressed stall = 1). */
+  private lit = 0;
+  /**
+   * The room's light levels (set by the mood). Every stall is lit, empty or
+   * not (ref-04: the lockers are the light): an empty stall has its lime
+   * edge, a soft interior wash and a dim plate; a dressed one brightens and
+   * takes its position's color.
+   */
+  levels = { stall: 14, under: 9, emptyStall: 4, plate: 2.2, plateEmpty: 0.7, wash: 5, pool: 0.5, edge: 3.2, edgeEmpty: 1.4, inner: 0.6, innerEmpty: 0.25, screen: 1, screenEmpty: 0.6 };
+  private pool: THREE.MeshBasicMaterial;
+
+  constructor(place: LockerPlace, shared: SharedLockerAssets) {
+    this.place = place;
+    this.pos = POS_OF_SLOT[place.slot];
+    this.posColor = new THREE.Color(POS_HEX[this.pos]!.solid);
+    this.lightIdx = place.index;
+    const W = place.width;
+    const g = this.group;
+    g.position.copy(place.pos);
+    g.rotation.y = place.rotY;
+    const { geo } = shared;
+    const box = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material) => {
+      const mesh = new THREE.Mesh(geo.box, m);
+      mesh.scale.set(w, h, d);
+      mesh.position.set(x, y, z);
+      g.add(mesh);
+      return mesh;
+    };
+    const D = LOCKER_D;
+    // Frame: sides, top cabinet, seat cabinet, shelf, rod, back.
+    for (const s of [-1, 1]) box(0.05, LOCKER_H, D, s * (W / 2 - 0.025), LOCKER_H / 2, -D / 2, shared.lacquer);
+    box(W, TOP_H, D, 0, LOCKER_H - TOP_H / 2, -D / 2, shared.lacquer);
+    box(W - 0.1, SEAT_H - 0.08, D - 0.04, 0, 0.08 + (SEAT_H - 0.08) / 2, -D / 2 - 0.02, shared.lacquer);
+    box(W - 0.14, 0.08, D - 0.12, 0, 0.04, -D / 2 - 0.06, shared.lacquer); // recessed toe kick
+    box(W - 0.12, 0.06, D - 0.1, 0, SEAT_H + 0.03, -D / 2 - 0.03, shared.cushion);
+    box(W - 0.1, 0.025, D - 0.1, 0, SHELF_Y, -D / 2 - 0.05, shared.lacquer);
+    const rod = new THREE.Mesh(geo.rod, shared.chrome);
+    rod.scale.set(1, W - 0.1, 1);
+    rod.position.set(0, ROD_Y, -D / 2 - 0.02);
+    g.add(rod);
+    this.backMat = lockerLit(new THREE.MeshStandardMaterial({ color: 0x3a3a3e, map: shared.back.map, roughness: 0.75, emissive: WARM.clone(), emissiveMap: shared.washTex, emissiveIntensity: 0 }));
+    const back = new THREE.Mesh(geo.plane, this.backMat);
+    back.scale.set(W - 0.1, LOCKER_H - TOP_H - SEAT_H, 1);
+    back.position.set(0, SEAT_H + (LOCKER_H - TOP_H - SEAT_H) / 2, -D + 0.02);
+    (shared.back.map as THREE.Texture).repeat.set(1, 1);
+    g.add(back);
+
+    // Nameplate on the top cabinet's face (the canvas is its emissive map too).
+    const pc = makeCanvas(place.slot === 'OL' ? 2048 : 1024, 160);
+    this.blank = place.slot === 'OL' ? 'OFFENSIVE LINE' : place.slot;
+    drawNameplate(pc, null, this.blank);
+    const ptex = canvasTexture(pc);
+    const pmat = new THREE.MeshStandardMaterial({ map: ptex, emissiveMap: ptex, emissive: new THREE.Color(1, 1, 1), emissiveIntensity: 0, roughness: 0.35, metalness: 0.4 });
+    const plate = new THREE.Mesh(geo.plane, pmat);
+    plate.scale.set(W - 0.12, 0.17, 1);
+    plate.position.set(0, LOCKER_H - TOP_H / 2, 0.002);
+    g.add(plate);
+    this.plate = { canvas: pc, tex: ptex, mat: pmat };
+
+    // Sticker strip: the seat cabinet's face.
+    const sc = makeCanvas(place.slot === 'OL' ? 1024 : 512, 180);
+    drawStickers(sc, null);
+    const stex = canvasTexture(sc);
+    const sticker = new THREE.Mesh(geo.plane, new THREE.MeshStandardMaterial({ map: stex, roughness: 0.4 }));
+    sticker.scale.set(W - 0.1, SEAT_H - 0.1, 1);
+    sticker.position.set(0, 0.08 + (SEAT_H - 0.08) / 2, -0.019);
+    g.add(sticker);
+    this.stickers = { canvas: sc, tex: stex };
+
+    // Stall light strip under the shelf's front edge; underlight in the toe kick.
+    this.strip = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const strip = new THREE.Mesh(geo.box, this.strip);
+    strip.scale.set(W - 0.16, 0.012, 0.02);
+    strip.position.set(0, LOCKER_H - TOP_H - 0.012, -0.08);
+    g.add(strip);
+    this.under = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const under = new THREE.Mesh(geo.box, this.under);
+    under.scale.set(W - 0.16, 0.014, 0.012);
+    under.position.set(0, 0.075, -0.07);
+    g.add(under);
+
+    // The edge strip around the opening (ref-04's LED frames): down both
+    // sides' inner edges, across under the top cabinet and along the seat.
+    this.edge = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const openH = LOCKER_H - TOP_H - SEAT_H;
+    const edgeBox = (w: number, h: number, x: number, y: number) => {
+      const e = new THREE.Mesh(geo.box, this.edge);
+      e.scale.set(w, h, 0.012);
+      e.position.set(x, y, 0.004);
+      g.add(e);
+    };
+    for (const sx of [-1, 1]) edgeBox(0.016, openH + 0.016, sx * (W / 2 - 0.058), SEAT_H + openH / 2);
+    edgeBox(W - 0.1, 0.016, 0, LOCKER_H - TOP_H - 0.008);
+    edgeBox(W - 0.1, 0.016, 0, SEAT_H + 0.004);
+
+    // The screen over the stall, in a thin black bezel on the wall above it.
+    const sc2 = makeCanvas(place.slot === 'OL' ? 1280 : 512, 320);
+    const stex2 = canvasTexture(sc2);
+    const smat = new THREE.MeshBasicMaterial({ map: stex2, color: 0x000000 });
+    this.screen = { canvas: sc2, tex: stex2, mat: smat };
+    const SCREEN_H = 0.66;
+    const bezel = new THREE.Mesh(geo.box, shared.lacquer);
+    bezel.scale.set(W - 0.02, SCREEN_H + 0.05, 0.05);
+    bezel.position.set(0, LOCKER_H + 0.24 + SCREEN_H / 2, -D + 0.02);
+    g.add(bezel);
+    const scr = new THREE.Mesh(geo.plane, smat);
+    scr.scale.set(W - 0.07, SCREEN_H, 1);
+    scr.position.set(0, LOCKER_H + 0.24 + SCREEN_H / 2, -D + 0.046);
+    g.add(scr);
+    this.drawScreen();
+
+    // The underlight's pool on the carpet (additive; the light loop lights
+    // the carpet too, but a soft decal keeps the color reading at a distance).
+    this.pool = new THREE.MeshBasicMaterial({ map: shared.poolTex, color: 0x000000, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    const pool = new THREE.Mesh(geo.plane, this.pool);
+    pool.rotation.x = -Math.PI / 2;
+    pool.scale.set(W + 0.3, 1.2, 1);
+    pool.position.set(0, 0.004, 0.5);
+    g.add(pool);
+
+    // The kit (hidden until dressed).
+    g.add(this.kit);
+    this.kit.visible = false;
+    const men = place.slot === 'OL' ? 5 : 1;
+    const spacing = men > 1 ? (W - 0.2) / men : 0;
+    const scale = men > 1 ? 0.76 : 1;
+    for (let i = 0; i < men; i++) {
+      const x = men > 1 ? -((W - 0.2) / 2) + spacing * (i + 0.5) : 0;
+      const hanger = new THREE.Mesh(geo.hanger, shared.chrome);
+      hanger.position.set(x, ROD_Y - 0.07, -D / 2 - 0.02 + i * 0.012);
+      hanger.scale.setScalar(scale);
+      const jc = makeCanvas(512, 640);
+      const jtex = canvasTexture(jc);
+      const jersey = new THREE.Mesh(geo.jersey, lockerLit(new THREE.MeshStandardMaterial({ map: jtex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.82 })));
+      jersey.scale.setScalar(scale);
+      jersey.position.set(x, ROD_Y - 0.09, -D / 2 - 0.02 + i * 0.012);
+      this.kit.add(hanger, jersey);
+      this.jerseys.push({ mesh: jersey, canvas: jc, tex: jtex, hanger, baseY: jersey.position.y });
+      // Helmet on the shelf, facemask out, turned a little.
+      const helmet = new THREE.Group();
+      helmet.add(new THREE.Mesh(geo.helmet.shell, shared.helmetShell), new THREE.Mesh(geo.helmet.stripe, shared.helmetStripe), new THREE.Mesh(geo.helmet.mask, shared.helmetMask));
+      helmet.scale.setScalar(men > 1 ? 0.92 : 1);
+      helmet.position.set(men > 1 ? x : -0.12, SHELF_Y + 0.0125 + 0.135, -D / 2 - 0.02);
+      helmet.rotation.y = men > 1 ? 0.2 * (i - 2) : 0.38;
+      helmet.userData.baseY = helmet.position.y;
+      this.kit.add(helmet);
+      this.helmets.push(helmet);
+    }
+    // Towel and gloves over the shelf's front edge; cleats on the floor.
+    const edgeZ = -D / 2 - 0.05 + (D - 0.1) / 2;
+    const towel = new THREE.Mesh(geo.towel, shared.towel);
+    towel.position.set(men > 1 ? -W / 2 + 0.3 : -0.3, SHELF_Y + 0.0125, edgeZ);
+    this.shelfKit.add(towel);
+    if (men === 1)
+      for (const s of [-1, 1]) {
+        const glove = new THREE.Mesh(geo.glove, shared.glove);
+        // Hung over the shelf's lip, fingers down (the glove lies fingers-forward in its geometry).
+        glove.rotation.set(Math.PI / 2 - 0.1, 0, s * 0.12);
+        glove.position.set(0.3 + s * 0.055, SHELF_Y + 0.0125, edgeZ + 0.012 + (s > 0 ? 0.008 : 0));
+        this.shelfKit.add(glove);
+      }
+    this.kit.add(this.shelfKit);
+    const cleatPairs = men > 1 ? [-0.8, -0.4, 0, 0.4, 0.8] : [0];
+    for (const cx of cleatPairs)
+      for (const s of [-1, 1]) {
+        const c = new THREE.Group();
+        c.add(new THREE.Mesh(geo.cleat.upper, shared.cleatUpper), new THREE.Mesh(geo.cleat.sole, shared.cleatSole));
+        c.position.set(cx + s * 0.085, 0, 0.16);
+        c.rotation.y = s * 0.12 + cx * 0.1;
+        this.cleats.add(c);
+      }
+    this.kit.add(this.cleats);
+
+    // World-space lights for the shared loop.
+    g.updateMatrixWorld(true);
+    const stall = lockerLightsWorld[this.lightIdx]!;
+    // Under the top cabinet, washing down over the helmet, the shelf and the jersey.
+    stall.pos.set(0, LOCKER_H - TOP_H - 0.03, -0.05).applyMatrix4(g.matrixWorld);
+    stall.dir.set(0, -1, -0.3).normalize().transformDirection(g.matrixWorld);
+    stall.color.copy(WARM);
+    lockerLightUniforms.uLkCone.value[this.lightIdx]!.set(-0.3, 0.5, 2.2);
+    const ul = lockerLightsWorld[9 + this.lightIdx]!;
+    ul.pos.set(0, 0.07, -0.02).applyMatrix4(g.matrixWorld);
+    ul.dir.set(0, -0.35, 1).normalize().transformDirection(g.matrixWorld);
+    ul.color.copy(this.posColor);
+    lockerLightUniforms.uLkCone.value[9 + this.lightIdx]!.set(-0.1, 0.7, 2.5);
+    // Ceiling washer: from above the bench line, aimed at the stall's face.
+    const wa = lockerLightsWorld[18 + this.lightIdx]!;
+    wa.pos.copy(frontOf(place, 1.5, CEILING_Y - 0.08));
+    wa.dir.copy(onArc(place.angle, ARC_R, 1.4)).sub(wa.pos).normalize();
+    wa.color.set(1, 0.84, 0.66);
+    lockerLightUniforms.uLkCone.value[18 + this.lightIdx]!.set(0.8, 0.95, 0.12);
+    this.clear();
+  }
+
+  private drawScreen(): void {
+    const o = this.occupant;
+    const spec: ScreenSpec | null = o ? { men: o.men.map((m) => ({ name: m.name, num: m.num })), team: o.stickers.tag?.team ?? '', decade: o.stickers.tag?.decade ?? '' } : null;
+    drawStallScreen(this.screen.canvas, spec, this.blank, `#${this.posColor.getHexString()}`);
+    this.screen.tex.needsUpdate = true;
+  }
+
+  /** Dress the stall for a drafted man (or men). `instant` skips the animation. */
+  dress(o: LockerOccupant, instant = false): void {
+    this.occupant = o;
+    const lines: PlateLine[] = o.men.map((m) => ({ name: m.jerseyName, num: m.num }));
+    drawNameplate(this.plate.canvas, lines);
+    this.plate.tex.needsUpdate = true;
+    o.men.forEach((m, i) => {
+      const j = this.jerseys[i];
+      if (!j) return;
+      drawJersey(j.canvas, m.jerseyName, m.num);
+      j.tex.needsUpdate = true;
+    });
+    this.kit.visible = true;
+    this.drawScreen();
+    this.t = instant ? 99 : 0;
+    this.stickersShown = instant ? 99 : 0;
+    drawStickers(this.stickers.canvas, o.stickers, this.stickersShown);
+    this.stickers.tex.needsUpdate = true;
+    this.update(0);
+  }
+
+  /** Back to bare: blank plate, dark shelf, an empty hanger. */
+  clear(): void {
+    this.occupant = null;
+    this.t = null;
+    drawNameplate(this.plate.canvas, null, this.blank);
+    this.plate.tex.needsUpdate = true;
+    drawStickers(this.stickers.canvas, null);
+    this.stickers.tex.needsUpdate = true;
+    this.drawScreen();
+    this.kit.visible = true;
+    // Only the hanger(s) stay.
+    for (const j of this.jerseys) j.mesh.visible = false;
+    for (const h of this.helmets) h.visible = false;
+    this.shelfKit.visible = false;
+    this.cleats.visible = false;
+    this.lit = 0;
+    this.plate.mat.emissiveIntensity = this.levels.plateEmpty;
+    this.applyLights();
+  }
+
+  /** Redraw textures (after the display font loads). */
+  redraw(): void {
+    if (this.occupant) {
+      drawNameplate(this.plate.canvas, this.occupant.men.map((m) => ({ name: m.jerseyName, num: m.num })));
+      this.occupant.men.forEach((m, i) => this.jerseys[i] && drawJersey(this.jerseys[i]!.canvas, m.jerseyName, m.num));
+      for (const j of this.jerseys) j.tex.needsUpdate = true;
+      drawStickers(this.stickers.canvas, this.occupant.stickers, this.stickersShown);
+    } else {
+      drawNameplate(this.plate.canvas, null, this.blank);
+      drawStickers(this.stickers.canvas, null);
+    }
+    this.plate.tex.needsUpdate = true;
+    this.stickers.tex.needsUpdate = true;
+    this.drawScreen();
+  }
+
+  get dressing(): boolean {
+    return this.t !== null && this.t < DRESS_END;
+  }
+
+  update(dt: number): void {
+    if (this.t === null) return;
+    this.t += dt;
+    const t = this.t;
+    // Lights: the stall lamp flickers on like a tube starting, the plate
+    // wipes up, the underlight swells in the position color.
+    const flick = t < 0.08 ? 1 : t < 0.14 ? 0.1 : t < 0.2 ? 0.8 : t < 0.24 ? 0.3 : 1;
+    this.lit = clamp01(t / 0.25) * flick;
+    const pe = ease(clamp01((t - 0.05) / 0.45));
+    this.plate.mat.emissiveIntensity = this.levels.plateEmpty + (this.levels.plate - this.levels.plateEmpty) * pe;
+    const u = ease(clamp01((t - 0.1) / 0.6));
+    this.applyLights(u);
+    // Jersey drops onto the hanger and sways to rest.
+    this.jerseys.forEach((j, i) => {
+      if (!this.occupant || i >= this.occupant.men.length) {
+        j.mesh.visible = false;
+        return;
+      }
+      const start = 0.35 + i * 0.07;
+      j.mesh.visible = t >= start;
+      j.mesh.position.y = j.baseY + drop(t, start, start + 0.3, 0.5, 0.012);
+      const s = Math.max(0, t - start - 0.3);
+      j.mesh.rotation.z = 0.06 * Math.sin(s * 7) * Math.exp(-s * 3.2);
+      j.mesh.rotation.x = -0.05 * Math.sin(s * 5.5 + 0.6) * Math.exp(-s * 3);
+      j.hanger.rotation.z = j.mesh.rotation.z;
+    });
+    // Helmet lands on the shelf.
+    this.helmets.forEach((h, i) => {
+      const start = 0.8 + i * 0.06;
+      h.visible = t >= start;
+      h.position.y = (h.userData.baseY as number) + drop(t, start, start + 0.25, 0.42, 0.018);
+    });
+    // Towel and gloves.
+    const k = clamp01((t - 1.2) / 0.25);
+    this.shelfKit.visible = t >= 1.2;
+    this.shelfKit.scale.set(1, 0.3 + 0.7 * ease(k) + 0.05 * Math.sin(k * Math.PI), 1);
+    // Cleats.
+    this.cleats.visible = t >= 1.45;
+    this.cleats.position.y = drop(t, 1.45, 1.65, 0.3, 0.015);
+    // Stickers go on one by one.
+    const n = t < 1.8 ? 0 : Math.floor((t - 1.8) / 0.2) + 1;
+    if (n !== this.stickersShown && this.stickersShown < 99) {
+      this.stickersShown = Math.min(n, 9);
+      drawStickers(this.stickers.canvas, this.occupant?.stickers ?? null, this.stickersShown);
+      this.stickers.tex.needsUpdate = true;
+      if (t > 3.5) this.stickersShown = 99;
+    }
+  }
+
+  /** Push this stall's light levels into the shared loop and the emissive strips. */
+  applyLights(under = this.occupant ? 1 : 0): void {
+    const L = this.levels;
+    const stall = lockerLightsWorld[this.lightIdx]!;
+    const on = this.occupant ? this.lit : 0;
+    // Bare: the empty stall's lamp still on (levels.emptyStall), warm and lower.
+    stall.intensity = L.stall * on + L.emptyStall * (1 - on);
+    this.strip.color.copy(WARM).multiplyScalar(1.4 + 3.8 * on);
+    // The edge frame: lime when bare, the position's color as he moves in.
+    this.edge.color.copy(LIME_EDGE).lerp(this.posColor, under).multiplyScalar(L.edgeEmpty + (L.edge - L.edgeEmpty) * under);
+    this.backMat.emissive.copy(AMBER).lerp(_tint.copy(AMBER).lerp(this.posColor, 0.3), under);
+    this.screen.mat.color.setScalar(L.screenEmpty + (L.screen - L.screenEmpty) * under);
+    this.backMat.emissiveIntensity = L.innerEmpty + (L.inner - L.innerEmpty) * on;
+    if (!this.occupant) this.plate.mat.emissiveIntensity = L.plateEmpty;
+    const ul = lockerLightsWorld[9 + this.lightIdx]!;
+    ul.intensity = this.levels.under * under;
+    this.under.color.copy(this.posColor).multiplyScalar(0.15 + 4 * under);
+    this.pool.color.copy(this.posColor).multiplyScalar(this.levels.pool * under);
+    lockerLightsWorld[18 + this.lightIdx]!.intensity = this.levels.wash * (0.55 + 0.45 * on);
+  }
+}
+
+/** A soft pool of light: brightest at the stall's toe kick (top edge), fading out across the carpet. */
+function poolTexture(): THREE.Texture {
+  const c = makeCanvas(128, 128);
+  const ctx = c.getContext('2d')!;
+  // Brightest along the toe kick, falling off across the carpet and at the sides.
+  const img = ctx.createImageData(128, 128);
+  for (let y = 0; y < 128; y++)
+    for (let x = 0; x < 128; x++) {
+      const u = (x - 63.5) / 64;
+      const v = y / 127;
+      const a = Math.exp(-4.5 * v) * Math.max(0, 1 - u * u * u * u) * (1 - v);
+      const i = (y * 128 + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = Math.round(255 * a);
+    }
+  ctx.putImageData(img, 0, 0);
+  return canvasTexture(c, false);
+}
+
+/** When the room's time runs past this, a dressing is over. */
+export const DRESS_END = 2.9;

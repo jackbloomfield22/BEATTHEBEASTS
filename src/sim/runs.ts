@@ -12,10 +12,18 @@ import { atan2 } from '@/engine/math/detmath';
 import { blockOf } from './blocks';
 import { arrive, steer } from './movement';
 import { pursue, reaction, runBlock } from './ai';
-import { ZONES, type OffPlay } from './plays';
-import type { PlayState } from './state';
+import { fullbackSlot, inLine, ZONES, type OffPlay } from './plays';
+import { manOf, type PlayState } from './state';
 import { FIELD_HALF_W, type Agent, type OffSlot } from './types';
 import { dist, v2, type V2 } from './vec';
+
+/** Defensive backs read their receivers first: a beat longer to believe run (s; M5.5 0.15). */
+const DB_READ = 0.05;
+/** Deep zones are pass-first: a beat more still (s; M5.5 0.2, which left the deep safeties backpedalling as backs reached the second level). */
+const DEEP_READ = 0.1;
+
+/** How deep a linebacker sits over his gap before the back gets to the line (yd): level at depth, then downhill as he arrives. */
+const LB_FIT = 1;
 
 /** Gap offsets from the ball (yd): A (center–guard), B (guard–tackle), C (outside the tackle), D (outside the tight end). */
 export const GAPS = [0.7, 2.0, 3.4, 5.2];
@@ -32,41 +40,55 @@ const OL = ['LT', 'LG', 'C', 'RG', 'RT'];
  */
 export type BlockRole = 'zone' | 'reach' | 'down' | 'hinge' | 'kick' | 'lead' | 'climb' | 'stalk' | 'pass' | 'release';
 
+/** Schemes the line blocks like zone (a play-side step, the man in the gap): the iso's base blocks and the sneak's wedge too. */
+const ZONE_LIKE = ['insideZone', 'iso', 'sneak'];
+/** Schemes the line reaches on (outside zone and the toss). */
+const REACH = ['outsideZone', 'toss'];
+
 export function blockRoles(play: OffPlay): Partial<Record<OffSlot, BlockRole>> {
   const out: Partial<Record<OffSlot, BlockRole>> = {};
   const run = play.run;
+  const fb = fullbackSlot(play.formation);
+  const pulls = pullers(play);
   for (const k of Object.keys(play.assign) as OffSlot[]) {
     const a = play.assign[k];
     if (a.kind === 'passBlock') out[k] = play.screen && OL.includes(k) ? 'release' : 'pass';
     else if (a.kind === 'stalk') out[k] = 'stalk';
     else if (a.kind === 'runBlock') {
       const lineman = OL.includes(k);
+      const te = inLine(play.formation, k);
+      const side = (run?.aim ?? -1) >= 0 ? 1 : -1;
+      const dy = play.formation.align[k].dy * side;
       if (!run || run.scheme === 'draw') out[k] = lineman ? 'pass' : 'stalk';
-      else if (!lineman && k !== 'TE') out[k] = 'stalk';
-      else if (run.scheme === 'insideZone') out[k] = 'zone';
-      else if (run.scheme === 'outsideZone') out[k] = 'reach';
-      else {
-        const side = run.aim >= 0 ? 1 : -1;
-        const dy = play.formation.align[k].dy * side;
-        const pulls = pullers(play);
-        if (k === pulls.kick) out[k] = 'kick';
-        else if (k === pulls.lead) out[k] = 'lead';
-        else if (k === 'TE') out[k] = dy > 0 && run.scheme === 'power' ? 'climb' : dy > 0 ? 'down' : 'stalk';
-        else out[k] = dy > -0.5 ? 'down' : 'hinge';
-      }
+      else if (k === pulls.kick) out[k] = 'kick';
+      else if (k === pulls.lead) out[k] = 'lead';
+      // The fullback leads through the hole (iso, the dive, zone) or around the edge (toss).
+      else if (k === fb) out[k] = 'lead';
+      else if (!lineman && !te) out[k] = 'stalk';
+      else if (ZONE_LIKE.includes(run.scheme)) out[k] = !lineman && dy < 0 ? 'hinge' : 'zone';
+      else if (REACH.includes(run.scheme)) out[k] = !lineman && dy < 0 ? 'hinge' : 'reach';
+      else if (te) out[k] = dy > 0 ? (run.scheme === 'power' && !fb ? 'climb' : 'down') : 'hinge';
+      else out[k] = dy > -0.5 ? 'down' : 'hinge';
     }
   }
   return out;
 }
 
-/** Gap schemes' pullers: the backside guard kicks out; on counter the backside tackle leads too. */
+/**
+ * Gap schemes' pullers: the backside guard kicks out; on counter the
+ * backside tackle leads too. With a fullback (Power O from the I or heavy
+ * sets) the fullback kicks out the end and the guard wraps up through the
+ * hole to the linebacker.
+ */
 export function pullers(play: OffPlay): { kick?: OffSlot; lead?: OffSlot } {
   const run = play.run;
   if (!run || (run.scheme !== 'power' && run.scheme !== 'counter')) return {};
   const left = run.aim >= 0; // running to the offense's left: the backside is the right
-  return { kick: left ? 'RG' : 'LG', ...(run.scheme === 'counter' ? { lead: left ? 'RT' : 'LT' } : {}) };
+  const guard: OffSlot = left ? 'RG' : 'LG';
+  const fb = fullbackSlot(play.formation);
+  if (run.scheme === 'power' && fb) return { kick: fb, lead: guard };
+  return { kick: guard, ...(run.scheme === 'counter' ? { lead: left ? 'RT' : 'LT' } : {}) };
 }
-
 /** The play side (+1 = offense's left) of a run or a play-action fake. */
 export function playSide(s: PlayState): 1 | -1 {
   const aim = s.setup.play.run?.aim ?? s.setup.play.pa?.aim ?? -1;
@@ -113,6 +135,8 @@ export function assignRunBlocks(s: PlayState): void {
   const pulls = pullers(s.setup.play);
   const pullG = pulls.kick ? s.agents[s.slot[pulls.kick]!] : undefined;
   const pullT = pulls.lead ? s.agents[s.slot[pulls.lead]!] : undefined;
+  const fbSlot = fullbackSlot(s.setup.play.formation);
+  const fb = fbSlot && s.setup.play.assign[fbSlot].kind === 'runBlock' ? s.agents[s.slot[fbSlot]!] : undefined;
   const hole = v2(los + 0.6, by + run.aim);
   for (const b of line) {
     delete b.mem.drive;
@@ -127,20 +151,31 @@ export function assignRunBlocks(s: PlayState): void {
       // Backside tackle on power: hinge on the man over or outside him.
       tgt = nearestFree(s, front, v2(b.pos.x + 1.2, b.pos.y - side * 0.8), taken, 2.6);
       b.mem.drive = 0;
+    } else if (run.scheme === 'sneak') {
+      // The wedge: everyone fires straight ahead into the man in front of him.
+      tgt = nearestFree(s, front, v2(b.pos.x + 1.2, b.pos.y), taken, 2.2);
+      b.mem.drive = 0;
+    } else if (run.scheme === 'iso') {
+      // Iso: base blocks, the man over me (a half-step play-side), driven straight back.
+      tgt = nearestFree(s, front, v2(b.pos.x + 1.2, b.pos.y + side * 0.5), taken, 2.2);
+      b.mem.drive = side * 0.15;
     } else {
-      // Zone: my play-side gap; outside zone reaches a step wider.
-      const reach = run.scheme === 'outsideZone' ? 1.6 : 1.1;
+      // Zone: my play-side gap; outside zone and the toss reach a step wider.
+      const wide = run.scheme === 'outsideZone' || run.scheme === 'toss';
+      const reach = wide ? 1.6 : 1.1;
       tgt = nearestFree(s, front, v2(b.pos.x + 1.2, b.pos.y + side * reach), taken, 2.2);
-      b.mem.drive = side * (run.scheme === 'outsideZone' ? 0.9 : 0.3);
+      b.mem.drive = side * (wide ? 0.9 : 0.3);
     }
-    // Uncovered: climb to the linebacker on my play side.
+    // Uncovered: climb to the linebacker on my play side (on the iso, leave the one over the hole to the fullback).
     if (tgt < 0) tgt = nearestFree(s, second, v2(b.pos.x + 5, b.pos.y + side * 1.5), taken);
     if (tgt >= 0) {
       taken.add(tgt);
       b.mem.target = tgt;
     }
   }
-  // Pullers: the guard kicks out the end on the play side; the counter's tackle leads through the hole.
+  // Pullers: the kick-out on the end at the play side (the guard, or the
+  // fullback on Power O); the lead through the hole to the linebacker (the
+  // counter's tackle, or the guard wrapping on Power O).
   const end = nearestFree(s, s.def, v2(los + 1, by + side * 4.5), taken);
   if (pullG) {
     pullG.mem.pull = hole;
@@ -155,26 +190,49 @@ export function assignRunBlocks(s: PlayState): void {
     pullT.mem.drive = side * 0.2;
     if (lb >= 0) taken.add(lb);
   }
-  // Tight end and receivers: on power the play-side tight end climbs to the
-  // linebacker over the hole (nobody else can); on counter he down-blocks;
+  // The fullback's lead (not a puller): through the hole to the linebacker
+  // over it (iso, the dive, zone), or around the edge to the force defender
+  // (the toss). He runs his path first (mem.pull), then blocks.
+  if (fb && fb !== pullG && fb !== pullT) {
+    const toss = run.scheme === 'toss';
+    const at = toss ? v2(los + 2.5, by + run.aim + side * 1.5) : v2(los + 4.5, hole.y);
+    const tgt = nearestFree(s, toss ? s.def : second.length ? second : s.def, at, taken);
+    fb.mem.pull = toss ? v2(los - 0.5, by + run.aim) : v2(hole.x, hole.y);
+    fb.mem.target = tgt;
+    fb.mem.drive = side * (toss ? 0.8 : 0.2);
+    if (tgt >= 0) taken.add(tgt);
+  }
+  // Tight ends (whoever's in-line) and receivers: on power (no fullback) the
+  // play-side tight end climbs to the linebacker over the hole; on counter
+  // and Power O he down-blocks; on the reach schemes he reaches the end;
   // everyone else stalks the nearest man to his side.
   for (const k of ['TE', 'X', 'Z', 'SLOT']) {
     const b = s.agents[s.slot[k]!]!;
+    if (b === fb || b === pullG || b === pullT) continue;
     b.mem.pull = null;
     if (s.setup.play.assign[k as 'TE'].kind !== 'runBlock') continue;
-    const inline = Math.abs(b.pos.y - by) < 5 && b.pos.x > los - 1.2;
+    const inline = Math.abs(b.pos.y - by) < 5.5 && b.pos.x > los - 1.2;
+    const playSide = (b.pos.y - by) * side > 0;
     let tgt = -1;
-    if (inline && run.scheme === 'power' && (b.pos.y - by) * side > 0) {
+    if (inline && run.scheme === 'power' && playSide && !fb) {
       tgt = nearestFree(s, [...second, ...front], v2(los + 4, hole.y), taken, 6);
       b.mem.drive = side * 0.3;
-    } else if (inline && gap && (b.pos.y - by) * side > 0) {
+    } else if (inline && gap && playSide) {
       tgt = nearestFree(s, front, v2(b.pos.x + 1.2, b.pos.y - side * 1.2), taken, 3);
       b.mem.drive = -side * 0.8;
       // Nobody to down-block: the linebacker over the hole.
       if (tgt < 0) tgt = nearestFree(s, second, v2(los + 4, hole.y), taken, 6);
-    } else if (inline && run.scheme === 'outsideZone') {
+    } else if (inline && (run.scheme === 'outsideZone' || run.scheme === 'toss') && playSide) {
       tgt = nearestFree(s, s.def, v2(b.pos.x + 1.4, b.pos.y + side * 1.8), taken, 3.5);
       b.mem.drive = side * 0.9;
+    } else if (inline && playSide) {
+      // Iso, the sneak and inside zone: the man over or just outside him, driven out.
+      tgt = nearestFree(s, s.def, v2(b.pos.x + 1.2, b.pos.y + side * 0.6), taken, 3);
+      b.mem.drive = side * 0.4;
+    } else if (inline) {
+      // Backside: cut off the man over him (hinge), keep him from chasing it down.
+      tgt = nearestFree(s, s.def, v2(b.pos.x + 1.2, b.pos.y + side * 0.8), taken, 3);
+      b.mem.drive = side * 0.3;
     }
     if (tgt < 0) tgt = nearestFree(s, s.def, v2(b.pos.x + 3, b.pos.y), taken);
     if (tgt >= 0) {
@@ -230,14 +288,27 @@ export function backToMesh(s: PlayState, rb: Agent): void {
     rb.anim = 'block';
     return;
   }
+  if (run.scheme === 'toss') {
+    // The toss: the back opens and runs for the edge from the snap, a yard
+    // or two deeper than the QB so the pitch comes back to him on the run.
+    const edge = v2(s.setup.los - 4.5, (s.setup.ballY ?? 0) + run.aim);
+    steer(rb, arrive(rb, edge, 1), {});
+    rb.anim = 'run';
+    return;
+  }
+  if (run.scheme === 'sneak') {
+    // The sneak: the back's a blocker behind the wedge (a push from behind).
+    steer(rb, arrive(rb, v2(qb.pos.x - 0.6, qb.pos.y), 0.6, 1), { face: 0 });
+    return;
+  }
   const mesh = v2(qb.pos.x + 0.3, qb.pos.y + run.aim * 0.25);
-  steer(rb, { x: (mesh.x - rb.pos.x) * 3, y: (mesh.y - rb.pos.y) * 3 }, { pace: run.scheme === 'outsideZone' ? 0.8 : 0.7 });
+  steer(rb, { x: (mesh.x - rb.pos.x) * 3, y: (mesh.y - rb.pos.y) * 3 }, { pace: run.scheme === 'outsideZone' ? 0.8 : run.scheme === 'iso' ? 0.85 : 0.7 });
 }
 
 /**
  * The QB's side of the mesh: a reverse pivot from under center (back and
  * toward the play), a slide toward the back from the gun; the draw first
- * shows a three-step drop.
+ * shows a three-step drop; on the toss he opens to the play side and pitches.
  */
 export function qbMesh(s: PlayState, qb: Agent, rb: Agent): void {
   const run = s.setup.play.run!;
@@ -246,6 +317,13 @@ export function qbMesh(s: PlayState, qb: Agent, rb: Agent): void {
   if (run.scheme === 'draw' && since < run.mesh - 0.3) {
     steer(qb, { x: -qb.fx.vmax * 0.45, y: 0 }, { face: 0 });
     qb.anim = 'drop';
+    return;
+  }
+  if (run.scheme === 'toss') {
+    // A reverse pivot and a step back toward the play side, facing the back for the pitch.
+    const side = run.aim >= 0 ? 1 : -1;
+    steer(qb, s.phase === 'carrier' ? { x: 0, y: 0 } : { x: -qb.fx.vmax * 0.35, y: side * qb.fx.vmax * 0.3 }, { pace: 0.5, face: atan2(rb.pos.y - qb.pos.y, rb.pos.x - qb.pos.x) });
+    qb.anim = 'handoff';
     return;
   }
   const want = center && since < 0.45 ? { x: -qb.fx.vmax * 0.5, y: run.aim * 0.9 } : { x: 0, y: (rb.pos.y - qb.pos.y) * 1.5 };
@@ -327,19 +405,19 @@ export function belief(s: PlayState, d: Agent): 'run' | 'pass' {
   // A man-coverage defender's key is his man: he plays the run only when his
   // man blocks (or the ball's across the line), never off a backfield fake.
   if (as.kind === 'man') {
-    const m = s.agents[s.slot[as.on]!]!;
+    const m = manOf(s, d)!;
     // His man blocking (or the back he's on carrying it: his run key) shows him run; he fits his gap.
     const k = s.setup.play.assign[m.slot as keyof typeof s.setup.play.assign].kind;
     const blocking = k !== 'route';
     return past || (blocking && s.runShow >= 0 && s.t >= s.runShow + reaction(s, d)) ? 'run' : 'pass';
   }
   const rt = reaction(s, d);
-  const db = d.slot === 'LCB' || d.slot === 'RCB' || d.slot === 'FS' || d.slot === 'SS';
+  const db = d.p.pos === 'CB' || d.p.pos === 'S';
   // Deep zones are pass-first by coaching (a ball over your head is the one
   // unforgivable thing): they need to see run a beat longer, longer still
   // against a play-action look (the fake is built to hold them).
   const deep = as.kind === 'zone' && ZONES[as.zone].deep;
-  const tRun = s.runShow >= 0 ? s.runShow + rt + (db ? 0.15 : 0) + (deep ? (s.setup.play.pa ? 0.35 : 0.2) : 0) : Infinity;
+  const tRun = s.runShow >= 0 ? s.runShow + rt + (db ? DB_READ : 0) + (deep ? (s.setup.play.pa ? 0.35 : DEEP_READ) : 0) : Infinity;
   // Seeing the ball come out of a fake takes a sharper eye than seeing the
   // fake (Play Recognition: the best read it almost at once, the worst a
   // quarter-second late).
@@ -390,7 +468,7 @@ export function runFit(s: PlayState, d: Agent): void {
     // gap, and downhill only as the back gets to the line (read and flow,
     // then fill: attack too early and the back cuts behind him).
     const toLine = Math.max(0, los - ball.pos.x);
-    const depth = Math.max(1, Math.min(4, 1 + toLine * 0.6));
+    const depth = Math.max(LB_FIT, Math.min(4.5, LB_FIT + toLine * 0.5));
     const flow = (ball.pos.y - by) * 0.6;
     steer(d, arrive(d, v2(los + depth, gap + flow), 1, 0.6), {});
     return;

@@ -3,6 +3,7 @@ import { useApp, type CameraShot, type Screen } from '@/app/appStore';
 import { useMenuNav } from '../nav';
 import { Hints, MenuItem } from '../components/controls';
 import { Audio } from '@/audio/audio';
+import { useDraft } from '@/app/draftStore';
 import { getDailyChallenge, rateBeasts, threatTier, todayKey } from '@/engine';
 
 interface Item {
@@ -15,14 +16,15 @@ interface Item {
   arrives?: string;
 }
 
-const ITEMS: Item[] = [
-  { id: 'play', label: 'Play', blurb: 'Draft an all-time offense through the slot machine, then take the field against the Beasts. Classic shows every number; Film Room hides them.', shot: 'menu', arrives: 'the full game build' },
-  { id: 'daily', label: 'Daily Challenge', blurb: 'Same Beasts, same draft sequence for everyone today. Your final margin is your score.', shot: 'daily', arrives: 'the full game build' },
-  { id: 'quick', label: 'Quick Play', blurb: 'Auto-draft and straight to kickoff.', shot: 'menu', arrives: 'the full game build' },
+const ALL_ITEMS: Item[] = [
+  { id: 'play', label: 'Play', blurb: 'Draft an all-time offense in the Contenders\' locker room through the slot machine, then take the field against the Beasts. Classic shows every number; Film Room hides them (← → to switch).', shot: 'menu' },
+  { id: 'daily', label: 'Daily Challenge', blurb: 'Same Beasts, same draft sequence for everyone today. Film Room rules, no skips, no Auto-Draft. Your final margin is your score.', shot: 'daily' },
+  { id: 'quick', label: 'Quick Play', blurb: 'Auto-draft, a look at the lockers, and straight out of the tunnel to kickoff.', shot: 'menu' },
+  { id: 'locker', label: 'Locker Room', blurb: 'Your last roster, dressed and waiting, with your last game on the board: the score, the grade, the box score and the drive chart. Walk the row, or walk out and play them again.', shot: 'menu' },
   { id: 'practice', label: 'Practice Field', blurb: 'Free play against the Beasts: pick a play, a spot and a coverage, and run it as often as you like. Drills with medals arrive with the full game build.', shot: 'practice', screen: 'practice' },
   { id: 'howto', label: 'How to Play', blurb: 'Controls and the rules of the game.', shot: 'history', screen: 'howto' },
   { id: 'settings', label: 'Settings', blurb: 'Display, graphics, controls, audio, gameplay and accessibility.', shot: 'settings', screen: 'settings' },
-  { id: 'history', label: 'History', blurb: 'Your past games and dailies, with share cards.', shot: 'history', arrives: 'the full game build' },
+  { id: 'history', label: 'History', blurb: 'Every game you have played against the Beasts: the final score, the grade, the full box score and the drive chart. Share cards arrive with the full game build.', shot: 'history', screen: 'history' },
 ];
 
 function useDailyPreview() {
@@ -37,6 +39,9 @@ function useDailyPreview() {
 
 export function MainMenu() {
   const go = useApp((s) => s.go);
+  const hasDraft = useDraft((s) => !!s.saved);
+  const [film, setFilm] = useState(false);
+  const ITEMS = ALL_ITEMS.filter((it) => it.id !== 'locker' || hasDraft);
   const setShot = useApp((s) => s.setShot);
   const showToast = useApp((s) => s.showToast);
   const [focus, setFocus] = useState(0);
@@ -50,6 +55,18 @@ export function MainMenu() {
   };
   const activate = (i: number) => {
     const it = ITEMS[i]!;
+    const draft = useDraft.getState();
+    if (it.id === 'play' || it.id === 'daily' || it.id === 'quick') {
+      Audio.uiSelect();
+      void draft.begin(it.id === 'daily' ? 'daily' : it.id === 'quick' ? 'quick' : film ? 'film' : 'classic');
+      go('draft');
+      return;
+    }
+    if (it.id === 'locker') {
+      Audio.uiSelect();
+      void draft.view().then((ok) => ok && go('draft'));
+      return;
+    }
     if (it.screen) {
       Audio.uiSelect();
       go(it.screen);
@@ -59,7 +76,12 @@ export function MainMenu() {
     }
   };
 
-  useMenuNav({ count: ITEMS.length, focus, setFocus: focusItem, onConfirm: activate });
+  const toggleFilm = () => {
+    if (ITEMS[focus]?.id !== 'play') return;
+    Audio.uiTick();
+    setFilm((f) => !f);
+  };
+  useMenuNav({ count: ITEMS.length, focus, setFocus: focusItem, onConfirm: activate, onLeft: toggleFilm, onRight: toggleFilm });
 
   return (
     <div className="menu-screen main-menu">
@@ -70,7 +92,7 @@ export function MainMenu() {
       </header>
       <nav className="menu-list">
         {ITEMS.map((it, i) => (
-          <MenuItem key={it.id} label={it.label} focused={i === focus} tag={it.arrives ? 'Locked' : undefined} onHover={() => focusItem(i)} onClick={() => activate(i)} />
+          <MenuItem key={it.id} label={it.label} focused={i === focus} tag={it.arrives ? 'Locked' : it.id === 'play' ? (film ? 'Film Room' : 'Classic') : undefined} onHover={() => focusItem(i)} onClick={() => activate(i)} />
         ))}
       </nav>
       <aside className="menu-detail" key={item.id}>

@@ -112,14 +112,14 @@ Full-screen and left-aligned, over a live cinematic camera that changes per focu
 7. OL is picked as a team+decade **unit**. In the 3D game it becomes five individual linemen (named from the unit's key list, the rest generated around the unit's level; see the ratings spec).
 8. Daily: the sequence is fixed per date (`buildDailySequence`, unchanged). If a Daily round ever offers no legal pick (theoretically possible through the duplicate-player rule), the round advances to a deterministic backup pair derived from the same date seed (§15 D8).
 
-### 6.2 Presentation
-- The slot machine runs on the stadium's main video board: team and decade reels with the legacy flicker timing (~950 ms), then a lock with light and sound.
-- The draft UI is a full-screen overlay styled like a sports game's team-select screen:
-  - **Left:** the pool for this pair, grouped by position, with search and position filter tabs (All/QB/RB/WR/TE/OL; tabs for filled positions are dimmed, as legacy).
-  - **Center:** the focused player's card: name, team+decade in `TEAM_COLORS` accents, OVR, the 4–6 key attributes for his position, trait badges. In Classic there's a **Scouting** tab: "how we got these numbers", with the contribution breakdown from real stats and confidence flags.
-  - **Right:** your roster on a mini formation (the 3D field behind shows the same thing live).
-  - **Skips** sit on the reels, and there's a Film Room indicator.
-- **Pick → materialize:** the camera cuts to the field. The player forms up at his position in the formation in the Contenders kit (particle and light resolve, not a pop-in), with a short signature animation chosen from his traits (QB: a drop-back and throw motion; Bruiser RB: a lowered-shoulder hit on a sled; Deep Threat WR: a burst into a go route and a catch over the shoulder), and a crowd reaction scaled to OVR.
+### 6.2 Presentation: the Contenders' locker room (M6)
+The draft happens in the Contenders' locker room, on their side of the Beasts' stadium: the identity of the game. Look and mood from `docs/reference/ref-04` to `ref-06`, in black and lime, with no league or team marks.
+- **The room:** one row of nine stalls on an arc facing the camera, in draft order (QB, RB, RB2, WR1, WR2, WR3, TE, TE2, and a double-wide OL stall with five nameplates); a bench in front; the video wall closing the row on the left; the tunnel door on the right with the field in daylight at the end of it. Dark, warm and premium: the stalls are the light (a lamp in each, an underlight in the position's color, a washer from the ceiling). Two moods: pregame (house lights up) and lights down (the night preset).
+- **Empty stalls** are bare: a blank nameplate, a dark shelf, an empty hanger.
+- **The video wall:** the slot machine's team and decade reels, the Beasts' lineup (flip the pages), and the pick card.
+- **On a pick** the camera moves to his stall and it dresses itself over about three seconds: the nameplate lights with his name and number, the lamp and the underlight come on, the jersey drops onto the hanger with his name and number, the helmet lands on the shelf, gloves and a towel go over its lip, the cleats land on the floor, and stickers go on one by one (his team+decade tag, a trait badge or two, his first-team All-Pro count). His signature move plays as a hologram in front of the stall (QB drop and throw, WR release, RB cut, lineman into his stance).
+- **The pick panel** (over the room, right side): the pair, the skips, position tabs, search, the list (OVR in Classic), and the Scouting card: OVR and confidence, the key attributes, traits with their why lines, the era line. Film Room hides every number. Mouse, keyboard and controller.
+- **After the ninth stall** the camera pulls back down the row and walks out the tunnel into the stadium, and the game kicks off (the M7 tunnel reveal grows from this). The room stays reachable as **Locker Room** on the main menu and the results screen once a draft exists.
 - **Auto-Draft** (Classic, Film Room, Quick Play only) fills the remaining slots from the best available assignment for a random sequence, as legacy did. Unlike legacy, it doesn't discard picks you've already made.
 
 ---

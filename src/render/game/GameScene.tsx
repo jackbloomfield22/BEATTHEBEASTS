@@ -33,6 +33,8 @@ import { createFootball } from './football';
 import { createFieldMarks } from './fieldMarks';
 import { frameEvents } from './frameEvents';
 import { ballInHands, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
+import { Officials } from './officials';
+import { kickView } from './kickView';
 
 // The live play (TECH_PLAN §4.3): one top-priority frame callback advances
 // the sim through the Practice session, then every player, the ball, the
@@ -68,9 +70,44 @@ const STANCE: Record<string, string> = {
 /** The stance for a slot on this play: the QB under center or in the gun by the formation. */
 const stanceFor = (slot: string, s: PlayState): string => (slot === 'QB' && s.setup.play.formation.center ? 'stance_qb_center' : STANCE[slot] ?? 'stance_idle');
 
+/**
+ * A field goal or PAT (M6): the other 19 set around the kicking unit
+ * (KickBall.tsx has the snapper, holder and kicker). Field frame relative to
+ * the line of scrimmage, 7 yd in front of the spot of the kick: x downfield,
+ * y left, yd. The protection is the NFL's tight split, guards to wings a
+ * foot apart (~0.35 yd) with the wings a yard off the ends' outside hips; the
+ * block unit puts eight in the gaps across from them, an edge rusher off each
+ * wing and one jumper in the middle (the standard field goal block look).
+ * The QB, RB and center step off: the snapper takes the center's place.
+ */
+const FG_SET: Record<string, { at: [number, number]; stance: string } | null> = {
+  QB: null,
+  RB: null,
+  C: null,
+  LG: { at: [-0.3, 1.15], stance: 'stance_ol_3pt' },
+  RG: { at: [-0.3, -1.15], stance: 'stance_ol_3pt' },
+  LT: { at: [-0.3, 2.3], stance: 'stance_ol_3pt' },
+  RT: { at: [-0.3, -2.3], stance: 'stance_ol_3pt' },
+  TE: { at: [-0.3, 3.45], stance: 'stance_ol_3pt' },
+  SLOT: { at: [-0.3, -3.45], stance: 'stance_ol_3pt' },
+  X: { at: [-1.1, 4.4], stance: 'stance_rb_2pt' },
+  Z: { at: [-1.1, -4.4], stance: 'stance_rb_2pt' },
+  LDT: { at: [1, 0.6], stance: 'stance_dl_4pt' },
+  RDT: { at: [1, -0.6], stance: 'stance_dl_4pt' },
+  LE: { at: [1, 1.75], stance: 'stance_dl_3pt' },
+  RE: { at: [1, -1.75], stance: 'stance_dl_3pt' },
+  WLB: { at: [1, 2.9], stance: 'stance_dl_3pt' },
+  SLB: { at: [1, -2.9], stance: 'stance_dl_3pt' },
+  LCB: { at: [1.1, 4.05], stance: 'stance_dl_3pt' },
+  RCB: { at: [1.1, -4.05], stance: 'stance_dl_3pt' },
+  FS: { at: [1.6, 5.6], stance: 'stance_lb_ready' },
+  SS: { at: [1.6, -5.6], stance: 'stance_lb_ready' },
+  MLB: { at: [2.6, 0], stance: 'stance_lb_ready' },
+};
+
 const RENDER_POS: Record<SimPlayer['pos'], Position> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', OL: 'OL', DE: 'DL', DT: 'DL', LB: 'LB', CB: 'CB', S: 'S' };
 
-function buildTeam(players: SimPlayer[], slots: string[], kit: 'royal' | 'beasts', asset: PlayerAsset, lib: AnimLibrary): Body[] {
+function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: PlayerAsset, lib: AnimLibrary): Body[] {
   return players.map((p, k) => {
     const body = bodyFromImperial(p.heightIn, p.weightLb);
     const player = new Player(asset, {
@@ -81,8 +118,21 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: 'royal' | 'beasts
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>() };
+    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>() };
   });
+}
+
+/**
+ * Personnel changes the man in a slot between plays (an FB or a second TE in
+ * the SLOT slot, the nickel corner for a linebacker): dress the body for
+ * whoever lines up there now. Look and body only; the skeleton and clips stay.
+ */
+function relook(b: Body, p: SimPlayer): void {
+  if (b.who === p.id) return;
+  b.who = p.id;
+  const body = bodyFromImperial(p.heightIn, p.weightLb);
+  b.player.setLook({ kit: KITS[b.kit]!, skin: skinHexFor(p.name), number: p.num, name: jerseyName(p.name), variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name) });
+  b.player.setBody(body.heightM, body.weightKg);
 }
 
 const _p = new THREE.Vector3();
@@ -103,6 +153,8 @@ export function GameScene() {
   const [ball] = useState(createFootball);
   const [routeArt] = useState(createRouteArt);
   const shownPlay = useRef(-1);
+  const officials = useRef<Officials | null>(null);
+  const kickSet = useRef<number | null>(null);
   const lastSimT = useRef(0);
   const snapped = useRef(false);
 
@@ -116,13 +168,17 @@ export function GameScene() {
       if (!alive || !practice.rosters) return;
       const R = practice.rosters;
       // Agent order in the sim: OFF_SLOTS then DEF_SLOTS (sim/plays.ts).
-      const all = [...buildTeam(OFF_SLOTS.map((k) => R.offense[k]), OFF_SLOTS, 'royal', asset, lib), ...buildTeam(DEF_SLOTS.map((k) => R.defense[k]), DEF_SLOTS, 'beasts', asset, lib)];
+      const all = [...buildTeam(OFF_SLOTS.map((k) => R.offense[k]), OFF_SLOTS, practice.offenseKit, asset, lib), ...buildTeam(DEF_SLOTS.map((k) => R.defense[k]), DEF_SLOTS, 'beasts', asset, lib)];
       const g = new THREE.Group();
       g.name = 'players';
       for (const b of all) {
         b.player.root.visible = false;
         g.add(b.player.root);
       }
+      const crew = new Officials(asset, lib);
+      crew.group.visible = false;
+      g.add(crew.group);
+      officials.current = crew;
       await prepareLate(g, gl, camera, scene);
       if (!alive) return;
       group = g;
@@ -148,6 +204,41 @@ export function GameScene() {
     marks.group.visible = show && r!.cur.phase !== 'dead';
     ball.visible = show;
     frameEvents.length = 0;
+    if (officials.current) officials.current.group.visible = show;
+    if (show && kickView.active) {
+      // The kick: everyone set in the field goal look, the sim's marks and ball away.
+      marks.group.visible = false;
+      ball.visible = false;
+      for (const el of hudDom.icons) if (el) el.style.visibility = 'hidden';
+      routeArt.update(r!.state, false, step, null);
+      if (kickSet.current !== kickView.spotX) {
+        kickSet.current = kickView.spotX;
+        const los = kickView.spotX + 7;
+        for (const b of bodies!) {
+          const set = FG_SET[b.slot];
+          b.player.root.visible = !!set;
+          if (!set) continue;
+          const off = (OFF_SLOTS as string[]).includes(b.slot);
+          b.player.root.position.set(worldX(set.at[1]), 0, worldZ(los + set.at[0]));
+          b.player.root.rotation.set(0, yawOf(off ? 0 : Math.PI), 0);
+          resetBody(b);
+          b.animator.reset();
+          b.animator.setStance(set.stance);
+          b.animator.update(10, { speed: 0 });
+        }
+        officials.current?.place(los, 0);
+      }
+      for (const b of bodies!) {
+        if (!b.player.root.visible) continue;
+        b.animator.update(step, { speed: 0 });
+        b.player.updateLod(camera, gl.domElement.height);
+      }
+      officials.current?.update(step, { x: kickView.spotX, y: 0 }, null, 0, 10, camera, gl.domElement.height);
+      // Back from the kick, the next snapshot sets everyone again.
+      shownPlay.current = -1;
+      return;
+    }
+    kickSet.current = null;
     if (!show) {
       if (bodies) for (const b of bodies) b.player.root.visible = false;
       for (const el of hudDom.icons) if (el) el.style.visibility = 'hidden';
@@ -166,6 +257,7 @@ export function GameScene() {
       snapped.current = false;
       bodies.forEach((b, i) => {
         const a = cur.agents[i]!;
+        relook(b, s.agents[i]!.p);
         b.player.root.visible = true;
         b.player.root.position.set(worldX(a.y), 0, worldZ(a.x));
         b.player.root.rotation.set(0, yawOf(a.face), 0);
@@ -180,6 +272,7 @@ export function GameScene() {
       });
       if (urlFlags.pops) resetPops();
       lastSimT.current = cur.t;
+      officials.current?.place(s.setup.los, s.setup.ballY ?? 0);
     }
     // The snap: everyone who has a get-off out of his stance plays it.
     if (!snapped.current && cur.phase !== 'presnap') {
@@ -249,6 +342,7 @@ export function GameScene() {
       if (urlFlags.pops) measure(b, animDt, latency.frame, s.agents[i]!.anim, cur.phase);
     });
 
+    officials.current?.update(animDt, cur.ball, s.result, s.result ? s.result.spot - s.setup.los : 0, s.setup.toGo, camera, viewportPx);
     placeBall(s.snapT, s.t);
     placeMarks(s.setup.los, s.setup.toGo);
     // The route preview: held key, the hot-route picker, or just after a hot route is called.

@@ -1,0 +1,58 @@
+/* A full game (M6): the score bug, the Meanwhile cut, decisions and the kick. */
+
+.game-screen { position: absolute; inset: 0; pointer-events: none; }
+.game-screen > * { pointer-events: auto; }
+
+.score-bug { position: absolute; top: 1.6rem; left: 50%; transform: translateX(-50%); display: grid; grid-template-columns: auto auto auto; grid-template-rows: auto auto; background: rgba(6,6,8,.86); border-bottom: 3px solid var(--lime); z-index: 30; pointer-events: none; font-weight: 800; }
+.sb-team { display: flex; align-items: center; gap: .8rem; padding: .45rem .9rem; }
+.sb-team.us { border-left: 4px solid var(--lime); }
+.sb-team.them { border-left: 4px solid #ff2a4d; }
+.sb-name { font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.sb-score { font-family: var(--font-display); font-size: 1.6rem; min-width: 2.2ch; text-align: right; }
+.sb-clock { display: flex; align-items: center; gap: .6rem; padding: .45rem .9rem; font-family: var(--font-display); font-size: 1.05rem; border-left: 1px solid rgba(255,255,255,.1); }
+.sb-tos { display: flex; gap: .2rem; }
+.sb-tos i { width: .7rem; height: .25rem; background: rgba(255,255,255,.18); }
+.sb-tos i.on { background: #ffd400; }
+.sb-down { grid-column: 1 / span 2; padding: .25rem .9rem; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: #fff; background: rgba(170,255,0,.1); }
+.sb-down span { color: var(--ink-2); margin-left: .5rem; }
+.sb-down.dim { color: var(--ink-3); background: none; }
+.sb-wind { padding: .25rem .9rem; font-size: .72rem; color: var(--ink-2); display: flex; align-items: center; gap: .4rem; }
+.wind-arrow { display: inline-block; color: #7fc4ec; font-weight: 900; }
+
+.meanwhile { position: absolute; left: 3.5rem; bottom: 6rem; min-width: 34rem; padding: 1.1rem 1.6rem 1.2rem; background: linear-gradient(90deg, rgba(5,5,6,.92), rgba(5,5,6,.6)); border-left: 5px solid #ff2a4d; animation: lt-in 520ms cubic-bezier(.2,.7,.2,1) both; }
+.meanwhile.stopped { border-left-color: var(--lime); }
+.meanwhile.final { left: 50%; top: 42%; bottom: auto; transform: translate(-50%, -50%); text-align: center; border-left: none; border-top: 4px solid var(--lime); }
+.mw-kicker { font-size: .76rem; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-3); }
+.mw-line { display: flex; align-items: baseline; gap: 1rem; margin: .25rem 0; font-family: var(--font-display); }
+.mw-team { font-size: 1.5rem; color: #ff2a4d; }
+.meanwhile.final .mw-team { color: #fff; }
+.mw-result { font-size: 2.2rem; }
+.mw-pts { font-size: 1.6rem; color: #ff2a4d; }
+.mw-meta { color: var(--ink-2); font-weight: 600; }
+.mw-next { margin-top: .5rem; color: var(--lime); font-weight: 700; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; }
+.meanwhile .hints { position: static; margin-top: .8rem; }
+
+.decision-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 34rem; padding: 1.4rem 1.6rem; background: rgba(6,6,8,.9); border-top: 3px solid var(--lime); backdrop-filter: blur(8px); }
+.decision-card .hints { position: static; margin-top: 1rem; }
+/* The choices stack (↑↓ picks one), so a long option never runs off the card. */
+.decision-card .result-actions { flex-direction: column; align-items: stretch; margin-top: .8rem; }
+.decision-card .result-actions .menu-item { white-space: normal; }
+.clock-note { position: absolute; left: 50%; bottom: 5rem; transform: translateX(-50%); padding: .4rem 1rem; background: rgba(255,212,0,.15); color: #ffd400; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+
+.kick-panel { position: absolute; inset: 0; cursor: grab; }
+.kick-panel:active { cursor: grabbing; }
+.kick-info { position: absolute; left: 3rem; top: 8rem; padding: 1rem 1.3rem; background: rgba(6,6,8,.7); border-left: 3px solid var(--lime); }
+.kick-pct { color: var(--ink-2); font-weight: 700; }
+.kick-meter { position: absolute; right: 4rem; top: 50%; transform: translateY(-50%); display: flex; gap: 1.2rem; align-items: flex-end; }
+.km-power { width: 1.1rem; height: 14rem; background: rgba(255,255,255,.1); display: flex; align-items: flex-end; border: 1px solid rgba(255,255,255,.2); }
+.km-power span { display: block; width: 100%; background: linear-gradient(0deg, var(--lime-dim), var(--lime)); }
+.km-power span.over { background: linear-gradient(0deg, var(--lime), #ff2a4d); }
+.km-aim { width: 5rem; height: 5rem; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); position: relative; }
+.km-aim span { position: absolute; left: 50%; top: 8%; width: 3px; height: 42%; margin-left: -1.5px; background: var(--lime); transform-origin: 50% 100%; }
+.kick-result { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); font-family: var(--font-display); font-size: 3.4rem; animation: lt-in 400ms both; text-shadow: 0 .2rem 2rem rgba(0,0,0,.8); }
+.kick-result.good { color: var(--lime); }
+.kick-result.bad { color: #ff2a4d; }
+
+/* In a game the score bug owns the top centre: the play call sits below it. */
+.game-call .screen-head { top: 7.4rem; }
+.game-call .call-body { top: 12.4rem; }

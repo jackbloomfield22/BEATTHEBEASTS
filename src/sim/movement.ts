@@ -6,7 +6,7 @@
 
 import { atan2, cos, sin } from '@/engine/math/detmath';
 import { angleDiff, clamp, heading, len, type V2 } from './vec';
-import { TICK, type Agent } from './types';
+import { FIELD_HALF_W, TICK, type Agent } from './types';
 
 /** Top backpedal (facing away from where he's going) as a share of top speed. */
 export const BACKPEDAL = 0.62;
@@ -36,8 +36,11 @@ export interface SteerOpts {
   burst?: boolean;
 }
 
-export function steer(a: Agent, want: V2, opts: SteerOpts = {}): void {
+export function steer(a: Agent, want0: V2, opts: SteerOpts = {}): void {
   const fx = a.fx;
+  // Everyone but the ball carrier plays inside the lines (stepPlay sets the room each tick).
+  const room = a.mem.room;
+  const want = typeof room === 'number' ? boundaryGovern(a, want0, room) : want0;
   const vTop = fx.vmax;
   const tau = fx.tau * (opts.burst ? 0.55 : 1);
   const cap = vTop * (opts.pace ?? 1) * (opts.mult ?? 1) * (0.86 + 0.14 * a.stamina);
@@ -150,3 +153,20 @@ export function timeTo(a: Agent, to: V2): number {
   const tAcc = (a.fx.tau * (vm - v0)) / vm;
   return d / vm + tAcc * 0.8 + (toward < 0 ? 0.25 : 0);
 }
+
+/**
+ * Keep a defender (or a receiver running his route) from running out of
+ * bounds: the speed he's asked for toward the nearer sideline is capped at
+ * what he can stop from before `room` yd from it (v = √(2·a·d) at his
+ * braking, the same law arrive() slows by).
+ */
+export function boundaryGovern(a: Agent, want: V2, room: number): V2 {
+  const lim = FIELD_HALF_W - room;
+  const out = Math.sign(want.y) || 0;
+  if (out === 0 || Math.sign(a.pos.y) !== out) return want;
+  const left = lim - Math.abs(a.pos.y);
+  const vmax = Math.sqrt(2 * a.fx.cutAccel * 0.5 * Math.max(0, left));
+  if (Math.abs(want.y) <= vmax) return want;
+  return { x: want.x, y: out * vmax };
+}
+

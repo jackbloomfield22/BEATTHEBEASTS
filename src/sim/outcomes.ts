@@ -10,13 +10,51 @@
 // the best receivers and lower for everyone else.
 
 import { routeOf } from './ai';
+import { fnv1a } from '@/engine/rng';
 import { maxThrowSpeed } from './effects';
 import { NEUTRAL } from './input';
 import { stepPlay } from './play';
 import { DEF_CALLS, PASS_PLAYS, RUN_PLAYS, type DefCall, type OffPlay, type RouteName } from './plays';
 import { createPlay, type PlayState } from './state';
 import type { DefSlot, OffSlot, SimPlayer } from './types';
+import { offenseFor, type ContendersRoster } from './personnel';
+import { defenseFor, packageFor, type BeastsDefense } from './defense';
+
+/**
+ * The rosters the harness plays: the eleven-man shapes, and (when given)
+ * the drafted nine and the Beasts' packages, so each play puts its own
+ * personnel on the field and the Beasts answer with the package the
+ * coordinator would (nickel against three receivers, base against the heavy sets).
+ */
+export interface HarnessRosters {
+  offense: Record<OffSlot, SimPlayer>;
+  defense: Record<DefSlot, SimPlayer>;
+  team?: ContendersRoster;
+  beasts?: BeastsDefense;
+}
+
+/** The two sides for a play and a call on 1st and 10 (the harness's situation). */
+export function sidesFor(r: HarnessRosters, play: OffPlay, def: DefCall): { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer>; def: DefCall } {
+  const offense = r.team ? offenseFor(play, r.team) : r.offense;
+  if (!r.beasts) return { offense, defense: r.defense, def };
+  const call: DefCall = { ...def, package: packageFor({ down: 1, toGo: 10, los: 35, personnel: play.formation.personnel }) };
+  return { offense, defense: defenseFor(call, r.beasts), def: call };
+}
+
+/** The harness's book: the everyday plays (situational calls, the sneak and the Hail Mary, are left out). */
+const PASS_BASE = PASS_PLAYS.filter((p) => !p.situ);
+const RUN_BASE = RUN_PLAYS.filter((p) => !p.situ);
 import { dist } from './vec';
+
+/**
+ * A cell's k-th seed: the play and the call hashed in, so no two cells share
+ * their seeds (with the same seeds everywhere, a rare roll, a first draw
+ * under 6%, came out the same way in every cell of the book at once).
+ */
+export const cellSeed = (play: OffPlay, def: DefCall, k: number): number => (fnv1a(`${play.id}/${def.id}`) + k * 7919) >>> 0;
+
+/** The ball on the left hash, the middle and the right hash in turn (NFL hashes ±3.08 yd), so every concept plays from each. */
+const HASHES = [3.08, 0, -3.08];
 
 /** Short, underneath routes (the "YAC on short routes" figure). */
 const SHORT: RouteName[] = ['slant', 'flat', 'hitch', 'stick', 'drag', 'checkdown', 'swing', 'sit', 'curl', 'out', 'in'];
@@ -46,6 +84,10 @@ export interface PassSample {
   hang90: number;
   /** Throw distance, QB to catch point (yd). */
   throwDist: number;
+  /** Air yards thrown (the catch point past the line, every attempt with a target: NFL "aDOT"). */
+  adot: number;
+  /** Snap to release, s. */
+  ttt: number;
   /**
    * Completions: the most defenders within CROWD_R of the catch point from
    * the catch to CROWD_T after it (round-two feedback: 4–5 used to arrive at once).
@@ -97,6 +139,10 @@ export interface PassDist {
   openCatch: number;
   /** Completions by gain: <0, 0–4, 5–9, 10–19, 20–39, 40+. */
   buckets: number[];
+  /** Average depth of target (air yards on targeted attempts; NFL ~7.5–8.5). */
+  adot: number;
+  /** Median time to throw, snap to release (NFL ~2.6–2.8 s, NGS). */
+  ttt: number;
   /** Driven throws, median hang time scaled to a 90 arm, at 8–12 yd and 18–22 yd (targets ~0.6 and ~0.9 s). */
   hang10: number;
   hang20: number;
@@ -118,7 +164,7 @@ function arrivalSep(s: PlayState): number {
   return k;
 }
 
-export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> }, n: number, plays: OffPlay[] = PASS_PLAYS, defs: DefCall[] = DEF_CALLS): PassDist {
+export function passDistribution(rosters: HarnessRosters, n: number, plays: OffPlay[] = PASS_BASE, defs: DefCall[] = DEF_CALLS): PassDist {
   const samples: PassSample[] = [];
   let playsRun = 0;
   let sacks = 0;
@@ -130,7 +176,8 @@ export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>;
   for (const play of plays) {
     for (const def of defs) {
       for (let k = 0; k < n; k++) {
-        const s = createPlay({ seed: 1000 + k * 7919, offense: rosters.offense, defense: rosters.defense, play, def, los: 35, toGo: 10, user: false });
+        const sd = sidesFor(rosters, play, def);
+        const s = createPlay({ seed: cellSeed(play, def, k), offense: sd.offense, defense: sd.defense, play, def: sd.def, los: 35, ballY: HASHES[k % 3], flip: k % 2 === 1, toGo: 10, user: false });
         let sep = -1;
         let target = -1;
         let catchX = NaN;
@@ -200,6 +247,8 @@ export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>;
           yac: complete ? r.yards - air : 0,
           hang90,
           throwDist,
+          adot: r.pass.airYards,
+          ttt: s.ball.releaseT - s.snapT,
           crowd,
           sep: !tgt ? NaN : r.pass.sep !== undefined ? r.pass.sep : s.events.some((e) => e.type === 'interception' || e.type === 'deflection') ? 0 : sep < 0 ? 99 : sep,
         });
@@ -250,6 +299,8 @@ export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>;
     contestedCatch: share(contested.filter((p) => p.complete).length, contested.length),
     openCatch: share(open.filter((p) => p.complete).length, open.length),
     buckets,
+    adot: avg(samples.filter((p) => !Number.isNaN(p.sep)).map((p) => p.adot)),
+    ttt: median(samples.map((p) => p.ttt)),
     hang10: hangAt(8, 12),
     hang20: hangAt(18, 22),
     crowdOver2: share(comp.filter((p) => p.crowd > 2).length, comp.length),
@@ -263,7 +314,7 @@ export function formatPassDist(d: PassDist): string {
   const p = (x: number) => `${(100 * x).toFixed(1)}%`;
   return [
     `plays ${d.plays}  att ${d.att}  comp ${d.comp}  int ${d.int}  sacks ${d.sacks}`,
-    `completion ${p(d.cmpPct)}  ypa ${d.ypa.toFixed(1)}`,
+    `completion ${p(d.cmpPct)}  ypa ${d.ypa.toFixed(1)}  aDOT ${d.adot.toFixed(1)}  time to throw ${d.ttt.toFixed(2)} s  int ${p(d.int / Math.max(1, d.att))}`,
     `completions 20+ ${p(d.exp20)}  40+ ${p(d.exp40)}`,
     `YAC short routes ${d.yacShort.toFixed(1)}  all ${d.yacAll.toFixed(1)}`,
     `in phase (< ${IN_PHASE} yd) ${p(d.contestedShare)} of targets, caught ${p(d.contestedCatch)}; 2+ yd open caught ${p(d.openCatch)}`,
@@ -310,12 +361,13 @@ export interface RunDist {
   samples: RunSample[];
 }
 
-export function runDistribution(rosters: { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> }, n: number, plays: OffPlay[] = RUN_PLAYS, defs: DefCall[] = DEF_CALLS): RunDist {
+export function runDistribution(rosters: HarnessRosters, n: number, plays: OffPlay[] = RUN_BASE, defs: DefCall[] = DEF_CALLS): RunDist {
   const samples: RunSample[] = [];
   for (const play of plays) {
     for (const def of defs) {
       for (let k = 0; k < n; k++) {
-        const s = createPlay({ seed: 1000 + k * 7919, offense: rosters.offense, defense: rosters.defense, play, def, los: 35, toGo: 10, user: false });
+        const sd = sidesFor(rosters, play, def);
+        const s = createPlay({ seed: cellSeed(play, def, k), offense: sd.offense, defense: sd.defense, play, def: sd.def, los: 35, ballY: HASHES[k % 3], flip: k % 2 === 1, toGo: 10, user: false });
         for (let t = 0; t < 60 * 40 && !s.result; t++) stepPlay(s, NEUTRAL);
         const r = s.result!;
         const fumble = s.events.some((e) => e.type === 'fumble');
@@ -331,7 +383,8 @@ export function runDistribution(rosters: { offense: Record<OffSlot, SimPlayer>; 
   return {
     carries: samples.length,
     ypc: ys.reduce((a, b) => a + b, 0) / Math.max(1, ys.length),
-    stuff: share((p) => p.yards <= 0),
+    // A stuff is no gain or a loss as the stat sheet has it: whole yards, so anything short of half a yard is a 0 (M6; the sim spots the ball to the tenth).
+    stuff: share((p) => p.yards < 0.5),
     exp10: share((p) => p.yards >= 10),
     exp20: share((p) => p.yards >= 20),
     fumbles: samples.filter((p) => p.fumble).length,

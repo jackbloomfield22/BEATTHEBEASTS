@@ -45,15 +45,25 @@ test('boots like a PC game: intro → press any key → main menu → settings �
   expect(errors).toEqual([]);
 });
 
-test('locked modes explain themselves instead of opening stand-in screens', async ({ page }) => {
+test('History opens (empty on a fresh device) and backs out; Play opens the locker room', async ({ page }) => {
+  test.setTimeout(420_000); // the locker room builds on first entry (slow in the software renderer)
   await page.goto('/?nointro');
   await waitReady(page);
   await page.waitForTimeout(500);
   await page.keyboard.press('Enter');
   await expect(page.locator('.main-menu')).toBeVisible();
-  await page.keyboard.press('Enter'); // Play (locked in milestone 1)
-  await expect(page.locator('.toast')).toContainText('arrives with');
+  // History: every game played, or a word on what lands there.
+  await page.keyboard.press('ArrowUp'); // wraps to the last item
+  await expect(page.locator('.menu-item.is-focused')).toContainText('History');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.history-screen')).toBeVisible();
+  await expect(page.locator('.hist-empty')).toContainText('No games yet');
+  await page.keyboard.press('Escape');
   await expect(page.locator('.main-menu')).toBeVisible();
+  // Play (M6): the draft in the Contenders' locker room (the menu comes back on its first item).
+  await expect(page.locator('.menu-item.is-focused')).toContainText('Play');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.draft-screen')).toBeVisible();
 });
 
 test('settings rebinding moves a clashing key and persists', async ({ page }) => {
