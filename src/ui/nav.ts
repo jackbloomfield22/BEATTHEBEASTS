@@ -17,6 +17,7 @@ export interface NavOptions {
   onTabPrev?: () => void;
   onTabNext?: () => void;
   onAlt?: (i: number) => void;
+  onAlt2?: (i: number) => void;
   /** Items (by index) that can't be focused. */
   isDisabled?: (i: number) => boolean;
   /** Grid columns (1 = vertical list). */
@@ -82,6 +83,9 @@ export function useMenuNav(opts: NavOptions): void {
           break;
         case 'menu.alt':
           if (!info.repeat) o.onAlt?.(o.focus);
+          break;
+        case 'menu.alt2':
+          if (!info.repeat) o.onAlt2?.(o.focus);
           break;
       }
     });
