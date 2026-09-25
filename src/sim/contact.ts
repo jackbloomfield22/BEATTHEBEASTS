@@ -12,6 +12,8 @@ import type { PlayState } from './state';
 import { TICK, type Agent } from './types';
 import { dist, len } from './vec';
 
+/** The tackle logistic's base: ~90% for an even matchup (NFL missed-tackle rate ~10–15% of attempts, PFF/SIS). M5.5 had 2.1 (~89% before the move and mass terms). */
+const TACKLE0 = 2.4;
 const logistic = (x: number): number => 1 / (1 + exp(-x));
 
 /** Push overlapping bodies apart (not engaged pairs), heavier players move less. */
@@ -82,7 +84,7 @@ export function resolveTackle(s: PlayState, d: Agent, c: Agent): { out: TackleOu
   }
   // Baseline ~85% per attempt for an even matchup (NFL missed-tackle rate
   // runs 10–15% of attempts: PFF / Sports Info Solutions charting).
-  let x = 2.1 + 3.2 * (tackle - counter * 0.85) - 1.8 * massEdge + 0.7 * gang;
+  let x = TACKLE0 + 3.2 * (tackle - counter * 0.85) - 1.8 * massEdge + 0.7 * gang;
   if (mv === 'stiffArm') x -= 0.5 * c.fx.a('stiffArm');
   if (mv === 'truck') x -= 0.8 * c.fx.a('trucking') * (c.fx.mass / (c.fx.mass + d.fx.mass)) * 2 - 0.4;
   if (headOn < -0.3) x -= 0.4; // arm tackles from behind get broken more
@@ -94,7 +96,8 @@ export function resolveTackle(s: PlayState, d: Agent, c: Agent): { out: TackleOu
 
 /** Fumble on contact: Ball Security against Hit Power; protecting halves it. */
 export function fumbles(s: PlayState, d: Agent, c: Agent, big: boolean): boolean {
-  const base = 0.008 + 0.03 * Math.max(0, d.fx.a('hitPower') - c.fx.a('ballSecurity') * 0.8);
+  // NFL backs fumble on ~1–1.5% of carries (about half lost); M6 trimmed this from 0.008 + 0.03·(…), which ran ~2.8% against the Beasts' hitters.
+  const base = 0.004 + 0.02 * Math.max(0, d.fx.a('hitPower') - c.fx.a('ballSecurity') * 0.8);
   // A big hit jars it loose far more often (~5–8% for a sure-handed back,
   // double for a loose one), more again from a Bone Crusher; Ball Security resists.
   const jar = big ? 0.07 * (1.4 - 0.9 * c.fx.a('ballSecurity')) * (has(d, 'bone-crusher') ? 1.1 : 1) : 0;
@@ -132,8 +135,8 @@ export function isBigHit(s: PlayState, d: Agent, c: Agent, closing: number, head
  */
 const PLANT: Record<string, number> = { jukeL: 5, jukeR: 5, spin: 6, dive: 3 };
 
-/** A quarterback's dive is a slide (feet first: he gives himself up and can't be hit). */
-export const slides = (c: Agent): boolean => c.slot === 'QB' && c.side === 'off';
+/** A quarterback's dive is a slide (feet first: he gives himself up and can't be hit); not on a designed QB run (the sneak: he dives for the yard). */
+export const slides = (c: Agent): boolean => c.slot === 'QB' && c.side === 'off' && !c.mem.designed;
 
 /** A carrier's move: commits him for a few frames and sets a cooldown. False if he can't start it now. */
 export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>): boolean {

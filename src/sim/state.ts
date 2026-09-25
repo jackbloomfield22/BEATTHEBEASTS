@@ -3,20 +3,26 @@
 
 import { deriveStream } from '@/engine/rng';
 import { effects } from './effects';
+import type { RushMove } from './blocks';
 import { type Streams, streams } from './rand';
-import { DEF_SLOTS, OFF_SLOTS, type DefCall, type OffPlay, type RouteName, type ZoneName, ZONES } from './plays';
+import { defById, DEF_SLOTS, mirrorPlay, OFF_SLOTS, type DefCall, type OffPlay, type RouteName, type ZoneName, ZONES } from './plays';
 import type { CatchType } from './input';
 import { FIELD_HALF_W, type Agent, type Ball, type DefSlot, type OffSlot, type Phase, type PlayResult, type SimEvent, type SimPlayer } from './types';
 import { v2, type V2 } from './vec';
 
 export type Difficulty = 'rookie' | 'pro' | 'legend' | 'beast';
 
-/** Difficulty changes AI reaction and reads, never ratings (GDD §10.4). */
-export const DIFFICULTY: Record<Difficulty, { latency: number; pumpBite: number }> = {
-  rookie: { latency: 0.25, pumpBite: 1.4 },
-  pro: { latency: 0.1, pumpBite: 1.0 },
-  legend: { latency: 0.03, pumpBite: 0.8 },
-  beast: { latency: 0, pumpBite: 0.7 },
+/**
+ * Difficulty changes AI reaction and reads, never ratings (GDD §10.4):
+ * read latency, pump-fake bite, and how often the coordinator disguises the
+ * call (none / light / frequent / frequent; Beast adds simulated pressure,
+ * defense.ts).
+ */
+export const DIFFICULTY: Record<Difficulty, { latency: number; pumpBite: number; disguise: number }> = {
+  rookie: { latency: 0.25, pumpBite: 1.4, disguise: 0 },
+  pro: { latency: 0.1, pumpBite: 1.0, disguise: 0.15 },
+  legend: { latency: 0.03, pumpBite: 0.8, disguise: 0.45 },
+  beast: { latency: 0, pumpBite: 0.7, disguise: 0.5 },
 };
 
 export interface PlaySetup {
@@ -37,6 +43,14 @@ export interface PlaySetup {
   autoSnap?: boolean;
   /** Stamina each player starts the play without (0–1), e.g. still shaking off a big hit. */
   fatigue?: Partial<Record<OffSlot | DefSlot, number>>;
+  /**
+   * The user's touch-pass threshold (s): a receiver key held this long or
+   * less is a tap (the driven ball), longer is a hold (touch). The player's
+   * Settings value, passed in so a replay throws the same ball. Default TAP_MAX.
+   */
+  tapMax?: number;
+  /** Run the play flipped (its mirror image: the strength, the run and the fake to the other side; the line stays put). */
+  flip?: boolean;
 }
 
 export interface Block {
@@ -46,10 +60,13 @@ export interface Block {
   /** −1 blocker winning … +1 defender sheds. */
   lev: number;
   kind: 'pass' | 'run';
-  move: 'bull' | 'speed' | 'swim' | 'spin' | 'drive';
+  move: RushMove | 'drive';
   t: number;
   /** This rep's edge at contact (hands, pad level, footwork): the same matchup doesn't play out the same every snap. */
   bias: number;
+  /** A pass rush: when (block time, s) the rusher tries his next counter, and how many he's tried. */
+  next: number;
+  tries: number;
 }
 
 export interface PlayState {
@@ -78,7 +95,7 @@ export interface PlayState {
   /** Throw charge: ticks the current icon has been held, and which. */
   hold: { icon: number; ticks: number };
   /** A throw wound up: released at `at` (play time). */
-  windup: { at: number; icon: number; charge: number; aim: V2; away: boolean } | null;
+  windup: { at: number; from: number; icon: number; charge: number; aim: V2; away: boolean } | null;
   catchType: CatchType | null;
   /** Hot routes called at the line, by offensive slot (they replace the play's route at the snap). */
   hot: Partial<Record<OffSlot, RouteName>>;
@@ -90,6 +107,8 @@ export interface PlayState {
   whistleT: number;
   /** The handoff (play time; −1 before one). */
   runReadT: number;
+  /** A toss: when the QB pitched it and from where (the ball flies to the back over PITCH_T). */
+  pitch: { t: number; from: V2 } | null;
   /**
    * When the offense showed run (the line firing out, a handoff, a fake) and
    * pass (the line setting, the QB's drop, the ball pulled out of a fake);
@@ -111,7 +130,11 @@ export interface PlayState {
   /** A big hit on this play (for the result). */
   bigHit: PlayResult['bigHit'];
   /** AI QB read state. */
-  read: { idx: number; since: number };
+  read: { idx: number; since: number; noise: number; noiseFor: number };
+  /** Man assignments resolved to this formation (resolveMan). */
+  man: Partial<Record<DefSlot, OffSlot>>;
+  /** The coordinator's bracket, resolved to this play: the receiver (agent index), who brackets him and how. */
+  bracket: { r: number; by: DefSlot; how: 'shade' | 'lurk' } | null;
 }
 
 function makeAgent(i: number, side: 'off' | 'def', slot: OffSlot | DefSlot, p: SimPlayer, pos: V2, face: number): Agent {
@@ -141,10 +164,45 @@ function makeAgent(i: number, side: 'off' | 'def', slot: OffSlot | DefSlot, p: S
   };
 }
 
-/** Where each defender lines up, from the coverage and the offense's formation. */
-function defensiveAlignment(s: PlaySetup, offPos: Record<OffSlot, V2>): Record<DefSlot, V2> {
+/**
+ * Who each man defender covers on this snap. The call names its men for
+ * the formation as drawn (the X split left, the Z right); a corner takes
+ * the widest receiver on his side whatever the offense does (a flipped
+ * formation, trips to the other side), and whoever the call gave that man
+ * to takes the corner's instead.
+ */
+export function resolveMan(call: DefCall['assign'], offPos: Record<OffSlot, V2>, by: number): Partial<Record<DefSlot, OffSlot>> {
+  const res: Partial<Record<DefSlot, OffSlot>> = {};
+  for (const slot of DEF_SLOTS) {
+    const a = call[slot];
+    if (a.kind === 'man') res[slot] = a.on;
+  }
+  const eligible: OffSlot[] = ['X', 'Z', 'SLOT', 'TE', 'RB'];
+  for (const [cb, side] of [['LCB', 1], ['RCB', -1]] as const) {
+    if (!res[cb]) continue;
+    const widest = eligible.filter((k) => (offPos[k].y - by) * side > 5).sort((p, q) => Math.abs(offPos[q].y - by) - Math.abs(offPos[p].y - by))[0];
+    if (!widest || widest === res[cb]) continue;
+    const other = DEF_SLOTS.find((k) => k !== cb && res[k] === widest);
+    if (other) res[other] = res[cb];
+    res[cb] = widest;
+  }
+  return res;
+}
+
+/** A defender who plays like a defensive back (a corner or safety, wherever the package puts him). */
+export const isDB = (p: SimPlayer): boolean => p.pos === 'CB' || p.pos === 'S';
+
+/**
+ * Where each defender lines up, from the call and the offense's formation.
+ * The look is the call's, or its disguise's shell (the call rotates at the
+ * snap). A sub defensive back in a linebacker's slot lines up like one: the
+ * nickel corner over the slot receiver, the dime safety at 8 yd. Blitzers
+ * in the look's `show` walk up into the gaps.
+ */
+function defensiveAlignment(s: PlaySetup, offPos: Record<OffSlot, V2>, bracketY: number | null): Record<DefSlot, V2> {
   const los = s.los;
   const by = s.ballY ?? 0;
+  const look = s.def.shell ? defById(s.def.shell) : s.def;
   // Receivers split to each side (the widest two set the corners).
   const wide = (OFF_SLOTS.filter((k) => ['X', 'Z', 'SLOT', 'TE', 'RB'].includes(k)) as OffSlot[]).map((k) => ({ k, p: offPos[k] }));
   const left = wide.filter((w) => w.p.y > by + 5).sort((a, b) => b.p.y - a.p.y);
@@ -160,12 +218,13 @@ function defensiveAlignment(s: PlaySetup, offPos: Record<OffSlot, V2>): Record<D
   out.WLB = v2(los + 4.5, by - 3.6 * strength);
   out.MLB = v2(los + 5, by + 0.4 * strength);
   out.SLB = v2(los + 4.5, by + 3.6 * strength);
-  const call = s.def.assign;
+  const call = look.assign;
   const cb = (slot: 'LCB' | 'RCB', rec: { p: V2 } | undefined, sideSign: number) => {
     const a = call[slot];
     const press = a.kind === 'man' && a.press;
     const y = rec ? rec.p.y + sideSign * 0.8 : by + sideSign * 15;
-    return v2(los + (press ? 1.2 : a.kind === 'zone' && ZONES[a.zone].deep ? 7 : 5.5), y);
+    // Press at the line; off man at ~6.5 yd (the cushion he bails from); a deep third at 7; a flat/cloud corner at 5.5.
+    return v2(los + (press ? 1.2 : a.kind === 'man' ? 6.5 : a.kind === 'zone' && ZONES[a.zone].deep ? 7 : 5.5), y);
   };
   out.LCB = cb('LCB', left[0], 1);
   out.RCB = cb('RCB', right[0], -1);
@@ -179,18 +238,45 @@ function defensiveAlignment(s: PlaySetup, offPos: Record<OffSlot, V2>): Record<D
   };
   out.FS = safety('FS', 1);
   out.SS = safety('SS', -1);
+  // Sub defensive backs in linebacker slots.
+  for (const slot of ['WLB', 'MLB', 'SLB'] as DefSlot[]) {
+    const p = s.defense[slot];
+    if (!isDB(p)) continue;
+    const a = call[slot];
+    const lb = out[slot]!;
+    if (p.pos === 'S') {
+      out[slot] = v2(los + 8, lb.y * 0.7 + by * 0.3);
+      continue;
+    }
+    // The nickel: over the inside receiver on his side (#2), 5 yd off, a step inside.
+    const side = a.kind === 'zone' ? Math.sign(ZONES[a.zone].y) || Math.sign(lb.y - by) || 1 : Math.sign(lb.y - by) || 1;
+    const rec = (side > 0 ? left : right)[1] ?? (side > 0 ? left : right)[0];
+    out[slot] = rec ? v2(los + 5, rec.p.y - side * 1) : v2(los + 5.5, by + side * 6);
+  }
   // Man defenders line up over their man.
+  const man = resolveMan(call, offPos, by);
   for (const slot of DEF_SLOTS) {
     const a = call[slot];
     if (a.kind === 'man' && slot !== 'LCB' && slot !== 'RCB') {
-      const m = offPos[a.on];
-      out[slot] = v2(los + (slot === 'SS' || slot === 'FS' ? 6 : 4.5), m.y + (m.y > by ? -0.8 : 0.8));
+      const m = offPos[man[slot]!];
+      out[slot] = v2(los + (slot === 'SS' || slot === 'FS' ? 6 : isDB(s.defense[slot]) ? 5 : 4.5), m.y + (m.y > by ? -0.8 : 0.8));
     }
+  }
+  // Pressure shown: the blitzers walk up into the A and B gaps.
+  const gaps = [by + 1.8, by - 1.8, by + 3.2, by - 3.2];
+  (look.show ?? []).forEach((slot, j) => (out[slot] = v2(los + 1.3, gaps[j % gaps.length]!)));
+  // A bracket shows before the snap too: the free safety shaded toward the man, the robber cheating toward him.
+  const b = s.def.bracket;
+  if (b && bracketY !== null && out[b.by]) {
+    const at = out[b.by]!;
+    out[b.by] = v2(at.x, at.y + (bracketY - at.y) * (b.how === 'shade' ? 0.35 : 0.25));
   }
   return out as Record<DefSlot, V2>;
 }
 
-export function createPlay(s: PlaySetup): PlayState {
+export function createPlay(setup: PlaySetup): PlayState {
+  // A flipped call runs the mirror image (the setup the play keeps is the one it runs).
+  const s: PlaySetup = setup.flip ? { ...setup, play: mirrorPlay(setup.play), flip: false } : setup;
   const by = s.ballY ?? 0;
   const agents: Agent[] = [];
   const slot: Record<string, number> = {};
@@ -204,7 +290,9 @@ export function createPlay(s: PlaySetup): PlayState {
     slot[k] = ag.i;
     agents.push(ag);
   }
-  const defPos = defensiveAlignment(s, offPos);
+  // The bracketed receiver, if he's on the field this play.
+  const bk = s.def.bracket ? OFF_SLOTS.find((k) => s.offense[k].id === s.def.bracket!.id) : undefined;
+  const defPos = defensiveAlignment(s, offPos, bk ? offPos[bk].y : null);
   for (const k of DEF_SLOTS) {
     const ag = makeAgent(agents.length, 'def', k, s.defense[k], defPos[k], Math.PI);
     slot[k] = ag.i;
@@ -266,6 +354,7 @@ export function createPlay(s: PlaySetup): PlayState {
     maxX: -Infinity,
     whistleT: -1,
     runReadT: -1,
+    pitch: null,
     runShow: -1,
     passShow: -1,
     scrambleT: -1,
@@ -275,8 +364,16 @@ export function createPlay(s: PlaySetup): PlayState {
     pass: undefined,
     sack: false,
     bigHit: undefined,
-    read: { idx: 0, since: 0 },
+    read: { idx: 0, since: 0, noise: 0, noiseFor: -1 },
+    bracket: bk && s.def.bracket ? { r: slot[bk]!, by: s.def.bracket.by, how: s.def.bracket.how } : null,
+    man: resolveMan(s.def.assign, offPos, by),
   };
+}
+
+/** The receiver a man defender has on this snap (resolveMan), or null. */
+export function manOf(s: PlayState, d: Agent): Agent | null {
+  const k = s.man[d.slot as DefSlot];
+  return k ? s.agents[s.slot[k]!]! : null;
 }
 
 export const clampY = (y: number): number => Math.max(-FIELD_HALF_W + 0.5, Math.min(FIELD_HALF_W - 0.5, y));

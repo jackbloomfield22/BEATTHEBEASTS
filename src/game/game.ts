@@ -9,7 +9,8 @@
 import { create } from 'zustand';
 import type { Slot } from '@data/legacy/types';
 import { Input } from '@/input/InputManager';
-import { DEF_CALLS, type DefCall, type DefSlot, type OffSlot, type PlayResult, type PlayState, type SimPlayer, simPlayer, type Difficulty } from '@/sim';
+import { callDefense, emptyTendencies, recordPlay, type BeastsDefense, type ContendersRoster, type DefCall, type DefSlot, type OffSlot, type PlayResult, type PlayState, type SimPlayer, simPlayer, type Difficulty, type Tendencies } from '@/sim';
+import { deriveStream, type Rng } from '@/engine/rng';
 import type { Catalog, Roster } from './draft';
 import { draftedTeam } from './draft';
 import type { RatedBeasts } from './beasts';
@@ -88,7 +89,7 @@ const get = () => useGame.getState();
 const BEAST_SLOTS: DefSlot[] = ['LE', 'LDT', 'RDT', 'RE', 'WLB', 'MLB', 'SLB', 'LCB', 'FS', 'SS', 'RCB'];
 const DEFAULT_NUM: Record<string, number> = { DE: 94, DT: 97, LB: 55, CB: 24, S: 31 };
 
-export function gameRosters(cat: Catalog, roster: Roster, beasts: RatedBeasts): { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer>; bench: SimPlayer[] } {
+export function gameRosters(cat: Catalog, roster: Roster, beasts: RatedBeasts): { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer>; team: ContendersRoster; beastsD: BeastsDefense } {
   const t = draftedTeam(cat, roster);
   const offense = { QB: t.QB, RB: t.RB, X: t.WR1, Z: t.WR2, SLOT: t.WR3, TE: t.TE, LT: t.OL[0], LG: t.OL[1], C: t.OL[2], RG: t.OL[3], RT: t.OL[4] } as Record<OffSlot, SimPlayer>;
   const defense = {} as Record<DefSlot, SimPlayer>;
@@ -100,7 +101,17 @@ export function gameRosters(cat: Catalog, roster: Roster, beasts: RatedBeasts): 
     used.add(num);
     defense[BEAST_SLOTS[i]!] = simPlayer(e, num);
   });
-  return { offense, defense, bench: [t.RB2, t.TE2] };
+  // The sub package: the nickel corner and the dime safety drawn after the base eleven.
+  const sub = (k: number, pos: 'CB' | 'S'): SimPlayer => {
+    const b = beasts.subs[k];
+    const e = b ? cat.entry.get(b.id) : undefined;
+    if (!e) return defense[pos === 'CB' ? 'RCB' : 'SS'];
+    let num = cat.numbers[b!.id] ?? DEFAULT_NUM[pos]!;
+    while (used.has(num)) num = (num % 99) + 1;
+    used.add(num);
+    return simPlayer(e, num);
+  };
+  return { offense, defense, team: t, beastsD: { base: defense, nickel: sub(0, 'CB'), dime: sub(1, 'S') } };
 }
 
 export interface GameStart {
@@ -121,8 +132,15 @@ class GameSession {
   private lastWhistleWall = 0;
   private offKeys: (() => void) | null = null;
   private names: { qb: string } = { qb: '' };
-  /** The Beasts' coverage choice: seeded by snap (the full DC arrives with the situational AI). */
-  defCall: (sit: Situation, seed: number) => DefCall = (_sit, seed) => DEF_CALLS[(seed >>> 4) % DEF_CALLS.length]!;
+  /** What the Beasts' staff has charted about you this game (targets, run/pass by down). */
+  tendencies: Tendencies = emptyTendencies();
+  private dcRng: Rng = deriveStream(0, 'dc');
+  private difficulty: Difficulty = 'pro';
+  /** The Beasts' call: package, coverage and pressure from the situation, the difficulty and what they've charted (sim/defense.ts). */
+  defCall = (sit: Situation): DefCall => {
+    const m = this.m!;
+    return callDefense({ down: sit.down, toGo: sit.toGo, los: sit.los, secondsLeft: m.clock.live ? m.clock.secs : undefined, scoreDiff: m.score.user - m.score.beasts }, this.difficulty, this.tendencies, this.dcRng);
+  };
 
   get match(): Match | null {
     return this.m;
@@ -132,14 +150,18 @@ class GameSession {
     set({ stage: 'loading', match: null, meanwhile: null, punt: null, kick: null, outcome: null, mode: o.mode, note: null });
     const rosters = gameRosters(o.cat, o.roster, o.beasts);
     this.names.qb = rosters.offense.QB.name;
+    this.tendencies = emptyTendencies();
+    this.dcRng = deriveStream(o.seed, 'beasts-dc');
+    this.difficulty = o.difficulty;
     const m = createMatch({ drives: o.drives, seed: o.seed, beastsRating: o.beasts.rating.rating, diffAdj: o.diffAdj, kickerRange: KICKER_RANGE[o.difficulty] }, o.windScale ?? 1);
     this.m = m;
     practice.difficulty = o.difficulty;
     await practice.enter(o.seed, {
-      rosters,
+      rosters: { offense: rosters.offense, defense: rosters.defense },
+      teams: { team: rosters.team, beasts: rosters.beastsD },
       game: {
         situation: () => this.m!.sit,
-        defCall: (sit, seed) => this.defCall(sit, seed),
+        defCall: (sit) => this.defCall(sit),
         onResult: (s, r, endY) => this.onResult(s, r, endY),
       },
     });
@@ -222,6 +244,9 @@ class GameSession {
     this.lastWhistleWall = now;
     const before = m.sit;
     this.tally(s, r, before);
+    // The Beasts' staff charts it.
+    const tgt = r.pass?.attempted ? s.agents[r.pass.target]?.p.id : undefined;
+    this.tendencies = recordPlay(this.tendencies, { targetId: tgt, playId: s.setup.play.id, type: s.setup.play.type, down: before.down, toGo: before.toGo, yards: r.offenseBall ? r.spot - before.los : 0 });
     const out = applyPlay(m, r, endY, playSecs, between);
     if (out.kind === 'firstDown' || (out.kind === 'touchdown' && r.offenseBall)) get().box.firstDowns++;
     set({ outcome: out.kind, stage: 'play' });

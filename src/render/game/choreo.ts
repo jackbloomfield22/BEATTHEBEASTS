@@ -15,6 +15,9 @@ import { latency } from '@/game/latency';
 // get-up after the whistle.
 
 export interface Body {
+  /** Who the body is dressed as (player id) and in which kit (personnel can change the man in a slot). */
+  who: string;
+  kit: string;
   player: Player;
   animator: PlayerAnimator;
   ragdoll: Ragdoll;

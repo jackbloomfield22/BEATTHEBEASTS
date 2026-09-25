@@ -8,7 +8,7 @@ import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
 import { loadJSON, saveJSON } from '@/app/storage';
 import type { InputContext } from '@/input/actions';
-import { createPlay, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type DefCall, type InputFrame, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayResult, type PlayState, type SimPlayer } from '@/sim';
+import { createPlay, defenseFor, offenseFor, type BeastsDefense, type ContendersRoster, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type DefCall, type InputFrame, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayResult, type PlayState, type SimPlayer } from '@/sim';
 import { getSettings } from '@/app/settings';
 import { Controls } from './controls';
 import { describe, type ResultCard } from './describe';
@@ -176,6 +176,13 @@ type Rosters = { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, S
 class PracticeSession {
   /** Set while a full game is on (null on the Practice Field). */
   game: GameHooks | null = null;
+  /**
+   * The two teams as squads: the offense's personnel groupings (each play
+   * lines up its own eleven: an FB or a second TE comes on in I-Form and
+   * Heavy) and the Beasts' sub packages (the nickel and dime come on for the
+   * call). `rosters` stays the base eleven the render builds bodies from.
+   */
+  teams: { team: ContendersRoster; beasts: BeastsDefense } | null = null;
   /** The offense's uniform: the classic line-up's Royal on the Practice Field, the Contenders' Blackout Lime in a game. */
   offenseKit = 'royal';
   runner: SimRunner | null = null;
@@ -212,13 +219,14 @@ class PracticeSession {
   private sawAir = false;
 
   /** Enter the Practice Field: load the rosters, open the play call. */
-  async enter(seed?: number, opts: { rosters?: Rosters; game?: GameHooks } = {}): Promise<void> {
+  async enter(seed?: number, opts: { rosters?: Rosters; teams?: { team: ContendersRoster; beasts: BeastsDefense }; game?: GameHooks } = {}): Promise<void> {
     this.seedBase = seed ?? (Math.random() * 0x7fffffff) | 0;
     this.game = opts.game ?? null;
     // A game brings its own rosters; the Practice Field uses the classic line-up.
     if (opts.rosters) this.rosters = opts.rosters;
     else if (!this.game && this.customRosters) this.rosters = null;
     this.customRosters = !!opts.rosters;
+    this.teams = opts.teams ?? null;
     this.offenseKit = this.game ? 'blackoutLime' : 'royal';
     this.snaps = 0;
     this.firstCatch = true;
@@ -233,7 +241,11 @@ class PracticeSession {
       if (!info.repeat) this.onHot(id, info.device);
     });
     try {
-      this.rosters ??= await loadPracticeRosters();
+      if (!this.rosters || !this.teams) {
+        const r = await loadPracticeRosters();
+        this.rosters ??= r;
+        if (!this.game) this.teams = { team: r.team, beasts: r.beasts };
+      }
       set({ stage: 'call', situation: this.game ? this.game.situation() : startSituation(get().startSpot, get().startDowns), box: emptyBox() });
     } catch (e) {
       set({ error: `The rosters didn't load (${(e as Error).message}).` });
@@ -283,11 +295,14 @@ class PracticeSession {
   private setUp(playId: string, seed: number, def: DefCall, sit: Situation): void {
     if (!this.rosters) return;
     this.closeHot();
+    const play = playById(playId);
     const state = createPlay({
       seed,
-      offense: this.rosters.offense,
-      defense: this.rosters.defense,
-      play: playById(playId),
+      offense: this.teams ? offenseFor(play, this.teams.team) : this.rosters.offense,
+      defense: this.teams ? defenseFor(def, this.teams.beasts) : this.rosters.defense,
+      play,
+      // The Touch pass hold setting: how long a receiver key is held before a driven ball becomes touch.
+      tapMax: getSettings().controls.bulletHoldMs / 1000,
       def,
       los: sit.los,
       ballY: sit.ballY,

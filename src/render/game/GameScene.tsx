@@ -81,8 +81,21 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: Pl
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>() };
+    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>() };
   });
+}
+
+/**
+ * Personnel changes the man in a slot between plays (an FB or a second TE in
+ * the SLOT slot, the nickel corner for a linebacker): dress the body for
+ * whoever lines up there now. Look and body only; the skeleton and clips stay.
+ */
+function relook(b: Body, p: SimPlayer): void {
+  if (b.who === p.id) return;
+  b.who = p.id;
+  const body = bodyFromImperial(p.heightIn, p.weightLb);
+  b.player.setLook({ kit: KITS[b.kit]!, skin: skinHexFor(p.name), number: p.num, name: jerseyName(p.name), variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name) });
+  b.player.setBody(body.heightM, body.weightKg);
 }
 
 const _p = new THREE.Vector3();
@@ -166,6 +179,7 @@ export function GameScene() {
       snapped.current = false;
       bodies.forEach((b, i) => {
         const a = cur.agents[i]!;
+        relook(b, s.agents[i]!.p);
         b.player.root.visible = true;
         b.player.root.position.set(worldX(a.y), 0, worldZ(a.x));
         b.player.root.rotation.set(0, yawOf(a.face), 0);

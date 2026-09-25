@@ -13,7 +13,26 @@ export interface Suggestion {
   why: string;
 }
 
-export function suggestPlays(sit: Situation, opts: { twoMinute?: boolean; clockRunning?: boolean } = {}): Suggestion[] {
+type Opts = { twoMinute?: boolean; clockRunning?: boolean };
+
+export function suggestPlays(sit: Situation, opts: Opts = {}): Suggestion[] {
+  const { down, los } = sit;
+  const plan = planFor(sit, opts);
+  return pick(plan, down, los);
+}
+
+/** The coach's reason for calling a play of this kind here (the Suggested tab's line under a play). */
+export function reasonFor(sit: Situation, opts: Opts, play: OffPlay): string {
+  const hit = planFor(sit, opts).find(([t]) => t === play.type);
+  if (hit) return hit[1];
+  if (play.situ === 'short') return 'A yard to go: the quarterback sneak.';
+  if (play.hailMary) return 'No time left: throw it up and let them fight for it.';
+  return `${PLAY_TYPE_WORD[play.type]} out of ${play.formation.name}: it fits this group of players.`;
+}
+
+const PLAY_TYPE_WORD: Record<PlayType, string> = { quick: 'Quick game', dropback: 'A drop-back', shot: 'A shot play', playAction: 'Play action', screen: 'A screen', run: 'A run' };
+
+function planFor(sit: Situation, opts: Opts): [PlayType, string][] {
   const { down, toGo, los } = sit;
   const red = los >= 80;
   const goal = los + toGo >= 100;
@@ -77,6 +96,10 @@ export function suggestPlays(sit: Situation, opts: { twoMinute?: boolean; clockR
           ['quick', 'Stay on schedule.'],
         ];
   }
+  return plan;
+}
+
+function pick(plan: [PlayType, string][], down: number, los: number): Suggestion[] {
   // Two plays from the first idea, one each from the others, rotated by the spot so it doesn't repeat itself.
   const out: Suggestion[] = [];
   const seen = new Set<string>();

@@ -37,6 +37,7 @@ export interface Settings {
     mouseSensitivity: number; // 0.25 .. 2
     invertY: boolean;
     reticleSensitivity: number; // 0.25 .. 2
+    /** Touch pass hold (ms): a receiver key held longer throws touch (the sim's tapMax; 180 = its tuned TAP_MAX). */
     bulletHoldMs: number; // 120 .. 400
     ballInAir: 'off' | 'assist' | 'full';
     keyboard: Bindings;
@@ -116,7 +117,7 @@ export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings
     version: 6,
     display: { fullscreen: false, resolutionScale: 1, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
-    controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 200, ballInAir: 'assist', keyboard, gamepad },
+    controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 180, ballInAir: 'assist', keyboard, gamepad },
     audio: { master: 0.8, music: 0.6, sfx: 0.8, crowd: 0.8, ui: 0.7, muteUnfocused: true },
     gameplay: { difficulty: 'pro', gameLength: 6, camera: 'broadcast', lighting: 'golden', skipIntros: false, fastReveal: false, autoReplay: 'big', bigHitSlowmo: true, firstCatchSlowmo: false },
     accessibility: { colorblind: 'off', captionSize: 'medium', reduceShake: false, reduceFlashing: false, holdToToggle: false, uiScale: 1 },

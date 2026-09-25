@@ -4,11 +4,11 @@ import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
 import { game, useGame } from '@/game/game';
 import { canVictoryFormation, clockLabel, fgMakePct, type Match } from '@/game/match';
-import { suggestPlays } from '@/game/coordinator';
+import { reasonFor } from '@/game/coordinator';
 import { practice, usePractice } from '@/game/practice';
 import { downLabel, spotLabel } from '@/game/situation';
 import { aimFor } from '@/game/kick';
-import { PLAY_TYPE_LABEL, PLAYS, type PlayType } from '@/sim';
+import { PLAY_TYPE_LABEL, PLAYS, playById, suggestPlays, type PlayType } from '@/sim';
 import { Input } from '@/input/InputManager';
 import { kickView } from '@/render/game/kickView';
 import { useMenuNav } from '../nav';
@@ -156,10 +156,16 @@ function GamePlayCall() {
   const m = game.match!;
   const sit = m.sit;
   const twoPoint = m.phase === 'twoPoint';
-  const sugg = useMemo(() => suggestPlays(sit, { twoMinute: m.clock.live, clockRunning: m.lastWhistle === 'runs' }), [sit, m.clock.live, m.lastWhistle]);
+  // The coordinator's five (sim/coordinator.ts: down, distance, field, clock and this roster's strengths), each with the coach's reason.
+  const sugg = useMemo(() => {
+    const team = practice.teams?.team;
+    const opts = { twoMinute: m.clock.live, clockRunning: m.lastWhistle === 'runs' };
+    const ids = team ? suggestPlays({ down: sit.down, toGo: sit.toGo, los: sit.los, secondsLeft: m.clock.live ? m.clock.secs : undefined, scoreDiff: m.score.user - m.score.beasts }, team) : [];
+    return ids.map((id) => playById(id)).map((play) => ({ play, why: reasonFor(sit, opts, play) }));
+  }, [sit, m.clock.live, m.clock.secs, m.lastWhistle, m.score.user, m.score.beasts]);
   const [group, setGroup] = useState(0);
   const g = GROUPS[group]!;
-  const plays = g === 'suggested' ? sugg.map((s) => s.play) : PLAYS.filter((p) => p.type === g);
+  const plays = g === 'suggested' ? sugg.map((s) => s.play) : PLAYS.filter((p) => p.type === g && (p.situ !== 'short' || sit.toGo <= 1) && (!p.hailMary || (m.clock.live && m.clock.secs <= 10)));
   const [focus, setFocus] = useState(0);
   const cur = plays[Math.min(focus, plays.length - 1)]!;
   const why = g === 'suggested' ? sugg[Math.min(focus, sugg.length - 1)]?.why : null;

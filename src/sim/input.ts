@@ -71,5 +71,5 @@ export const input = (patch: Partial<InputFrame>): InputFrame => ({ ...NEUTRAL, 
 
 /** Seconds of hold past a tap that give a touch pass its full loft. */
 export const LOFT_CHARGE = 0.5;
-/** A hold shorter than this is a tap: a touch pass. */
+/** A hold this long or shorter is a tap: the driven ball (PlaySetup.tapMax carries the player's setting). */
 export const TAP_MAX = 0.18;
