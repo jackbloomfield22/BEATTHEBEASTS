@@ -6,7 +6,7 @@
 // reaches a pair of hands: base Catching, ball speed, how far the ball is
 // from the ideal spot, defenders in the catch window, and the catch type.
 
-import { flightTime, solveLaunch, speed3, stepFlight, type V3 } from './ball';
+import { flightTime, G, solveLaunch, speed3, stepFlight, type V3 } from './ball';
 import { errorAt20, maxRange, maxThrowSpeed } from './effects';
 import { continueDir } from './ai';
 import { gauss } from './rand';
@@ -83,14 +83,63 @@ export function lead(r: Agent, T: number): V2 {
 }
 
 /**
- * How much loft a touch pass takes (0 = the flattest throw at that speed,
- * 1 = the lob), by distance: a short touch pass is a soft line drive, a
- * deep one drops in over the top. From a 90 arm this gives ~0.9 s at 8
- * yd, ~1.1 s at 15, ~1.7 s at 25 and ~2.3 s at 35 (NFL Next Gen Stats
- * time-to-target by depth runs ~0.8–1.1 s short, ~1.4–1.8 s at 20–30 yd).
+ * Hang time of a driven ball, the default throw (round-two feedback: a
+ * short throw must not float while the defense rallies), s from release to
+ * the catch point. From a 90 arm: ~0.6 s at 10 yd and ~0.9 s at 20 (the
+ * owner's targets; a quick-game ball is on a receiver in about the time
+ * the NFL's fastest throws take, ~0.5–0.7 s), then steeper past 20 as a
+ * deep ball needs arc to carry: a driven 40-yard rope in ~1.8 s, 50 in
+ * ~2.25 s (a lofted deep shot, 2.4–2.8 s in the NFL, is the touch pass).
+ * The slope past 20 also keeps the lead stable: a receiver running ~10 yd/s
+ * moves the catch point ~10 yd for every second of hang, so a slope much
+ * past 0.05 s/yd runs away (the lead chases him to the end line). A weaker
+ * arm takes longer in proportion to its top speed; the throw is never
+ * faster than the arm can make it (planThrow).
  */
-export function touchArc(d: number): number {
-  return 0.08 + Math.max(0, Math.min(1, (d - 10) / 40)) * 0.24;
+export function driveTime(d: number, power: number): number {
+  const base = 0.3 + 0.03 * Math.min(d, 20) + 0.045 * Math.max(0, d - 20);
+  return base * (maxThrowSpeed(90) / maxThrowSpeed(power));
+}
+
+/**
+ * A touch pass (the icon held briefly): the driven time stretched by 15%
+ * for a quick hold up to 35% for a full one. Less loft than M5's touch pass,
+ * which took ~0.9 s to go 10 yd from a 90 arm; this one takes 0.69–0.81 s.
+ */
+export const touchStretch = (loft: number): number => 1.15 + 0.2 * Math.max(0, Math.min(1, loft));
+
+/**
+ * Stretch a throw's hang time until it clears the defenders under its path:
+ * a defender near the line of the throw (within ~0.9 yd, where he'd be as
+ * it passes) who could reach the ball's height there makes the QB put air
+ * under it. Up to four 12% steps; past that it's thrown into him anyway.
+ */
+function clearLoft(s: PlayState, from: V3, to: V3, T: number): number {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const L2 = dx * dx + dy * dy;
+  if (L2 < 1) return T;
+  for (let step = 0; step < 4; step++) {
+    let blocked = false;
+    for (const i of s.def) {
+      const d = s.agents[i]!;
+      if (d.down) continue;
+      for (const u of [0.25, 0.4, 0.55, 0.7, 0.85]) {
+        const t = u * T;
+        const px = d.pos.x + d.vel.x * Math.min(t, 0.4);
+        const py = d.pos.y + d.vel.y * Math.min(t, 0.4);
+        const bx = from.x + dx * u;
+        const by = from.y + dy * u;
+        if ((px - bx) * (px - bx) + (py - by) * (py - by) > 0.81) continue;
+        // The ball's height there (vacuum arc; drag lowers it a little more).
+        const z = from.z + (to.z - from.z) * u + 0.5 * G * T * T * u * (1 - u);
+        if (z < reach(d).top + 0.15) blocked = true;
+      }
+    }
+    if (!blocked) return T;
+    T *= 1.12;
+  }
+  return T;
 }
 
 /**
@@ -107,7 +156,7 @@ export interface ThrowPlan {
   to: V3;
   v0: V3;
   T: number;
-  kind: 'touch' | 'bullet';
+  kind: 'driven' | 'touch';
   /** Distance from the QB to the catch point, yd (air yards are downfield only). */
   distance: number;
   airYards: number;
@@ -118,22 +167,22 @@ export interface ThrowPlan {
 }
 
 /**
- * Plan a throw. `charge` 0 = touch; >0 = bullet at that charge. `aim` is the
- * placement input. `pressure` 0..1 and `moving` 0..1 scale the error.
+ * Plan a throw. `loft` 0 = the driven ball (a tap); >0 = touch, more air the
+ * longer the hold. `aim` is the placement input. `pressure` 0..1 and
+ * `offPlatform` scale the error.
  */
-export function planThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, aim: V2, pressure: number, offPlatform: boolean): ThrowPlan {
+export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2, pressure: number, offPlatform: boolean): ThrowPlan {
   const power = qb.fx.r('throwPower');
   const vmax = maxThrowSpeed(power);
   const range = maxRange(power);
-  const bullet = charge > 0;
-  const S = bullet ? vmax * (0.84 + 0.16 * Math.min(1, charge)) : vmax * 0.7;
+  const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
+  const hang = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T);
   // Lead the receiver: iterate the flight time against where he will be.
   let T = 0.8;
   let spot = lead(rec, T);
   for (let k = 0; k < 4; k++) {
-    const to = { x: spot.x, y: spot.y, z: CATCH_Z };
-    T = flightTime(from, to, S, bullet ? 0.05 : touchArc(dist(from, to))).T + 0.05;
+    T = hang({ x: spot.x, y: spot.y, z: CATCH_Z }) + 0.05;
     spot = lead(rec, T);
   }
   // Placement input: lead / back shoulder along his path, high / low.
@@ -151,7 +200,6 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, a
   const moving = Math.min(1, len(qb.vel) / 4);
   sigma *= 1 + moving * 1.1 * (1 - qb.fx.a('throwOnRun'));
   sigma *= 1 + pressure * 1.4 * (1 - qb.fx.a('underPressure'));
-  sigma *= bullet ? 1 + 0.18 * Math.min(1, charge) : 1;
   sigma *= offPlatform ? 1.2 : 1;
   const ex = gauss(s.rng.throw) * sigma;
   const ey = gauss(s.rng.throw) * sigma;
@@ -167,9 +215,11 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, a
     tz = 0.3;
   }
   const to: V3 = { x: tx, y: ty, z: tz };
-  const final = flightTime(from, to, S, bullet ? 0.05 : touchArc(d));
-  const v0 = solveLaunch(from, to, final.T);
-  return { from, to, v0, T: final.T, kind: bullet ? 'bullet' : 'touch', distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant };
+  // Air under it when a defender is in the way (a driven ball becomes a touch pass).
+  const Tf = clearLoft(s, from, to, hang(to));
+  const kind = touch || Tf > hang(to) * 1.01 ? 'touch' : 'driven';
+  const v0 = solveLaunch(from, to, Tf);
+  return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant };
 }
 
 /**
@@ -178,16 +228,16 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, a
  * for his accuracy at that depth and his motion. Read-only (no dice), for
  * the landing reticle while the user holds an icon.
  */
-export function previewThrow(s: PlayState, qb: Agent, rec: Agent, charge: number, aim: V2): { x: number; y: number; sigma: number } {
+export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2): { x: number; y: number; sigma: number } {
   const power = qb.fx.r('throwPower');
   const vmax = maxThrowSpeed(power);
-  const bullet = charge > 0;
-  const S = bullet ? vmax * (0.84 + 0.16 * Math.min(1, charge)) : vmax * 0.7;
+  const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
   let T = 0.8;
   let spot = lead(rec, T);
   for (let k = 0; k < 4; k++) {
-    T = flightTime(from, { x: spot.x, y: spot.y, z: CATCH_Z }, S, bullet ? 0.05 : touchArc(dist(from, spot))).T + 0.05;
+    const to = { x: spot.x, y: spot.y, z: CATCH_Z };
+    T = Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T) + 0.05;
     spot = lead(rec, T);
   }
   const rv = len(rec.vel) > 0.5 ? { x: rec.vel.x / len(rec.vel), y: rec.vel.y / len(rec.vel) } : { x: 1, y: 0 };
@@ -202,7 +252,7 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, charge: number
   const air = x - s.setup.los;
   const acc = air < 12 ? qb.fx.r('shortAcc') : air < 25 ? qb.fx.r('midAcc') : qb.fx.r('deepAcc');
   const moving = Math.min(1, len(qb.vel) / 4);
-  const sigma = errorAt20(acc) * coneScale(d) * (1 + moving * 1.1 * (1 - qb.fx.a('throwOnRun'))) * (bullet ? 1 + 0.18 * Math.min(1, charge) : 1);
+  const sigma = errorAt20(acc) * coneScale(d) * (1 + moving * 1.1 * (1 - qb.fx.a('throwOnRun')));
   return { x, y, sigma };
 }
 

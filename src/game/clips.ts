@@ -35,7 +35,7 @@ export function throwAndRun(icon: number, at: number, move: 'juke' | 'stiffArm' 
     if (s.phase === 'air') return input({ catchType: 'rac' });
     if (s.phase === 'carrier') {
       const close = nearest(s) < 2.6;
-      return input({ move: { x: 1, y: lean }, sprint: true, juke: move === 'juke' && close, stiffArm: move === 'stiffArm' && close, spin: move === 'spin' && close });
+      return input({ move: { x: 1, y: lean }, juke: move === 'juke' && close, stiffArm: move === 'stiffArm' && close, spin: move === 'spin' && close });
     }
     return input({ snap: s.phase === 'presnap', throwHeld: t >= at && t < at + 4 ? icon : 0 });
   };
@@ -48,10 +48,10 @@ export function holdIt(s: PlayState): InputFrame {
 
 // Seeds found by tools/sim/findclips.ts.
 export const CLIPS: Clip[] = [
-  // Mesh against Cover 1: the crosser beats his man across the field, then 13 more after the catch with a juke.
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 71, play: 'doubles-mesh', def: 'cover1', los: 30, script: throwAndRun(4, 84, 'juke') },
+  // Stick against Cover 2: the driven ball to the stick, caught in stride, then 15 more after the catch with a juke.
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 22, play: 'trips-stick', def: 'cover2', los: 30, script: throwAndRun(2, 84, 'juke') },
   // The QB holds it: the four-man rush gets home at 4.5 s, the median pocket time at Pro.
   { id: 'sack', title: 'Sack', seed: 2, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // A stiff arm sheds the first tackler and he keeps going for 12 after the catch.
-  { id: 'broken-tackle', title: 'Broken tackle', seed: 79, play: 'trips-four-verts', def: 'cover1', los: 30, script: throwAndRun(2, 100, 'stiffArm') },
+  { id: 'broken-tackle', title: 'Broken tackle', seed: 79, play: 'trips-four-verts', def: 'cover1', los: 30, script: throwAndRun(1, 100, 'stiffArm') },
 ];

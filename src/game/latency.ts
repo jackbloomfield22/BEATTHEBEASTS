@@ -8,7 +8,6 @@
 //   snap          the get-offs and the QB's drop start
 //   move          the controlled player's velocity toward the pressed
 //                 direction has grown by 0.3 yd/s since the press
-//   sprint        his speed has grown by 0.15 yd/s
 //   throwHold     the power ring is up on the held icon
 //   throwRelease  the QB's throw motion starts (key up to motion)
 //   catch         the called catch lights up in the panel
@@ -19,7 +18,7 @@
 
 import type { V2 } from '@/sim/vec';
 
-export type LatKind = 'snap' | 'move' | 'sprint' | 'throwHold' | 'throwRelease' | 'catch' | 'juke' | 'spin' | 'stiffArm' | 'truck' | 'dive' | 'protect';
+export type LatKind = 'snap' | 'move' | 'throwHold' | 'throwRelease' | 'catch' | 'juke' | 'spin' | 'stiffArm' | 'truck' | 'dive' | 'protect';
 
 export interface LatSample {
   kind: LatKind;
@@ -41,7 +40,6 @@ interface Pending {
 const MOTION_WINDOW = 45;
 /** Velocity toward the pressed direction that counts as a visible response (yd/s). */
 const MOVE_DELTA = 0.3;
-const SPRINT_DELTA = 0.15;
 const KEEP = 400;
 
 class LatencyLog {
@@ -54,7 +52,7 @@ class LatencyLog {
 
   press(kind: LatKind, t: number, opts: { dir?: V2; buffered?: boolean } = {}): void {
     if (this.pending.has(kind)) return;
-    const base = kind === 'sprint' ? Math.hypot(this.vel.x, this.vel.y) : opts.dir ? this.vel.x * opts.dir.x + this.vel.y * opts.dir.y : 0;
+    const base = opts.dir ? this.vel.x * opts.dir.x + this.vel.y * opts.dir.y : 0;
     this.pending.set(kind, { t, frame: this.frame, base, ...opts });
   }
 
@@ -70,15 +68,14 @@ class LatencyLog {
     this.pending.delete(kind);
   }
 
-  /** Once per rendered frame: the controlled player's velocity, which answers move and sprint presses. */
+  /** Once per rendered frame: the controlled player's velocity, which answers move presses. */
   motion(v: V2 | null, now = performance.now()): void {
     if (v) {
-      for (const kind of ['move', 'sprint'] as const) {
-        const p = this.pending.get(kind);
-        if (!p) continue;
-        const got = kind === 'sprint' ? Math.hypot(v.x, v.y) - p.base : p.dir ? v.x * p.dir.x + v.y * p.dir.y - p.base : 0;
-        if (got >= (kind === 'sprint' ? SPRINT_DELTA : MOVE_DELTA)) this.respond(kind, now);
-        else if (this.frame - p.frame > MOTION_WINDOW) this.cancel(kind);
+      const p = this.pending.get('move');
+      if (p) {
+        const got = p.dir ? v.x * p.dir.x + v.y * p.dir.y - p.base : 0;
+        if (got >= MOVE_DELTA) this.respond('move', now);
+        else if (this.frame - p.frame > MOTION_WINDOW) this.cancel('move');
       }
       this.vel = { x: v.x, y: v.y };
     }

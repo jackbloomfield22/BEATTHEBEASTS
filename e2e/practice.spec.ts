@@ -65,12 +65,10 @@ test('a full play: snap, throw, catch, run, tackle or score, result card', async
   expect(thr.who![1]).toBe(s.icons[0]);
   s = await tickUntil(page, (x) => x.phase === 'carrier' || x.phase === 'dead');
   expect(s.events.some((e) => e.type === 'catch')).toBe(true);
-  // Run it: sprint upfield.
+  // Run it upfield (he sets his own pace).
   await page.keyboard.down('ArrowUp');
-  await page.keyboard.down('ShiftRight');
   s = await tickUntil(page, (x) => x.result !== null);
   await page.keyboard.up('ArrowUp');
-  await page.keyboard.up('ShiftRight');
   expect(['tackle', 'touchdown', 'outOfBounds']).toContain(s.result!.reason);
   expect(s.result!.yards).toBeGreaterThan(10);
   // The dead ball settles and the result card comes up.
@@ -154,15 +152,13 @@ test('scores: a touchdown run ends the series with a touchdown card', async ({ p
   await tick(page, 3);
   await page.keyboard.up('Digit1');
   await tickUntil(page, (x) => x.phase === 'carrier' || x.phase === 'dead');
-  // Weave: angle away from the nearest defender (the stick right), sprinting.
-  await page.keyboard.down('ShiftRight');
+  // Weave: angle away from the nearest defender (the stick right).
   await page.keyboard.down('ArrowUp');
   await page.keyboard.down('ArrowRight');
   await tick(page, 20);
   await page.keyboard.up('ArrowRight');
   const s = await tickUntil(page, (x) => x.result !== null);
   await page.keyboard.up('ArrowUp');
-  await page.keyboard.up('ShiftRight');
   // Seed 43 (Cover 2) with these inputs is a 75-yard catch and run (the replay is exact).
   expect(s.result!.touchdown).toBe(true);
   expect(s.events.some((e) => e.type === 'touchdown')).toBe(true);

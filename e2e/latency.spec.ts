@@ -77,7 +77,6 @@ test('every key shows its response within 100 ms at 60 fps', async ({ page }) =>
   await waitPhase(page, ['carrier', 'dead']);
   if ((await phase(page)) === 'carrier') {
     await page.keyboard.down('ArrowUp');
-    await press(page, 'ShiftRight', 20);
     for (const k of ['KeyQ', 'KeyW', 'KeyE', 'KeyC']) {
       await ready(page);
       if ((await phase(page)) !== 'carrier') break;
@@ -94,7 +93,7 @@ test('every key shows its response within 100 ms at 60 fps', async ({ page }) =>
   for (const r of out.summary) expect(r.f95 * (1000 / 60), `${r.kind}: ${r.f95} frames`).toBeLessThan(100);
 });
 
-test('the ball carrier: sprint, juke, stiff arm, spin and protect show within 100 ms at 60 fps', async ({ page }) => {
+test('the ball carrier: juke, stiff arm, spin and protect show within 100 ms at 60 fps', async ({ page }) => {
   test.setTimeout(2_400_000);
   await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
   await page.goto('/?screen=practice&nointro&seed=1&quality=low&shot=practice');
@@ -118,7 +117,6 @@ test('the ball carrier: sprint, juke, stiff arm, spin and protect show within 10
   await page.evaluate(() => (window as unknown as W & { __btbLatency: { clear(): void } }).__btbLatency.clear());
   await page.keyboard.down('ArrowUp');
   await ready(page);
-  await press(page, 'ShiftRight', 20);
   for (const k of ['KeyQ', 'KeyW', 'KeyE', 'KeyC']) {
     await ready(page);
     if ((await phase(page)) !== 'carrier') break;

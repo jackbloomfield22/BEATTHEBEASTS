@@ -85,7 +85,7 @@ export const ACTIONS: ActionDef[] = [
   a('pocket.throwClick', 'pocket', 'Throw to clicked receiver', ['Mouse0'], [], true),
   a('pocket.pumpFake', 'pocket', 'Pump fake', ['Mouse2'], ['Pad:LB']),
   a('pocket.throwAway', 'pocket', 'Throw it away', ['KeyQ'], ['Pad:RS']),
-  a('pocket.scramble', 'pocket', 'Scramble: tuck it and run', ['ShiftLeft', 'ShiftRight'], ['Pad:RT']),
+  a('pocket.scramble', 'pocket', 'Scramble: tuck it and run', ['KeyR'], ['Pad:RT']),
 
   // Ball in air
   a('air.switch', 'ballInAir', 'Switch to target', ['Tab'], ['Pad:B']),
@@ -99,7 +99,7 @@ export const ACTIONS: ActionDef[] = [
   a('carrier.left', 'carrier', 'Run left', ['ArrowLeft'], ['Pad:LSLeft']),
   a('carrier.right', 'carrier', 'Run right', ['ArrowRight'], ['Pad:LSRight']),
   // The number row is the moves (1–6, as the prompts show); Q W E R F C stay as second keys.
-  a('carrier.sprint', 'carrier', 'Burst (a short extra gear, costs stamina)', ['ShiftRight', 'ShiftLeft'], ['Pad:RT']),
+  // No speed key: he runs at the pace the play calls for and bursts on his own (out of a cut, into open field).
   a('carrier.juke', 'carrier', 'Juke (toward the side you steer, else away from the tackler)', ['Digit1', 'KeyQ'], []),
   a('carrier.jukeLeft', 'carrier', 'Juke left', [], ['Pad:RSLeft']),
   a('carrier.jukeRight', 'carrier', 'Juke right', [], ['Pad:RSRight']),
@@ -173,6 +173,11 @@ export const KB_DEFAULTS_V4: Record<string, string[]> = {
   'carrier.truck': ['KeyR'],
   'carrier.dive': ['KeyF'],
   'carrier.protect': ['KeyC'],
+};
+
+/** Keyboard defaults that changed in settings v6 (the scramble off Shift), with their v5 values. */
+export const KB_DEFAULTS_V5: Record<string, string[]> = {
+  'pocket.scramble': ['ShiftLeft', 'ShiftRight'],
 };
 
 export const ACTIONS_BY_ID = new Map(ACTIONS.map((d) => [d.id, d]));

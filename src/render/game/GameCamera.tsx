@@ -144,12 +144,14 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   const cy = r ? (ay + r.y) / 2 : ay;
   const lx = ball.x + (cx - ball.x) * (0.3 + 0.7 * e);
   const ly = ball.y + (cy - ball.y) * (0.3 + 0.7 * e);
-  // Back off along the line: wide at release, about 9 yd off the catch at arrival.
-  const back = 20 - 11 * e;
+  // Back off along the line: wide at release, 10.5 yd off the catch at
+  // arrival (round two: the push-in ends ~17% wider than M5.5's 9 yd, 3.4 up,
+  // so the receiver and the nearest defenders are all in frame).
+  const back = 20 - 9.5 * e;
   return {
     ex: lx - ux * back,
     ey: ly - uy * back,
-    eh: 8 - 4.6 * e,
+    eh: 8 - 4.1 * e,
     lx,
     ly,
     // Low enough that the catch sits just above center, clear of the catch-call panel.

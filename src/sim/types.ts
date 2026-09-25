@@ -87,7 +87,7 @@ export interface Agent {
   moveCooldown: number;
   /** Recent moves (spamming loses effectiveness). */
   moveFatigue: number;
-  /** A burst (the carrier's Shift): ticks left, and ticks until he can burst again. */
+  /** A burst (automatic, out of a cut or into open field): ticks left, and ticks until he can burst again. */
   burst: number;
   burstCd: number;
   /** A move pressed while he couldn't start it yet, and the ticks it stays pressed (input buffer). */
@@ -122,8 +122,8 @@ export interface Ball {
   meant: { x: number; y: number };
   releaseT: number;
   thrower: number;
-  /** 'touch' | 'bullet' of the last throw. */
-  kind: 'touch' | 'bullet' | null;
+  /** 'driven' (the default, flat) | 'touch' (held, or lofted over a defender) of the last throw. */
+  kind: 'driven' | 'touch' | null;
   /** Nose-over-tail spin phase for the render (radians). */
   spin: number;
 }

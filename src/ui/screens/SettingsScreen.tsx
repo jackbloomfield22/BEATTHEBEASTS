@@ -65,7 +65,7 @@ function buildTabs(nav: { openEditor: () => void; applyPreset: (p: QualityPreset
         { kind: 'slider', label: 'Mouse sensitivity', desc: 'Replay camera and aiming sensitivity.', min: 0.25, max: 2, step: 0.05, fmt: (v) => v.toFixed(2), get: (s) => s.controls.mouseSensitivity, set: (d, v) => { d.controls.mouseSensitivity = v; } },
         { kind: 'toggle', label: 'Invert Y', desc: 'Invert vertical camera movement in replays.', get: (s) => s.controls.invertY, set: (d, v) => { d.controls.invertY = v; } },
         { kind: 'slider', label: 'Placement reticle', desc: 'How far the ball-placement reticle moves per mouse movement.', min: 0.25, max: 2, step: 0.05, fmt: (v) => v.toFixed(2), get: (s) => s.controls.reticleSensitivity, set: (d, v) => { d.controls.reticleSensitivity = v; } },
-        { kind: 'slider', label: 'Bullet pass hold', desc: 'How long to hold a receiver key before a touch pass becomes a bullet.', min: 120, max: 400, step: 10, fmt: (v) => `${v} ms`, get: (s) => s.controls.bulletHoldMs, set: (d, v) => { d.controls.bulletHoldMs = v; } },
+        { kind: 'slider', label: 'Touch pass hold', desc: 'How long to hold a receiver key before a driven ball becomes a touch pass.', min: 120, max: 400, step: 10, fmt: (v) => `${v} ms`, get: (s) => s.controls.bulletHoldMs, set: (d, v) => { d.controls.bulletHoldMs = v; } },
         { kind: 'choice', label: 'Ball-in-air control', desc: 'Off: catches are automatic. Assist: switch to the target with Tab. Full: you always take over the target.', options: [{ value: 'off', label: 'Off' }, { value: 'assist', label: 'Assist' }, { value: 'full', label: 'Full' }], get: (s) => s.controls.ballInAir, set: (d, v) => { d.controls.ballInAir = v as Settings['controls']['ballInAir']; } },
         { kind: 'action', label: 'Reset all bindings', desc: 'Restore every keyboard and gamepad binding.', run: nav.resetBinds },
         ...(['preSnap', 'pocket', 'ballInAir', 'carrier', 'kick', 'replay', 'global', 'playCall', 'menu'] as InputContext[]).flatMap((ctx): Row[] => [
@@ -100,6 +100,7 @@ function buildTabs(nav: { openEditor: () => void; applyPreset: (p: QualityPreset
         { kind: 'choice', label: 'Automatic replays', desc: 'When instant replays play by themselves.', options: [{ value: 'on', label: 'All big plays' }, { value: 'big', label: 'Scores and turnovers' }, { value: 'off', label: 'Off' }], get: (s) => s.gameplay.autoReplay, set: (d, v) => { d.gameplay.autoReplay = v as Settings['gameplay']['autoReplay']; } },
         { kind: 'toggle', label: 'Big-hit slow motion', desc: 'The very biggest hits play in slow motion for a moment.', get: (s) => s.gameplay.bigHitSlowmo, set: (d, v) => { d.gameplay.bigHitSlowmo = v; } },
         { kind: 'action', label: 'Skin-tone editor', desc: 'Assign skin tones to every player and defender. Saved to the game data so they carry across sessions and devices.', run: nav.openEditor, value: 'Open ▸' },
+        { kind: 'toggle', label: 'Slow first catch', desc: 'Your first catch of a session plays in slow motion while the ball is in the air, to learn the catch call.', get: (s) => s.gameplay.firstCatchSlowmo, set: (d, v) => { d.gameplay.firstCatchSlowmo = v; } },
         { kind: 'action', label: 'Reset gameplay settings', desc: 'Restore the defaults on this tab.', run: () => nav.reset('gameplay') },
       ],
     },

@@ -281,7 +281,6 @@ function PlayHud() {
       {live && phase === 'carrier' && ui.carrier ? (
         <div className="prompt-row cue-row">
           <Cue k={moveKeys('carrier.')} w="Run" />
-          <Cue k={key('carrier.sprint')} w="Burst" />
           {qbRunning ? <Cue k={key('carrier.dive')} w="Slide" /> : null}
         </div>
       ) : null}
@@ -305,9 +304,9 @@ function Tutorial() {
   const cues: Record<string, [string, string][]> = {
     snap: [[key('preSnap.snap'), 'Snap']],
     read: [['Glow', 'Open'], ['Dim', 'Covered']],
-    throw: [[receivers, 'Throw'], ['Hold', 'Bullet']],
+    throw: [[receivers, 'Throw'], ['Hold', 'Touch']],
     catch: CATCHES.map((c) => [key(c.action), c.word]),
-    run: [[pad ? 'R-Stick' : `${key('carrier.juke')}–${key('carrier.protect')}`, 'Moves'], [key('carrier.sprint'), 'Burst']],
+    run: [[pad ? 'R-Stick' : `${key('carrier.juke')}–${key('carrier.protect')}`, 'Moves']],
   };
   const order = ['snap', 'read', 'throw', 'catch', 'run'];
   return (

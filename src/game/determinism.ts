@@ -19,7 +19,7 @@ export const HASH_CASES: HashCase[] = PLAYS.flatMap((p) => DEF_CALLS.flatMap((d)
 /** A fixed user script: snap, drift right, throw to icon 2 at 1.5 s, then run and juke. */
 function script(s: PlayState): InputFrame {
   const t = s.tick;
-  if (s.phase === 'carrier') return input({ move: { x: 1, y: 0.2 }, sprint: true, jukeL: t % 40 === 0 });
+  if (s.phase === 'carrier') return input({ move: { x: 1, y: 0.2 }, jukeL: t % 40 === 0 });
   return input({ snap: t === 0, move: t > 40 && t < 70 ? { x: 0, y: -0.5 } : { x: 0, y: 0 }, throwHeld: t >= 90 && t < 96 ? 2 : 0, aim: { x: 0.3, y: 0.1 } });
 }
 

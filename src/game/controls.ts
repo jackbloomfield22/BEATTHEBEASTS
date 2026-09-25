@@ -49,7 +49,6 @@ const MOVE_KEYS: Record<string, [number, number]> = {
 };
 const PRESS_KIND: Record<string, LatKind> = {
   'preSnap.snap': 'snap',
-  'carrier.sprint': 'sprint',
   'pocket.throw1': 'throwHold',
   'pocket.throw2': 'throwHold',
   'pocket.throw3': 'throwHold',
@@ -178,7 +177,6 @@ export class Controls {
     const f: InputFrame = { ...NEUTRAL, move: { x: 0, y: 0 }, aim: { x: 0, y: 0 } };
     const pocket = ctx === 'pocket';
     const carrier = ctx === 'carrier';
-    f.sprint = Input.isHeld('carrier.sprint');
     f.snap = e.has('preSnap.snap');
     if (this.pendingHot) {
       f.hotRoute = this.pendingHot;

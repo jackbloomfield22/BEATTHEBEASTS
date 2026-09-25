@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { loadJSON, saveJSON } from './storage';
-import { KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4, type Bindings } from '@/input/actions';
+import { KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4, KB_DEFAULTS_V5, type Bindings } from '@/input/actions';
 
 export type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
 export type Difficulty = 'rookie' | 'pro' | 'legend' | 'beast';
@@ -21,7 +21,7 @@ export interface GraphicsSettings {
 }
 
 export interface Settings {
-  version: 5;
+  version: 6;
   display: {
     fullscreen: boolean;
     resolutionScale: number; // 0.5 .. 1.0
@@ -53,6 +53,8 @@ export interface Settings {
     autoReplay: 'on' | 'big' | 'off';
     /** The biggest hits play in slow motion for a moment. */
     bigHitSlowmo: boolean;
+    /** The session's first catch in slow motion (a teaching aid; off by default since round two). */
+    firstCatchSlowmo: boolean;
   };
   accessibility: {
     colorblind: 'off' | 'deuteranopia' | 'protanopia' | 'tritanopia';
@@ -111,12 +113,12 @@ export function renderDpr(cssW: number, cssH: number, deviceDpr: number, preset:
 
 export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings {
   return {
-    version: 5,
+    version: 6,
     display: { fullscreen: false, resolutionScale: 1, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 200, ballInAir: 'assist', keyboard, gamepad },
     audio: { master: 0.8, music: 0.6, sfx: 0.8, crowd: 0.8, ui: 0.7, muteUnfocused: true },
-    gameplay: { difficulty: 'pro', gameLength: 6, camera: 'broadcast', lighting: 'golden', skipIntros: false, fastReveal: false, autoReplay: 'big', bigHitSlowmo: true },
+    gameplay: { difficulty: 'pro', gameLength: 6, camera: 'broadcast', lighting: 'golden', skipIntros: false, fastReveal: false, autoReplay: 'big', bigHitSlowmo: true, firstCatchSlowmo: false },
     accessibility: { colorblind: 'off', captionSize: 'medium', reduceShake: false, reduceFlashing: false, holdToToggle: false, uiScale: 1 },
   };
 }
@@ -214,6 +216,19 @@ export function migrate(stored: Settings): Settings {
       }
     }
     (s as { version: number }).version = 5;
+  }
+  if ((s.version as number) === 5) {
+    // v6: no burst key (the carrier bursts on his own); the scramble moves off Shift to R.
+    const kb = s.controls?.keyboard;
+    if (kb) {
+      for (const [id, old] of Object.entries(KB_DEFAULTS_V5)) {
+        const cur = kb[id];
+        if (cur && cur.length === old.length && cur.every((c, i) => c === old[i])) delete kb[id];
+      }
+      delete kb['carrier.sprint'];
+    }
+    if (s.controls?.gamepad) delete s.controls.gamepad['carrier.sprint'];
+    (s as { version: number }).version = 6;
   }
   return s;
 }

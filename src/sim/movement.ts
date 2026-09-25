@@ -27,7 +27,7 @@ export interface SteerOpts {
   /** Braking as a share of the cut deceleration (a carrier coasting off the stick). Default 1. */
   brake?: number;
   /**
-   * A burst (the carrier's Shift): he reaches top speed faster and holds a
+   * A burst (a carrier out of a cut or into open field): he reaches top speed faster and holds a
    * little over it for its half-second. From the sprint model: a burst is
    * the acceleration phase compressed (τ × 0.55) and a top end 4% higher,
    * about the gap between a player's game speed and his best-ever timed run.

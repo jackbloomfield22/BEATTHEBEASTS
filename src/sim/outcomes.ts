@@ -10,6 +10,7 @@
 // the best receivers and lower for everyone else.
 
 import { routeOf } from './ai';
+import { maxThrowSpeed } from './effects';
 import { NEUTRAL } from './input';
 import { stepPlay } from './play';
 import { DEF_CALLS, PASS_PLAYS, RUN_PLAYS, type DefCall, type OffPlay, type RouteName } from './plays';
@@ -41,7 +42,20 @@ export interface PassSample {
    * arrival when it never got to him (overthrown). NaN on a throwaway.
    */
   sep: number;
+  /** Driven throws: hang time release to catch point, s, scaled to a 90 arm (NaN otherwise). */
+  hang90: number;
+  /** Throw distance, QB to catch point (yd). */
+  throwDist: number;
+  /**
+   * Completions: the most defenders within CROWD_R of the catch point from
+   * the catch to CROWD_T after it (round-two feedback: 4–5 used to arrive at once).
+   */
+  crowd: number;
 }
+
+/** The crowd at the catch: defenders within 2 yd of the catch point, over the 0.3 s after it (or to the whistle). */
+export const CROWD_R = 2;
+export const CROWD_T = 0.3;
 
 /**
  * The pocket (feedback item 4). Bands (NFL, NGS/PFF, 2018–2023): sacks on
@@ -83,6 +97,12 @@ export interface PassDist {
   openCatch: number;
   /** Completions by gain: <0, 0–4, 5–9, 10–19, 20–39, 40+. */
   buckets: number[];
+  /** Driven throws, median hang time scaled to a 90 arm, at 8–12 yd and 18–22 yd (targets ~0.6 and ~0.9 s). */
+  hang10: number;
+  hang20: number;
+  /** Completions with more than two defenders at the catch point, and the average there. */
+  crowdOver2: number;
+  crowdAvg: number;
   samples: PassSample[];
 }
 
@@ -114,8 +134,33 @@ export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>;
         let sep = -1;
         let target = -1;
         let catchX = NaN;
+        let hang90 = NaN;
+        let throwDist = NaN;
+        let crowd = 0;
+        let catchPt: { x: number; y: number } | null = null;
+        let catchT = -1;
         for (let t = 0; t < 60 * 40 && !s.result; t++) {
           stepPlay(s, NEUTRAL);
+          if (Number.isNaN(throwDist) && s.ball.mode === 'air' && s.ball.target >= 0) {
+            const qb = s.agents[s.qb]!;
+            throwDist = dist(s.ball.aim, qb.pos);
+            if (s.ball.kind === 'driven') hang90 = (s.ball.arrive - s.ball.releaseT) * (maxThrowSpeed(qb.fx.r('throwPower')) / maxThrowSpeed(90));
+          }
+          if (!catchPt) {
+            const c = s.events.find((e) => e.type === 'catch');
+            if (c?.at) {
+              catchPt = c.at;
+              catchT = s.t;
+            }
+          }
+          if (catchPt && s.t - catchT <= CROWD_T) {
+            let k = 0;
+            for (const i of s.def) {
+              const d = s.agents[i]!;
+              if (dist(d.pos, catchPt) < CROWD_R) k++;
+            }
+            crowd = Math.max(crowd, k);
+          }
           if (s.ball.mode === 'air' && s.ball.target >= 0) target = s.ball.target;
           if (sep < 0 && target >= 0 && s.pass?.attempted && s.t >= s.ball.arrive - 1e-9) {
             // The ball may already be caught (arrive is the planned time); the target is the thrown-to man either way.
@@ -153,6 +198,9 @@ export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>;
           yards: r.yards,
           air,
           yac: complete ? r.yards - air : 0,
+          hang90,
+          throwDist,
+          crowd,
           sep: !tgt ? NaN : r.pass.sep !== undefined ? r.pass.sep : s.events.some((e) => e.type === 'interception' || e.type === 'deflection') ? 0 : sep < 0 ? 99 : sep,
         });
       }
@@ -172,6 +220,11 @@ export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>;
     buckets[j]!++;
   }
   const pr = [...pressures].sort((a, b) => a - b);
+  const median = (xs: number[]) => {
+    const a = [...xs].sort((x, y) => x - y);
+    return a.length ? a[Math.floor(a.length / 2)]! : NaN;
+  };
+  const hangAt = (lo: number, hi: number) => median(samples.filter((p) => !Number.isNaN(p.hang90) && p.throwDist >= lo && p.throwDist <= hi).map((p) => p.hang90));
   return {
     pocket: {
       dropbacks: playsRun,
@@ -197,6 +250,10 @@ export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>;
     contestedCatch: share(contested.filter((p) => p.complete).length, contested.length),
     openCatch: share(open.filter((p) => p.complete).length, open.length),
     buckets,
+    hang10: hangAt(8, 12),
+    hang20: hangAt(18, 22),
+    crowdOver2: share(comp.filter((p) => p.crowd > 2).length, comp.length),
+    crowdAvg: avg(comp.map((p) => p.crowd)),
     samples,
   };
 }
@@ -210,6 +267,8 @@ export function formatPassDist(d: PassDist): string {
     `completions 20+ ${p(d.exp20)}  40+ ${p(d.exp40)}`,
     `YAC short routes ${d.yacShort.toFixed(1)}  all ${d.yacAll.toFixed(1)}`,
     `in phase (< ${IN_PHASE} yd) ${p(d.contestedShare)} of targets, caught ${p(d.contestedCatch)}; 2+ yd open caught ${p(d.openCatch)}`,
+    `driven ball hang (90 arm) 10 yd ${d.hang10.toFixed(2)} s  20 yd ${d.hang20.toFixed(2)} s`,
+    `at the catch: ${d.crowdAvg.toFixed(2)} defenders within ${CROWD_R} yd on average, more than two on ${p(d.crowdOver2)} of completions`,
     `completions by gain  <0 ${d.buckets[0]}  0-4 ${d.buckets[1]}  5-9 ${d.buckets[2]}  10-19 ${d.buckets[3]}  20-39 ${d.buckets[4]}  40+ ${d.buckets[5]}`,
     `pocket: sacks ${p(d.pocket.sackRate)} of dropbacks  scrambles ${p(d.pocket.scrambleRate)} for ${d.pocket.scrambleYds.toFixed(1)} yd (${d.pocket.scrambleSacks} sacked after tucking)  pressured ${p(d.pocket.pressureRate)}, first at ${d.pocket.timeToPressure.toFixed(2)} s (median)`,
   ].join('\n');

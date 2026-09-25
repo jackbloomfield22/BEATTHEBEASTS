@@ -10,7 +10,6 @@ import {
   breakOnBall,
   carrierAI,
   manCover,
-  openness,
   passBlock,
   pressureOn,
   pursue,
@@ -26,8 +25,8 @@ import { stepFlight } from './ball';
 import { blockOf, stepBlocks } from './blocks';
 import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tickMoves } from './contact';
 import { releaseTime } from './effects';
-import { BULLET_CHARGE, TAP_MAX, type InputFrame } from './input';
-import { arrive, remember, steer } from './movement';
+import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
+import { arrive, remember, steer, timeTo } from './movement';
 import { planThrow, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import type { PlayState } from './state';
@@ -250,8 +249,10 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
   if (s.scrambleT >= 0) {
     // Tucked: he runs like a ball carrier (context speed, cuts), eyes still downfield until the line.
     const pace = carrierPace(s, qb, 1);
-    const want = s.setup.user ? { x: inp.move.x * qb.fx.vmax * pace, y: inp.move.y * qb.fx.vmax * pace } : scrambleLane(s, qb, pace);
-    steer(qb, cutWeight(qb, want), { brake: len(want) < 0.1 ? CARRIER_COAST : 1 });
+    const dir = stickDir(inp.move);
+    const want = s.setup.user ? { x: dir.x * qb.fx.vmax * pace, y: dir.y * qb.fx.vmax * pace } : scrambleLane(s, qb, pace);
+    autoBurst(s, qb, pace, want);
+    steer(qb, cutWeight(qb, want), { brake: len(want) < 0.1 ? CARRIER_COAST : 1, burst: qb.burst > 0 });
     if (qb.anim !== 'throw') qb.anim = 'carry';
   } else if (s.setup.user && since > 0.35 && (inp.move.x !== 0 || inp.move.y !== 0)) {
     // The user moves the QB in the pocket (camera-relative input already in the field frame): controlled steps, eyes downfield.
@@ -340,7 +341,8 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
       s.eyes = { ...s.agents[s.icons[inp.throwHeld - 1]!]!.pos };
     } else if (s.hold.icon > 0) {
       const held = s.hold.ticks * TICK;
-      const charge = held <= TAP_MAX ? 0 : Math.min(1, (held - TAP_MAX) / BULLET_CHARGE);
+      // A tap drives it; a hold adds touch (more air the longer he holds).
+      const charge = held <= TAP_MAX ? 0 : Math.min(1, (held - TAP_MAX) / LOFT_CHARGE);
       start(s.hold.icon - 1, charge, { x: inp.aim.x, y: inp.aim.y });
       s.hold = { icon: 0, ticks: 0 };
     }
@@ -350,10 +352,8 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
   const pressure = pressureOn(s, qb);
   const pick = qbRead(s, qb, pressure);
   if (pick >= 0) {
-    const r = s.agents[s.icons[pick]!]!;
-    const o = openness(s, qb, r);
-    // Touch over the top on deep balls; bullets into windows.
-    start(pick, o.bullet ? 0.6 : 0, v2());
+    // The driven ball; planThrow puts air under it when a defender is in the way.
+    start(pick, 0, v2());
   } else if ((pressure > 0.9 || s.t - s.snapT - s.setup.play.drop.set > 3) && Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) > 3.5) {
     // Nothing there and he's outside the pocket: throw it away.
     start(0, 0.3, v2(), true);
@@ -441,15 +441,9 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
   // Context speed (feedback item 3): flat out in space, controlled with a tackler on him.
   const pace = carrierPace(s, c, attack);
   if (userCarrier) {
-    // Shift: a short burst, on the press (holding it doesn't keep bursting).
-    if (inp.sprint && !c.mem.sprintHeld && c.burst === 0 && c.burstCd === 0 && c.stamina > BURST_MIN) {
-      c.burst = BURST_TICKS;
-      c.burstCd = BURST_COOLDOWN;
-      c.stamina = Math.max(0, c.stamina - BURST_COST);
-      s.events.push({ t: s.t, type: 'move', who: [c.i], data: { move: 'burst' } });
-    }
-    c.mem.sprintHeld = inp.sprint;
-    want = { x: inp.move.x * c.fx.vmax * pace, y: inp.move.y * c.fx.vmax * pace };
+    // The stick is a direction only: his speed is the situation's (a diagonal is as fast as straight ahead).
+    const dir = stickDir(inp.move);
+    want = { x: dir.x * c.fx.vmax * pace, y: dir.y * c.fx.vmax * pace };
     const pressed: Move | null = inp.jukeL
       ? 'jukeL'
       : inp.jukeR
@@ -504,6 +498,7 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
       }
     }
   }
+  autoBurst(s, c, pace, want);
   // Committed moves carry him (their velocity change builds over the plant); protecting costs speed.
   applyImpulse(c);
   if (c.busy > 0 && c.move && c.move !== 'protect' && c.move !== 'stiffArm') {
@@ -564,11 +559,57 @@ export function carrierPace(s: PlayState, c: Agent, attack: 1 | -1): number {
   return near < 2.5 ? 0.86 + 0.14 * Math.max(0, Math.min(1, (near - 1.2) / 1.3)) : 1;
 }
 
-/** Burst: half a second, a tenth of his stamina, not again for 1.5 s, not when he's spent. */
-const BURST_TICKS = 30;
+/**
+ * A stick reading as a direction: any push past the dead zone is a full
+ * push. A pad's diagonal often reads ~0.85–0.9 at full tilt (and a keyboard
+ * diagonal is normalised already), so speed never comes from how far it's pushed.
+ */
+export function stickDir(m: V2): V2 {
+  const k = Math.sqrt(m.x * m.x + m.y * m.y);
+  return k < 0.2 ? { x: 0, y: 0 } : { x: m.x / k, y: m.y / k };
+}
+
+/**
+ * The burst is his own, not a key (round-two feedback): the extra gear a
+ * back finds accelerating out of a cut, or when he clears the last tackler
+ * near him and hits open grass. It lasts 0.3 s for a 0-Acceleration runner
+ * up to 0.6 s at 99 (the elite "burst" trait's ~0.15 s sooner to top speed,
+ * catalogOffense.ts), costs stamina, and can't come again for 1.5 s or
+ * when he's spent. movement.ts turns it into the compressed sprint phase.
+ */
 const BURST_COOLDOWN = 90;
-const BURST_COST = 0.1;
-const BURST_MIN = 0.15;
+const BURST_COST = 0.05;
+const BURST_MIN = 0.2;
+/** A cut: asked to run more than ~35° off the line he's on. */
+const CUT_COS = 0.82;
+
+function autoBurst(s: PlayState, c: Agent, pace: number, want: V2): void {
+  const lastPace = (c.mem.lastPace as number | undefined) ?? pace;
+  c.mem.lastPace = pace;
+  // A juke or spin that just ended (its plant done, he's coming out of it).
+  const prev = c.mem.prevMove as string | undefined;
+  if ((prev === 'jukeL' || prev === 'jukeR' || prev === 'spin') && c.move !== prev) c.mem.moveEnd = s.t;
+  c.mem.prevMove = c.move ?? '';
+  const sp = len(c.vel);
+  const wl = len(want);
+  if (sp < 1.5 || wl < 0.5 * c.fx.vmax) return;
+  const along = (c.vel.x * want.x + c.vel.y * want.y) / (sp * wl);
+  // In a cut: asked to run well off the line he's on.
+  if (along < CUT_COS && sp > 3) c.mem.cutT = s.t;
+  if (c.burst > 0 || c.burstCd > 0 || c.stamina < BURST_MIN || c.busy > 0 || c.move === 'protect') return;
+  // Coming out of it: going where he's asked to (not still in the turn).
+  if (along < 0.95) return;
+  // Clearing the tackler: the controlled pace gives way to open field.
+  const cleared = lastPace < 0.97 && pace >= 1;
+  // Out of a cut in the last half second, or a juke or spin just finished.
+  const cut = s.t - ((c.mem.cutT as number | undefined) ?? -9) < 0.5;
+  const moved = s.t - ((c.mem.moveEnd as number | undefined) ?? -9) < 0.25;
+  if (!cleared && !cut && !moved) return;
+  c.burst = Math.round(60 * (0.3 + 0.3 * c.fx.a('acceleration')));
+  c.burstCd = BURST_COOLDOWN;
+  c.stamina = Math.max(0, c.stamina - BURST_COST);
+  s.events.push({ t: s.t, type: 'move', who: [c.i], data: { move: 'burst' } });
+}
 /** Protecting the ball: a jog, ~78% (two hands on it, pads over it). */
 const PROTECT_PACE = 0.78;
 
@@ -698,13 +739,12 @@ function ballStep(s: PlayState): void {
         s.phase = 'carrier';
         a.anim = 'catch';
         if (out === 'catch') {
-          // No pause after the catch: in stride he keeps all his speed, and
-          // only the hands are busy (a few frames to tuck it before a move).
-          // Securing it with both hands gives a little speed up; going up
-          // for it costs the most (he lands and restarts). From the catch
-          // clips' timing: tuck ~0.07 s, secure ~0.13 s, high point ~0.2 s.
+          // No hitch at the catch (round two): he catches at speed and keeps
+          // going. Only the hands are busy (frames to tuck it before a move:
+          // tuck ~0.07 s, secure ~0.13 s, high point ~0.2 s from the catch
+          // clips); going up for it costs a little of his run as he lands.
           const type = s.catchType ?? 'rac';
-          const keep = type === 'aggressive' ? 0.55 : type === 'possession' ? 0.8 : 1;
+          const keep = type === 'aggressive' ? 0.9 : 1;
           a.vel.x *= keep;
           a.vel.y *= keep;
           a.busy = Math.max(a.busy, type === 'aggressive' ? 12 : type === 'possession' ? 8 : 4);
@@ -899,8 +939,12 @@ function runToBall(s: PlayState, a: Agent): void {
   }
   const top = a.fx.vmax;
   if (left > 0.1 && d > 0.25) {
-    // Pace to be there on time; a hurry past top speed is simply top speed.
-    const sp = Math.min(top, d / left);
+    // On time at full stride: never brake to wait for the ball (it's led to
+    // where he'll be at speed). Only a ball well short of him (it needs him
+    // at under 60% of his run) makes him throttle down and come back to it.
+    const need = d / left;
+    const cur = len(a.vel);
+    const sp = Math.min(top, need < 0.6 * cur ? need : Math.max(need, cur));
     steer(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp });
     return;
   }
@@ -916,6 +960,69 @@ function pursueTackle(s: PlayState, a: Agent, t: Agent): void {
     return;
   }
   pursue(s, a, t);
+}
+
+/** Defenders who rally to a throw: at most two (round-two feedback: four or five used to arrive at once). */
+const MAX_RALLY = 2;
+/** A real angle: he can be at the catch point within this of the ball (to contest it or tackle on the catch). */
+const RALLY_SLACK = 0.35;
+
+/**
+ * Who breaks on this throw, decided at the release: the man covering the
+ * target, then whoever can get to the catch point soonest (his read of the
+ * throw plus the run), if he can be there within RALLY_SLACK of the ball.
+ * Everyone else keeps his man or his zone until the catch; that's how a
+ * defense flows to the ball without leaving the field empty behind it.
+ */
+function rallies(s: PlayState): number[] {
+  if (s.rally && s.rally.at === s.ball.releaseT) return s.rally.who;
+  const aim = { x: s.ball.aim.x, y: s.ball.aim.y };
+  const left = s.ball.arrive - s.t;
+  const call = s.setup.def.assign;
+  const cands: { i: number; t: number }[] = [];
+  let manOn = -1;
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (d.down || blockOf(s, i)) continue;
+    const as = call[d.slot as keyof typeof call];
+    if (as.kind === 'man' && off(s, as.on).i === s.ball.target) manOn = i;
+    const t = reaction(s, d) + timeTo(d, aim);
+    if (t <= left + RALLY_SLACK) cands.push({ i, t });
+  }
+  cands.sort((a, b) => a.t - b.t);
+  const who = manOn >= 0 ? [manOn] : [];
+  for (const c of cands) if (who.length < MAX_RALLY && !who.includes(c.i)) who.push(c.i);
+  s.rally = { at: s.ball.releaseT, who };
+  return who;
+}
+
+/**
+ * The rest of the defense flows to the ball without converging on the catch
+ * point: a defender near the throw (within FLOW_R of the catch point, and not
+ * a deep defender with a man still behind him) runs to a leverage point
+ * FLOW_AHEAD yards past the catch along the receiver's run, where the tackle
+ * after the catch is made. His assignment is done once he's read the throw.
+ */
+const FLOW_R = 15;
+const FLOW_AHEAD = 5;
+
+function flowToBall(s: PlayState, d: Agent): boolean {
+  const aim = { x: s.ball.aim.x, y: s.ball.aim.y };
+  if (dist(d.pos, aim) > FLOW_R) return false;
+  const r = s.agents[s.ball.target]!;
+  const v = len(r.vel);
+  const ux = v > 1 ? r.vel.x / v : 1;
+  const uy = v > 1 ? r.vel.y / v : 0;
+  const at = { x: aim.x + ux * FLOW_AHEAD, y: aim.y + uy * FLOW_AHEAD };
+  // Keep off the catch point on the way (go around it, not through it).
+  const toCatch = dist(d.pos, aim);
+  if (toCatch < 3) {
+    const away = norm(sub(d.pos, aim));
+    at.x += away.x * 2;
+    at.y += away.y * 2;
+  }
+  steer(d, arrive(d, at, 0.95, 1));
+  return true;
 }
 
 function defenseRoles(s: PlayState): void {
@@ -959,10 +1066,12 @@ function defenseRoles(s: PlayState): void {
       const t0 = (d.mem.sawThrow as number | undefined) ?? -1;
       if (t0 < 0) d.mem.sawThrow = s.t;
       const since = s.t - ((d.mem.sawThrow as number | undefined) ?? s.t);
-      const near = dist(d.pos, { x: s.ball.aim.x, y: s.ball.aim.y }) < 20;
-      if (near && since >= reaction(s, d) && s.ball.target !== -3) {
-        breakOnBall(s, d);
-        continue;
+      if (s.ball.target >= 0 && since >= reaction(s, d)) {
+        if (rallies(s).includes(i)) {
+          breakOnBall(s, d);
+          continue;
+        }
+        if (flowToBall(s, d)) continue;
       }
     }
     const as = call[d.slot as keyof typeof call];

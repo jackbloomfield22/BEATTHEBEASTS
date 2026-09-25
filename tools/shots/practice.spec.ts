@@ -78,7 +78,6 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   }
   await shot(page, '06c-air-arrival');
   for (let k = 0; k < 40 && (await phase(page)) === 'air'; k++) await tick(page, 6);
-  await page.keyboard.down('ShiftRight');
   await page.keyboard.down('ArrowUp');
   await page.keyboard.down('ArrowRight');
   await tick(page, 20);
@@ -88,7 +87,6 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   await shot(page, '08-long-run');
   for (let k = 0; k < 80 && (await phase(page)) !== 'dead'; k++) await tick(page, 6);
   await page.keyboard.up('ArrowUp');
-  await page.keyboard.up('ShiftRight');
   await tick(page, 30);
   await page.keyboard.press('F3');
   await shot(page, '09-field-level-dead-ball');

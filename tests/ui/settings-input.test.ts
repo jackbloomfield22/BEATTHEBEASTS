@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, defaultBindings, findConflicts, inputLabel, KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4 } from '@/input/actions';
+import { ACTIONS, defaultBindings, findConflicts, inputLabel, KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4, KB_DEFAULTS_V5 } from '@/input/actions';
 import { defaultSettings, migrate } from '@/app/settings';
 import { validateCharacterization } from '@/engine/data/characterizationSchema';
 import bundled from '@data/characterization.json';
@@ -34,12 +34,13 @@ describe('action map', () => {
       expect(kb[p + up]).toEqual(['ArrowUp']);
     }
     expect(kb['carrier.right']).toEqual(['ArrowRight']);
-    expect(kb['carrier.sprint']).toEqual(['ShiftRight', 'ShiftLeft']);
+    // No speed key (round two): he sets his own pace and bursts on his own.
+    expect(kb['carrier.sprint']).toBeUndefined();
     expect([kb['air.aggressive'], kb['air.possession'], kb['air.rac']]).toEqual([['Digit1'], ['Digit2'], ['Digit3']]);
     // The number row first (v5), the letters as second keys.
     expect([kb['carrier.juke'], kb['carrier.stiffArm'], kb['carrier.spin']]).toEqual([['Digit1', 'KeyQ'], ['Digit2', 'KeyW'], ['Digit3', 'KeyE']]);
     expect([kb['carrier.truck'], kb['carrier.dive'], kb['carrier.protect']]).toEqual([['Digit4', 'KeyR'], ['Digit5', 'KeyF'], ['Digit6', 'KeyC']]);
-    expect(kb['pocket.scramble']).toEqual(['ShiftLeft', 'ShiftRight']);
+    expect(kb['pocket.scramble']).toEqual(['KeyR']);
     // The directional jukes stay on the right stick only.
     expect(kb['carrier.jukeLeft']).toEqual([]);
     expect(defaultBindings('pad')['carrier.jukeLeft']).toEqual(['Pad:RSLeft']);
@@ -49,7 +50,7 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V2, 'carrier.spin': ['KeyX'] }, defaultBindings('pad'));
     (old as { version: number }).version = 2;
     const m = migrate(old);
-    expect(m.version).toBe(5);
+    expect(m.version).toBe(6);
     // Still on the old default: dropped, so the merge with the defaults fills in the new one.
     expect(m.controls.keyboard['carrier.up']).toBeUndefined();
     expect(m.controls.keyboard['air.possession']).toBeUndefined();
@@ -74,6 +75,20 @@ describe('action map', () => {
     const m = migrate(old);
     expect(m.controls.keyboard['carrier.juke']).toBeUndefined();
     expect(m.controls.keyboard['carrier.spin']).toEqual(['KeyX']);
+  });
+
+  it('v5 settings move the scramble off Shift and drop the burst key, keeping a rebound scramble', () => {
+    const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V5, 'carrier.sprint': ['ShiftRight'] }, { ...defaultBindings('pad'), 'carrier.sprint': ['Pad:RT'] });
+    (old as { version: number }).version = 5;
+    const m = migrate(old);
+    expect(m.version).toBe(6);
+    expect(m.controls.keyboard['pocket.scramble']).toBeUndefined();
+    expect(m.controls.keyboard['carrier.sprint']).toBeUndefined();
+    expect(m.controls.gamepad['carrier.sprint']).toBeUndefined();
+    expect(m.gameplay.firstCatchSlowmo).toBe(false);
+    const rebound = defaultSettings({ ...defaultBindings('kb'), 'pocket.scramble': ['KeyT'] }, defaultBindings('pad'));
+    (rebound as { version: number }).version = 5;
+    expect(migrate(rebound).controls.keyboard['pocket.scramble']).toEqual(['KeyT']);
   });
 
   it('labels inputs readably', () => {

@@ -65,7 +65,7 @@ Full-screen and left-aligned, over a live cinematic camera that changes per focu
 |---|---|
 | Display | Fullscreen, Resolution scale (50–100% + Dynamic), Frame cap (30/60/120/144/Unlimited), VSync (where the browser allows it; otherwise hidden), Field of view (broadcast camera ±10°), HUD scale, Safe-area (ultrawide) |
 | Graphics | Preset (Low/Medium/High/Ultra/Custom, auto-detected on first launch), Shadows, Ambient occlusion, Crowd density, Grass detail, Post effects (bloom, vignette), Replay depth of field and motion blur, Weather particles |
-| Controls | Rebinding per context (keyboard/mouse and gamepad), Mouse sensitivity, Invert Y (replay camera), Placement reticle sensitivity, Bullet-pass hold threshold, Ball-in-air control (Off / Assist / Full) |
+| Controls | Rebinding per context (keyboard/mouse and gamepad), Mouse sensitivity, Invert Y (replay camera), Placement reticle sensitivity, Touch-pass hold threshold, Ball-in-air control (Off / Assist / Full) |
 | Audio | Master, Music, SFX, Crowd, UI. Mute when unfocused |
 | Gameplay | Difficulty (Rookie/Pro/Legend/Beast), Game length (Quick 4 / Standard 6 / Full 10 drives), Default camera (Broadcast/All-22/Field Level), Lighting (Golden Hour default, Night, Overcast, Rain, Snow, Random), Skip intros, Fast reveal, Auto-replay (On / Big plays only / Off) |
 | Accessibility | Colorblind receiver icons (shapes + numbers, three palettes), Commentary captions size, Reduce camera shake, Reduce flashing (pyro, strobes, bloom pulses), Hold-to-toggle for sprint and protect, UI scale |
@@ -186,7 +186,7 @@ All bindings can be rebound per context. The gamepad has Madden-style defaults. 
 | | Flip play | `F` |
 | | Show receiver reads / coverage shell | Hold `Alt` |
 | **Pocket (QB)** | Move (step up, drift, roll out), camera-relative | Arrow keys (the left hand stays on `1`–`5`) |
-| | Throw to receiver | `1`–`5` or left-click the receiver icon. **Tap = touch/lob, hold = bullet** (power ring fills around the icon) |
+| | Throw to receiver | `1`–`5` or left-click the receiver icon. **Tap = driven ball (flat, fast), hold = touch** (the ring fills with the loft); he lofts a driven ball over a defender in the lane on his own |
 | | Placement | Mouse offset from the icon while choosing: a small reticle sets lead / back shoulder / high / low |
 | | Pump fake | Right-click (or `Shift`+number) |
 | | Throw it away (outside the pocket) | `Q` |
@@ -212,7 +212,7 @@ All bindings can be rebound per context. The gamepad has Madden-style defaults. 
 |---|---|---|
 | Pre-snap | Snap / hot route / audible / motion / flip | A / Y then a receiver button / X then preset / left stick when in motion menu / RB |
 | Pocket | Move | Left stick |
-| | Throw | Receiver buttons A, B, X, Y, RB. Tap = touch, hold = bullet |
+| | Throw | Receiver buttons A, B, X, Y, RB. Tap = driven, hold = touch |
 | | Placement | Left stick direction while pressing |
 | | Pump fake / throw away | LB / RS click |
 | Ball in air | Aggressive / RAC / possession catch | Y / X / A |
@@ -237,8 +237,8 @@ Everything here is driven by `sim/attributeEffects.ts` (ratings → physical and
 
 ### 9.1 Passing
 - **Drop:** the play sets the drop (quick, 3-, 5- or 7-step, shotgun catch, play-action). Release time comes from the Release attribute (0.45 s at 70 → 0.30 s at 99).
-- **Velocity:** touch vs bullet sets the launch speed and arc. Throw Power sets the maximum speed (52 → 62 mph) and range (55 → 75 yards).
-- **Placement error:** a cone that widens with distance. Short, Mid and Deep Accuracy pick the base size (about 1 yard at 20 yards for a 70, a third of that for a 99), multiplied by throwing on the run (Throw on the Run), pressure (Under Pressure), bullet vs touch, and footwork (set feet vs off-platform).
+- **Velocity:** the throw's hang time is set by distance and arm: a driven ball (the default) reaches 10 yd in ~0.6 s and 20 yd in ~0.9 s from a 90 arm, longer for a weaker one; touch stretches it 15–35%, and a defender under the path makes the QB loft it. Throw Power sets the maximum speed (52 → 62 mph) and range (55 → 75 yards).
+- **Placement error:** a cone that widens with distance. Short, Mid and Deep Accuracy pick the base size (about 1 yard at 20 yards for a 70, a third of that for a 99), multiplied by throwing on the run (Throw on the Run), pressure (Under Pressure), and footwork (set feet vs off-platform).
 - **Pressure** is physical: defenders within a radius and closing, not a hidden roll. Pocket Presence gives earlier awareness cues (the QB's head check and a subtle HUD edge glow) and a better auto step-up.
 - **Pump fakes** move defenders whose read is QB eyes and shoulders. Play Recognition sets how long they stay fooled.
 

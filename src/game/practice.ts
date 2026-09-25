@@ -397,8 +397,8 @@ class PracticeSession {
     // The UI and the input context follow the play tick by tick (a frame can
     // step several ticks: a catch and the carrier's first move can land in one).
     const r = this.runner!;
-    // The session's first catch: ease the play down while the ball is in the air, and back up after.
-    const slow = this.firstCatch && r.state.phase === 'air';
+    // The session's first catch, if it's switched on (off by default: the play must never hitch at the catch).
+    const slow = this.firstCatch && getSettings().gameplay.firstCatchSlowmo && r.state.phase === 'air';
     // A big hit: a beat of hit-stop, then (the biggest, if it's on) a moment of slow motion.
     for (; this.seenEvents < r.state.events.length; this.seenEvents++) {
       const e = r.state.events[this.seenEvents]!;

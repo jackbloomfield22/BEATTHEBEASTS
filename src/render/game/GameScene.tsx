@@ -14,7 +14,7 @@ import { lerpAngle, type AgentSnap } from '@/game/snapshot';
 import { latency } from '@/game/latency';
 import { view } from '@/game/view';
 import { worldX, worldY, worldZ, yawOf } from '@/game/coords';
-import { BULLET_CHARGE, DEF_SLOTS, HOT_ROUTES, OFF_SLOTS, TAP_MAX, TICK, type PlayState, type SimPlayer } from '@/sim';
+import { LOFT_CHARGE, DEF_SLOTS, HOT_ROUTES, OFF_SLOTS, TAP_MAX, TICK, type PlayState, type SimPlayer } from '@/sim';
 import { openness } from '@/sim/ai';
 import { previewThrow } from '@/sim/passing';
 import { openState } from '@/game/view';
@@ -315,7 +315,7 @@ export function GameScene() {
     const reading = !thrown && cur.phase !== 'presnap' && cur.phase !== 'snap';
     if (reading && latency.frame % 4 === 0) {
       const qb = s.agents[s.qb]!;
-      for (let k = 0; k < s.icons.length; k++) view.icons[k]!.open = openState(openness(s, qb, s.agents[s.icons[k]!]!, undefined, true).sep);
+      for (let k = 0; k < s.icons.length; k++) view.icons[k]!.open = openState(openness(s, qb, s.agents[s.icons[k]!]!, true).sep);
     }
     for (let k = 0; k < 5; k++) {
       const el = hudDom.icons[k];
@@ -356,7 +356,7 @@ export function GameScene() {
       if (ring) {
         const held = s.hold.icon === k + 1 && practice.controls.heldIcon === k + 1;
         const t = held ? s.hold.ticks * TICK : 0;
-        const charge = t <= TAP_MAX ? 0 : Math.min(1, (t - TAP_MAX) / BULLET_CHARGE);
+        const charge = t <= TAP_MAX ? 0 : Math.min(1, (t - TAP_MAX) / LOFT_CHARGE);
         ring.style.strokeDashoffset = String(RING_LEN * (1 - charge));
         ring.style.opacity = held ? '1' : '0';
         if (held) latency.respond('throwHold');
@@ -369,7 +369,7 @@ export function GameScene() {
     land.visible = pocket && !thrown && rec !== undefined;
     if (land.visible && rec !== undefined) {
       const t = s.hold.ticks * TICK;
-      const charge = t <= TAP_MAX ? 0 : Math.min(1, (t - TAP_MAX) / BULLET_CHARGE);
+      const charge = t <= TAP_MAX ? 0 : Math.min(1, (t - TAP_MAX) / LOFT_CHARGE);
       const aim = practice.controls.aim;
       const pv = previewThrow(s, s.agents[s.qb]!, s.agents[rec]!, charge, aim);
       land.position.set(worldX(pv.y), 0.07, worldZ(pv.x));

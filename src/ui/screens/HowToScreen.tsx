@@ -126,7 +126,7 @@ function FieldPage() {
       </p>
       <h3>In the pocket</h3>
       <p>
-        Move with {k('pocket.moveUp')}{k('pocket.moveLeft')}{k('pocket.moveDown')}{k('pocket.moveRight')}. A receiver's number throws to him: tap it for a touch pass over the top, hold it for a bullet (the ring fills). Move the mouse off his icon while you hold it to place the
+        Move with {k('pocket.moveUp')}{k('pocket.moveLeft')}{k('pocket.moveDown')}{k('pocket.moveRight')}. A receiver's number throws to him: tap it and the ball is driven in on a line; hold it for touch, more air the longer you hold (the ring fills). He puts air under a driven ball on his own when a defender is in the way. Move the mouse off his icon while you hold it to place the
         ball: along his path leads him or throws back shoulder, up the screen is high. The ring on the field shows where it will come down, sized to the error you can expect. A glowing icon is an open man; a dim one is covered. {k('pocket.pumpFake')} pump-fakes, {k('pocket.throwAway')} throws
         it away.
       </p>
@@ -139,12 +139,12 @@ function FieldPage() {
       <p>On a designed run the back takes the handoff and you run it from there: press the aiming point, read the blocks, and cut where it opens. Inside zone and outside zone read the defense; power and counter follow a pulling guard; the draw shows pass first.</p>
       <h3>Ball in the air</h3>
       <p>
-        {k('air.aggressive')} <b>Go up</b>: attack the ball at its highest point. Best in traffic, costs his momentum. {k('air.possession')} <b>Secure</b>: both hands, go down with it; the sure catch, and the only one that can tap both feet on the sideline. {k('air.rac')} <b>Run</b>: catch it in stride and
+        {k('air.aggressive')} <b>Go up</b>: attack the ball at its highest point. Best in traffic; he lands and loses a step. {k('air.possession')} <b>Secure</b>: both hands on it; the sure catch, still at speed, and the only one that can tap both feet on the sideline. {k('air.rac')} <b>Run</b>: catch it in stride and
         keep going. With no call he catches and runs.
       </p>
       <h3>With the ball</h3>
       <p>
-        He runs hard on his own: flat out in space, a controlled run when a tackler is close (so cuts and moves land), a jog only when he's protecting the ball. {k('carrier.sprint')} is a burst past that for a moment, at a cost in stamina. The moves: {k('carrier.juke')} <b>Juke</b> (toward the side you
+        You steer; he sets the pace: flat out in space, a controlled run when a tackler is close (so cuts and moves land), a jog only when he's protecting the ball. There's no sprint key. He finds an extra gear on his own coming out of a cut or when he clears the last man near him, longer for a quicker back and not when he's tired. The moves: {k('carrier.juke')} <b>Juke</b> (toward the side you
         steer, else away from the nearest tackler), {k('carrier.stiffArm')} <b>Stiff arm</b>, {k('carrier.spin')} <b>Spin</b>, {k('carrier.truck')} <b>Truck</b>, {k('carrier.dive')} <b>Dive</b> (a quarterback slides to give himself up), {k('carrier.protect')} <b>Protect</b> (hold: two hands on the ball,
         a little slower, far harder to strip). A move pressed a beat early still fires when he can make it.
       </p>

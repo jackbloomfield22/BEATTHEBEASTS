@@ -7,8 +7,8 @@
 import { atan2, cos, sin } from '@/engine/math/detmath';
 import { blockOf, engage } from './blocks';
 import { arrive, CRUISE, seen, steer } from './movement';
-import { maxThrowSpeed, releaseTime } from './effects';
-import { lead } from './passing';
+import { releaseTime } from './effects';
+import { driveTime, lead } from './passing';
 import { ROUTE_DELAY, ROUTES, ZONES, type OffPlay, type RouteName } from './plays';
 import { DIFFICULTY, zoneSpot, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, type Agent, type OffSlot } from './types';
@@ -315,17 +315,14 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, 
  * calls it every frame): a defender whose read jitter hasn't been rolled
  * yet counts as zero rather than rolling it.
  */
-export function openness(s: PlayState, qb: Agent, r: Agent, bullet?: boolean, peek = false): { sep: number; at: V2; T: number; bullet: boolean } {
+export function openness(s: PlayState, qb: Agent, r: Agent, peek = false): { sep: number; at: V2; T: number } {
   const react = (d: Agent) => (peek ? reactionPeek(s, d) : reaction(s, d));
-  const vmax = maxThrowSpeed(qb.fx.r('throwPower'));
-  // First guess at the throw: bullets for short and mid windows, touch deep.
+  const power = qb.fx.r('throwPower');
+  // The throw he'd make: the driven ball (planThrow's hang time), after his release.
   let at = lead(r, 0.8);
-  const deep = at.x - s.setup.los > 20;
-  const isBullet = bullet ?? !deep;
-  const speed = isBullet ? vmax * 0.85 : vmax * 0.62;
   let T = 0.8;
   for (let k = 0; k < 3; k++) {
-    T = dist(qb.pos, at) / speed + 0.12 + releaseTime(qb.fx.r('release'));
+    T = driveTime(dist(qb.pos, at), power) + 0.05 + releaseTime(qb.fx.r('release'));
     at = lead(r, T);
   }
   let sep = 99;
@@ -365,7 +362,7 @@ export function openness(s: PlayState, qb: Agent, r: Agent, bullet?: boolean, pe
   if (rt && rt.idx === 0 && !(rt.pts.length === 1 && r.pos.x - s.setup.los > 12)) sep -= 1.5;
   // Out of bounds catch points aren't open.
   if (Math.abs(at.y) > FIELD_HALF_W - 0.8) sep -= 3;
-  return { sep, at, T, bullet: isBullet };
+  return { sep, at, T };
 }
 
 /**
@@ -389,9 +386,11 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
   // The clock in his head: past ~2.2 s from the set he takes what's there.
   const held = s.t - s.snapT - s.setup.play.drop.set;
   // The window he wants (yd of separation at the catch point, after the
-  // closing defenders): under a yard. NFL QBs throw ~15% of attempts into
-  // tight windows (NGS "aggressiveness").
-  const need = 0.7 - 1.1 * pressure - Math.min(0.8, held * 0.3) - (held > 2.2 ? 2 : 0);
+  // closing defenders): a step. NFL QBs throw ~15% of attempts into tight
+  // windows (NGS "aggressiveness"). Round two's driven ball (0.6 s to 10 yd,
+  // slower than M5.5's bullet) reads every window a little tighter; the
+  // bar came down from 0.7 to 0 to keep sacks at M5.5's ~9% of dropbacks.
+  const need = 0 - 1.1 * pressure - Math.min(0.8, held * 0.3) - (held > 2.2 ? 2 : 0);
   s.eyes = { x: r.pos.x, y: r.pos.y };
   // The progression runs once, in time with the routes: a deep read that
   // wasn't there on schedule isn't come back to late (a QB who's been through
@@ -545,9 +544,30 @@ export function pursue(s: PlayState, d: Agent, t: Agent): void {
   const k = 0.35 + 0.65 * d.fx.a('pursuit');
   const naive = { x: seenT.pos.x + vt.x * 0.25, y: seenT.pos.y + vt.y * 0.25 };
   const aim = cut ? { x: naive.x + (cut.x - naive.x) * k, y: naive.y + (cut.y - naive.y) * k } : { x: seenT.pos.x + vt.x * 0.6, y: seenT.pos.y + vt.y * 0.6 };
+  const close = dist(d.pos, seenT.pos);
+  // Beaten (behind the runner's line of run): he still takes his angle
+  // downfield, but on his own side of the runner, behind him and never
+  // across or through him to cut him off (round-two feedback). The meeting
+  // point is pushed out to his side; one he can't reach is chased from behind.
+  const vl = Math.sqrt(vt.x * vt.x + vt.y * vt.y);
+  if (vl > 3 && close > 1.2) {
+    const ux = vt.x / vl;
+    const uy = vt.y / vl;
+    const rx = d.pos.x - seenT.pos.x;
+    const ry = d.pos.y - seenT.pos.y;
+    if (rx * ux + ry * uy < -0.5) {
+      const side = rx * -uy + ry * ux >= 0 ? 1 : -1;
+      const tgt = cut ? aim : { x: seenT.pos.x + ux * 0.3 * vl * 0.3, y: seenT.pos.y + uy * 0.3 * vl * 0.3 };
+      const lat = (tgt.x - seenT.pos.x) * -uy + (tgt.y - seenT.pos.y) * ux;
+      const push = Math.max(0, 0.8 - lat * side);
+      const at = { x: tgt.x - uy * side * push, y: tgt.y + ux * side * push };
+      const dir = norm(sub(at, d.pos));
+      steer(d, { x: dir.x * d.fx.vmax, y: dir.y * d.fx.vmax });
+      return;
+    }
+  }
   // Inside-out: a step inside him, and never aim out of bounds (the sideline is the 12th defender).
   // Close in: attack him (a small lead), don't aim at a point he can cut under.
-  const close = dist(d.pos, seenT.pos);
   if (close < 3.5) {
     // Close in: attack where he's going. Where the two of us meet at my
     // speed and his current run (the intercept point); a runner I can't

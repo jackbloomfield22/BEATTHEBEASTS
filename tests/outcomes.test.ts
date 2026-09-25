@@ -32,6 +32,16 @@ describe('outcomes: the passing game', () => {
     expect(d.contestedCatch).toBeLessThan(0.4);
     expect(d.openCatch).toBeGreaterThan(0.88);
   });
+  it('the ball is driven, not floated: ~0.6 s to 10 yd and ~0.9 s to 20 from a 90 arm', () => {
+    expect(d.hang10).toBeGreaterThan(0.5);
+    expect(d.hang10).toBeLessThan(0.7);
+    expect(d.hang20).toBeGreaterThan(0.8);
+    expect(d.hang20).toBeLessThan(1.0);
+  });
+  it('the defense flows without bunching: no more than two defenders at the catch point', () => {
+    // At most two within 2 yd of the catch point on a normal completion (round two); allow a rare pile.
+    expect(d.crowdOver2).toBeLessThan(0.03);
+  });
   it('the pocket: sacks, scrambles and their yards in NFL-like bands', () => {
     expect(d.pocket.sackRate).toBeGreaterThan(0.03);
     expect(d.pocket.sackRate).toBeLessThan(0.12);

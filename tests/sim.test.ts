@@ -363,7 +363,7 @@ describe('sim: the field has edges (M5.5)', () => {
     for (let k = 0; k < 30; k++) {
       const side = k % 2 ? 1 : -1;
       const s = live(at(900 + k, [30, 70, 92][k % 3]!, PLAYS[k % PLAYS.length], DEF_CALLS[k % DEF_CALLS.length], true), (st) =>
-        input({ snap: st.tick === 0, throwHeld: st.tick >= 70 && st.tick < 74 ? 1 : 0, move: st.phase === 'carrier' ? { x: k % 3 === 2 ? 1 : 0.3, y: k % 3 === 2 ? 0 : side } : { x: 0, y: 0 }, sprint: true }),
+        input({ snap: st.tick === 0, throwHeld: st.tick >= 70 && st.tick < 74 ? 1 : 0, move: st.phase === 'carrier' ? { x: k % 3 === 2 ? 1 : 0.3, y: k % 3 === 2 ? 0 : side } : { x: 0, y: 0 } }),
       );
       const r = s.result!;
       if (r.reason === 'outOfBounds') {
@@ -404,7 +404,7 @@ describe('sim: the field has edges (M5.5)', () => {
     s.carrier = c.i;
     s.phase = 'carrier';
     const n = Math.hypot(vel.x, vel.y);
-    for (let k = 0; k < 120 && !s.result; k++) stepPlay(s, input({ move: { x: vel.x / n, y: vel.y / n }, sprint: true, ...opt.inp?.(k) }));
+    for (let k = 0; k < 120 && !s.result; k++) stepPlay(s, input({ move: { x: vel.x / n, y: vel.y / n }, ...opt.inp?.(k) }));
     return s;
   };
 
@@ -590,23 +590,60 @@ describe('sim: M5.5 feedback round (items 3–7)', () => {
     expect(carrierPace(s, c, 1)).toBe(1);
   });
 
-  it('the burst: on the press, a tenth of his stamina, not again for a while', () => {
+  /** A carrier alone in open field at the 40, standing, the defense down. */
+  const openField = () => {
     const s = createPlay({ seed: 4, offense: rosters.offense, defense: rosters.defense, play: PLAYS[0]!, def: DEF_CALLS[0]!, los: 30, toGo: 10, user: true });
     stepPlay(s, input({ snap: true }));
     for (let t = 0; t < 30; t++) stepPlay(s, NEUTRAL);
     const c = s.agents[s.icons[0]!]!;
     for (const i of s.def) s.agents[i]!.down = true;
+    c.pos = v2(40, 0);
+    c.vel = v2(0, 0);
     s.ball.mode = 'held';
     s.ball.holder = c.i;
     s.carrier = c.i;
     s.phase = 'carrier';
+    return { s, c };
+  };
+
+  it('a diagonal is as fast as straight ahead, whatever the stick reads', () => {
+    const speedAfter = (move: { x: number; y: number }) => {
+      const { s, c } = openField();
+      for (let t = 0; t < 90; t++) stepPlay(s, input({ move }));
+      return Math.hypot(c.vel.x, c.vel.y);
+    };
+    const straight = speedAfter({ x: 1, y: 0 });
+    expect(straight).toBeGreaterThan(8);
+    // 45° from the keyboard (normalised) and from a pad whose full diagonal reads ~0.87.
+    expect(speedAfter({ x: Math.SQRT1_2, y: Math.SQRT1_2 })).toBeCloseTo(straight, 6);
+    expect(speedAfter({ x: 0.62, y: -0.62 })).toBeCloseTo(straight, 6);
+  });
+
+  it('the burst is his own: out of a cut into open field, not from a key, and not again for a while', () => {
+    const { s, c } = openField();
+    for (let t = 0; t < 60; t++) stepPlay(s, input({ move: { x: 1, y: 0 } }));
+    // Running straight in space: nothing to burst out of.
+    expect(s.events.some((e) => e.data?.move === 'burst')).toBe(false);
+    // A hard cut (to 60° off his line), then straightening out of it.
     const st = c.stamina;
-    stepPlay(s, input({ move: { x: 1, y: 0 }, sprint: true }));
-    expect(c.burst).toBeGreaterThan(0);
-    expect(st - c.stamina).toBeGreaterThan(0.09);
-    const events = s.events.filter((e) => e.data?.move === 'burst').length;
-    for (let t = 0; t < 40; t++) stepPlay(s, input({ move: { x: 1, y: 0 }, sprint: true }));
-    expect(s.events.filter((e) => e.data?.move === 'burst').length).toBe(events); // held: no second burst
+    for (let t = 0; t < 40; t++) stepPlay(s, input({ move: { x: 0.5, y: 0.866 } }));
+    const bursts = s.events.filter((e) => e.data?.move === 'burst');
+    expect(bursts.length).toBe(1);
+    expect(st - c.stamina).toBeGreaterThan(0.04);
+    // Another cut straight away: still cooling down.
+    for (let t = 0; t < 40; t++) stepPlay(s, input({ move: { x: 1, y: 0 } }));
+    expect(s.events.filter((e) => e.data?.move === 'burst').length).toBe(1);
+    // A quicker back's burst lasts longer (Acceleration).
+    const { s: s2, c: slow } = openField();
+    (slow.fx as { a: (k: string) => number }).a = (k: string) => (k === 'acceleration' ? 0 : 0.8);
+    for (let t = 0; t < 60; t++) stepPlay(s2, input({ move: { x: 1, y: 0 } }));
+    let len = 0;
+    for (let t = 0; t < 60; t++) {
+      stepPlay(s2, input({ move: { x: 0.5, y: 0.866 } }));
+      if (slow.burst > len) len = slow.burst;
+    }
+    expect(len).toBe(18);
+    expect(c.fx.a('acceleration')).toBeGreaterThan(0.5);
   });
 
   it('the scramble: tuck it, throw on the run before the line, a runner past it', () => {

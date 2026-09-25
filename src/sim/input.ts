@@ -10,13 +10,13 @@ export type CatchType = 'aggressive' | 'rac' | 'possession';
 
 export interface InputFrame {
   /** Desired move direction in the field frame, length 0..1. */
+  /** For a ball carrier only its direction counts: his speed is the situation's (and his burst is his own). */
   move: V2;
-  sprint: boolean;
   /** Snap (pressed this tick). */
   snap: boolean;
   /**
-   * Receiver icon held (1..5, 0 = none). A throw goes on release: a tap is a
-   * touch pass, holding charges the bullet (the power ring).
+   * Receiver icon held (1..5, 0 = none). A throw goes on release: a tap is
+   * the driven ball, holding adds touch (the ring fills with the loft).
    */
   throwHeld: number;
   /**
@@ -49,7 +49,6 @@ export interface InputFrame {
 
 export const NEUTRAL: InputFrame = Object.freeze({
   move: Object.freeze({ x: 0, y: 0 }) as V2,
-  sprint: false,
   snap: false,
   throwHeld: 0,
   aim: Object.freeze({ x: 0, y: 0 }) as V2,
@@ -70,7 +69,7 @@ export const NEUTRAL: InputFrame = Object.freeze({
 
 export const input = (patch: Partial<InputFrame>): InputFrame => ({ ...NEUTRAL, ...patch });
 
-/** Seconds of hold that fully charge a bullet. */
-export const BULLET_CHARGE = 0.5;
+/** Seconds of hold past a tap that give a touch pass its full loft. */
+export const LOFT_CHARGE = 0.5;
 /** A hold shorter than this is a tap: a touch pass. */
 export const TAP_MAX = 0.18;

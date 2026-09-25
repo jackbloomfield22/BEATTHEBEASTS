@@ -103,6 +103,8 @@ export interface PlayState {
   escapeT: number;
   /** First time a free defender got on the QB (pressure ≥ 0.7), for the harness; −1 if never. */
   pressureT: number;
+  /** The defenders who rally to this throw (decided at the release, keyed by it); the rest keep their men and zones. */
+  rally: { at: number; who: number[] } | null;
   /** Throw bookkeeping for the result. */
   pass: PlayResult['pass'];
   sack: boolean;
@@ -269,6 +271,7 @@ export function createPlay(s: PlaySetup): PlayState {
     scrambleT: -1,
     escapeT: -1,
     pressureT: -1,
+    rally: null,
     pass: undefined,
     sack: false,
     bigHit: undefined,
