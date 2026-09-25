@@ -13,6 +13,17 @@ export function loadJSON<T>(key: string): T | undefined {
   }
 }
 
+/** saveJSON that says whether it stuck (false: storage full or blocked). */
+export function trySaveJSON(key: string, value: unknown): boolean {
+  try {
+    if (!globalThis.localStorage) return false;
+    globalThis.localStorage.setItem(PREFIX + key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function saveJSON(key: string, value: unknown): void {
   try {
     globalThis.localStorage?.setItem(PREFIX + key, JSON.stringify(value));

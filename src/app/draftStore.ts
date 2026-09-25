@@ -231,6 +231,7 @@ export function startGame(): void {
     seed: (st.draft.seed ^ 0x6a09e667) >>> 0,
     diffAdj: st.daily?.diffAdj ?? 0,
     difficulty: g.difficulty,
+    daily: st.daily,
     // Rain and snow blow harder (the legacy WindChip's weather bump).
     windScale: lighting === 'rain' || lighting === 'snow' ? 1.4 : 1,
   });

@@ -3,63 +3,35 @@
 // snap exactly as in practice; this layer owns everything between snaps:
 // the Beasts' "Meanwhile" possessions, downs and scores, fourth-down
 // decisions, tries, kicks and punts, the live two-minute clock, overtime,
-// the box score and the result. React reads the small store; per-frame work
-// stays in the play engine.
+// the pause menu, the box score and the result. React reads the small
+// store; per-frame work stays in the play engine.
+//
+// The moment the match is over (and when you leave it from the pause menu)
+// the game's record is built and saved to History (src/app/history.ts)
+// before anything else happens, so the results screen can always be reached
+// again: from the game, the Locker Room's Last Game panel, or History.
 
 import { create } from 'zustand';
 import type { Slot } from '@data/legacy/types';
 import { Input } from '@/input/InputManager';
+import { saveRecord } from '@/app/history';
 import { callDefense, emptyTendencies, recordPlay, type BeastsDefense, type ContendersRoster, type DefCall, type DefSlot, type OffSlot, type PlayResult, type PlayState, type SimPlayer, simPlayer, type Difficulty, type Tendencies } from '@/sim';
 import { deriveStream, type Rng } from '@/engine/rng';
-import type { Catalog, Roster } from './draft';
+import type { Catalog, DraftMode, Roster } from './draft';
 import { draftedTeam } from './draft';
 import type { RatedBeasts } from './beasts';
+import type { NewDaily } from './daily';
+import { describe } from './describe';
 import { applyBeastsDrive, applyKick, applyPlay, beastsPossession, callTimeout, canVictoryFormation, chooseFourth, chooseTry, createMatch, fgMakePct, KICKER_RANGE, spikeOrKneel, type BeastsDrive, type GameLength, type Match, type PlayOutcome } from './match';
 import { kickFlight, type KickResult } from './kick';
 import { practice, usePractice } from './practice';
+import { buildRecord, encodeFrames, keyMatchups, type GameRecord, type RecordMeta, type ReplayCapsule } from './record';
 import type { Situation } from './situation';
+import { emptyGameBox, pickPlayOfGame, sampleShadow, tallySnap, type GameBox, type PlayLog } from './stats';
+
+export { emptyGameBox, type GameBox } from './stats';
 
 export type GameStage = 'loading' | 'meanwhile' | 'call' | 'play' | 'fourth' | 'try' | 'kick' | 'punt' | 'final';
-
-export interface PassLine {
-  name: string;
-  cmp: number;
-  att: number;
-  yds: number;
-  td: number;
-  int: number;
-  sacks: number;
-}
-export interface RushLine {
-  name: string;
-  car: number;
-  yds: number;
-  td: number;
-  long: number;
-}
-export interface RecLine {
-  name: string;
-  tgt: number;
-  rec: number;
-  yds: number;
-  td: number;
-  long: number;
-}
-
-/** The box score: legacy's categories, plus the big hits you took. */
-export interface GameBox {
-  pass: PassLine;
-  rush: Record<string, RushLine>;
-  rec: Record<string, RecLine>;
-  /** Targets by receiver, by the defender nearest the ball when it arrived (the matchups). */
-  covered: Record<string, Record<string, { tgt: number; yds: number }>>;
-  bigHits: number;
-  firstDowns: number;
-  plays: number;
-  yards: number;
-  turnovers: number;
-  sacks: number;
-}
 
 export interface GameUi {
   stage: GameStage;
@@ -75,13 +47,13 @@ export interface GameUi {
   mode: string;
   /** A short line for the clock events (timeouts, spikes). */
   note: string | null;
+  /** The pause menu is up over a card (a snap pauses in the play engine: practice stage 'paused'). */
+  paused: boolean;
+  /** The game's record, once it's over (saved to History the moment it's built). */
+  record: GameRecord | null;
 }
 
-export function emptyGameBox(qb = ''): GameBox {
-  return { pass: { name: qb, cmp: 0, att: 0, yds: 0, td: 0, int: 0, sacks: 0 }, rush: {}, rec: {}, covered: {}, bigHits: 0, firstDowns: 0, plays: 0, yards: 0, turnovers: 0, sacks: 0 };
-}
-
-export const useGame = create<GameUi>(() => ({ stage: 'loading', match: null, v: 0, meanwhile: null, punt: null, kick: null, outcome: null, box: emptyGameBox(), mode: 'classic', note: null }));
+export const useGame = create<GameUi>(() => ({ stage: 'loading', match: null, v: 0, meanwhile: null, punt: null, kick: null, outcome: null, box: emptyGameBox(), mode: 'classic', note: null, paused: false, record: null }));
 const set = (p: Partial<GameUi>) => useGame.setState((s) => ({ ...p, v: s.v + 1 }));
 const get = () => useGame.getState();
 
@@ -118,20 +90,33 @@ export interface GameStart {
   cat: Catalog;
   roster: Roster;
   beasts: RatedBeasts;
-  mode: string;
+  mode: DraftMode;
   drives: GameLength;
   seed: number;
   diffAdj: number;
   difficulty: Difficulty;
   /** Wind scale from the weather (rain and snow blow harder). */
   windScale?: number;
+  /** The Daily (its date and perfect team, for the results). */
+  daily?: NewDaily | null;
 }
+
+/** Wall-clock ms for the record's date (the game layer's clock; the sim never sees it). */
+const wallNow = (): number => Date.now();
 
 class GameSession {
   private m: Match | null = null;
   private lastWhistleWall = 0;
   private offKeys: (() => void) | null = null;
   private names: { qb: string } = { qb: '' };
+  private start0: GameStart | null = null;
+  private team: ContendersRoster | null = null;
+  private beastsD: BeastsDefense | null = null;
+  /** Every snap of the game (the play of the game is picked from these). */
+  private plays: PlayLog[] = [];
+  private capsules: (ReplayCapsule | null)[] = [];
+  /** The play engine's id of the snap whose coverage snapshot is taken. */
+  private shadowed = -1;
   /** What the Beasts' staff has charted about you this game (targets, run/pass by down). */
   tendencies: Tendencies = emptyTendencies();
   private dcRng: Rng = deriveStream(0, 'dc');
@@ -147,9 +132,15 @@ class GameSession {
   }
 
   async start(o: GameStart): Promise<void> {
-    set({ stage: 'loading', match: null, meanwhile: null, punt: null, kick: null, outcome: null, mode: o.mode, note: null });
+    set({ stage: 'loading', match: null, meanwhile: null, punt: null, kick: null, outcome: null, mode: o.mode, note: null, paused: false, record: null });
     const rosters = gameRosters(o.cat, o.roster, o.beasts);
     this.names.qb = rosters.offense.QB.name;
+    this.start0 = o;
+    this.team = rosters.team;
+    this.beastsD = rosters.beastsD;
+    this.plays = [];
+    this.capsules = [];
+    this.shadowed = -1;
     this.tendencies = emptyTendencies();
     this.dcRng = deriveStream(o.seed, 'beasts-dc');
     this.difficulty = o.difficulty;
@@ -163,11 +154,12 @@ class GameSession {
         situation: () => this.m!.sit,
         defCall: (sit) => this.defCall(sit),
         onResult: (s, r, endY) => this.onResult(s, r, endY),
+        onTick: (s) => this.onTick(s),
       },
     });
     this.offKeys?.();
     this.offKeys = Input.onAction((id, info) => {
-      if (info.repeat) return;
+      if (info.repeat || get().paused) return;
       if (id === 'global.spike') this.spike();
       else if (id === 'global.kneel') this.kneel();
       else if (id === 'global.timeout') this.timeout();
@@ -181,7 +173,7 @@ class GameSession {
     this.offKeys = null;
     practice.leave();
     this.m = null;
-    set({ stage: 'loading', match: null });
+    set({ stage: 'loading', match: null, paused: false });
   }
 
   /** A Beasts possession: computed now, shown as the Meanwhile cut. */
@@ -193,9 +185,9 @@ class GameSession {
 
   /** The Meanwhile cut is over (or skipped): score it, and to your drive. */
   endMeanwhile(): void {
-    const m = this.m!;
+    const m = this.m;
     const d = get().meanwhile;
-    if (!d || get().stage !== 'meanwhile') return;
+    if (!m || !d || get().stage !== 'meanwhile' || get().paused) return;
     applyBeastsDrive(m, d);
     set({ meanwhile: null });
     this.toPhase();
@@ -204,6 +196,7 @@ class GameSession {
   /** Move the UI to wherever the match is now. */
   private toPhase(): void {
     const m = this.m!;
+    this.checkFinal();
     switch (m.phase) {
       case 'meanwhile':
         practice.abandon();
@@ -235,6 +228,80 @@ class GameSession {
     set({ stage: 'call' });
   }
 
+  /** The match just went final (any path: a snap, a kick, a punt, a kneel): record it now, before the UI moves. */
+  private checkFinal(): void {
+    if (this.m?.phase === 'final' && !get().record) this.finish('final');
+  }
+
+  /** Build the game's record and save it to History (once). */
+  private finish(end: 'final' | 'left'): GameRecord | null {
+    const m = this.m;
+    const o = this.start0;
+    if (!m || !o || !this.team || !this.beastsD) return null;
+    if (get().record) return get().record;
+    const box = get().box;
+    const t = this.team;
+    const person = (slot: string, p: SimPlayer) => ({ slot, id: p.id, name: p.name, num: p.num, pos: p.pos });
+    const offense = [person('QB', t.QB), person('RB', t.RB), person('RB2', t.RB2), person('WR1', t.WR1), person('WR2', t.WR2), person('WR3', t.WR3), person('TE', t.TE), person('TE2', t.TE2), ...(['LT', 'LG', 'C', 'RG', 'RT'] as const).map((s, i) => person(s, t.OL[i]!))];
+    const bd = this.beastsD;
+    const beasts = [...BEAST_SLOTS.map((s) => person(s, bd.base[s])), person('NB', bd.nickel), person('DB', bd.dime)];
+    const perfect = o.daily?.perfect.map((p) => {
+      const mine = o.roster[p.slot];
+      return { slot: p.slot, pick: p.pick?.name ?? null, mine: mine?.name ?? null, same: !!(mine && p.pick && mine.id === p.pick.id) };
+    });
+    const finishedAt = wallNow();
+    const meta: RecordMeta = {
+      id: `${finishedAt.toString(36)}-${m.cfg.seed.toString(36)}`,
+      finishedAt,
+      mode: o.mode,
+      dailyKey: o.daily?.dateKey ?? null,
+      difficulty: o.difficulty,
+      end,
+      offense,
+      beasts,
+      matchups: keyMatchups(o.cat, o.roster, o.beasts, box),
+      perfect: perfect ?? null,
+    };
+    const idx = pickPlayOfGame(this.plays);
+    const rec = buildRecord(m, box, meta, this.plays, idx >= 0 ? { index: idx, capsule: this.capsules[idx] ?? null } : null);
+    saveRecord(rec);
+    set({ record: rec });
+    return rec;
+  }
+
+  /**
+   * The pause menu's way out: a snap whose whistle has blown still counts
+   * (the last play of the game ends it properly), then the game is over
+   * where it stands and its record is saved. Returns the record (the
+   * results screen shows it).
+   */
+  quitToResults(): GameRecord | null {
+    const m = this.m;
+    if (!m) return get().record;
+    practice.settle();
+    const rec = get().record ?? this.finish(m.phase === 'final' ? 'final' : 'left');
+    practice.abandon();
+    set({ paused: false, stage: 'final' });
+    return rec;
+  }
+
+  pause(): void {
+    if (this.m && !get().paused) set({ paused: true });
+  }
+
+  resume(): void {
+    if (get().paused) set({ paused: false });
+  }
+
+  /** Each tick of a snap: the coverage snapshot, once a dropback, when the ball comes out or the pocket breaks down. */
+  private onTick(s: PlayState): void {
+    if (this.shadowed === practice.playId || s.setup.play.run || s.snapT < 0) return;
+    const out = s.phase === 'air' || s.phase === 'carrier' || s.phase === 'loose' || !!s.result;
+    if (!out) return;
+    this.shadowed = practice.playId;
+    sampleShadow(get().box, s);
+  }
+
   /** A play's whistle (from the play engine). */
   private onResult(s: PlayState, r: PlayResult, endY: number): { next: Situation; over: boolean } {
     const m = this.m!;
@@ -243,18 +310,56 @@ class GameSession {
     const between = this.lastWhistleWall ? Math.max(0, (now - this.lastWhistleWall) / 1000 - playSecs) : 0;
     this.lastWhistleWall = now;
     const before = m.sit;
-    this.tally(s, r, before);
+    const score = { ...m.score };
+    const driveIdx = m.userDrives.length;
+    const n = (m.drive?.plays ?? 0) + 1;
+    const round = m.round;
+    const ot = m.ot;
+    tallySnap(get().box, s, r, before, this.names.qb);
     // The Beasts' staff charts it.
     const tgt = r.pass?.attempted ? s.agents[r.pass.target]?.p.id : undefined;
     this.tendencies = recordPlay(this.tendencies, { targetId: tgt, playId: s.setup.play.id, type: s.setup.play.type, down: before.down, toGo: before.toGo, yards: r.offenseBall ? r.spot - before.los : 0 });
     const out = applyPlay(m, r, endY, playSecs, between);
     if (out.kind === 'firstDown' || (out.kind === 'touchdown' && r.offenseBall)) get().box.firstDowns++;
+    this.logPlay(s, r, before, { drive: driveIdx, n, round, ot, score });
     set({ outcome: out.kind, stage: 'play' });
+    this.checkFinal();
     return { next: m.sit, over: m.phase !== 'drive' && m.phase !== 'fourth' };
+  }
+
+  private logPlay(s: PlayState, r: PlayResult, before: Situation, at: { drive: number; n: number; round: number; ot: number; score: { user: number; beasts: number } }): void {
+    const card = describe(s);
+    const m = this.m!;
+    this.plays.push({
+      ...at,
+      down: before.down,
+      toGo: before.toGo,
+      los: before.los,
+      playId: s.setup.play.id,
+      playName: s.setup.play.name,
+      headline: card.headline,
+      detail: card.detail,
+      yards: r.offenseBall ? r.spot - before.los : 0,
+      touchdown: r.touchdown && r.offenseBall,
+      turnover: !r.offenseBall,
+      pickSix: r.touchdown && !r.offenseBall,
+      late: at.ot > 0 || at.round >= m.cfg.drives,
+    });
+    const run = practice.runner;
+    const st = s.setup;
+    this.capsules.push(
+      run && run.state === s
+        ? { seed: st.seed, playId: st.play.id, def: st.def, los: st.los, ballY: st.ballY ?? 0, toGo: st.toGo, down: before.down, difficulty: st.difficulty, tapMax: st.tapMax, flip: st.flip, fatigue: st.fatigue as Record<string, number> | undefined, frames: encodeFrames(run.frames) }
+        : null,
+    );
+    // Keep the inputs of the snaps that could still be the play of the game (memory: a game is ~60 snaps).
+    const keep = pickPlayOfGame(this.plays);
+    this.capsules = this.capsules.map((c, i) => (i === keep || i === this.capsules.length - 1 ? c : null));
   }
 
   /** From the result card: on to the next snap, decision or possession. */
   afterResult(): void {
+    if (get().paused) return;
     this.toPhase();
   }
 
@@ -263,6 +368,7 @@ class GameSession {
     const spot = m.sit.los;
     const y = chooseFourth(m, choice);
     if (choice === 'punt') {
+      this.checkFinal();
       set({ stage: 'punt', punt: { yards: y ?? 0, spot } });
       return;
     }
@@ -290,9 +396,9 @@ class GameSession {
 
   /** The kick's flight has been shown. */
   endKick(): void {
-    const m = this.m!;
+    const m = this.m;
     const k = get().kick;
-    if (!k?.result) return;
+    if (!m || !k?.result) return;
     applyKick(m, k.result.good);
     set({ kick: null });
     this.toPhase();
@@ -306,7 +412,7 @@ class GameSession {
 
   spike(): void {
     const m = this.m;
-    if (!m || get().stage !== 'call' || !m.clock.live) return;
+    if (!m || get().stage !== 'call' || !m.clock.live || m.phase !== 'drive') return;
     const between = this.lastWhistleWall ? (performance.now() - this.lastWhistleWall) / 1000 : 0;
     this.lastWhistleWall = performance.now();
     spikeOrKneel(m, 'spike', between);
@@ -316,7 +422,7 @@ class GameSession {
 
   kneel(): void {
     const m = this.m;
-    if (!m || get().stage !== 'call') return;
+    if (!m || get().stage !== 'call' || m.phase !== 'drive') return;
     if (!m.clock.live && !canVictoryFormation(m)) return;
     const between = this.lastWhistleWall ? (performance.now() - this.lastWhistleWall) / 1000 : 0;
     this.lastWhistleWall = performance.now();
@@ -324,73 +430,6 @@ class GameSession {
     set({ note: 'Kneel' });
     this.toPhase();
   }
-
-  /** Box score from one snap (the sim's agents and the result). */
-  private tally(s: PlayState, r: PlayResult, before: Situation): void {
-    const b = get().box;
-    b.plays++;
-    const y = r.offenseBall ? r.spot - before.los : 0;
-    const td = r.touchdown && r.offenseBall ? 1 : 0;
-    if (r.bigHit && s.agents[r.bigHit.on]?.side === 'off') b.bigHits++;
-    if (!r.offenseBall) b.turnovers++;
-    if (r.sack) {
-      b.sacks++;
-      b.pass.sacks++;
-      b.yards += y;
-      return;
-    }
-    if (r.pass?.attempted) {
-      b.pass.att++;
-      const tgt = s.agents[r.pass.target];
-      const name = tgt?.p.name ?? '';
-      const line = (b.rec[name] ??= { name, tgt: 0, rec: 0, yds: 0, td: 0, long: 0 });
-      line.tgt++;
-      // The nearest Beast when the ball got there: who covered him on this target.
-      const cov = nearestDefender(s, r.pass.target);
-      if (cov) {
-        const c = ((b.covered[name] ??= {})[cov] ??= { tgt: 0, yds: 0 });
-        c.tgt++;
-        if (r.pass.complete && !r.pass.intercepted) c.yds += y;
-      }
-      if (r.pass.intercepted) b.pass.int++;
-      else if (r.pass.complete) {
-        b.pass.cmp++;
-        b.pass.yds += y;
-        b.pass.td += td;
-        line.rec++;
-        line.yds += y;
-        line.td += td;
-        line.long = Math.max(line.long, y);
-      }
-    } else {
-      const c = s.carrier >= 0 ? s.agents[s.carrier] : null;
-      const name = c && c.side === 'off' ? c.p.name : this.names.qb;
-      const line = (b.rush[name] ??= { name, car: 0, yds: 0, td: 0, long: 0 });
-      line.car++;
-      line.yds += y;
-      line.td += td;
-      line.long = Math.max(line.long, y);
-    }
-    b.yards += y;
-  }
-}
-
-function nearestDefender(s: PlayState, target: number): string | null {
-  const a = s.agents[target];
-  if (!a) return null;
-  let best: string | null = null;
-  let bd = Infinity;
-  for (const d of s.agents) {
-    if (d.side !== 'def') continue;
-    const dx = d.pos.x - a.pos.x;
-    const dy = d.pos.y - a.pos.y;
-    const dd = dx * dx + dy * dy;
-    if (dd < bd) {
-      bd = dd;
-      best = d.p.name;
-    }
-  }
-  return best;
 }
 
 export const game = new GameSession();
