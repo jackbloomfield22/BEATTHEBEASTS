@@ -1,8 +1,9 @@
 import { test, type Page } from '@playwright/test';
 
-// The game screens (M6 gate): the Meanwhile cut, the play call with the
+// The game screens (M6 gate): the play call with the
 // coordinator's Suggested tab, a snap with the officials set, the fourth-down
-// card, the kick view, and the results screen. Quick Play from the menu,
+// card, the kick set, a punt and the results screen (the Meanwhile cut is in
+// the drive video). Quick Play from the menu,
 // played the way the browser test does; each stage is captured the first
 // time it shows (?shot: cameras cut straight to their pose, so a slow
 // software-rendered frame still shows the shot as played). Into tools/shots/out/game.
@@ -17,12 +18,14 @@ type W = {
 };
 
 const OUT = 'tools/shots/out/game';
+/** Each stage's root element in GameScreen.tsx (the Meanwhile cut advances itself under ?shot). */
+const ROOT: Record<string, string> = { call: '.game-call', fourth: '.decision-card', try: '.decision-card', kick: '.kick-panel', punt: '.meanwhile', final: '.meanwhile.final' };
 const shot = (page: Page, name: string) => page.screenshot({ path: `${OUT}/${name}.png` });
 
 test('game screens', async ({ page }) => {
   test.setTimeout(3_600_000);
   await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
-  await page.goto(`/?screen=main&nointro&quality=${process.env.BTB_QUALITY ?? 'medium'}&autokick&shot=practice`);
+  await page.goto(`/?screen=main&nointro&quality=${process.env.BTB_QUALITY ?? 'medium'}&shot=practice`);
   await page.waitForFunction(() => (window as unknown as { __btbReady?: boolean }).__btbReady === true, null, { timeout: 300_000 });
   await page.evaluate(() => {
     const w = window as unknown as W;
@@ -63,13 +66,22 @@ test('game screens', async ({ page }) => {
   for (let step = 0; step < 400; step++) {
     const st = await stage();
     if (st === 'final') break;
-    if (!seen.has(st) && st !== 'loading' && st !== 'play') {
+    if (!seen.has(st) && st !== 'loading' && st !== 'play' && st !== 'meanwhile') {
       seen.add(st);
-      await page.waitForTimeout(st === 'kick' ? 150 : 1200);
+      // The store flips before React draws the stage (slow frames here), so
+      // wait for its element, then give the scene a moment to settle.
+      await page.waitForSelector(ROOT[st] ?? 'body', { timeout: 120_000 }).catch(() => null);
+      await page.waitForTimeout(st === 'kick' ? 2500 : 1200);
       if ((await stage()) === st) await shot(page, st);
       continue;
     }
-    if (st === 'meanwhile' || st === 'fourth' || st === 'try') await page.keyboard.press('Enter');
+    if (st === 'kick') {
+      // Hold to build power, release to strike (GameScreen's KickPanel).
+      await page.keyboard.down('Space');
+      await page.waitForTimeout(1250);
+      await page.keyboard.up('Space');
+      await page.waitForFunction(() => (window as unknown as W).__btbGameUi.getState().stage !== 'kick', null, { timeout: 120_000 });
+    } else if (st === 'meanwhile' || st === 'fourth' || st === 'try') await page.keyboard.press('Enter');
     else if (st === 'call') {
       await page.keyboard.press('Enter');
       await snap();
