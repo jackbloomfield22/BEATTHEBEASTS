@@ -121,6 +121,8 @@ VIEWS = {
     "side": ((3.6, -0.25, 0.85), (0, -0.25, 0.72), 55),
     "front": ((0.9, -3.6, 1.0), (0, -0.25, 0.8), 55),
     "broadcast": ((2.6, -2.6, 3.0), (0, -0.2, 0.7), 55),
+    # Three-quarter front at chest height, close: arms and hands read (M6 line play).
+    "three": ((2.3, -2.6, 1.25), (0, -0.2, 0.8), 50),
 }
 
 

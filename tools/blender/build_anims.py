@@ -109,6 +109,21 @@ def clip_list():
         clip = {"name": c.name, "kind": c.kind, "frames": c.frames, "loop": c.loop, "speed": 0.0, "dir": c.dir if c.kind == "transition" else [0, 0], "pose": c.pose, "contacts": c.contacts, "events": c.events}
         if c.kind == "transition":
             clip.update({"travel": c.travel, "travel_xy": c.travel_xy, "from": c.frm, "to": c.to, "to_phase": c.to_phase})
+            if c.turn:
+                clip["turn"] = c.turn
+            if c.from_phase is not None:
+                clip["from_phase"] = c.from_phase
+        elif c.kind == "locomotion":
+            # Loops keyed outside the gait table (M6: the drive block, the
+            # linebacker's shuffle, the official's run): same contract as the gaits.
+            clip.update({"speed": c.speed, "dir": c.dir, "travel": c.travel})
+        elif c.kind == "signature":
+            # Locker-room clips play in place (the root never moves); where the
+            # body runs, the ground moves under it like a treadmill, and the
+            # slide gate measures against that.
+            clip["travel_xy"] = c.travel_xy
+        if c.kind == "stance":
+            clip["balance"] = c.com
         if c.mask:
             clip["mask"] = c.mask
         clips.append(clip)
@@ -471,11 +486,18 @@ def main():
             if clip.get("to_phase"):
                 # Where in the gait's cycle the clip hands over (0 = left touch-down).
                 meta["clips"][clip["name"]]["toPhase"] = clip["to_phase"]
-            if "travel_xy" in clip:
+            if "travel_xy" in clip and clip["dir"][0] == 0:
                 # Sideways travel (glTF +X left), for moves that cut.
                 side = [round(clip["travel_xy"](f)[0], 4) for f in range(clip["frames"] + 1)]
                 if any(abs(x) > 1e-4 for x in side):
                     meta["clips"][clip["name"]]["side"] = side
+            if clip.get("turn"):
+                # The body ends turned this far (deg, + left): the runtime turns
+                # the heading by it when it hands over to `to`.
+                meta["clips"][clip["name"]]["turn"] = clip["turn"]
+            if clip.get("from_phase") is not None:
+                # Out of a gait: the phase of it the clip starts at (0 = left touch-down).
+                meta["clips"][clip["name"]]["fromPhase"] = clip["from_phase"]
         if clip.get("events"):
             # Frames where the sim's moments land (the ball leaves the hand, a catch is secured).
             meta["clips"][clip["name"]]["events"] = clip["events"]
