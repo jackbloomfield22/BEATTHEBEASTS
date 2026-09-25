@@ -98,7 +98,7 @@ export function ResultsScreen() {
     );
   const res = resultWord(rec);
   return (
-    <div className={`menu-screen results beat-${beat}`} onClick={beat < 2 ? skipReveal : undefined}>
+    <div className={`menu-screen results beat-${beat} ${fresh ? 'fresh' : ''}`} onClick={beat < 2 ? skipReveal : undefined}>
       <div className="menu-scrim strong" />
       <header className="res-head">
         <div className={`res-banner ${res.tone}`}>{res.word}</div>
@@ -114,7 +114,7 @@ export function ResultsScreen() {
           </span>
           {from !== 'game' ? <span>{dateLabel(rec.finishedAt)}</span> : null}
         </div>
-        <div className="res-grade">
+        <div className={`res-grade ${res.tone}`}>
           {rec.grade ? (
             <>
               <span className="grade">{rec.grade.grade}</span>

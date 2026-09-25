@@ -18,7 +18,7 @@ export function LastGamePanel({ rec, onOpen }: { rec: GameRecord; onOpen: () => 
       </div>
       <div className="lg-top">
         <span className={`res-banner ${res.tone}`}>{res.word}</span>
-        <span className="lg-grade">
+        <span className={`lg-grade ${res.tone}`}>
           {rec.grade ? (
             <>
               <b>{rec.grade.grade}</b> {rec.grade.label}
@@ -69,7 +69,7 @@ export function ReportOverlay({ rec, onClose }: { rec: GameRecord; onClose: () =
           </span>
           <span>{dateLabel(rec.finishedAt)}</span>
         </div>
-        <div className="res-grade">
+        <div className={`res-grade ${res.tone}`}>
           {rec.grade ? (
             <>
               <span className="grade">{rec.grade.grade}</span>

@@ -23,7 +23,8 @@
 .results.beat-0 .res-banner, .results.beat-0 .res-grade, .results.beat-0 .res-meta { opacity: 0; }
 .results.beat-0 .res-head { top: 40%; }
 .results.beat-1 .res-head { top: 40%; }
-.results .res-head { transition: top 520ms cubic-bezier(.2,.7,.2,1); }
+.results.beat-2.fresh .res-head { animation: head-up 520ms cubic-bezier(.2,.7,.2,1) both; }
+@keyframes head-up { from { transform: translateY(calc(40vh - 2.6rem)); } to { transform: none; } }
 .results.beat-1 .res-banner { animation: stamp 420ms cubic-bezier(.2,.9,.3,1.2) both; }
 .results.beat-1 .res-grade .grade { animation: stamp 520ms 160ms cubic-bezier(.2,.9,.3,1.3) both; }
 .results.beat-1 .res-grade .label, .results.beat-1 .res-meta { animation: fade-in 400ms 300ms both; }
@@ -164,8 +165,12 @@
 .last-game .rep-team { font-size: .78rem; gap: .25rem .9rem; margin-bottom: .6rem; }
 .lg-open { display: flex; align-items: center; gap: .6rem; margin-top: .8rem; font-size: .85rem; font-weight: 700; color: var(--ink-2); }
 .report-overlay { z-index: 5; }
-.report-overlay .menu-scrim { background: rgba(5,4,10,.93); backdrop-filter: blur(6px); }
+.report-overlay > .menu-scrim.strong { background: rgba(5,4,10,.93); backdrop-filter: blur(6px); }
 
 /* The game's pause menu. */
 .game-pause { z-index: 40; }
 .game-pause .menu-item-sub { display: block; margin-left: .8rem; font-size: .85rem; font-weight: 600; color: var(--ink-2); letter-spacing: 0; text-transform: none; }
+
+/* A loss grades in the Beasts red. */
+.res-grade.loss .grade { color: #ff2a4d; text-shadow: 0 0 1.6rem rgba(255,42,77,.35); }
+.hist-grade.loss, .hd-grade.loss b, .lg-grade.loss b { color: #ff2a4d; }

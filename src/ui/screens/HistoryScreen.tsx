@@ -82,7 +82,7 @@ function HistoryRow({ r, focused, onHover, onClick }: { r: GameRecord; focused: 
         {r.score.user}–{r.score.beasts}
         {r.ot ? <em>{r.ot > 1 ? `${r.ot}OT` : 'OT'}</em> : null}
       </span>
-      <span className="hist-grade">{r.grade?.grade ?? '—'}</span>
+      <span className={`hist-grade ${res.tone}`}>{r.grade?.grade ?? '—'}</span>
       <span className="hist-mode">{modeLabel(r.mode)}</span>
       <span className="hist-date">{dateLabel(r.finishedAt)}</span>
     </li>
@@ -106,7 +106,7 @@ export function HistoryDetail({ r }: { r: GameRecord }) {
         <span className="us">Contenders {r.score.user}</span>
         <span className="them">Beasts {r.score.beasts}</span>
       </div>
-      <div className="hd-grade">
+      <div className={`hd-grade ${res.tone}`}>
         {r.grade ? (
           <>
             <b>{r.grade.grade}</b> {r.grade.label}
