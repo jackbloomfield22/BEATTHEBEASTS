@@ -206,14 +206,20 @@ export function validPairs(cat: Catalog, s: DraftState): Pair[] {
   const pairs: Pair[] = [];
   const note = (t: string, d: string) => {
     const k = `${t}|${d}`;
-    if (!seen.has(k)) (seen.add(k), pairs.push({ t, d }));
+    if (seen.has(k)) return;
+    seen.add(k);
+    pairs.push({ t, d });
   };
   PLAYERS.forEach((pl, idx) => {
     if (!open.includes(pl.p) || used.has(idx)) return;
     const c = playerCandidate(cat, idx);
     if (c && !people.has(c.personIds[0]!)) note(pl.t, pl.d);
   });
-  if (open.includes('OL')) OL_UNITS.forEach((u, idx) => u.p === 'OL' && unitCandidate(cat, idx) && note(u.t, u.d));
+  if (open.includes('OL')) {
+    OL_UNITS.forEach((u, idx) => {
+      if (u.p === 'OL' && unitCandidate(cat, idx)) note(u.t, u.d);
+    });
+  }
   return pairs;
 }
 
