@@ -34,18 +34,18 @@ export const SHOTS = {
 } satisfies Record<string, Pose>;
 
 /**
- * A stall's shot: square on from ~5 m, low, looking a little up, so the
- * stall holds the middle of the frame with its neighbors, the screens and
- * the ceiling above, and the bench and the carpet below (the room stays in
- * the picture; a tight close-up lost it). A touch right of center so the
- * hologram stands clear at left.
+ * A stall's shot: from ~5 m, low, looking a little up, so the stall sits in
+ * the frame with its neighbors, the screens and the ceiling above, and the
+ * bench and the carpet below (the room stays in the picture; a tight
+ * close-up lost it). The stall sits right of center: the draft's stage
+ * button holds the center of the screen, and the hologram stands at left.
  */
 export function stallShot(slot: Slot): Pose {
   const l = LOCKER_OF[slot];
   const ol = slot === 'OL';
   return {
-    pos: onArc(l.angle + 0.3 / ARC_R, ARC_R - (ol ? 5.9 : 5.2), 1.35),
-    look: onArc(l.angle - 0.1 / ARC_R, ARC_R, 1.75),
+    pos: onArc(l.angle - (ol ? 1.2 : 0.8) / ARC_R, ARC_R - (ol ? 6.2 : 5.2), 1.35),
+    look: onArc(l.angle - (ol ? 2.4 : 1.7) / ARC_R, ARC_R, 1.75),
     fov: ol ? 57 : 55,
   };
 }

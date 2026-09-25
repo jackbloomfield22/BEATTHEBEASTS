@@ -283,7 +283,7 @@ export function DraftScreen() {
             <button className={`stage-btn is-draft ${cur?.slot ? '' : 'is-off'}`} tabIndex={-1} onClick={() => doPick(cur)} style={cur ? { ['--pc' as string]: POS_HEX[cur.pos]!.solid } : undefined}>
               <span className="stage-text">
                 <span className="stage-verb">{cur ? (cur.slot ? `Draft → ${SLOT_LABEL[cur.slot]}` : `${cur.pos} is full`) : 'Choose a player'}</span>
-                <span className={`stage-label ${cur && stageName(cur).length > 16 ? 'is-long' : ''}`}>{cur ? stageName(cur) : '—'}</span>
+                <span className={`stage-label ${cur && stageName(cur).length > 18 ? 'is-xlong' : cur && stageName(cur).length > 12 ? 'is-long' : ''}`}>{cur ? stageName(cur) : '—'}</span>
               </span>
               <KeyCap kb="Enter" pad="A" className="stage-key" />
             </button>

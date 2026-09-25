@@ -296,7 +296,8 @@ export class Room {
     const seatGeo = new THREE.ExtrudeGeometry(seat, { depth: 0.1, bevelEnabled: true, bevelSize: 0.02, bevelThickness: 0.02, bevelSegments: 2, curveSegments: 4 });
     seatGeo.rotateX(Math.PI / 2);
     seatGeo.translate(0, 0.46, 0);
-    s.add(new THREE.Mesh(seatGeo, lockerLit(new THREE.MeshStandardMaterial({ color: 0x1a1a1d, roughness: 0.38 }))));
+    // The seat in the stalls' cognac leather (the second reference), so the bench reads as furniture, not a black band.
+    s.add(new THREE.Mesh(seatGeo, lockerLit(new THREE.MeshStandardMaterial({ color: 0x7a4322, roughness: 0.4 }))));
     const welt = new THREE.CylinderGeometry(r1 - 0.015, r1 - 0.015, 0.018, 96, 1, true, toTheta(a1), a1 - a0);
     welt.translate(0, 0.37, 0);
     s.add(new THREE.Mesh(welt, accent.mat));
