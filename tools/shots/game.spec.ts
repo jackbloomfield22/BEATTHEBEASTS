@@ -72,6 +72,7 @@ test('game screens', async ({ page }) => {
       // wait for its element, then give the scene a moment to settle.
       await page.waitForSelector(ROOT[st] ?? 'body', { timeout: 120_000 }).catch(() => null);
       await page.waitForTimeout(st === 'kick' ? 2500 : 1200);
+      if (process.env.BTB_PROBE) console.log('PROBE', st, JSON.stringify(await page.evaluate((sel) => { const el = document.querySelector(sel); const cs = el ? getComputedStyle(el) : null; return { found: !!el, opacity: cs?.opacity, vis: cs?.visibility, display: cs?.display, rect: el?.getBoundingClientRect(), anim: el?.getAnimations().map((a) => [a.playState, a.currentTime]), gs: document.querySelector('.game-screen')?.children.length, cls: [...(document.querySelector('.game-screen')?.children ?? [])].map((c) => c.className) }; }, ROOT[st] ?? 'body')));
       if ((await stage()) === st) await shot(page, st);
       continue;
     }
