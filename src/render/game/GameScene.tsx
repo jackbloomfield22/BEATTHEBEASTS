@@ -70,7 +70,7 @@ const stanceFor = (slot: string, s: PlayState): string => (slot === 'QB' && s.se
 
 const RENDER_POS: Record<SimPlayer['pos'], Position> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', OL: 'OL', DE: 'DL', DT: 'DL', LB: 'LB', CB: 'CB', S: 'S' };
 
-function buildTeam(players: SimPlayer[], slots: string[], kit: 'royal' | 'beasts', asset: PlayerAsset, lib: AnimLibrary): Body[] {
+function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: PlayerAsset, lib: AnimLibrary): Body[] {
   return players.map((p, k) => {
     const body = bodyFromImperial(p.heightIn, p.weightLb);
     const player = new Player(asset, {
@@ -116,7 +116,7 @@ export function GameScene() {
       if (!alive || !practice.rosters) return;
       const R = practice.rosters;
       // Agent order in the sim: OFF_SLOTS then DEF_SLOTS (sim/plays.ts).
-      const all = [...buildTeam(OFF_SLOTS.map((k) => R.offense[k]), OFF_SLOTS, 'royal', asset, lib), ...buildTeam(DEF_SLOTS.map((k) => R.defense[k]), DEF_SLOTS, 'beasts', asset, lib)];
+      const all = [...buildTeam(OFF_SLOTS.map((k) => R.offense[k]), OFF_SLOTS, practice.offenseKit, asset, lib), ...buildTeam(DEF_SLOTS.map((k) => R.defense[k]), DEF_SLOTS, 'beasts', asset, lib)];
       const g = new THREE.Group();
       g.name = 'players';
       for (const b of all) {

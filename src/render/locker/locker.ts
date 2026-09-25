@@ -55,13 +55,13 @@ export function createSharedLockerAssets(lit: <M extends THREE.MeshStandardMater
     back: std({ color: 0x3a3a3e, map: backTex, roughness: 0.75 }),
     cushion: std({ color: 0x151517, roughness: 0.55 }),
     chrome: std({ color: 0xd8d8dc, roughness: 0.25, metalness: 1 }),
-    helmetShell: std({ color: 0x111214, roughness: 0.16, metalness: 0.15 }),
+    helmetShell: std({ color: 0x3a3d43, roughness: 0.14, metalness: 0.3 }), // satin black reads as gunmetal under a stall lamp (0x111214 vanished)
     helmetStripe: std({ color: 0xaaff00, roughness: 0.3, emissive: new THREE.Color(0xaaff00), emissiveIntensity: 0.12 }),
     helmetMask: std({ color: 0x0c0c0d, roughness: 0.45, metalness: 0.6 }),
     cleatUpper: std({ color: 0x141416, roughness: 0.4 }),
     cleatSole: std({ color: 0xaaff00, roughness: 0.5 }),
     glove: std({ color: 0x1a1b1e, roughness: 0.6 }),
-    towel: std({ color: 0xe9e7e2, roughness: 0.95, side: THREE.DoubleSide }),
+    towel: std({ color: 0x5e5c58, roughness: 0.97, side: THREE.DoubleSide }),
     poolTex: poolTexture(),
     geo: {
       box: new THREE.BoxGeometry(1, 1, 1),
@@ -178,7 +178,7 @@ export class Locker {
     this.strip = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const strip = new THREE.Mesh(geo.box, this.strip);
     strip.scale.set(W - 0.16, 0.012, 0.02);
-    strip.position.set(0, SHELF_Y - 0.02, -0.12);
+    strip.position.set(0, LOCKER_H - TOP_H - 0.012, -0.08);
     g.add(strip);
     this.under = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const under = new THREE.Mesh(geo.box, this.under);
@@ -191,8 +191,8 @@ export class Locker {
     this.pool = new THREE.MeshBasicMaterial({ map: shared.poolTex, color: 0x000000, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
     const pool = new THREE.Mesh(geo.plane, this.pool);
     pool.rotation.x = -Math.PI / 2;
-    pool.scale.set(W + 0.5, 1.5, 1);
-    pool.position.set(0, 0.004, 0.62);
+    pool.scale.set(W + 0.3, 1.2, 1);
+    pool.position.set(0, 0.004, 0.5);
     g.add(pool);
 
     // The kit (hidden until dressed).
@@ -226,14 +226,14 @@ export class Locker {
     // Towel and gloves over the shelf's front edge; cleats on the floor.
     const edgeZ = -D / 2 - 0.05 + (D - 0.1) / 2;
     const towel = new THREE.Mesh(geo.towel, shared.towel);
-    towel.position.set(men > 1 ? -W / 2 + 0.3 : 0.22, SHELF_Y + 0.0125, edgeZ);
-    towel.scale.set(men > 1 ? 1 : 0.85, 1, 1);
+    towel.position.set(men > 1 ? -W / 2 + 0.3 : -0.3, SHELF_Y + 0.0125, edgeZ);
     this.shelfKit.add(towel);
     if (men === 1)
       for (const s of [-1, 1]) {
         const glove = new THREE.Mesh(geo.glove, shared.glove);
-        glove.rotation.set(-Math.PI / 2 + 0.12, 0, s * 0.1);
-        glove.position.set(-0.3 + s * 0.05, SHELF_Y + 0.02, edgeZ + 0.02 + (s > 0 ? 0.006 : 0));
+        // Hung over the shelf's lip, fingers down (the glove lies fingers-forward in its geometry).
+        glove.rotation.set(Math.PI / 2 - 0.1, 0, s * 0.12);
+        glove.position.set(0.3 + s * 0.055, SHELF_Y + 0.0125, edgeZ + 0.012 + (s > 0 ? 0.008 : 0));
         this.shelfKit.add(glove);
       }
     this.kit.add(this.shelfKit);
@@ -251,10 +251,11 @@ export class Locker {
     // World-space lights for the shared loop.
     g.updateMatrixWorld(true);
     const stall = lockerLightsWorld[this.lightIdx]!;
-    stall.pos.set(0, SHELF_Y - 0.03, -0.1).applyMatrix4(g.matrixWorld);
-    stall.dir.set(0, -1, -0.45).normalize().transformDirection(g.matrixWorld);
+    // Under the top cabinet, washing down over the helmet, the shelf and the jersey.
+    stall.pos.set(0, LOCKER_H - TOP_H - 0.03, -0.05).applyMatrix4(g.matrixWorld);
+    stall.dir.set(0, -1, -0.3).normalize().transformDirection(g.matrixWorld);
     stall.color.copy(WARM);
-    lockerLightUniforms.uLkCone.value[this.lightIdx]!.set(-0.2, 0.55, 3);
+    lockerLightUniforms.uLkCone.value[this.lightIdx]!.set(-0.3, 0.5, 2.2);
     const ul = lockerLightsWorld[9 + this.lightIdx]!;
     ul.pos.set(0, 0.07, -0.02).applyMatrix4(g.matrixWorld);
     ul.dir.set(0, -0.35, 1).normalize().transformDirection(g.matrixWorld);
@@ -393,12 +394,18 @@ export class Locker {
 function poolTexture(): THREE.Texture {
   const c = makeCanvas(128, 128);
   const ctx = c.getContext('2d')!;
-  const g = ctx.createRadialGradient(64, 0, 4, 64, 0, 128);
-  g.addColorStop(0, 'rgba(255,255,255,1)');
-  g.addColorStop(0.35, 'rgba(255,255,255,0.45)');
-  g.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 128, 128);
+  // Brightest along the toe kick, falling off across the carpet and at the sides.
+  const img = ctx.createImageData(128, 128);
+  for (let y = 0; y < 128; y++)
+    for (let x = 0; x < 128; x++) {
+      const u = (x - 63.5) / 64;
+      const v = y / 127;
+      const a = Math.exp(-4.5 * v) * Math.max(0, 1 - u * u * u * u) * (1 - v);
+      const i = (y * 128 + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = Math.round(255 * a);
+    }
+  ctx.putImageData(img, 0, 0);
   return canvasTexture(c, false);
 }
 

@@ -3,7 +3,7 @@ import { create } from 'zustand';
 // App-level state machine (TECH_PLAN §4.2). Game states arrive in later
 // milestones; the 3D scene persists across every state.
 
-export type Screen = 'intro' | 'title' | 'main' | 'settings' | 'characterization' | 'howto' | 'practice' | 'draft';
+export type Screen = 'intro' | 'title' | 'main' | 'settings' | 'characterization' | 'howto' | 'practice' | 'draft' | 'game' | 'results';
 
 /** Named camera shots the persistent scene can fly between. */
 export type CameraShot = 'intro' | 'title' | 'menu' | 'daily' | 'practice' | 'settings' | 'history' | 'characterization';

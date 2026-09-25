@@ -161,9 +161,25 @@ function contextFor(phase: Phase, userCarrier: boolean): InputContext {
   }
 }
 
+/** A full game drives the play engine through these (src/game/game.ts). */
+export interface GameHooks {
+  /** Where the next snap is. */
+  situation(): Situation;
+  /** The Beasts' call for this snap. */
+  defCall(sit: Situation, seed: number): DefCall;
+  /** A snap's whistle: the game scores it and says where the next snap is. */
+  onResult(s: PlayState, r: PlayResult, endY: number): { next: Situation; over: boolean };
+}
+
+type Rosters = { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> };
+
 class PracticeSession {
+  /** Set while a full game is on (null on the Practice Field). */
+  game: GameHooks | null = null;
+  /** The offense's uniform: the classic line-up's Royal on the Practice Field, the Contenders' Blackout Lime in a game. */
+  offenseKit = 'royal';
   runner: SimRunner | null = null;
-  rosters: { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> } | null = null;
+  rosters: Rosters | null = null;
   readonly controls = new Controls();
   difficulty: Difficulty = 'pro';
   private ctxPop: (() => void) | null = null;
@@ -171,6 +187,7 @@ class PracticeSession {
   private seedBase = 0;
   private snaps = 0;
   private offPause: (() => void) | null = null;
+  private customRosters = false;
   private offHot: (() => void) | null = null;
   private resuming = false;
   private stageBeforePause: PracticeStage = 'presnap';
@@ -195,8 +212,14 @@ class PracticeSession {
   private sawAir = false;
 
   /** Enter the Practice Field: load the rosters, open the play call. */
-  async enter(seed?: number): Promise<void> {
+  async enter(seed?: number, opts: { rosters?: Rosters; game?: GameHooks } = {}): Promise<void> {
     this.seedBase = seed ?? (Math.random() * 0x7fffffff) | 0;
+    this.game = opts.game ?? null;
+    // A game brings its own rosters; the Practice Field uses the classic line-up.
+    if (opts.rosters) this.rosters = opts.rosters;
+    else if (!this.game && this.customRosters) this.rosters = null;
+    this.customRosters = !!opts.rosters;
+    this.offenseKit = this.game ? 'blackoutLime' : 'royal';
     this.snaps = 0;
     this.firstCatch = true;
     set({ stage: 'loading', result: null, error: null });
@@ -211,13 +234,14 @@ class PracticeSession {
     });
     try {
       this.rosters ??= await loadPracticeRosters();
-      set({ stage: 'call', situation: startSituation(get().startSpot, get().startDowns) });
+      set({ stage: 'call', situation: this.game ? this.game.situation() : startSituation(get().startSpot, get().startDowns), box: emptyBox() });
     } catch (e) {
       set({ error: `The rosters didn't load (${(e as Error).message}).` });
     }
   }
 
   leave(): void {
+    this.game = null;
     this.closeHot();
     this.setContext(null);
     this.offPause?.();
@@ -236,8 +260,9 @@ class PracticeSession {
     const ui = get();
     const seed = (this.seedBase + this.snaps * 7919) | 0;
     this.snaps++;
-    const def = ui.cover === 'random' ? DEF_CALLS[(seed >>> 4) % DEF_CALLS.length]! : defById(ui.cover);
-    const sit = ui.seriesOver ? startSituation(ui.startSpot, ui.startDowns) : ui.situation;
+    const g = this.game;
+    const sit = g ? g.situation() : ui.seriesOver ? startSituation(ui.startSpot, ui.startDowns) : ui.situation;
+    const def = g ? g.defCall(sit, seed) : ui.cover === 'random' ? DEF_CALLS[(seed >>> 4) % DEF_CALLS.length]! : defById(ui.cover);
     this.setUp(playId, seed, def, sit);
   }
 
@@ -454,7 +479,9 @@ class PracticeSession {
     this.stepTutorial(s);
     if (s.result && get().stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) {
       const ui = get();
-      const next = nextSituation(ui.situation, s.result, s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y);
+      const endY = s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y;
+      const g = this.game ? this.game.onResult(s, s.result, endY) : null;
+      const next = g ? (g.over ? null : g.next) : nextSituation(ui.situation, s.result, endY);
       this.setContext(null);
       // Fatigue for the next play: last play's toll recovers by half; a big hit adds his.
       const f: Partial<Record<OffSlot, number>> = {};
@@ -465,7 +492,7 @@ class PracticeSession {
         f[slot] = Math.min(0.6, (f[slot] ?? 0) + hitToll(bh.force));
       }
       this.fatigue = f;
-      set({ stage: 'result', result: describe(s), situation: next ?? startSituation(ui.startSpot, ui.startDowns), seriesOver: next === null, box: addToBox(ui.box, s.result) });
+      set({ stage: 'result', result: describe(s), situation: next ?? (g ? g.next : startSituation(ui.startSpot, ui.startDowns)), seriesOver: next === null, box: addToBox(ui.box, s.result) });
     }
   }
 

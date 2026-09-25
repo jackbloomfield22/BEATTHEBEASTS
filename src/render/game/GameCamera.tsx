@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { kickView } from './kickView';
 import * as THREE from 'three';
 import { useSettings } from '@/app/settings';
 import { urlFlags } from '@/app/platform';
@@ -46,6 +47,8 @@ class Spring {
 }
 
 function targetPose(mode: Mode): Pose | null {
+  // A field goal or PAT: from behind the kicker, the posts square in frame.
+  if (kickView.active) return { ex: kickView.spotX - 11, ey: 0, eh: 2.6, lx: 110, ly: 0, lh: 3.2, fov: 34 };
   const r = practice.runner;
   if (!r) {
     // Before the first snap (the play call): the field from behind the line.

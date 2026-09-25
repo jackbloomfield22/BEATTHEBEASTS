@@ -166,7 +166,7 @@ export function gloveGeometry(): THREE.BufferGeometry {
 }
 
 /** A towel folded over the shelf's front edge: a strip bent 180° around a small radius, hanging on the front. */
-export function towelGeometry(width = 0.3, top = 0.2, drop = 0.26): THREE.BufferGeometry {
+export function towelGeometry(width = 0.24, top = 0.2, drop = 0.19): THREE.BufferGeometry {
   const segs = 28;
   const g = new THREE.PlaneGeometry(width, 1, 6, segs);
   const p = g.attributes.position as THREE.BufferAttribute;

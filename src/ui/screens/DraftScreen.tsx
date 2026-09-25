@@ -98,6 +98,13 @@ export function DraftScreen() {
     }
   }, [d.phase, d.version]);
 
+  // Quick Play: a look down the full row, then straight out of the tunnel.
+  useEffect(() => {
+    if (d.mode !== 'quick' || d.phase !== 'complete') return;
+    const t = setTimeout(() => useDraft.setState({ phase: 'walkout', focus: null, wallBeasts: null }), urlFlags.shot ? 200 : 3500);
+    return () => clearTimeout(t);
+  }, [d.mode, d.phase]);
+
   // A new pair on the reels resets the panel.
   const pairKey = `${draft?.pair?.t}|${draft?.pair?.d}|${draft?.sequence.length}`;
   const [seenPair, setSeenPair] = useState(pairKey);

@@ -10,6 +10,7 @@ import { CameraDirector } from './cameras/CameraDirector';
 import { FlyCamera } from './cameras/FlyCamera';
 import { GameScene } from './game/GameScene';
 import { GameCamera } from './game/GameCamera';
+import { KickBall } from './game/KickBall';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { renderDpr, useSettings, type QualityPreset } from '@/app/settings';
@@ -178,7 +179,7 @@ export function currentQuality(): QualityPreset {
 export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasElement) => void } = {}) {
   const preset = useLightingPreset();
   const shot = useApp((s) => s.shot);
-  const inGame = useApp((s) => s.screen === 'practice');
+  const inGame = useApp((s) => s.screen === 'practice' || s.screen === 'game');
   const inRoom = useApp((s) => s.screen === 'draft');
   const go = useApp((s) => s.go);
   // The room is built on first entry and kept (its textures and programs stay warm).
@@ -237,6 +238,7 @@ export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasEl
       <World preset={preset} quality={worldQuality} onReady={setSceneReady} />
       {urlFlags.lineup ? <Lineup /> : null}
       {inGame ? <GameScene /> : null}
+      {inGame ? <KickBall /> : null}
       {roomMounted ? <LockerRoomMount active={inRoom} preset={preset} /> : null}
       {urlFlags.fly ? (
         <FlyCamera />

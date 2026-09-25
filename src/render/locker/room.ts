@@ -39,16 +39,16 @@ export interface MoodSpec {
 export const MOODS: Record<RoomMood, MoodSpec> = {
   pregame: {
     ceiling: 1.4,
-    stall: 16,
+    stall: 12,
     under: 7,
     plate: 2.4,
     wash: 7,
-    pool: 0.35,
+    pool: 0.14,
     env: 0.9,
     exposure: 1.05,
     bloom: 0.7,
     threshold: 0.85,
-    accent: 1.3,
+    accent: 0.8,
     grade: { lift: [0.006, 0.003, 0.0], gamma: [0.98, 1.0, 1.03], gain: [1.06, 1.0, 0.92], saturation: 1.08, contrast: 1.08 },
   },
   lightsdown: {
@@ -57,12 +57,12 @@ export const MOODS: Record<RoomMood, MoodSpec> = {
     under: 12,
     plate: 3.2,
     wash: 1.4,
-    pool: 0.7,
+    pool: 0.3,
     env: 0.3,
     exposure: 1.35,
     bloom: 1.0,
     threshold: 0.75,
-    accent: 2.4,
+    accent: 1.5,
     grade: { lift: [0.0, 0.004, 0.0], gamma: [1.0, 0.98, 1.02], gain: [1.0, 1.02, 0.96], saturation: 1.15, contrast: 1.14 },
   },
 };
@@ -166,7 +166,7 @@ export class Room {
     const seatGeo = new THREE.ExtrudeGeometry(seat, { depth: 0.1, bevelEnabled: true, bevelSize: 0.02, bevelThickness: 0.02, bevelSegments: 2, curveSegments: 4 });
     seatGeo.rotateX(Math.PI / 2);
     seatGeo.translate(0, 0.46, 0);
-    s.add(new THREE.Mesh(seatGeo, lockerLit(new THREE.MeshStandardMaterial({ color: 0x121214, roughness: 0.48 }))));
+    s.add(new THREE.Mesh(seatGeo, lockerLit(new THREE.MeshStandardMaterial({ color: 0x1a1a1d, roughness: 0.38 }))));
     const welt = new THREE.CylinderGeometry(r1 - 0.015, r1 - 0.015, 0.018, 96, 1, true, toTheta(a1), a1 - a0);
     welt.translate(0, 0.37, 0);
     s.add(new THREE.Mesh(welt, accent.mat));

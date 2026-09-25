@@ -10,8 +10,8 @@ import { chromiumLaunch } from '../../playwright.config';
 // BTB_LOCKER=1 the locker room (locker.spec.ts: empty, half, full, stalls, moods).
 export default defineConfig({
   testDir: '.',
-  testMatch: process.env.BTB_LOCKER ? 'locker.spec.ts' : process.env.BTB_CONTACT ? 'contact.spec.ts' : process.env.BTB_PRACTICE ? 'practice.spec.ts' : process.env.BTB_VIDEO ? 'video.spec.ts' : 'matrix.spec.ts',
-  timeout: process.env.BTB_VIDEO ? 3_600_000 : 600_000,
+  testMatch: process.env.BTB_M6VIDEO ? 'm6video.spec.ts' : process.env.BTB_LOCKER ? 'locker.spec.ts' : process.env.BTB_CONTACT ? 'contact.spec.ts' : process.env.BTB_PRACTICE ? 'practice.spec.ts' : process.env.BTB_VIDEO ? 'video.spec.ts' : 'matrix.spec.ts',
+  timeout: process.env.BTB_VIDEO || process.env.BTB_M6VIDEO ? 7_200_000 : 600_000,
   workers: 1,
   reporter: [['list']],
   use: { baseURL: 'http://localhost:5174', viewport: { width: 1920, height: 1080 }, launchOptions: chromiumLaunch },

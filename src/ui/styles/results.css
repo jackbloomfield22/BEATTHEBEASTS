@@ -1,0 +1,42 @@
+/* The results screen (GDD §14). */
+.results { overflow: hidden; }
+.res-head { position: absolute; top: 3rem; left: 5rem; right: 5rem; display: flex; align-items: center; gap: 2.4rem; }
+.res-banner { font-family: var(--font-display); font-size: 1.1rem; padding: .35rem .9rem; letter-spacing: .1em; }
+.res-banner.win { background: var(--lime); color: #0a0a0a; }
+.res-banner.loss { background: #ff2a4d; color: #fff; }
+.res-score { font-family: var(--font-display); font-size: 2.6rem; display: flex; gap: 1rem; }
+.res-score .us { color: #fff; }
+.res-score .them { color: #ff2a4d; }
+.res-score .dash { color: var(--ink-3); }
+.res-grade { margin-left: auto; display: flex; align-items: baseline; gap: .8rem; }
+.res-grade .grade { font-family: var(--font-display); font-size: 3rem; color: var(--lime); }
+.res-grade .label { font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.res-grade .ot { color: var(--ink-3); font-weight: 700; }
+.res-body { position: absolute; top: 9rem; left: 5rem; right: 5rem; bottom: 9rem; display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; }
+.res-body h3 { margin: 0 0 .5rem; font-size: .78rem; letter-spacing: .18em; text-transform: uppercase; color: var(--lime); }
+.res-box table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.res-box th { text-align: left; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); padding: .6rem .4rem .25rem; }
+.res-box td { padding: .22rem .4rem; border-bottom: 1px solid rgba(255,255,255,.06); }
+.res-box td:first-child { font-weight: 700; }
+.grade-cell { font-family: var(--font-display); }
+.res-team { display: flex; flex-wrap: wrap; gap: .5rem 1.4rem; margin-top: 1rem; color: var(--ink-2); font-weight: 700; font-size: .85rem; }
+.res-team .hits { color: #ffd400; }
+.res-side { overflow-y: auto; }
+.res-matchups, .res-perfect, .res-drives { list-style: none; margin: 0 0 1.2rem; padding: 0; }
+.res-matchups li { display: grid; grid-template-columns: 3rem 1fr auto auto; gap: .8rem; align-items: center; padding: .35rem 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: .86rem; }
+.res-matchups .slot, .res-perfect .slot { font-weight: 800; color: var(--ink-3); }
+.res-matchups em { color: var(--ink-3); font-style: normal; margin: 0 .3rem; }
+.res-matchups .line { color: var(--ink-2); font-size: .78rem; }
+.verdict { font-weight: 900; font-size: .72rem; letter-spacing: .08em; padding: .15rem .4rem; }
+.v-rec { color: #0a0a0a; background: var(--lime); }
+.v-def { color: #fff; background: #ff2a4d; }
+.v-even { color: #fff; background: rgba(255,255,255,.15); }
+.res-drives { display: flex; flex-wrap: wrap; gap: .4rem; }
+.res-drives li { display: flex; flex-direction: column; min-width: 4.6rem; font-size: .72rem; font-weight: 800; }
+.res-drives .b { color: #ff2a4d; padding: .2rem .4rem; background: rgba(255,42,77,.1); }
+.res-drives .u { padding: .2rem .4rem; background: rgba(170,255,0,.1); color: var(--ink-2); }
+.res-drives .u.r-TD, .res-drives .u.r-FG { color: var(--lime); }
+.res-perfect li { display: grid; grid-template-columns: 3rem 1fr auto; gap: .8rem; padding: .25rem 0; font-size: .85rem; }
+.res-perfect li.same .you { color: var(--lime); font-weight: 800; }
+.res-perfect .you { color: var(--ink-3); }
+.res-actions { position: absolute; left: 5rem; bottom: 3.5rem; display: flex; gap: .5rem; }

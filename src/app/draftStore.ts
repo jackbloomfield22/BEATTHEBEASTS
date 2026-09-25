@@ -28,6 +28,8 @@ import { assembleRatedBeasts, type RatedBeasts } from '@/game/beasts';
 import { newDaily, type NewDaily } from '@/game/daily';
 import { loadJSON, saveJSON } from './storage';
 import type { Screen } from './appStore';
+import { getSettings } from './settings';
+import { game } from '@/game/game';
 
 // The draft session the locker room and its UI share (M6). The rules live in
 // src/game/draft.ts (pure); this store holds the live draft, the Beasts it
@@ -186,9 +188,10 @@ export const useDraft = create<DraftStore>((set, get) => ({
     set((s) => ({ draft, daily, beasts, mode: saved.mode, phase: 'viewing', focus: null, version: s.version + 1, instantSeq: s.instantSeq + 1, wallBeasts: 0 }));
     return true;
   },
-  next: 'practice',
+  next: 'game',
   finishWalkout(go) {
     set({ phase: 'complete' });
+    if (get().next === 'game') startGame();
     go(get().next);
   },
   offers() {
@@ -204,6 +207,26 @@ function save(d: DraftState): void {
   const saved: SavedDraft = { mode: d.mode, seed: d.seed, dailyKey: d.daily?.dateKey ?? null, roster: d.roster, sequence: d.sequence, finishedAt: Date.now() };
   saveJSON('lastDraft', saved);
   useDraft.setState({ saved });
+}
+
+/** Kick off a game with the drafted roster (the walk-out's end). */
+export function startGame(): void {
+  const st = useDraft.getState();
+  if (!st.cat || !st.draft || !st.beasts || !isComplete(st.draft)) return;
+  const g = getSettings().gameplay;
+  const lighting = g.lighting;
+  void game.start({
+    cat: st.cat,
+    roster: st.draft.roster,
+    beasts: st.beasts,
+    mode: st.mode,
+    drives: g.gameLength,
+    seed: (st.draft.seed ^ 0x6a09e667) >>> 0,
+    diffAdj: st.daily?.diffAdj ?? 0,
+    difficulty: g.difficulty,
+    // Rain and snow blow harder (the legacy WindChip's weather bump).
+    windScale: lighting === 'rain' || lighting === 'snow' ? 1.4 : 1,
+  });
 }
 
 function todayIso(): string {

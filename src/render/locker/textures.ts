@@ -209,7 +209,7 @@ export function drawJersey(c: HTMLCanvasElement, name: string, num: number): voi
   ctx.lineWidth = 16;
   ctx.strokeStyle = LIME;
   ctx.strokeText(n, 256, 330);
-  ctx.fillStyle = INK;
+  ctx.fillStyle = '#d6d6d6';
   ctx.fillText(n, 256, 330);
   ctx.restore();
   ctx.restore();
