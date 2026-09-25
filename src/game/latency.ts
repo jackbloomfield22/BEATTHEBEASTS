@@ -6,8 +6,11 @@
 //
 // A response is "visible" when the frame shows it:
 //   snap          the get-offs and the QB's drop start
-//   move          the controlled player's velocity toward the pressed
-//                 direction has grown by 0.3 yd/s since the press
+//   move          the controlled player's velocity has changed by 0.3 yd/s
+//                 since the press, and not away from the pressed direction:
+//                 speeding up toward it, or a carrier at full speed planting
+//                 into a hard cut toward it (the brake is the first thing you
+//                 see; the turn itself builds over a few more frames)
 //   throwHold     the power ring is up on the held icon
 //   throwRelease  the QB's throw motion starts (key up to motion)
 //   catch         the called catch lights up in the panel
@@ -33,12 +36,14 @@ interface Pending {
   frame: number;
   dir?: V2;
   base: number;
+  /** The velocity at the press (move). */
+  v0?: V2;
   buffered?: boolean;
 }
 
 /** Frames a motion response may take before the press is dropped (it never showed: already at top speed, a wall). */
 const MOTION_WINDOW = 45;
-/** Velocity toward the pressed direction that counts as a visible response (yd/s). */
+/** Change of velocity (not away from the pressed direction) that counts as a visible response (yd/s). */
 const MOVE_DELTA = 0.3;
 const KEEP = 400;
 
@@ -53,7 +58,7 @@ class LatencyLog {
   press(kind: LatKind, t: number, opts: { dir?: V2; buffered?: boolean } = {}): void {
     if (this.pending.has(kind)) return;
     const base = opts.dir ? this.vel.x * opts.dir.x + this.vel.y * opts.dir.y : 0;
-    this.pending.set(kind, { t, frame: this.frame, base, ...opts });
+    this.pending.set(kind, { t, frame: this.frame, base, v0: { ...this.vel }, ...opts });
   }
 
   respond(kind: LatKind, now = performance.now()): void {
@@ -73,8 +78,10 @@ class LatencyLog {
     if (v) {
       const p = this.pending.get('move');
       if (p) {
-        const got = p.dir ? v.x * p.dir.x + v.y * p.dir.y - p.base : 0;
-        if (got >= MOVE_DELTA) this.respond('move', now);
+        const dx = v.x - (p.v0?.x ?? 0);
+        const dy = v.y - (p.v0?.y ?? 0);
+        const toward = p.dir ? dx * p.dir.x + dy * p.dir.y : 0;
+        if (toward >= -1e-6 && Math.sqrt(dx * dx + dy * dy) >= MOVE_DELTA) this.respond('move', now);
         else if (this.frame - p.frame > MOTION_WINDOW) this.cancel('move');
       }
       this.vel = { x: v.x, y: v.y };

@@ -49,7 +49,7 @@ async function tickUntil(page: Page, pred: (s: Awaited<ReturnType<typeof state>>
 
 test('a full play: snap, throw, catch, run, tackle or score, result card', async ({ page }) => {
   const errors = trackErrors(page);
-  await open(page, 37, 'fourVerts'); // Four Verticals against the coverage seed 37 draws (Cover 2)
+  await open(page, 98, 'fourVerts'); // Four Verticals against the coverage seed 98 draws (Cover 3)
   await page.keyboard.press('Space');
   await tick(page, 1);
   let s = await state(page);
@@ -79,7 +79,7 @@ test('a full play: snap, throw, catch, run, tackle or score, result card', async
 });
 
 test('the catch call: 1–3 while the ball is in the air, and the called one lights up', async ({ page }) => {
-  await open(page, 37, 'fourVerts');
+  await open(page, 98, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');
