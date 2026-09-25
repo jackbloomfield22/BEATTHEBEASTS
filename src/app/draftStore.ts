@@ -72,6 +72,8 @@ interface DraftStore {
   /** The wall shows the Beasts (page 0 = all, 1..3 = front, backers, secondary) or the draft. */
   wallBeasts: number | null;
   saved: SavedDraft | null;
+  /** A draft is being set up (the catalog is loading). */
+  starting: boolean;
   load(): Promise<Catalog>;
   begin(mode: DraftMode, opts?: { seed?: number; dailyKey?: string }): Promise<void>;
   spin(): Pair | null;
@@ -91,6 +93,7 @@ interface DraftStore {
 }
 
 let loading: Promise<Catalog> | null = null;
+let beginToken = 0;
 
 export const useDraft = create<DraftStore>((set, get) => ({
   cat: null,
@@ -105,6 +108,7 @@ export const useDraft = create<DraftStore>((set, get) => ({
   lastPick: null,
   instantSeq: 0,
   wallBeasts: null,
+  starting: false,
   saved: loadJSON<SavedDraft>('lastDraft') ?? null,
 
   load() {
@@ -117,8 +121,11 @@ export const useDraft = create<DraftStore>((set, get) => ({
   },
 
   async begin(mode, opts = {}) {
-    set({ phase: 'loading', mode, draft: null, lastPick: null, focus: null });
+    // The latest begin wins: an earlier one still loading the catalog gives up.
+    const token = ++beginToken;
+    set({ phase: 'loading', mode, draft: null, lastPick: null, focus: null, starting: true });
     const cat = await get().load();
+    if (token !== beginToken) return;
     const dailyKey = mode === 'daily' ? (opts.dailyKey ?? todayIso()) : undefined;
     const seed = opts.seed ?? (dailyKey ? seedFromDate(dailyKey) : (Date.now() ^ 0x5bd1e995) >>> 0);
     const draft = createDraft(mode, seed, dailyKey);
@@ -129,7 +136,7 @@ export const useDraft = create<DraftStore>((set, get) => ({
       daily = newDaily(dailyKey, cat);
       beasts = daily.beasts;
     } else beasts = assembleRatedBeasts(makeRng(seed ^ 0x9e3779b9), ovrOf);
-    set((s) => ({ draft, daily, beasts, phase: 'intro', version: s.version + 1, instantSeq: s.instantSeq + 1, wallBeasts: 0 }));
+    set((s) => ({ draft, daily, beasts, phase: 'intro', version: s.version + 1, instantSeq: s.instantSeq + 1, wallBeasts: 0, starting: false }));
     if (mode === 'quick') {
       get().auto();
     }

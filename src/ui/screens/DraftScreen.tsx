@@ -60,7 +60,7 @@ export function DraftScreen() {
   // Start a draft when the screen opens without one (Play from the menu starts its own).
   useEffect(() => {
     const st = useDraft.getState();
-    if (!st.draft && st.phase !== 'viewing') void st.begin('classic', { seed: urlFlags.seed ? Number(urlFlags.seed) : undefined });
+    if (!st.draft && !st.starting && st.phase !== 'viewing') void st.begin('classic', { seed: urlFlags.seed ? Number(urlFlags.seed) : undefined });
   }, []);
 
   // Dev and screenshot harness: ?fill=N drafts N rounds at once (best OVR), ?pick=1 shows the pick panel.
