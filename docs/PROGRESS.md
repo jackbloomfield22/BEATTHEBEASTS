@@ -302,6 +302,7 @@ A new standing principle heads CLAUDE.md: **football is art**. The harness numbe
 - **Weak:**
   - The catch-call panel still sits over the receiver's legs in the arrival shot.
   - The screenshot play (a held touch pass into Cover 3) is now intercepted by the deep safety. That's right for a floated ball into Cover 3, but the stills no longer show a completion; the video does.
+- **The broken-tackle clip** (Four Verticals against Cover 1): the frame around the deep catch is busy. It's the man defenders riding the other go routes into the same area, not a convergence on the ball. The stiff arm sheds the first tackler as before.
 - **Latency:** re-measured, still under 100 ms. A carrier's move reads 5 frames (83 ms) in the new clip because the test's Up key is now a 90° cut at full speed. The tool now counts the plant into the cut as the visible response, the first thing you see. Juke and stiff arm are 1 frame; spin and protect weren't reached before the tackle this run.
 
 **Honest gaps.**

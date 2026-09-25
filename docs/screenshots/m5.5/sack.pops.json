@@ -1,7 +1,7 @@
 {
- "frames": 5266,
- "worst": 70,
- "p99": 31,
+ "frames": 5355,
+ "worst": 79,
+ "p99": 32,
  "spikes": [
   {
    "frame": 42,
@@ -54,57 +54,27 @@
    "phase": "snap"
   },
   {
-   "frame": 172,
-   "slot": "RDT",
-   "bone": "thigh_l",
-   "rate": 47,
-   "clip": "tackle",
-   "overlay": "",
-   "anim": "tackle",
-   "phase": "dead"
-  },
-  {
-   "frame": 182,
-   "slot": "RDT",
+   "frame": 186,
+   "slot": "LE",
    "bone": "forearm_l",
-   "rate": 41,
+   "rate": 71,
    "clip": "tackle",
    "overlay": "",
    "anim": "tackle",
    "phase": "dead"
   },
   {
-   "frame": 182,
-   "slot": "RDT",
+   "frame": 186,
+   "slot": "LE",
    "bone": "forearm_r",
-   "rate": 44,
+   "rate": 79,
    "clip": "tackle",
    "overlay": "",
    "anim": "tackle",
    "phase": "dead"
   },
   {
-   "frame": 183,
-   "slot": "RDT",
-   "bone": "forearm_l",
-   "rate": 39,
-   "clip": "tackle",
-   "overlay": "",
-   "anim": "tackle",
-   "phase": "dead"
-  },
-  {
-   "frame": 183,
-   "slot": "RDT",
-   "bone": "forearm_r",
-   "rate": 43,
-   "clip": "tackle",
-   "overlay": "",
-   "anim": "tackle",
-   "phase": "dead"
-  },
-  {
-   "frame": 211,
+   "frame": 216,
    "slot": "QB",
    "bone": "thigh_l",
    "rate": 63,
@@ -114,7 +84,7 @@
    "phase": "dead"
   },
   {
-   "frame": 211,
+   "frame": 216,
    "slot": "QB",
    "bone": "thigh_r",
    "rate": 55,
@@ -124,7 +94,7 @@
    "phase": "dead"
   },
   {
-   "frame": 211,
+   "frame": 216,
    "slot": "QB",
    "bone": "calf_l",
    "rate": 64,
@@ -134,7 +104,7 @@
    "phase": "dead"
   },
   {
-   "frame": 211,
+   "frame": 216,
    "slot": "QB",
    "bone": "calf_r",
    "rate": 70,
