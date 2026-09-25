@@ -187,7 +187,8 @@ export const useDraft = create<DraftStore>((set, get) => ({
     const { cat, draft } = get();
     if (!cat || !draft) return [];
     const picks = autoDraft(cat, draft);
-    set((s) => ({ version: s.version + 1, reveal: { seq: s.reveal.seq + 1, slots: picks.map((p) => p.slot) }, phase: isComplete(draft) ? 'complete' : s.phase, focus: null }));
+    // The camera goes to the row (off the wall's Beasts page) to watch the reveal.
+    set((s) => ({ version: s.version + 1, reveal: { seq: s.reveal.seq + 1, slots: picks.map((p) => p.slot) }, phase: isComplete(draft) ? 'complete' : s.phase, focus: null, wallBeasts: picks.length ? null : s.wallBeasts }));
     if (isComplete(draft)) save(draft);
     return picks;
   },
