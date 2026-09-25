@@ -64,7 +64,12 @@ for (const f of files) {
 function most(t: Map<number, number>): number | undefined {
   let best: number | undefined;
   let bc = -1;
-  for (const [n, c] of [...t].sort((a, b) => a[0] - b[0])) if (c > bc) (best = n), (bc = c);
+  for (const [n, c] of [...t].sort((a, b) => a[0] - b[0])) {
+    if (c > bc) {
+      best = n;
+      bc = c;
+    }
+  }
   return best;
 }
 function merge(ts: Iterable<Map<number, number>>): Map<number, number> {
@@ -102,11 +107,18 @@ for (const e of [...snap.entries].sort((a, b) => a.id.localeCompare(b.id))) {
   let n: number | undefined;
   const here = byTeam?.get(`${e.team}|${e.decade}`);
   const dec = byTeam ? [...byTeam].filter(([k]) => k.endsWith(`|${e.decade}`)).map(([, t]) => t) : [];
-  if (here) (n = most(here)), how.franchise++;
-  else if (dec.length) (n = most(merge(dec))), how.decade++;
-  else if ((n = fromWiki(e)) !== undefined) how.wikipedia++;
-  else if (byTeam) (n = most(merge(byTeam.values()))), how.career++;
-  else how.none++;
+  if (here) {
+    n = most(here);
+    how.franchise++;
+  } else if (dec.length) {
+    n = most(merge(dec));
+    how.decade++;
+  } else if ((n = fromWiki(e)) !== undefined) {
+    how.wikipedia++;
+  } else if (byTeam) {
+    n = most(merge(byTeam.values()));
+    how.career++;
+  } else how.none++;
   if (n !== undefined) numbers[e.id] = n;
 }
 
