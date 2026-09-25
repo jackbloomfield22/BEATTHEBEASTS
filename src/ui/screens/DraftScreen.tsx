@@ -6,10 +6,8 @@ import { useApp } from '@/app/appStore';
 import { useDraft, SPIN_S, isComplete } from '@/app/draftStore';
 import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
-import { attrLabel } from '@/engine/ratings/attributes';
-import { CARD_ATTRS } from '@/engine/ratings/ovrWeights';
-import type { RatedPos } from '@/engine/ratings/types';
 import { autoAllowed, skipsAllowed, type Candidate } from '@/game/draft';
+import { compareForList, highlights, plainTraits } from '@/game/draftView';
 import { DRESS_DELAY } from '@/render/locker/LockerRoom';
 import { DRESS_END } from '@/render/locker/locker';
 import { useMenuNav } from '../nav';
@@ -19,9 +17,13 @@ import '../styles/draft.css';
 
 // The draft over the Contenders' locker room (M6). The reels spin on the
 // video wall; the pick panel lists what the pair offers, filtered by
-// position and searchable, with a Scouting card for the focused man (Film
-// Room hides every number). Each pick dresses its locker. Keyboard, mouse
-// and gamepad drive all of it through the shared menu actions.
+// position and searchable, with a Scouting card for the focused man. The
+// draft tests football knowledge, so no numbers show in any mode: no OVR, no
+// attribute values, no confidence; the card names his three best attributes
+// and his traits with plain-language reasons (src/game/draftView.ts). Film
+// Room shows name, position, team and decade only. Each pick dresses its
+// locker. Keyboard, mouse and gamepad drive all of it through the shared
+// menu actions.
 
 const POS_TABS = ['All', 'QB', 'RB', 'WR', 'TE', 'OL'] as const;
 type PosTab = (typeof POS_TABS)[number];
@@ -126,9 +128,9 @@ export function DraftScreen() {
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
     const l = all.filter((c) => (tab === 'All' || c.pos === tab) && (!q || c.name.toLowerCase().includes(q)));
-    // Open slots first; by OVR (Film Room: by position and name, so the order doesn't leak the numbers).
-    return l.sort((a, b) => Number(!!b.slot) - Number(!!a.slot) || (film ? a.pos.localeCompare(b.pos) || a.name.localeCompare(b.name) : b.ovr - a.ovr));
-  }, [all, tab, query, film]);
+    // QB, RB, WR, TE, OL, then last name, in every mode: the order never leaks a rating.
+    return l.sort(compareForList);
+  }, [all, tab, query]);
   const cur = list[Math.min(focus, list.length - 1)] ?? null;
 
   const choosing = d.phase === 'choosing';
@@ -296,7 +298,6 @@ export function DraftScreen() {
           <span className="lt-name">{lastPick.name}</span>
           <span className="lt-meta">
             {lastPick.linemen ? lastPick.linemen.map((l) => l.name.split(' ').slice(-1)[0]).join(' · ') : `#${lastPick.num}`} · {lastPick.team} {lastPick.decade}
-            {!film ? ` · ${lastPick.ovr} OVR` : ''}
           </span>
         </div>
       ) : null}
@@ -341,7 +342,6 @@ export function DraftScreen() {
                 </span>
                 <span className="pl-name">{c.kind === 'unit' ? `${c.team} ${c.decade} line` : c.name}</span>
                 <span className="pl-slot">{c.slot ? `→ ${SLOT_LABEL[c.slot]}` : 'Full'}</span>
-                {!film ? <span className="pl-ovr">{c.ovr}</span> : null}
               </li>
             ))}
             {!list.length ? <li className="pl-empty">No one matches.</li> : null}
@@ -401,22 +401,26 @@ export function DraftScreen() {
   );
 }
 
-/** The Scouting card for the focused candidate (Film Room: no numbers). */
+/**
+ * The Scouting card for the focused candidate, with no numbers: his three
+ * best attributes by name, his traits with plain-language reasons, and the
+ * era line. Film Room: name, position, team and decade only (an OL unit
+ * keeps its five names; the names are who you're drafting).
+ */
 function DraftScout({ c, film }: { c: Candidate; film: boolean }) {
   const cat = useDraft((s) => s.cat);
   const linemen = useMemo(() => (c.kind === 'unit' && cat ? (cat.unit.get(c.id)?.linemen ?? []).map((id) => cat.entry.get(id)).filter(Boolean) : []), [c, cat]);
-  const pos = c.pos as RatedPos;
+  const best = useMemo(() => (film ? [] : highlights(c)), [c, film]);
+  const traits = useMemo(() => (film ? [] : plainTraits(c)), [c, film]);
   return (
     <div className="draft-scout">
       <div className="ds-head">
         <div>
           <div className="ds-kicker">
             {c.pos} · {c.team} · {c.decade}
-            {!film ? <span className={`ds-conf conf-${c.conf}`}>{{ h: 'High', m: 'Medium', l: 'Low' }[c.conf]} confidence</span> : null}
           </div>
           <div className="ds-name">{c.kind === 'unit' ? `${c.team} ${c.decade} offensive line` : c.name}</div>
         </div>
-        {!film ? <div className="ds-ovr">{c.ovr}</div> : null}
       </div>
       {c.kind === 'unit' ? (
         <ul className="ds-line">
@@ -424,36 +428,30 @@ function DraftScout({ c, film }: { c: Candidate; film: boolean }) {
             <li key={l!.id}>
               <span>{l!.id.split('#')[1]}</span>
               <span>{l!.name}</span>
-              {!film ? <span>{l!.ovr}</span> : null}
             </li>
           ))}
-          {!film ? (
-            <li className="ds-agg">
-              <span />
-              <span>Pass block {c.attrs.passBlock} · Run block {c.attrs.runBlock}</span>
-              <span />
-            </li>
-          ) : null}
         </ul>
-      ) : !film ? (
-        <div className="ds-attrs">
-          {(CARD_ATTRS[pos] ?? []).map((k) =>
-            c.attrs[k] !== undefined ? (
-              <div key={k} className="ds-attr">
-                <span>{attrLabel(pos, k)}</span>
-                <span className="ds-bar">
-                  <span style={{ width: `${c.attrs[k]}%` }} />
-                </span>
-                <span className="ds-val">{c.attrs[k]}</span>
-              </div>
-            ) : null,
-          )}
-        </div>
       ) : null}
-      <div className="ds-traits">{film ? <TraitList traits={c.traits.map((t) => ({ id: t.id, why: '' }))} showWhy={false} size="sm" empty="No traits" /> : <TraitList traits={c.traits} size="sm" empty="No traits" />}</div>
-      <div className="ds-era">
-        <span style={{ color: DECADE_HEX[c.decade]?.text }}>{c.decade}</span> {ERA_NOTE[c.decade]}
-      </div>
+      {!film ? (
+        <>
+          {best.length ? (
+            <div className="ds-best">
+              <span className="ds-best-label">Strengths</span>
+              <ul>
+                {best.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className="ds-traits">
+            <TraitList traits={traits} size="sm" empty="No traits" />
+          </div>
+          <div className="ds-era">
+            <span style={{ color: DECADE_HEX[c.decade]?.text }}>{c.decade}</span> {ERA_NOTE[c.decade]}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

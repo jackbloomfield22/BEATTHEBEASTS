@@ -185,7 +185,8 @@ export class VideoWall {
   private drawBeasts(c: Extract<WallContent, { kind: 'beasts' }>): void {
     const ctx = this.ctx;
     this.text('THE BEASTS', 60, 70, 40, BEASTS_RED, 'left');
-    if (c.tier) this.text(`${c.tier.l.toUpperCase()}${c.rating !== null ? `  ·  ${c.rating}` : ''}`, W - 60, 70, 28, c.tier.c, 'right');
+    // The draft shows no numbers: the tier's word, never the rating (c.rating and c.showOvr are ignored).
+    if (c.tier) this.text(c.tier.l.toUpperCase(), W - 60, 70, 28, c.tier.c, 'right');
     const groups = [
       { label: 'Front', rows: c.beasts.filter((b) => b.pos === 'DE' || b.pos === 'DT') },
       { label: 'Linebackers', rows: c.beasts.filter((b) => b.pos === 'LB') },
@@ -203,8 +204,7 @@ export class VideoWall {
         ctx.fillRect(60, y - (big ? 26 : 16), big ? 90 : 60, big ? 52 : 32);
         this.text(b.pos, 60 + (big ? 45 : 30), y + 2, big ? 34 : 22, '#0a0a0a');
         this.text(b.name.toUpperCase(), big ? 180 : 140, y + 2, big ? 48 : 28, '#ffffff', 'left');
-        this.text(`${b.team} · ${b.decade}`, W - (c.showOvr ? 230 : 60), y + 2, big ? 30 : 22, DECADE_HEX[b.decade]?.text ?? '#ccc', 'right');
-        if (c.showOvr) this.text(String(b.ovr), W - 80, y + 2, big ? 48 : 30, BEASTS_RED, 'right');
+        this.text(`${b.team} · ${b.decade}`, W - 60, y + 2, big ? 30 : 22, DECADE_HEX[b.decade]?.text ?? '#ccc', 'right');
         y += rowH;
       }
       y += 16;
@@ -231,6 +231,6 @@ export class VideoWall {
     while (size > 40 && this.ctx.measureText(name).width > W - 240) this.ctx.font = `${(size -= 4)}px Bungee`;
     this.text(name, 140, 370, size, '#ffffff', 'left');
     this.text(`${c.team} · ${c.decade}`, 140, 480, 44, DECADE_HEX[c.decade]?.text ?? LIME, 'left');
-    if (c.ovr !== null) this.text(`${c.ovr} OVR`, W - 90, 480, 56, LIME, 'right');
+    // No OVR on the pick card (the draft shows no numbers; c.ovr is ignored).
   }
 }
