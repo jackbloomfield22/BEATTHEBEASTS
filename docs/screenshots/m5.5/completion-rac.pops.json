@@ -1,7 +1,7 @@
 {
- "frames": 7422,
+ "frames": 5794,
  "worst": 80,
- "p99": 33,
+ "p99": 32,
  "spikes": [
   {
    "frame": 42,
@@ -54,7 +54,7 @@
    "phase": "snap"
   },
   {
-   "frame": 96,
+   "frame": 88,
    "slot": "QB",
    "bone": "upperarm_l",
    "rate": 80,
@@ -64,7 +64,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 100,
+   "frame": 92,
    "slot": "QB",
    "bone": "upperarm_l",
    "rate": 37,
@@ -74,7 +74,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 100,
+   "frame": 92,
    "slot": "QB",
    "bone": "upperarm_r",
    "rate": 31,
@@ -84,7 +84,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 103,
+   "frame": 95,
    "slot": "QB",
    "bone": "upperarm_r",
    "rate": 34,
@@ -94,37 +94,37 @@
    "phase": "air"
   },
   {
-   "frame": 107,
-   "slot": "SS",
+   "frame": 156,
+   "slot": "SLOT",
    "bone": "calf_l",
-   "rate": 45,
-   "clip": "",
+   "rate": 52,
+   "clip": "juke_r",
    "overlay": "",
-   "anim": "backpedal",
-   "phase": "air"
-  },
-  {
-   "frame": 170,
-   "slot": "RCB",
-   "bone": "thigh_l",
-   "rate": 46,
-   "clip": "",
-   "overlay": "",
-   "anim": "backpedal",
-   "phase": "air"
-  },
-  {
-   "frame": 222,
-   "slot": "C",
-   "bone": "thigh_l",
-   "rate": 46,
-   "clip": "",
-   "overlay": "",
-   "anim": "run",
+   "anim": "juke",
    "phase": "carrier"
   },
   {
-   "frame": 280,
+   "frame": 176,
+   "slot": "SLOT",
+   "bone": "calf_l",
+   "rate": 52,
+   "clip": "juke_r",
+   "overlay": "",
+   "anim": "juke",
+   "phase": "carrier"
+  },
+  {
+   "frame": 196,
+   "slot": "FS",
+   "bone": "thigh_l",
+   "rate": 46,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "dead"
+  },
+  {
+   "frame": 206,
    "slot": "FS",
    "bone": "forearm_l",
    "rate": 41,
@@ -134,7 +134,7 @@
    "phase": "dead"
   },
   {
-   "frame": 280,
+   "frame": 206,
    "slot": "FS",
    "bone": "forearm_r",
    "rate": 44,
@@ -144,7 +144,7 @@
    "phase": "dead"
   },
   {
-   "frame": 281,
+   "frame": 207,
    "slot": "FS",
    "bone": "forearm_l",
    "rate": 39,
@@ -154,7 +154,7 @@
    "phase": "dead"
   },
   {
-   "frame": 281,
+   "frame": 207,
    "slot": "FS",
    "bone": "forearm_r",
    "rate": 43,
@@ -164,31 +164,11 @@
    "phase": "dead"
   },
   {
-   "frame": 309,
-   "slot": "X",
-   "bone": "thigh_l",
-   "rate": 68,
-   "clip": "getup_prone",
-   "overlay": "",
-   "anim": "tackled",
-   "phase": "dead"
-  },
-  {
-   "frame": 309,
-   "slot": "X",
-   "bone": "calf_l",
-   "rate": 64,
-   "clip": "getup_prone",
-   "overlay": "",
-   "anim": "tackled",
-   "phase": "dead"
-  },
-  {
-   "frame": 309,
-   "slot": "X",
-   "bone": "calf_r",
-   "rate": 59,
-   "clip": "getup_prone",
+   "frame": 236,
+   "slot": "SLOT",
+   "bone": "thigh_r",
+   "rate": 53,
+   "clip": "getup_supine",
    "overlay": "",
    "anim": "tackled",
    "phase": "dead"
