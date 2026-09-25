@@ -5,6 +5,7 @@ import { PLAYERS } from '@data/legacy/players';
 import type { Slot } from '@data/legacy/types';
 import { useApp } from '@/app/appStore';
 import { useDraft, SPIN_S, isComplete } from '@/app/draftStore';
+import { useHistory } from '@/app/history';
 import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
 import { autoAllowed, skipsAllowed, type Candidate, type Pair, type Roster } from '@/game/draft';
@@ -14,6 +15,7 @@ import { DRESS_END } from '@/render/locker/locker';
 import { useMenuNav } from '../nav';
 import { Hints, KeyCap } from '../components/controls';
 import { TraitList } from '../scouting/TraitBadge';
+import { LastGamePanel, ReportOverlay } from '../results/LastGame';
 import '../styles/draft.css';
 
 // The draft over the Contenders' locker room (M6). The reels spin on the
@@ -65,6 +67,10 @@ export function DraftScreen() {
   const [focus, setFocus] = useState(0);
   const [roomFocus, setRoomFocus] = useState(0);
   const search = useRef<HTMLInputElement>(null);
+  // The Locker Room entry: the last game on the board, its full box score a key away.
+  const lastGame = useHistory((s) => s.records[0] ?? null);
+  const [boxOpen, setBoxOpen] = useState(false);
+  const showLast = d.phase === 'viewing' && !!lastGame;
 
   // Start a draft when the screen opens without one (Play from the menu starts its own).
   useEffect(() => {
@@ -189,7 +195,7 @@ export function DraftScreen() {
     count: choosing ? list.length : 0,
     focus,
     setFocus,
-    enabled: phase !== 'walkout' && phase !== 'loading',
+    enabled: phase !== 'walkout' && phase !== 'loading' && !boxOpen,
     wrap: false,
     onConfirm: () => {
       if (choosing) doPick(cur);
@@ -215,6 +221,10 @@ export function DraftScreen() {
         Audio.uiSelect();
         useDraft.getState().skipEra();
       } else if (phase === 'intro' || phase === 'ready') useDraft.getState().setWallBeasts(d.wallBeasts === null ? 0 : null);
+      else if (showLast) {
+        Audio.uiSelect();
+        setBoxOpen(true);
+      }
     },
   });
   function flipBeasts(dir: 1 | -1) {
@@ -375,6 +385,9 @@ export function DraftScreen() {
         </aside>
       ) : null}
 
+      {showLast && !boxOpen ? <LastGamePanel rec={lastGame!} onOpen={() => setBoxOpen(true)} /> : null}
+      {showLast && boxOpen ? <ReportOverlay rec={lastGame!} onClose={() => setBoxOpen(false)} /> : null}
+
       {/* Enter (Spin, Draft, Walk out) and Auto-Draft show on the stage itself. */}
       <Hints
         items={
@@ -398,6 +411,7 @@ export function DraftScreen() {
                 : phase === 'complete' || phase === 'viewing'
                   ? [
                       { kb: '← →', pad: 'D-Pad', label: 'Lockers' },
+                      ...(showLast ? [{ kb: 'F', pad: 'X', label: 'Last game' }] : []),
                       { kb: 'Esc', pad: 'B', label: 'Back' },
                     ]
                   : []

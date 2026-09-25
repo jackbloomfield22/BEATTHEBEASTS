@@ -1,275 +1,153 @@
-import { useEffect, useMemo, useState } from 'react';
-import { SLOT_ORDER } from '@data/legacy/constants';
-import adapterFile from '@data/ratings/adapter.v1.json';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '@/app/appStore';
 import { useDraft } from '@/app/draftStore';
+import { useHistory } from '@/app/history';
+import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
-import { adaptDefenders, adaptOffense, unitAttrs, type AdapterFile, type AttrLookup } from '@/engine/legacy/adapter';
-import { gradeQB, gradeRec, gradeRush, scoreToGrade, gradeColor } from '@/engine/legacy/grades';
-import { buildMatchups } from '@/engine/legacy/sim';
-import type { Roster as LegacyRoster, RosterEntry } from '@/engine/legacy/types';
-import { game, useGame, type GameBox } from '@/game/game';
-import { matchGrade } from '@/game/match';
-import type { Catalog, Roster } from '@/game/draft';
-import type { RatedBeasts } from '@/game/beasts';
+import { game } from '@/game/game';
 import { useMenuNav } from '../nav';
 import { Hints, MenuItem } from '../components/controls';
+import { dateLabel, GameReport, modeLabel, ReportTabs, resultWord } from '../results/GameReport';
+import { useReportNav } from '../results/useReportNav';
 import '../styles/results.css';
 
-// The results screen (GDD §14): the final score counting up, win or loss
-// and the dominance grade, the box score with legacy's per-player grades
-// (yardage scaled to the game's length) and the big hits, the key matchups
-// (legacy buildMatchups on the new ratings through the adapter; the verdict
-// from how those targets actually went), the drive strip, and for the Daily
-// the perfect-team comparison.
+// The results screen (GDD §14). Straight from a game it plays out as a
+// broadcast would: the final score counts up, the result and the dominance
+// grade land, then the box score opens (Q/E through its tabs: the summary
+// with the play of the game and the drive chart, passing and rushing,
+// receiving, the line, the Beasts). From History it opens on the box score.
+// It draws a saved game record (src/app/history.ts), never the live match,
+// so any game can be opened again.
+
+/** When each beat lands (s): the count-up, the result and grade, the box score. */
+const BEATS = { grade: 1.5, box: 2.7 };
 
 export function ResultsScreen() {
   const go = useApp((s) => s.go);
-  const m = game.match;
-  const box = useGame((s) => s.box);
-  const d = useDraft();
-  const [shown, setShown] = useState({ u: 0, b: 0 });
+  const viewing = useHistory((s) => s.viewing);
+  const from = useHistory((s) => s.from);
+  const rec = useHistory((s) => (viewing ? s.records.find((r) => r.id === viewing) : s.records[0]) ?? null);
+  const fresh = from === 'game' && !urlFlags.shot;
+  const [beat, setBeat] = useState(fresh ? 0 : 2);
+  const [shown, setShown] = useState(fresh ? { u: 0, b: 0 } : { u: rec?.score.user ?? 0, b: rec?.score.beasts ?? 0 });
+  const [tab, setTab] = useState(0);
   const [focus, setFocus] = useState(0);
+  const body = useRef<HTMLDivElement>(null);
+
+  // The count-up, then the grade, then the box score.
   useEffect(() => {
-    if (!m) return;
+    if (!rec || beat >= 2) return;
     let raf = 0;
     const t0 = performance.now();
     const tick = (t: number) => {
-      const k = Math.min(1, (t - t0) / 1400);
+      const s = (t - t0) / 1000;
+      const k = Math.min(1, s / 1.4);
       const e = 1 - Math.pow(1 - k, 3);
-      setShown({ u: Math.round(m.score.user * e), b: Math.round(m.score.beasts * e) });
-      if (k < 1) raf = requestAnimationFrame(tick);
+      setShown({ u: Math.round(rec.score.user * e), b: Math.round(rec.score.beasts * e) });
+      if (s >= BEATS.box) return setBeat(2);
+      if (s >= BEATS.grade) setBeat((b) => Math.max(b, 1));
+      raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [m]);
-  const matchups = useMemo(() => (d.cat && d.draft && d.beasts ? keyMatchups(d.cat, d.draft.roster, d.beasts, box) : []), [d.cat, d.draft, d.beasts, box]);
-  const items = [
-    { label: 'Locker Room', run: () => void useDraft.getState().view().then(() => go('draft')) },
-    { label: 'Draft again', run: () => void useDraft.getState().begin(d.mode === 'daily' ? 'classic' : d.mode).then(() => go('draft')) },
-    { label: 'Main menu', run: () => go('main') },
-  ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rec?.id]);
+  useEffect(() => {
+    if (beat === 1) Audio.uiSelect();
+  }, [beat]);
+
+  const skipReveal = () => {
+    if (!rec) return;
+    setShown({ u: rec.score.user, b: rec.score.beasts });
+    setBeat(2);
+  };
+  const leaveGame = () => {
+    if (from === 'game') game.leave();
+  };
+  const toHistory = () => {
+    useHistory.setState({ viewing: null });
+    go('history');
+  };
+  const items =
+    from === 'game'
+      ? [
+          { label: 'Locker Room', run: () => void useDraft.getState().view().then((ok) => go(ok ? 'draft' : 'main')) },
+          { label: 'Draft again', run: () => void useDraft.getState().begin(useDraft.getState().mode === 'daily' ? 'classic' : useDraft.getState().mode).then(() => go('draft')) },
+          { label: 'Main menu', run: () => go('main') },
+        ]
+      : [
+          { label: 'Back to History', run: toHistory },
+          { label: 'Main menu', run: () => go('main') },
+        ];
   const pick = (i: number) => {
+    if (beat < 2) return skipReveal();
     Audio.uiSelect();
-    game.leave();
+    leaveGame();
     items[i]!.run();
   };
-  useMenuNav({ count: items.length, focus, setFocus, onConfirm: pick });
-  if (!m) return <div className="practice-loading">No game.</div>;
-  const margin = m.score.user - m.score.beasts;
-  const won = margin > 0;
-  const g = matchGrade(margin, m.cfg.drives);
-  const scale = 10 / m.cfg.drives; // legacy grades read a 10-drive game's yardage
-  const perfect = d.daily?.perfect ?? null;
+  // A press while the result is still landing only skips ahead: it never picks an action unseen.
+  useMenuNav({ count: items.length, focus, setFocus, columns: items.length, onConfirm: pick, onBack: from === 'game' ? (beat < 2 ? skipReveal : undefined) : toHistory });
+  useReportNav({ enabled: beat >= 2, tab, setTab, scroll: body });
+
+  if (!rec)
+    return (
+      <div className="menu-screen results">
+        <div className="menu-scrim strong" />
+        <div className="practice-loading">No game to show.</div>
+      </div>
+    );
+  const res = resultWord(rec);
   return (
-    <div className="menu-screen results">
+    <div className={`menu-screen results beat-${beat}`} onClick={beat < 2 ? skipReveal : undefined}>
       <div className="menu-scrim strong" />
       <header className="res-head">
-        <div className={`res-banner ${won ? 'win' : 'loss'}`}>{won ? 'Victory' : 'Defeat'}</div>
+        <div className={`res-banner ${res.tone}`}>{res.word}</div>
         <div className="res-score">
           <span className="us">Contenders {shown.u}</span>
           <span className="dash">–</span>
           <span className="them">{shown.b} Beasts</span>
         </div>
+        <div className="res-meta">
+          <span>{rec.clock}</span>
+          <span>
+            {modeLabel(rec.mode)} · {rec.drives} rounds
+          </span>
+          {from !== 'game' ? <span>{dateLabel(rec.finishedAt)}</span> : null}
+        </div>
         <div className="res-grade">
-          <span className="grade">{g.grade}</span>
-          <span className="label">{g.label}</span>
-          {m.ot ? <span className="ot">{m.ot > 1 ? `${m.ot} overtimes` : 'Overtime'}</span> : null}
+          {rec.grade ? (
+            <>
+              <span className="grade">{rec.grade.grade}</span>
+              <span className="label">{rec.grade.label}</span>
+            </>
+          ) : (
+            <span className="label">No grade: the game wasn't finished</span>
+          )}
+          {rec.ot ? <span className="ot">{rec.ot > 1 ? `${rec.ot} overtimes` : 'Overtime'}</span> : null}
         </div>
       </header>
-      <div className="res-body">
-        <section className="res-box">
-          <h3>Box score</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Passing</th>
-                <th>C/A</th>
-                <th>Yds</th>
-                <th>TD</th>
-                <th>Int</th>
-                <th>Sk</th>
-                <th>Grade</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{box.pass.name}</td>
-                <td>
-                  {box.pass.cmp}/{box.pass.att}
-                </td>
-                <td>{Math.round(box.pass.yds)}</td>
-                <td>{box.pass.td}</td>
-                <td>{box.pass.int}</td>
-                <td>{box.pass.sacks}</td>
-                <GradeCell s={gradeQB({ ...box.pass, yds: box.pass.yds * scale })} />
-              </tr>
-            </tbody>
-            <thead>
-              <tr>
-                <th>Rushing</th>
-                <th>Car</th>
-                <th>Yds</th>
-                <th>TD</th>
-                <th>Long</th>
-                <th />
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {Object.values(box.rush).map((r) => (
-                <tr key={r.name}>
-                  <td>{r.name}</td>
-                  <td>{r.car}</td>
-                  <td>{Math.round(r.yds)}</td>
-                  <td>{r.td}</td>
-                  <td>{Math.round(r.long)}</td>
-                  <td />
-                  <GradeCell s={gradeRush({ ...r, yds: r.yds * scale })} />
-                </tr>
-              ))}
-            </tbody>
-            <thead>
-              <tr>
-                <th>Receiving</th>
-                <th>Rec/Tgt</th>
-                <th>Yds</th>
-                <th>TD</th>
-                <th>Long</th>
-                <th />
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {Object.values(box.rec).map((r) => (
-                <tr key={r.name}>
-                  <td>{r.name}</td>
-                  <td>
-                    {r.rec}/{r.tgt}
-                  </td>
-                  <td>{Math.round(r.yds)}</td>
-                  <td>{r.td}</td>
-                  <td>{Math.round(r.long)}</td>
-                  <td />
-                  <GradeCell s={gradeRec({ ...r, yds: r.yds * scale })} />
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="res-team">
-            <span>{box.plays} plays</span>
-            <span>{Math.round(box.yards)} yd</span>
-            <span>{box.firstDowns} first downs</span>
-            <span>{box.sacks} sacks taken</span>
-            <span>{box.turnovers} turnovers</span>
-            <span className="hits">{box.bigHits} big hits taken</span>
-          </div>
-        </section>
-        <section className="res-side">
-          <h3>Key matchups</h3>
-          <ul className="res-matchups">
-            {matchups.map((x) => (
-              <li key={x.rec}>
-                <span className="slot">{x.slot}</span>
-                <span className="who">
-                  {x.rec} <em>vs</em> {x.def}
-                </span>
-                <span className="line">{x.line}</span>
-                <span className={`verdict v-${x.verdict.split(' ')[0]!.toLowerCase()}`}>{x.verdict}</span>
-              </li>
+      {beat >= 2 ? (
+        <>
+          <ReportTabs tab={tab} onTab={setTab} />
+          <GameReport rec={rec} tab={tab} ref={body} />
+          <nav className="res-actions">
+            {items.map((it, i) => (
+              <MenuItem key={it.label} size="md" label={it.label} focused={focus === i} onHover={() => setFocus(i)} onClick={() => pick(i)} />
             ))}
-          </ul>
-          <h3>Drives</h3>
-          <ol className="res-drives">
-            {m.userDrives.map((u, i) => (
-              <li key={i}>
-                <span className="b">{m.beastsDrives[i]?.result ?? ''}</span>
-                <span className={`u r-${u.result}`}>{u.result === 'TD' ? `TD ${u.points > 6 ? `+${u.points - 6}` : ''}` : u.result}</span>
-              </li>
-            ))}
-          </ol>
-          {perfect ? (
-            <>
-              <h3>The perfect team</h3>
-              <ul className="res-perfect">
-                {perfect.map((p) => {
-                  const mine = d.draft?.roster[p.slot];
-                  const same = mine && p.pick && mine.id === p.pick.id;
-                  return (
-                    <li key={p.slot} className={same ? 'same' : ''}>
-                      <span className="slot">{p.slot}</span>
-                      <span>{p.pick ? p.pick.name : '—'}</span>
-                      <span className="you">{same ? '✓ you' : (mine?.name ?? '')}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          ) : null}
-        </section>
-      </div>
-      <nav className="res-actions">
-        {items.map((it, i) => (
-          <MenuItem key={it.label} size="md" label={it.label} focused={focus === i} onHover={() => setFocus(i)} onClick={() => pick(i)} />
-        ))}
-      </nav>
-      <Hints items={[{ kb: '↑↓', pad: 'D-Pad', label: 'Choose' }, { kb: 'Enter', pad: 'A', label: 'Select' }]} />
+          </nav>
+          <Hints
+            items={[
+              { kb: 'Q / E', pad: 'LB / RB', label: 'Tabs' },
+              { kb: '↑↓', pad: 'D-Pad', label: 'Scroll' },
+              { kb: '← →', pad: 'D-Pad', label: 'Choose' },
+              { kb: 'Enter', pad: 'A', label: 'Select' },
+              ...(from !== 'game' ? [{ kb: 'Esc', pad: 'B', label: 'Back' }] : []),
+            ]}
+          />
+        </>
+      ) : (
+        <Hints items={[{ kb: 'Enter', pad: 'A', label: 'Skip' }]} />
+      )}
     </div>
   );
-}
-
-function GradeCell({ s }: { s: number }) {
-  const g = scoreToGrade(s);
-  return (
-    <td className="grade-cell" style={{ color: gradeColor(g) }}>
-      {g}
-    </td>
-  );
-}
-
-interface Matchup {
-  slot: string;
-  rec: string;
-  def: string;
-  line: string;
-  verdict: 'REC WON' | 'DEF WON' | 'EVEN';
-}
-
-/**
- * Legacy buildMatchups on the new ratings (the adapter), the pairings
- * legacy draws (WR1 on the top corner and so on). The verdict is how those
- * targets went in this game when that defender was nearest the ball, or by
- * yards per target overall: 8+ the receiver won, under 4 the defense won.
- */
-function keyMatchups(cat: Catalog, roster: Roster, beasts: RatedBeasts, box: GameBox): Matchup[] {
-  if (SLOT_ORDER.some((k) => !roster[k])) return [];
-  const attrs = new Map<string, Record<string, number>>();
-  const legacy = {} as Record<string, RosterEntry>;
-  for (const k of SLOT_ORDER) {
-    const p = roster[k]!;
-    const a = p.linemen ? unitAttrs(p.id, (id) => cat.entry.get(id)?.attrs) : cat.entry.get(p.id)?.attrs;
-    if (a) attrs.set(`${p.name}|${p.team}|${p.decade}`, a);
-    legacy[k] = { n: p.name, t: p.team, d: p.decade, p: p.pos, imp: p.imp, s: {} };
-  }
-  for (const b of beasts.beasts) {
-    const a = cat.entry.get(b.id)?.attrs;
-    if (a) attrs.set(`${b.n}|${b.t}|${b.d}`, a);
-  }
-  const attrsOf: AttrLookup = (e) => attrs.get(`${e.n}|${e.t}|${e.d}`);
-  try {
-    const off = adaptOffense(legacy as unknown as LegacyRoster, attrsOf, adapterFile as unknown as AdapterFile);
-    const defs = adaptDefenders(beasts.beasts, attrsOf, adapterFile as unknown as AdapterFile);
-    const M = buildMatchups(off, defs);
-    return M.cov.map((c) => {
-      const rec = box.rec[c.rec.name];
-      const vs = box.covered[c.rec.name]?.[c.defender.n];
-      const tgt = vs?.tgt ?? rec?.tgt ?? 0;
-      const yds = vs?.yds ?? rec?.yds ?? 0;
-      const ypt = tgt ? yds / tgt : null;
-      const verdict: Matchup['verdict'] = ypt === null ? (c.rec.sep + c.rec.big) / 2 - c.defender.cover > 4 ? 'REC WON' : (c.rec.sep + c.rec.big) / 2 - c.defender.cover < -4 ? 'DEF WON' : 'EVEN' : ypt >= 8 ? 'REC WON' : ypt < 4 ? 'DEF WON' : 'EVEN';
-      return { slot: c.slot, rec: c.rec.name, def: c.defender.n, line: tgt ? `${tgt} tgt, ${Math.round(yds)} yd` : 'not targeted', verdict };
-    });
-  } catch {
-    return [];
-  }
 }

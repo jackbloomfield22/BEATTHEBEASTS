@@ -20,11 +20,11 @@ const ALL_ITEMS: Item[] = [
   { id: 'play', label: 'Play', blurb: 'Draft an all-time offense in the Contenders\' locker room through the slot machine, then take the field against the Beasts. Classic shows every number; Film Room hides them (← → to switch).', shot: 'menu' },
   { id: 'daily', label: 'Daily Challenge', blurb: 'Same Beasts, same draft sequence for everyone today. Film Room rules, no skips, no Auto-Draft. Your final margin is your score.', shot: 'daily' },
   { id: 'quick', label: 'Quick Play', blurb: 'Auto-draft, a look at the lockers, and straight out of the tunnel to kickoff.', shot: 'menu' },
-  { id: 'locker', label: 'Locker Room', blurb: 'Your last roster, dressed and waiting. Walk the row, or walk out and play them again.', shot: 'menu' },
+  { id: 'locker', label: 'Locker Room', blurb: 'Your last roster, dressed and waiting, with your last game on the board: the score, the grade, the box score and the drive chart. Walk the row, or walk out and play them again.', shot: 'menu' },
   { id: 'practice', label: 'Practice Field', blurb: 'Free play against the Beasts: pick a play, a spot and a coverage, and run it as often as you like. Drills with medals arrive with the full game build.', shot: 'practice', screen: 'practice' },
   { id: 'howto', label: 'How to Play', blurb: 'Controls and the rules of the game.', shot: 'history', screen: 'howto' },
   { id: 'settings', label: 'Settings', blurb: 'Display, graphics, controls, audio, gameplay and accessibility.', shot: 'settings', screen: 'settings' },
-  { id: 'history', label: 'History', blurb: 'Your past games and dailies, with share cards.', shot: 'history', arrives: 'the full game build' },
+  { id: 'history', label: 'History', blurb: 'Every game you have played against the Beasts: the final score, the grade, the full box score and the drive chart. Share cards arrive with the full game build.', shot: 'history', screen: 'history' },
 ];
 
 function useDailyPreview() {
