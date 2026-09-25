@@ -268,7 +268,8 @@ export class Room {
     for (const e of this.emissive) e.mat.color.copy(e.base).multiplyScalar(e.kind === 'ceiling' ? m.ceiling : e.kind === 'accent' ? m.accent : 2.5);
     for (const e of this.envMats) e.mat.color.copy(e.base).multiplyScalar(e.kind === 'ceiling' ? m.ceiling / 2.2 : e.kind === 'accent' ? m.accent / 2.2 : m.stall / 16);
     for (const l of this.lockers) {
-      l.levels = { stall: m.stall, under: m.under, emptyStall: 0, plate: m.plate, wash: m.wash, pool: m.pool };
+      // A bare stall keeps a low lamp so its empty hanger and dark shelf still read.
+      l.levels = { stall: m.stall, under: m.under, emptyStall: m.stall * 0.12, plate: m.plate, wash: m.wash, pool: m.pool };
       l.applyLights();
     }
     const prev = this.scene.environment;

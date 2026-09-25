@@ -155,8 +155,8 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
       if (key === wallKey.current) return;
       wallKey.current = key;
       const decades = DECADES.filter((x) => x !== '1970s' || !Object.values(d.roster).some((p) => p?.decade === '1970s') || d.pair!.d === '1970s');
-      room.wall.set({ kind: 'slot', teams: TEAMS, decades: [...decades], final: d.pair, startedAt: room.wall.now, duration: st.phase === 'choosing' && urlFlags.shot ? 0 : 2.4, round });
-      if (st.phase === 'choosing' && urlFlags.shot) room.wall.now += 3;
+      // Screenshots show the reels already locked.
+      room.wall.set({ kind: 'slot', teams: TEAMS, decades: [...decades], final: d.pair, startedAt: room.wall.now - (urlFlags.shot !== null && !urlFlags.video ? 10 : 0), duration: 2.4, round });
       return;
     }
     if (st.phase === 'dressing' && st.lastPick) {

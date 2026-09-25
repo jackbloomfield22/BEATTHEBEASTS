@@ -380,6 +380,7 @@ export class Locker {
   applyLights(under = this.occupant ? 1 : 0): void {
     const stall = lockerLightsWorld[this.lightIdx]!;
     const on = this.occupant ? this.lit : 0;
+    // Bare: the empty stall's low lamp (levels.emptyStall).
     stall.intensity = this.levels.stall * on + this.levels.emptyStall * (1 - on);
     this.strip.color.copy(WARM).multiplyScalar(0.2 + 5 * on);
     const ul = lockerLightsWorld[9 + this.lightIdx]!;
