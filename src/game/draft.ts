@@ -337,7 +337,7 @@ export function draftPick(cat: Catalog, s: DraftState, c: Candidate): DraftPick 
 // ---- Auto-Draft ----------------------------------------------------------------------
 
 /** The best candidate a pair offers for a slot (by OVR), skipping people already used. */
-function bestFor(cat: Catalog, pair: Pair, slot: Slot, people: Set<string>): Omit<Candidate, 'slot'> | null {
+export function bestFor(cat: Catalog, pair: Pair, slot: Slot, people: Set<string>): Omit<Candidate, 'slot'> | null {
   const pos = posOfSlot(slot);
   let best: Omit<Candidate, 'slot'> | null = null;
   if (pos === 'OL') {
