@@ -81,7 +81,8 @@ test('game screens', async ({ page }) => {
       await page.waitForTimeout(1250);
       await page.keyboard.up('Space');
       await page.waitForFunction(() => (window as unknown as W).__btbGameUi.getState().stage !== 'kick', null, { timeout: 120_000 });
-    } else if (st === 'meanwhile' || st === 'fourth' || st === 'try') await page.keyboard.press('Enter');
+    } else if (st === 'fourth' || st === 'try') await page.keyboard.press('Enter');
+    // (The Meanwhile cut ends itself under ?shot; an Enter here would land on the play call.)
     else if (st === 'call') {
       await page.keyboard.press('Enter');
       await snap();

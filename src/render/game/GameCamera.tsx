@@ -47,8 +47,9 @@ class Spring {
 }
 
 function targetPose(mode: Mode): Pose | null {
-  // A field goal or PAT: from behind the kicker, the posts square in frame.
-  if (kickView.active) return { ex: kickView.spotX - 11, ey: 0, eh: 2.6, lx: 110, ly: 0, lh: 3.2, fov: 34 };
+  // A field goal or PAT: from behind and above the kicker, the protection and
+  // the block unit across the bottom of the frame, the posts square above them.
+  if (kickView.active) return { ex: kickView.spotX - 12, ey: 0, eh: 3.6, lx: 110, ly: 0, lh: 2.4, fov: 36 };
   const r = practice.runner;
   if (!r) {
     // Before the first snap (the play call): the field from behind the line.

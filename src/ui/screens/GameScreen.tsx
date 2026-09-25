@@ -3,7 +3,7 @@ import { useApp } from '@/app/appStore';
 import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
 import { game, useGame } from '@/game/game';
-import { canVictoryFormation, clockLabel, fgMakePct, type Match } from '@/game/match';
+import { canVictoryFormation, clockLabel, fgDistance, fgMakePct, type Match } from '@/game/match';
 import { reasonFor } from '@/game/coordinator';
 import { practice, usePractice } from '@/game/practice';
 import { downLabel, spotLabel } from '@/game/situation';
@@ -282,12 +282,12 @@ function GameResult() {
 function FourthCard() {
   useGame((s) => s.v);
   const m = game.match!;
-  const dist = 100 - m.sit.los + 17;
+  const dist = fgDistance(m.sit.los);
   const pct = fgMakePct(m, dist);
   const items = [
     { id: 'go', label: `Go for it (4th & ${Math.max(1, Math.round(m.sit.toGo))})`, sub: '' },
     { id: 'punt', label: 'Punt', sub: 'About 41 yards net' },
-    ...(pct > 0 ? [{ id: 'fg', label: `Field goal: ${dist} yd`, sub: `${Math.round(pct * 100)}% with this leg and wind` }] : []),
+    ...(pct > 0 ? [{ id: 'fg', label: `Field goal: ${Math.round(dist)} yd`, sub: `${Math.round(pct * 100)}% with this leg and wind` }] : []),
   ] as { id: 'go' | 'punt' | 'fg'; label: string; sub: string }[];
   const [focus, setFocus] = useState(items.length > 2 && m.sit.los >= 60 ? 2 : m.sit.toGo <= 1 && m.sit.los >= 45 ? 0 : 1);
   const pick = (i: number) => {
@@ -387,14 +387,13 @@ function KickPanel() {
     let t0 = 0;
     let p = 0;
     let a = 0;
-    const tick = (t: number) => {
-      const held = Input.isHeld('menu.confirm');
-      if (held && !charging.current && !done.current) {
-        charging.current = true;
-        t0 = t;
-      }
+    // The press and the release are timed from the input events, not the
+    // frames, so a long frame can't swallow a quick hold.
+    const tick = () => {
       if (charging.current) {
-        p = Math.min(1.12, (t - t0) / 1300);
+        const held = Input.isHeld('menu.confirm');
+        const end = held ? performance.now() : Input.releasedAt('menu.confirm');
+        p = Math.min(1.12, Math.max(0, end - t0) / 1300);
         setPower(p);
         if (!held) {
           charging.current = false;
@@ -404,7 +403,14 @@ function KickPanel() {
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    const off = Input.onAction((id) => {
+    const off = Input.onAction((id, info) => {
+      if (id === 'menu.confirm') {
+        if (!info.repeat && !charging.current && !done.current) {
+          charging.current = true;
+          t0 = info.time;
+        }
+        return;
+      }
       if (id === 'menu.left') a = Math.min(AIM_MAX, a + 0.01);
       else if (id === 'menu.right') a = Math.max(-AIM_MAX, a - 0.01);
       else return;
@@ -439,7 +445,7 @@ function KickPanel() {
     >
       <div className="kick-info">
         <div className="result-kicker">{k.kind === 'PAT' ? 'Extra point' : 'Field goal'}</div>
-        <h2 className="result-head">{k.distance} yards</h2>
+        <h2 className="result-head">{Math.round(k.distance)} yards</h2>
         <div className="kick-pct">{Math.round(k.pct * 100)}% for a clean strike</div>
       </div>
       {!res || !reveal ? (
