@@ -12,21 +12,24 @@ import type { GearColor, Variety } from './variety';
 // from the rest pose (`position` before skinning), so it follows the body
 // through every animation without textures.
 
-// Part ids: tools/blender/lib/gear.py PARTS.
+// Part ids: tools/blender/lib/gear.py PARTS. The official (M6) wears the
+// shirt and the cap; his pants, shoes and bare skin are pants, cleat, skin.
 export const PART = {
   skin: 0, glove: 1, sock: 2, cleat: 3, jersey: 4, pants: 5, helmet: 6,
   maskSkill: 7, maskCage: 8, maskQb: 9, maskLow: 10, visor: 11, strap: 12, towel: 13, collar: 14,
+  shirt: 15, cap: 16,
 } as const;
 const PART_SCALE = 16; // must match tools/blender/lib/gear.py PART_SCALE
-const N = 15;
+const N = 17;
 const MASKS = [PART.maskSkill, PART.maskCage, PART.maskQb, PART.maskLow];
 
 // Finish per part: roughness, metalness. Skin ~0.6 (matte, varied per
 // fragment in the shader); fabric rough; helmet shell a glossy clear-coated
 // plastic (~0.2); facemasks powder-coated steel; the visor a smoked,
-// polished polycarbonate; the chin strap a satin plastic cup.
-const ROUGH = [0.62, 0.62, 0.85, 0.45, 0.72, 0.68, 0.2, 0.35, 0.35, 0.35, 0.35, 0.06, 0.4, 0.92, 0.75];
-const METAL = [0, 0, 0, 0, 0, 0, 0.05, 0.55, 0.55, 0.55, 0.55, 0.25, 0, 0, 0];
+// polished polycarbonate; the chin strap a satin plastic cup; the
+// official's shirt a matte knit and his cap cotton twill.
+const ROUGH = [0.62, 0.62, 0.85, 0.45, 0.72, 0.68, 0.2, 0.35, 0.35, 0.35, 0.35, 0.06, 0.4, 0.92, 0.75, 0.8, 0.86];
+const METAL = [0, 0, 0, 0, 0, 0, 0.05, 0.55, 0.55, 0.55, 0.55, 0.25, 0, 0, 0, 0, 0];
 const GEAR_COLORS: Record<Exclude<GearColor, 'kit' | 'trim'>, string> = { black: '#121314', white: '#ecedef' };
 
 // Lettering on the jersey (sizes from the NFL uniform rules: back numbers
@@ -41,6 +44,11 @@ const NUMBER_CONDENSE = 0.84;
 const NAME = { cap: 0.066, y: 1.47, maxWidth: 0.34 };
 // Sleeve ("TV") numbers on the outside of each sleeve, 4 in tall.
 const SLEEVE_NUMBER = { cap: 0.085, t: 0.3 };
+// The official's shirt: vertical black-and-white stripes, each 2 in wide
+// (the pro officials' shirt), a black crew collar and sleeve hems; the
+// sleeve ends at 0.52 of the upper arm (tools/blender/lib/gear.py).
+const OFFICIAL_STRIPE = 0.0508;
+const OFFICIAL_SLEEVE_END = 0.52;
 /** Outline width, m. */
 const OUTLINE = 0.009;
 /** Letter spacing on the nameplate, em. */
@@ -272,6 +280,31 @@ vec3 playerAlbedo(int part, vec3 p, out float stripe, out float rough) {
     c *= 1.0 + fabricHeight(p, fp) * 28.0;
     c = lettering(c, p);
     c = sleeveNumber(c, p);
+  } else if (part == ${PART.shirt}) {
+    // Stripes run down the body and down each sleeve: the arc length around
+    // the torso's vertical axis (radius ~0.165 m) or the arm's axis
+    // (~0.068 m), in stripe widths; antialiased from the pixel footprint.
+    float u;
+    float st = sleeveT(p);
+    if (abs(p.x) > 0.21 && st > 0.08) {
+      vec3 d = armDir(p);
+      vec3 sh = vec3(sign(p.x) * 0.195, 1.505, -0.015);
+      vec3 r = p - sh - d * dot(p - sh, d);
+      vec3 lat = normalize(vec3(sign(p.x) * 0.7071, 0.7071, 0.0));
+      u = atan(r.z, dot(r, lat)) * 0.068;
+    } else {
+      // (0.1617 m = 5 stripe pairs per half turn: the stripes meet at the back seam.)
+      u = atan(p.x, p.z + 0.01) * 0.1617;
+    }
+    float w = u / ${(2 * OFFICIAL_STRIPE).toFixed(4)};
+    float tri = abs(fract(w) - 0.5) * 2.0;
+    // The pixel footprint from the rest position (w itself jumps at the back seam).
+    float aa = max(length(fwidth(p)) / ${(2 * OFFICIAL_STRIPE).toFixed(4)} * 2.0, 1e-3);
+    c = mix(c, uTrim, smoothstep(0.5 - aa, 0.5 + aa, tri));
+    // Black crew collar and sleeve hems.
+    float collar = smoothstep(1.572, 1.58, p.y) * (1.0 - smoothstep(0.108, 0.114, length(p.xz - vec2(0.0, -0.02))));
+    float hem = step(0.21, abs(p.x)) * smoothstep(${(OFFICIAL_SLEEVE_END - 0.07).toFixed(3)}, ${(OFFICIAL_SLEEVE_END - 0.065).toFixed(3)}, st);
+    c = mix(c, uTrim, max(collar, hem));
   } else if (part == ${PART.pants}) {
     float side = step(0.12, abs(p.x)) * (1.0 - smoothstep(0.011, 0.015, abs(p.z + 0.005))) * step(p.y, 1.05);
     c = mix(c, uPantsStripe, side);
@@ -423,8 +456,9 @@ export function setPlayerLook(mat: THREE.MeshStandardMaterial, { kit, skin, numb
   const v = variety;
   const glove = v ? gearColor(v.gloveColor, kit, kit.gloves) : kit.gloves;
   // By part id: skin, glove, sock, cleat, jersey, pants, helmet, the four
-  // facemasks, visor (smoked), chin strap, towel, collar (trim; the shader).
-  const byPart = [skin, glove, kit.socks, kit.cleats, kit.jersey, kit.pants, kit.helmet, kit.facemask, kit.facemask, kit.facemask, kit.facemask, '#16181c', '#e9e9e6', '#f2f2ef', kit.trim];
+  // facemasks, visor (smoked), chin strap, towel, collar (trim; the shader),
+  // the official's shirt (its stripes are the trim) and cap (the helmet color).
+  const byPart = [skin, glove, kit.socks, kit.cleats, kit.jersey, kit.pants, kit.helmet, kit.facemask, kit.facemask, kit.facemask, kit.facemask, '#16181c', '#e9e9e6', '#f2f2ef', kit.trim, kit.jersey, kit.helmet];
   byPart.forEach((hex, i) => u.uPartColor.value[i]!.copy(linear(hex)));
   const show = u.uPartShow.value;
   show.fill(1);

@@ -17,6 +17,23 @@
       "vertices": 2182
     }
   ],
+  "official": [
+    {
+      "lod": 0,
+      "triangles": 16639,
+      "vertices": 9001
+    },
+    {
+      "lod": 1,
+      "triangles": 7149,
+      "vertices": 4131
+    },
+    {
+      "lod": 2,
+      "triangles": 2619,
+      "vertices": 1655
+    }
+  ],
   "bones": 52,
   "runtimeBones": [
     "root",
@@ -70,7 +87,9 @@
     "visor": 11,
     "strap": 12,
     "towel": 13,
-    "collar": 14
+    "collar": 14,
+    "shirt": 15,
+    "cap": 16
   },
   "partScale": 16.0,
   "shapes": [
@@ -83,5 +102,5 @@
     "calves",
     "arms"
   ],
-  "bytes": 2017168
+  "bytes": 3462724
 }

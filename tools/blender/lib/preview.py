@@ -24,16 +24,17 @@ PART_COLORS = [
     (0.30, 0.02, 0.04), (0.75, 0.75, 0.78), (0.02, 0.02, 0.025), (0.6, 0.6, 0.62),
     (0.6, 0.6, 0.62), (0.6, 0.6, 0.62), (0.6, 0.6, 0.62), (0.03, 0.03, 0.04),
     (0.85, 0.85, 0.85), (0.9, 0.9, 0.88), (0.02, 0.02, 0.02),
+    (0.85, 0.85, 0.85), (0.02, 0.02, 0.025),  # the official's shirt (stripes are the runtime's) and cap
 ]
 # Parts a preview player doesn't wear (one mask style, no visor or towel).
 HIDDEN = {8, 9, 11, 13}
 
 
-def import_player(rig: bpy.types.Object, lod: int = 0) -> bpy.types.Object:
+def import_player(rig: bpy.types.Object, lod: int = 0, variant: str = "player") -> bpy.types.Object:
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=PLAYER)
     new = [o for o in bpy.data.objects if o not in before]
-    mesh = next(o for o in new if o.type == "MESH" and o.name.startswith(f"player_lod{lod}"))
+    mesh = next(o for o in new if o.type == "MESH" and o.name.startswith(f"{variant}_lod{lod}"))
     for o in new:
         if o is not mesh:
             bpy.data.objects.remove(o, do_unlink=True)
@@ -121,6 +122,10 @@ VIEWS = {
     "side": ((3.6, -0.25, 0.85), (0, -0.25, 0.72), 55),
     "front": ((0.9, -3.6, 1.0), (0, -0.25, 0.8), 55),
     "broadcast": ((2.6, -2.6, 3.0), (0, -0.2, 0.7), 55),
+    # Three-quarter front at chest height, close: arms and hands read (M6 line play).
+    "three": ((2.3, -2.6, 1.25), (0, -0.2, 0.8), 50),
+    "head": ((0.55, -1.3, 1.78), (0, 0, 1.62), 50),
+    "head_back": ((-0.5, 1.2, 1.85), (0, 0, 1.55), 50),
 }
 
 

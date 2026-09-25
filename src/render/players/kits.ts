@@ -128,3 +128,29 @@ export const KITS: Record<string, Kit> = {
 };
 
 export const CONTENDER_KITS = ['blackoutLime', 'arctic', 'royal', 'ember', 'heritage'] as const;
+
+// The officials (M6): a black-and-white vertically striped short-sleeve
+// shirt (jersey = the white, trim = the black stripes and collar), black
+// long pants, black shoes and a black cap; the referee's cap is white. No
+// numbers, names or marks (officialLook sets none). Only the fields the
+// official's parts read matter; the rest match so nothing stands out.
+export const OFFICIAL_KIT: Kit = {
+  id: 'official',
+  label: 'Official',
+  helmet: '#141416', // the cap
+  helmetStripe: '#141416',
+  stripeGlow: 0,
+  facemask: '#141416',
+  jersey: '#f1f1ee',
+  trim: '#111214',
+  number: '#111214',
+  numberOutline: '#111214',
+  pants: '#17181a',
+  pantsStripe: '#17181a',
+  socks: '#111214',
+  gloves: '#111214',
+  cleats: '#0e0e0f',
+};
+
+/** The referee's white cap; the rest of the crew wear black. */
+export const REFEREE_KIT: Kit = { ...OFFICIAL_KIT, id: 'referee', label: 'Referee', helmet: '#f1f1ee', helmetStripe: '#f1f1ee' };

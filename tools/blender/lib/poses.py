@@ -79,6 +79,10 @@ class Pose:
     # Where the elbows point under hand IK: side -> world point (default:
     # behind and out, the rig's calibration).
     elbow: dict = field(default_factory=dict)
+    # The facing (deg, + left) of the plane a hip-and-knee shaped swing
+    # (Foot.fk) moves in: 0 runs toward -Y; a body turned by rotate_pose
+    # (actions_m6.py) swings its legs along its own facing.
+    fk_dir: float = 0.0
 
 
 def _foot_rot(s: str, f: Foot) -> Quaternion:
@@ -105,12 +109,14 @@ def place_foot(c: Controls, s: str, f: Foot) -> None:
     c.foot[s].rotation_quaternion = _foot_rot(s, f) @ c.foot_rest[s]
 
 
-def _fk_ankle(rig, s: str, alpha: float, kappa: float) -> Vector:
+def _fk_ankle(rig, s: str, alpha: float, kappa: float, facing: float = 0.0) -> Vector:
     """Ankle position for a thigh flexed `alpha` from vertical and a knee
-    flexed `kappa`, from the posed hip, in the body's sagittal plane (-Y forward)."""
+    flexed `kappa`, from the posed hip, in the body's sagittal plane (-Y
+    forward, turned `facing` degrees to the left)."""
     hip = rig.matrix_world @ rig.pose.bones[f"thigh_{s}"].head
     a, k = math.radians(alpha), math.radians(alpha - kappa)
-    fwd, up = Vector((0, -1, 0)), Vector((0, 0, 1))
+    f = math.radians(facing)
+    fwd, up = Vector((math.sin(f), -math.cos(f), 0)), Vector((0, 0, 1))
     return hip + (fwd * math.sin(a) - up * math.cos(a)) * THIGH_LEN + (fwd * math.sin(k) - up * math.cos(k)) * SHANK_LEN
 
 
@@ -213,7 +219,7 @@ def apply_pose(rig, c: Controls, p: Pose) -> None:
         f = feet[s]
         if f.fk:
             alpha, kappa, w = f.fk
-            ankle = _fk_ankle(rig, s, alpha, kappa)
+            ankle = _fk_ankle(rig, s, alpha, kappa, p.fk_dir)
             base = foot_ankle(s, f)
             c.foot[s].location = base.lerp(ankle, w)
             c.foot[s].rotation_quaternion = _foot_rot(s, f) @ c.foot_rest[s]

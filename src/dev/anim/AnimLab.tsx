@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { SKIN_TONES } from '@data/legacy';
-import { KITS } from '@/render/players/kits';
+import { KITS, OFFICIAL_KIT, REFEREE_KIT, type Kit } from '@/render/players/kits';
 import { loadPlayerAsset, Player, type PlayerAsset } from '@/render/players/playerAsset';
 import { bodyFromImperial } from '@/render/players/bodyShape';
 import { loadAnimLibrary, planted, travelAt, type AnimLibrary } from '@/anim/library';
@@ -103,6 +103,17 @@ function gridTexture(): THREE.CanvasTexture {
   return t;
 }
 
+// The officials (M6) dress the official variant of the asset: kit=official or kit=referee.
+const OFFICIAL_KITS: Record<string, Kit> = { official: OFFICIAL_KIT, referee: REFEREE_KIT };
+const kitOf = (s: LabState): Kit => KITS[s.kit] ?? OFFICIAL_KITS[s.kit] ?? KITS.beasts!;
+const officialOf = (s: LabState): boolean => s.kit in OFFICIAL_KITS;
+
+/** The look for one Lab player: officials carry no number, name or gear variety. */
+function lookOf(s: LabState, b: (typeof LINEUP)[number]) {
+  const base = { kit: kitOf(s), skin: SKIN_TONES[s.skin]!.hex };
+  return officialOf(s) ? base : { ...base, ...lettering(s, b) };
+}
+
 function lettering(s: LabState, b: (typeof LINEUP)[number]): { number: number; name: string; variety: Variety } {
   const { heightM, weightKg } = bodyFromImperial(b.h, b.w);
   const who = s.mode === 'lineup' ? { number: b.num, name: b.name } : { number: s.num, name: s.name };
@@ -177,11 +188,12 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
   const camera = useThree((st) => st.camera);
   const gl = useThree((st) => st.gl);
   const actors = useMemo(() => actorsFor(s.mode, s.pos), [s.mode, s.pos]);
+  const official = officialOf(s);
   const bodies = actors.map((a) => a.body);
   const players = useMemo(
     () =>
       actors.map((a) => {
-        const p = new Player(asset, { kit: KITS[s.kit]!, skin: SKIN_TONES[s.skin]!.hex, ...lettering(s, a.body), ...bodyFromImperial(a.body.h, a.body.w) });
+        const p = new Player(asset, { ...lookOf(s, a.body), ...bodyFromImperial(a.body.h, a.body.w), variant: officialOf(s) ? 'official' : 'player' });
         p.root.position.set(a.x, 0, a.z ?? 0);
         if (a.ghost !== undefined) {
           p.material.transparent = true;
@@ -192,7 +204,7 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
         return p;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [asset, s.mode, s.pos],
+    [asset, s.mode, s.pos, official],
   );
   const animators = useMemo(() => players.map((p) => new PlayerAnimator(p, lib)), [players, lib]);
   // Dev console access: __labAnimators[0].player.bones.get(...)
@@ -206,7 +218,7 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
     [players],
   );
   useEffect(() => {
-    players.forEach((p, i) => p.setLook({ kit: KITS[s.kit]!, skin: SKIN_TONES[s.skin]!.hex, ...lettering(s, bodies[i]!) }));
+    players.forEach((p, i) => p.setLook(lookOf(s, bodies[i]!)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [players, s.kit, s.skin, s.num, s.name, s.seed]);
 
@@ -449,7 +461,7 @@ export function AnimLab() {
         <label>
           Kit
           <select value={s.kit} onChange={(e) => set({ kit: e.target.value })}>
-            {Object.values(KITS).map((k) => (
+            {[...Object.values(KITS), ...Object.values(OFFICIAL_KITS)].map((k) => (
               <option key={k.id} value={k.id}>
                 {k.label}
               </option>

@@ -19,8 +19,8 @@ from mathutils import Vector
 from .geo import smoothstep
 
 # How much each part follows the body shape (helmets, masks, visor and the
-# chin strap don't grow; gloves and cleats a little).
-PART_FOLLOW = {0: 1.0, 1: 0.35, 2: 0.7, 3: 0.15, 4: 1.0, 5: 1.0, 6: 0.0, 7: 0.0, 8: 0.0, 9: 0.0, 10: 0.0, 11: 0.0, 12: 0.0, 13: 0.8, 14: 1.0}
+# chin strap don't grow; gloves and cleats a little; the official's shirt does, his cap doesn't).
+PART_FOLLOW = {0: 1.0, 1: 0.35, 2: 0.7, 3: 0.15, 4: 1.0, 5: 1.0, 6: 0.0, 7: 0.0, 8: 0.0, 9: 0.0, 10: 0.0, 11: 0.0, 12: 0.0, 13: 0.8, 14: 1.0, 15: 1.0, 16: 0.0}
 JERSEY, SKIN, SOCK, COLLAR = 4, 0, 2, 14
 
 
