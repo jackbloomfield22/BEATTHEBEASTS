@@ -10,7 +10,10 @@ import {
   breakOnBall,
   carrierAI,
   manCover,
+  boundaryGovern,
+  numberReceivers,
   passBlock,
+  openness,
   pressureOn,
   pursue,
   qbRead,
@@ -29,11 +32,28 @@ import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { arrive, remember, steer, timeTo } from './movement';
 import { planThrow, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
-import type { PlayState } from './state';
+import { manOf, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
 import { HOT_ROUTES } from './plays';
 import { dist, len, norm, sub, v2, type V2 } from './vec';
 import { routePoints } from './ai';
+
+/** The hitch off a dropback (s): a step up into the pocket before the throw (the rhythm of a five-step drop and hitch). */
+const HITCH = 0.3;
+
+/** The window (yd, openness()) a scrambling AI QB still throws into: a man running free. */
+const SCRAMBLE_THROW = 5;
+
+/** The most a tackled runner carries the pile on (yd). */
+const FALL_MAX = 2.5;
+/** How much of his speed downhill a tackled runner carries on (× his share of the pair's mass, s): tuned so backs average ~2.2 yd after contact against the Beasts. */
+const FALL_K = 0.55;
+
+/** The closest to a sideline a player who isn't carrying it pulls up (yd): a stride inside the white (keepInBounds); route runners keep more. */
+const PULL_UP = 0.35;
+
+/** A toss's flight, s: a 4–5 yd underhand pitch at ~15 yd/s (about 0.3 s). */
+const PITCH_T = 0.3;
 
 /** Seconds the play keeps animating after the whistle. */
 export const DEAD_HOLD = 1.6;
@@ -70,8 +90,9 @@ function whistle(s: PlayState, reason: WhistleReason, spot: number, offenseBall:
 function doSnap(s: PlayState): void {
   s.phase = 'snap';
   s.snapT = s.t;
-  s.read = { idx: 0, since: s.t + s.setup.play.drop.set };
+  s.read = { idx: 0, since: s.t + s.setup.play.drop.set, noise: 0, noiseFor: -1 };
   setRoutes(s);
+  numberReceivers(s);
   assignProtection(s);
   assignRunBlocks(s);
   assignRunFits(s);
@@ -94,8 +115,8 @@ function doSnap(s: PlayState): void {
   for (const i of s.def) {
     const d = s.agents[i]!;
     const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
-    if (as.kind !== 'man' || !as.press) continue;
-    const r = off(s, as.on);
+    const r = manOf(s, d);
+    if (as.kind !== 'man' || !as.press || !r) continue;
     if (dist(r.pos, d.pos) > 2.5) continue;
     const edge = d.fx.a('press') - r.fx.a('beatPress') + 0.05 * gauss(s.rng.ai);
     if (edge > 0) r.busy = Math.round(60 * (0.12 + 0.9 * edge));
@@ -120,14 +141,18 @@ function startScramble(s: PlayState, qb: Agent): void {
 function aiScrambles(s: PlayState, qb: Agent): boolean {
   if (s.phase !== 'pocket' || s.windup || s.ball.mode !== 'held') return false;
   const held = s.t - s.snapT - s.setup.play.drop.set;
-  // Through most of his reads with nothing there, and no free rusher on him yet.
-  if (held < 1.6 || pressureOn(s, qb) > 0.35 || qb.pos.x < s.setup.los - 10) return false;
+  // Through his first reads with nothing there, or the pocket closing on
+  // him (M6: most NFL scrambles are escapes from pressure; M5.5 only ran
+  // with nobody near him, which with the quicker rush almost never came).
+  const pressure = pressureOn(s, qb);
+  if (held < (pressure > 0.5 ? 0.9 : 1.6) || qb.pos.x < s.setup.los - 10) return false;
   const lane = runningLane(s, qb);
   if (!lane) return false;
   // Checked every tenth of a second while it's there: a mobile QB takes it
-  // within about a second (half the time), a statue almost never.
+  // within about a second (half the time), a statue almost never; pressure
+  // makes it likelier.
   const mobile = qb.fx.a('speed') * 0.5 + qb.fx.a('elusiveness') * 0.5;
-  if (!(s.tick % 6 === 0 && s.rng.ai() < 0.01 + 0.045 * mobile)) return false;
+  if (!(s.tick % 6 === 0 && s.rng.ai() < (0.01 + 0.045 * mobile) * (1 + 2 * pressure))) return false;
   qb.mem.laneX = lane.x;
   qb.mem.laneY = lane.y;
   return true;
@@ -220,10 +245,24 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
   const since = s.t - s.snapT;
   const by = s.setup.ballY ?? 0;
   if (play.run) {
-    // Mesh: the reverse pivot or the slide to the back, and the handoff.
+    if (play.run.scheme === 'sneak') {
+      // The sneak: he keeps it, over the center's back behind the wedge (a designed run: no slide).
+      if (since >= play.run.mesh && s.phase !== 'carrier') {
+        s.carrier = qb.i;
+        s.phase = 'carrier';
+        s.runReadT = s.t;
+        if (s.runShow < 0) s.runShow = s.t;
+        qb.mem.designed = true;
+        qb.anim = 'carry';
+      } else steer(qb, { x: qb.fx.vmax * 0.3, y: 0 }, { face: 0 });
+      return;
+    }
+    // Mesh: the reverse pivot or the slide to the back, and the handoff (the toss: a pitch, up to ~5 yd).
     const rb = off(s, 'RB');
     qbMesh(s, qb, rb);
-    if (since >= play.run.mesh && s.phase !== 'carrier' && dist(qb.pos, rb.pos) < 1.8) {
+    const toss = play.run.scheme === 'toss';
+    if (since >= play.run.mesh && s.phase !== 'carrier' && dist(qb.pos, rb.pos) < (toss ? 5.5 : 1.8)) {
+      if (toss) s.pitch = { t: s.t, from: { x: qb.pos.x, y: qb.pos.y } };
       s.ball.holder = rb.i;
       s.carrier = rb.i;
       s.phase = 'carrier';
@@ -258,9 +297,19 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
     // The user moves the QB in the pocket (camera-relative input already in the field frame): controlled steps, eyes downfield.
     const sp = 0.55;
     steer(qb, { x: inp.move.x * qb.fx.vmax * sp, y: inp.move.y * qb.fx.vmax * sp }, { face: 0 });
-  } else if (qb.pos.x > dropX + 0.1 && since < play.drop.set + 0.2) {
+  } else if (play.drop.boot && since < play.drop.set + 0.2 && dist(qb.pos, v2(dropX, by + play.drop.boot)) > 0.6) {
+    // The bootleg: out of the fake he rolls to the boot side, gaining depth, eyes downfield.
+    const to = v2(dropX, by + play.drop.boot);
+    steer(qb, arrive(qb, to, 0.85, 1), { face: 0 });
+    qb.anim = 'drop';
+  } else if (!play.drop.boot && qb.pos.x > dropX + 0.1 && since < play.drop.set + 0.2) {
     steer(qb, { x: -qb.fx.vmax * 0.55, y: (by - qb.pos.y) * 2 }, { face: 0 });
     qb.anim = 'drop';
+  } else if (!s.setup.user && play.drop.boot && s.windup === null) {
+    // Set on the edge after a boot: keep drifting with the flow, square to the line, ready to throw on the run.
+    const side = Math.sign(play.drop.boot);
+    const room = FIELD_HALF_W - 3 - Math.abs(qb.pos.y);
+    steer(qb, { x: 0.6, y: room > 0 ? side * 2.2 : 0 }, { face: 0, pace: 0.5 });
   } else if (!s.setup.user) {
     // AI pocket: slide away from the nearest free rusher, step up against edge pressure.
     let push = v2();
@@ -321,7 +370,7 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     return;
   }
   const start = (icon: number, charge: number, aim: V2, away = false) => {
-    s.windup = { at: s.t + releaseTime(qb.fx.r('release')), icon, charge, aim, away };
+    s.windup = { at: s.t + releaseTime(qb.fx.r('release')), from: s.t, icon, charge, aim, away };
     qb.anim = 'throw';
     s.eyes = away ? s.eyes : { ...s.agents[s.icons[icon]!]!.pos };
   };
@@ -342,7 +391,8 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     } else if (s.hold.icon > 0) {
       const held = s.hold.ticks * TICK;
       // A tap drives it; a hold adds touch (more air the longer he holds).
-      const charge = held <= TAP_MAX ? 0 : Math.min(1, (held - TAP_MAX) / LOFT_CHARGE);
+      const tap = s.setup.tapMax ?? TAP_MAX;
+      const charge = held <= tap ? 0 : Math.min(1, (held - tap) / LOFT_CHARGE);
       start(s.hold.icon - 1, charge, { x: inp.aim.x, y: inp.aim.y });
       s.hold = { icon: 0, ticks: 0 };
     }
@@ -350,6 +400,38 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
   }
   if (s.phase !== 'pocket') return;
   const pressure = pressureOn(s, qb);
+  // Tucked and running: he'll still throw it to a man running free before the line, nothing tighter.
+  if (s.scrambleT >= 0) {
+    let best = -1;
+    let bs = -Infinity;
+    s.icons.forEach((k, j) => {
+      const o = openness(s, qb, s.agents[k]!).sep;
+      if (o > bs) {
+        bs = o;
+        best = j;
+      }
+    });
+    if (bs > SCRAMBLE_THROW) start(best, 0, v2());
+    return;
+  }
+  if (s.setup.play.hailMary) {
+    // The Hail Mary: let them get there (~1 s after the set, a 9-yd drop
+    // gives them 35+ yd), then put it up for the deepest man, all the loft
+    // he has, high (a jump ball in a crowd).
+    if (s.t - s.snapT - s.setup.play.drop.set >= 0.9 || pressure > 0.8) {
+      let deep = 0;
+      s.icons.forEach((k, j) => {
+        if (s.agents[k]!.pos.x > s.agents[s.icons[deep]!]!.pos.x) deep = j;
+      });
+      start(deep, 1, v2(0, 0.8));
+    }
+    return;
+  }
+  // The rhythm of the drop: off a five-step or a play-action drop he
+  // hitches up into the pocket before he lets it go (the quick game and
+  // screens are thrown off the top of the drop). Pressure speeds him up.
+  const quick = s.setup.play.type === 'quick' || s.setup.play.type === 'screen';
+  if (!quick && pressure < 0.6 && s.t - s.snapT < s.setup.play.drop.set + HITCH) return;
   const pick = qbRead(s, qb, pressure);
   if (pick >= 0) {
     // The driven ball; planThrow puts air under it when a defender is in the way.
@@ -486,7 +568,13 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
         const ahead = rel.x * attack;
         const k = len(rel);
         if (k < 2.4 && ahead > 0.3) {
-          const r = s.rng.ai();
+          // One decision per tackler as he closes (M6: a roll every tick
+          // tried a move on nearly every one, and broken or missed tackles
+          // ran at 0.4 a carry against the NFL's ~0.2): a back with moves
+          // tries one on ~30–45% of them.
+          if (c.mem[`mv${d.i}`]) break;
+          c.mem[`mv${d.i}`] = true;
+          const r = s.rng.ai() * (0.12 / (0.25 + 0.2 * Math.max(c.fx.a('elusiveness'), c.fx.a('stiffArm'))));
           if (r < 0.08) {
             const elu = c.fx.a('elusiveness');
             const pow = c.fx.a('trucking') * (c.fx.mass / 110);
@@ -624,7 +712,7 @@ function contactStep(s: PlayState): void {
   // A sliding quarterback has given himself up: nobody may hit him.
   if (c.move === 'dive' && slides(c) && !inPocket) return;
   for (const o of s.agents) {
-    if (o.side === c.side || o.down || o.busy > 0) continue;
+    if (o.side === c.side || o.down || o.busy > 0 || o.mem.outOfPlay) continue;
     // Engaged defenders can come off a block for an arm tackle as he passes (lower odds).
     const engaged = blockOf(s, o.i);
     if (engaged && (dist(o.pos, c.pos) > o.fx.radius + c.fx.radius + 0.35 || s.rng.contact() > 0.25)) continue;
@@ -640,7 +728,7 @@ function contactStep(s: PlayState): void {
     if (k > armReach) {
       // Level with him or losing ground: a diving tackle (~1 yd more reach).
       const closing = ((o.vel.x - c.vel.x) * (c.pos.x - o.pos.x) + (o.vel.y - c.vel.y) * (c.pos.y - o.pos.y)) / Math.max(1e-6, k);
-      if (k < armReach + 1.0 && closing < 0.6 && s.rng.contact() < 0.05) dive = true;
+      if (k < armReach + 1.0 && closing < 0.6 && s.rng.contact() < 0.02) dive = true; // M6: 5% a tick dove at nearly every runner pulling away (0.15 missed dives a carry)
       else continue;
     }
     const { out: out0, force } = resolveTackle(s, o, c);
@@ -652,7 +740,7 @@ function contactStep(s: PlayState): void {
     }
     if (dive) {
       o.anim = 'dive';
-      if ((out === 'tackle' || out === 'bigHit') && s.rng.contact() > 0.55) out = 'broken';
+      if ((out === 'tackle' || out === 'bigHit') && s.rng.contact() > 0.65) out = 'broken';
       if (out !== 'tackle' && out !== 'bigHit') {
         o.down = true;
         o.anim = 'down';
@@ -702,7 +790,18 @@ function contactStep(s: PlayState): void {
       whistle(s, c.pos.x <= 0 ? 'safety' : 'sack', c.pos.x, true);
     } else {
       s.events.push({ t: s.t, type: 'tackle', who: [o.i, c.i], at: { ...c.pos }, data: { big: out === 'bigHit' } });
-      whistle(s, 'tackle', attack > 0 ? Math.max(s.maxX, ballNose(c)) : c.pos.x, c.side === 'off');
+      // Falling forward: a runner going downhill carries the tackle on a
+      // yard or two (his share of the pair's momentum, less the tackler's
+      // coming the other way); a big hit stops him where he's hit. NFL backs
+      // average ~2.8–3 yd after contact (PFF/NGS), most of it this.
+      let drive = 0;
+      if (out !== 'bigHit') {
+        const mr = c.fx.mass / (c.fx.mass + o.fx.mass);
+        drive = FALL_K * Math.max(0, c.vel.x * attack) * mr - 0.15 * Math.max(0, -o.vel.x * attack) * (1 - mr);
+        drive = Math.max(0, Math.min(FALL_MAX, drive));
+      }
+      const at = attack > 0 ? Math.max(s.maxX, ballNose(c)) + drive : c.pos.x - drive;
+      whistle(s, 'tackle', attack > 0 ? Math.min(at, GOAL_X - 0.05) : Math.max(at, 0.05), c.side === 'off');
     }
     return;
   }
@@ -719,8 +818,13 @@ function ballStep(s: PlayState): void {
     const c = off(s, 'C');
     // Carried a quarter-yard ahead of his body, the way he's running (ballNose reads the same offset).
     const hx = h.pos.x + 0.25 * (h.side === 'off' ? 1 : -1);
+    const pitchF = s.pitch && b.holder !== s.qb ? (s.t - s.pitch.t) / PITCH_T : 1;
     if (s.snapT >= 0 && snapT < 1 && b.holder === s.qb) {
       b.pos = { x: c.pos.x + (hx - c.pos.x) * snapT, y: c.pos.y + (h.pos.y - c.pos.y) * snapT, z: 0.2 + 0.9 * snapT };
+    } else if (s.pitch && pitchF < 1) {
+      // The toss in the air: underhand from the QB's hip to the back's hands, a little arc.
+      const f = pitchF;
+      b.pos = { x: s.pitch.from.x + (hx - s.pitch.from.x) * f, y: s.pitch.from.y + (h.pos.y - s.pitch.from.y) * f, z: 1.0 + 0.15 * 4 * f * (1 - f) };
     } else if (s.snapT >= 0) {
       b.pos = { x: hx, y: h.pos.y, z: h.down ? 0.25 : 1.15 };
     }
@@ -731,6 +835,12 @@ function ballStep(s: PlayState): void {
     if (who >= 0) {
       s.touched.push(who);
       const a = s.agents[who]!;
+      // A receiver who stepped out and came back can't be the first to touch it: incomplete.
+      if (a.side === 'off' && a.mem.outOfPlay) {
+        s.events.push({ t: s.t, type: 'catchOutOfBounds', who: [who], at: { x: a.pos.x, y: a.pos.y }, data: { illegalTouch: true } });
+        whistle(s, 'incomplete', s.setup.los, true);
+        return;
+      }
       const out = resolveCatch(s, a);
       if (out === 'catch' || out === 'int') {
         b.mode = 'held';
@@ -826,6 +936,10 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
   for (const i of s.off) {
     const a = s.agents[i]!;
     if (a.down || i === s.carrier) continue;
+    if (a.mem.outOfPlay && i !== s.qb) {
+      steer(a, { x: 0, y: 0 }, { pace: 0.3 });
+      continue;
+    }
     if (i === s.qb) {
       if (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket' || (play.run && s.phase === 'carrier' && s.t - s.snapT < 1)) qbBeforeThrow(s, inp);
       else steer(a, { x: 0, y: 0 }, { pace: 0.3 });
@@ -897,9 +1011,13 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
     // A handoff: first hit the aiming point, then read it.
     const freeNear = s.def.some((i) => !blockOf(s, i) && !s.agents[i]!.down && dist(s.agents[i]!.pos, carrier.pos) < 3);
     // (He presses the aiming point for a beat after the mesh, then reads it: the lanes are carrierAI's.)
-    // Gap schemes press the aiming point all the way to the line (the puller clears it); zone presses for a beat, then reads.
-    const gapRun = play.run?.scheme === 'power' || play.run?.scheme === 'counter';
-    if (play.run && carrier.slot === 'RB' && carrier.pos.x < s.setup.los - 0.8 && (gapRun || s.t - s.runReadT < 0.35) && !freeNear) {
+    // Gap schemes press the aiming point all the way to the line (the puller
+    // clears it), and so do the downhill ones (the iso and dive behind the
+    // fullback, the toss to the edge, the sneak); zone presses for a beat, then reads.
+    const sc = play.run?.scheme;
+    const gapRun = sc === 'power' || sc === 'counter' || sc === 'iso' || sc === 'toss' || sc === 'sneak';
+    const designed = carrier.slot === 'RB' || (sc === 'sneak' && carrier.i === s.qb);
+    if (play.run && designed && carrier.pos.x < s.setup.los - (sc === 'sneak' ? 0 : 0.8) && (gapRun || s.t - s.runReadT < 0.35) && !freeNear) {
       const aim = v2(s.setup.los + 1, (s.setup.ballY ?? 0) + play.run.aim);
       steer(carrier, { x: (aim.x - carrier.pos.x) * 3, y: (aim.y - carrier.pos.y) * 3 });
       carrier.anim = 'carry';
@@ -934,7 +1052,7 @@ function runToBall(s: PlayState, a: Agent): void {
   const left = b.arrive - s.t;
   if (settle) {
     // Come back to the ball: at it by the time it gets there, braking into the catch.
-    steer(a, arrive(a, to, 1, 1));
+    steer(a, boundaryGovern(a, arrive(a, to, 1, 1), 0.25));
     return;
   }
   const top = a.fx.vmax;
@@ -945,12 +1063,12 @@ function runToBall(s: PlayState, a: Agent): void {
     const need = d / left;
     const cur = len(a.vel);
     const sp = Math.min(top, need < 0.6 * cur ? need : Math.max(need, cur));
-    steer(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp });
+    steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp }, 0.25));
     return;
   }
   // The ball's on him: run through the catch the way he's going.
   const v = len(a.vel);
-  if (v > 0.5) steer(a, { x: (a.vel.x / v) * top, y: (a.vel.y / v) * top });
+  if (v > 0.5) steer(a, boundaryGovern(a, { x: (a.vel.x / v) * top, y: (a.vel.y / v) * top }, 0.25));
   else steer(a, { x: to.x - a.pos.x, y: to.y - a.pos.y });
 }
 
@@ -983,9 +1101,9 @@ function rallies(s: PlayState): number[] {
   let manOn = -1;
   for (const i of s.def) {
     const d = s.agents[i]!;
-    if (d.down || blockOf(s, i)) continue;
+    if (d.down || blockOf(s, i) || d.mem.outOfPlay) continue;
     const as = call[d.slot as keyof typeof call];
-    if (as.kind === 'man' && off(s, as.on).i === s.ball.target) manOn = i;
+    if (as.kind === 'man' && manOf(s, d)?.i === s.ball.target) manOn = i;
     const t = reaction(s, d) + timeTo(d, aim);
     if (t <= left + RALLY_SLACK) cands.push({ i, t });
   }
@@ -1025,6 +1143,29 @@ function flowToBall(s: PlayState, d: Agent): boolean {
   return true;
 }
 
+/**
+ * A zone defender reading the QB's shoulders (GDD §10.4): once he's seen
+ * the wind-up (his read time; a Ballhawk sees it a third sooner), if he's
+ * within JUMP_R of the receiver the QB is turning to, he breaks for where
+ * that man will be when the ball gets there, before it's thrown. Man
+ * defenders keep playing the man.
+ */
+const JUMP_R = 8;
+function jumpThrow(s: PlayState, d: Agent): boolean {
+  const w = s.windup!;
+  if (w.away) return false;
+  const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
+  if (as.kind !== 'zone') return false;
+  const hawk = d.p.traits?.includes('ballhawk') ? 0.67 : 1;
+  if (s.t - w.from < reaction(s, d) * hawk) return false;
+  const r = s.agents[s.icons[w.icon]!]!;
+  if (dist(d.pos, r.pos) > JUMP_R) return false;
+  const ahead = Math.max(0, w.at - s.t) + 0.5;
+  steer(d, arrive(d, { x: r.pos.x + r.vel.x * ahead, y: r.pos.y + r.vel.y * ahead }, 1, 0.8));
+  d.mem.onBall = true;
+  return true;
+}
+
 function defenseRoles(s: PlayState): void {
   const call = s.setup.def.assign;
   const carrier = s.carrier >= 0 ? s.agents[s.carrier]! : null;
@@ -1032,6 +1173,10 @@ function defenseRoles(s: PlayState): void {
     const d = s.agents[i]!;
     if (d.down || i === s.carrier) continue;
     if (blockOf(s, i)) continue;
+    if (d.mem.outOfPlay) {
+      steer(d, { x: 0, y: 0 }, { pace: 0.3 });
+      continue;
+    }
     if (d.busy > 0) {
       steer(d, { x: 0, y: 0 }, { pace: 0.3 });
       continue;
@@ -1062,6 +1207,9 @@ function defenseRoles(s: PlayState): void {
       steer(d, { x: -d.fx.vmax * 0.8, y: (carrier.pos.y - d.pos.y) * 0.5 });
       continue;
     }
+    // Reading the QB's shoulders: a zone defender near the man he's winding
+    // up to breaks on the throw before it's out (GDD §10.4).
+    if (s.windup && s.phase !== 'air' && jumpThrow(s, d)) continue;
     if (s.phase === 'air') {
       const t0 = (d.mem.sawThrow as number | undefined) ?? -1;
       if (t0 < 0) d.mem.sawThrow = s.t;
@@ -1081,7 +1229,7 @@ function defenseRoles(s: PlayState): void {
         else rush(s, d);
         break;
       case 'man':
-        manCover(s, d, off(s, as.on));
+        manCover(s, d, manOf(s, d)!);
         break;
       case 'zone':
         zoneCover(s, d, as.zone);
@@ -1117,6 +1265,10 @@ export function stepPlay(s: PlayState, inp: InputFrame): void {
     return;
   }
   if (s.phase === 'air' && inp.catchType) s.catchType = inp.catchType;
+  // Nobody but the ball carrier runs out of bounds on his own (movement.ts
+  // governs his speed toward a sideline): route runners keep ~1 yd, everyone
+  // else half a yard. The QB with the ball is a runner too (his lines are lineCheck's).
+  for (const a of s.agents) a.mem.room = a.i === s.carrier || (a.i === s.qb && s.ball.holder === s.qb) ? null : s.ball.mode === 'air' && s.ball.target === a.i ? 0.2 : a.route ? 1 : 0.5;
   if (s.phase !== 'air' && s.phase !== 'carrier') qbThrow(s, inp);
   offenseRoles(s, inp);
   defenseRoles(s);
@@ -1133,6 +1285,8 @@ export function stepPlay(s: PlayState, inp: InputFrame): void {
   // A runner whose ball broke the plane scored, whoever hits him as it does;
   // a catch with the ball in the end zone is a score at the catch.
   if (s.carrier >= 0 && !s.result) lineCheck(s, s.agents[s.carrier]!, moved);
+  // The QB with the ball in the pocket (a drop or a scramble behind the line) is a runner at the lines too.
+  else if (s.carrier < 0 && s.snapT >= 0 && s.ball.mode === 'held' && s.ball.holder === s.qb && !s.result && s.t - s.snapT > 0.4) lineCheck(s, s.agents[s.qb]!);
   contactStep(s);
   keepInBounds(s);
   if (!s.result && s.t - s.snapT > MAX_PLAY) whistle(s, 'timeout', Number.isFinite(s.maxX) ? s.maxX : s.setup.los, true);
@@ -1211,8 +1365,29 @@ function lineCheck(s: PlayState, c: Agent, moved: V2 | null = null): void {
  */
 function keepInBounds(s: PlayState): void {
   const yl = FIELD_HALF_W + STEP_OUT;
+  const lim = FIELD_HALF_W - OOB_FOOT;
   for (const a of s.agents) {
     if (a.i === s.carrier) continue;
+    // A foot on or over a line while the play is live: he's out of the play
+    // until the whistle (he can't come back in and be the first to touch a
+    // pass, or make a play on the ball or the carrier).
+    // Nobody runs out on his own: a player who isn't carrying it (and isn't
+    // being driven there by a block) pulls up at the sideline, the last of
+    // his run toward it taken off (the steering's governor slows him first).
+    const edge = FIELD_HALF_W - (typeof a.mem.room === 'number' ? Math.max(PULL_UP, a.mem.room * 0.8) : 0);
+    if (typeof a.mem.room === 'number' && !a.mem.outOfPlay && !blockOf(s, a.i) && Math.abs(a.pos.y) > edge) {
+      a.pos.y = Math.sign(a.pos.y) * edge;
+      if (a.vel.y * a.pos.y > 0) a.vel.y = 0;
+    }
+    const out = Math.abs(a.pos.y) > lim || a.pos.x > END_X - OOB_FOOT || a.pos.x < BACK_X + OOB_FOOT;
+    if (out && !a.mem.outOfPlay && s.snapT >= 0 && !s.result) {
+      a.mem.outOfPlay = true;
+    }
+    if (a.mem.outOfPlay && Math.abs(a.pos.y) > FIELD_HALF_W - 1 && Math.abs(a.pos.y) < FIELD_HALF_W) {
+      // Out is out: he stays on the sideline, not back in.
+      a.pos.y = Math.sign(a.pos.y) * FIELD_HALF_W;
+      if (a.vel.y * a.pos.y < 0) a.vel.y = 0;
+    }
     if (a.pos.y > yl || a.pos.y < -yl) {
       a.pos.y = Math.sign(a.pos.y) * yl;
       if (a.vel.y * a.pos.y > 0) a.vel.y = 0;

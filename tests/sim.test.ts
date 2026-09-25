@@ -136,17 +136,20 @@ describe('sim: a play snap to whistle', () => {
 
   it('the pocket holds about as long as a real one when the QB never throws', () => {
     const times: number[] = [];
-    for (let k = 0; k < 40; k++) {
-      const s = setup(900 + k, PLAYS[k % PLAYS.length]!, DEF_CALLS[k % DEF_CALLS.length]!, true);
+    const dropbacks = PLAYS.filter((p) => !p.run && !p.situ && p.type !== 'screen');
+    for (let k = 0; k < 60; k++) {
+      const s = setup(900 + k, dropbacks[k % dropbacks.length]!, DEF_CALLS[k % DEF_CALLS.length]!, true);
       runToWhistle(s, (st) => input({ snap: st.tick === 0 }));
       times.push(s.t);
     }
     times.sort((a, b) => a - b);
-    const median = times[20]!;
-    // Tuned for play (M5.5): a QB who never throws goes down at a median of
-    // ~4.5 s at Pro against the four-man rush.
-    expect(median).toBeGreaterThan(4.1);
-    expect(median).toBeLessThan(4.9);
+    const median = times[30]!;
+    // A QB who never throws goes down at a median of ~3.8 s at Pro against
+    // the all-time rush (M5.5 tuned it to ~4.5 s; M6's rush wins early on
+    // some reps so the first pressure comes at ~3 s, and the help blocker
+    // keeps the rest of the pocket: tools/sim/sacktime.ts).
+    expect(median).toBeGreaterThan(3.3);
+    expect(median).toBeLessThan(4.5);
   });
 });
 
