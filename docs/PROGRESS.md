@@ -8,7 +8,7 @@
 - **M4 Characters and animation:** merged (PR #5).
 - **M4.5 Character and animation quality pass:** merged (PR #6).
 - **M5 Core play:** merged (PR #7), with the quick pass (pass camera, 1/2/3 catches, arrows, Q–F moves).
-- **M5.5 Game feel:** built on `claude/m5.5-game-feel`, PR open. Prompts in every phase, open receivers, the landing reticle, the tutorial, more pocket time, field boundaries, route preview and hot routes, blended transitions, latency measured, and three feel videos in `docs/screenshots/m5.5/`. **Needs your play test.**
+- **M5.5 Game feel:** built on `claude/m5.5-game-feel`, PR open. Prompts in every phase, open receivers, the landing reticle, the tutorial, more pocket time, field boundaries, route preview and hot routes, blended transitions, latency measured, and three feel videos in `docs/screenshots/m5.5/`. Then your feedback round: short prompts and number keys, context speed and burst, the scramble and slide, big hits, a 22-play book with designed runs, and passing outcomes from separation and geometry (plus the touchdown fix). **Needs your play test.**
 - **Next: M6**, which opens with the draft room (3D draft over the stadium, the video-board slot machine, the ported draft rules, the Scouting panel), with the Practice Field playing the drafted roster. The tunnel reveal and pre-game cinematics stay in M7.
 
 ## Known legacy issues (do not rebuild)
@@ -131,6 +131,108 @@ Your notes from the M5 play test, in the order they affect play: prompts and rea
 **Known issues and limits**
 - Openness is judged every 4 frames (cheap, and fast enough for the glow).
 - The tutorial is one play long by design. Show it again from the pause menu.
+
+#### Feedback round on PR #8 (items 1–7) and the touchdown fix
+
+**1–2. Prompts and keys.**
+- Every field prompt is now a key and one or two words (SPACE SNAP, 1 GO UP, 5 DIVE…).
+- The number row does everything, by phase: 1–5 receivers, 1–3 catch calls, and 1–6 carrier moves. Q W E R F C still work as second keys.
+- Settings v5 moves saved defaults and keeps your rebinds.
+- How to Play gets an "On the Field" page that uses your live keys.
+
+**Touchdowns not counted** (your bug: caught in the end zone, spotted at the 1). There were two causes:
+- The tackle check ran before the goal-line check in the same tick.
+- The line was judged from the body's centre, not the ball.
+
+Now the ball's forward point crossing the plane in bounds scores before any dead-ball check in that tick, and a catch with the ball in the end zone is a score at once. No input log is kept, so I reproduced it with the harness: a goal-line audit over its seeds found 57 misses before the fix and 0 after (`tools/sim/goalline.ts`). Tests cover a dive across, a tackle at the line with the ball over it, and a catch in the end zone.
+
+**3. Context speed and the burst.**
+- The carrier's pace follows the situation:
+  - flat out in space;
+  - controlled (down to 86%) with a free tackler within 1.2–2.5 yd in front of him;
+  - a 78% jog while protecting.
+- `Shift` is a **burst**: 0.5 s at a faster acceleration and 4% over top speed. It costs 10% stamina and has a 1.5 s cooldown.
+- A scrambling QB runs on the same rules.
+
+**4. Pass rush and the scramble.**
+- **Rushers:**
+  - They hunt the QB and re-target when he moves.
+  - The ends keep contain.
+  - When he escapes, the nearest rusher chases, the edges hold contain and the zone linebackers come up.
+- **Scramble:** `Shift` / RT tucks it. He can throw on the run until he crosses the line; past it he's a ball carrier.
+- **Receivers:** on a scramble they break into the scramble drill (deep men go deeper, short men work back toward the QB).
+- **Slide:** a QB who dives slides. He's down where the slide began, and nobody may hit him. The test also caught a bug: the slide had been spotted with the dive's extra 0.4 yd of reach. Fixed.
+- **AI QBs:** they scramble only with a real lane (5 angles checked for free and engaged defenders), after holding the ball ≥1.6 s, and more often when they're mobile.
+- **New clips** (keyed in `tools/blender/lib/actions_m55.py`):
+  - the tuck and take-off (`ovl_tuck`);
+  - `qb_slide`;
+  - the chase get-off (`ovl_getoff`);
+  - `rush_redirect_l/r`.
+
+**5. Big hits.**
+- **When it counts as big:** the hit's energy (Hit Power², closing speed, Enforcer) against the carrier's brace (Break Tackle, mass, running into it). The hit that decides it is the one that lands.
+- **What you see:**
+  - a 0.09 s hit-stop, camera shake, landing dust and the crowd;
+  - optional slow-mo on the hardest ones (Settings → Gameplay, on by default).
+- **Physics:** a capped launch (4.5 m/s, 1.1 lift) with a braced torso and trailing limbs, then a slide and the get-up.
+- **Consequences:**
+  - a higher fumble chance;
+  - a stamina toll that carries into the next snap;
+  - a count in the session box score.
+- **How rare:** 6.7% of tackles in the harness, about 3 per 60 plays. A test holds it between 2% and 12%.
+
+**6. Playbook.** 22 plays in 5 formations: shotgun Trips, Doubles, Bunch and Empty, and a new Singleback under center. The play call has tabs (`Q`/`E`), and the play art is drawn from the sim's own data (routes, blocks, the back's path, the play-action fake).
+- **Quick:** Stick, Slants, Quick Outs, Snag, Empty Quick.
+- **Dropback:** Smash, Mesh, Curl Flat, Flood, Drive.
+- **Shots:** Four Verticals, Dagger. **Play action:** PA Post, PA Yankee. **Screens:** RB Screen, Bubble.
+- **Runs:** Inside Zone (Singleback and Trips), Outside Zone, Power, Counter, Draw.
+  - The mesh and handoff are keyed in `ovl_handoff`/`ovl_take`, with `ovl_pa_fake` and new under-center drops.
+  - Scheme blocking: zone steps play-side; on gap schemes the backside guard pulls to kick out, the counter adds the tackle, and the tight end climbs.
+  - The Beasts fit runs by gap. Each defender's read of run or pass comes from what he sees (linemen blocking, the back's path, a play-action fake), with a reaction delay.
+- **Defense:** three new calls, Cover 4, Cover 2 Man and Cover 1 Blitz, making six.
+- **Scramble drill:** every pass play has one.
+
+**7. Passing outcomes.**
+- **Catch in stride:** the throw leads the receiver where he'll be at full speed, minus what a break costs him.
+- **Tracking:** he adjusts his path to the ball as he reads it.
+- **Settling:** only sit routes settle.
+- **After the catch:** a clean run-after-catch catch keeps his speed; a possession catch keeps 80%, a high-point catch 55%.
+- **Separation decides the catch** (closest approach relative to him):
+  - 2+ yd open is nearly automatic;
+  - in phase, it's a contested catch that mostly fails.
+- **Downfield blocking:** receivers stalk-block while the ball is in the air and after the catch.
+- **The harness:** `tools/sim/outcomes.ts` (AI vs AI at Pro against the all-time Beasts, 22 plays × 6 coverages).
+- **The test:** `tests/outcomes.test.ts` fails if the explosive tail disappears (20+ must stay above 7% of completions, 40+ above 2%), or if completion, YAC, contested catches, sacks, scrambles or the run bands drift.
+
+| Passing (n=20 per cell) | Before | After | NFL reference |
+|---|---|---|---|
+| Completion | 64.4% | 73.6% | 60–65% |
+| Completions of 20+ | 39.2% | 12.3% | ~10% |
+| Completions of 40+ | 9.6% | 6.2% | a few % |
+| YAC on short completions | 2.6 yd | 5.1 yd | 4–6 |
+| Contested (in phase) caught | not measured | 25% | under 40% |
+| 2+ yd open caught | 82.7% | 93% | nearly all |
+| Yards per attempt | — | 8.3 | ~7 |
+
+| Pocket and runs | After |
+|---|---|
+| Sack rate | 8.8% of dropbacks |
+| Scrambles | 4.6% of dropbacks, 7.6 yd each |
+| First pressure | 21.6% of dropbacks, at 3.67 s on average |
+| Designed runs | 4.63 yd/carry, 23% stuffed, 16.7% go 10+, 3.9% go 20+, 2.1 yd before contact, ~1.9% fumbles |
+
+**Honest gaps.**
+1. **Completion is high (74%, target 60–65%).** Zone defenders sit too softly on checkdowns, and there's no pattern-matching in the zones yet. That's the next coverage job.
+2. **Runs are a little too boom-or-bust:** 10+ runs are above the NFL (~11%) and the median carry is low. The blocking wins or loses too cleanly.
+3. **Pressure comes late** (3.7 s against the NFL's ~2.5 s). That's the consequence of the 4.5 s pocket you asked for in M5.5. The rushers hunt better, but the line still holds them long.
+4. **Against Cover 2, Four Verticals checks down to the back a lot**, because the read weighs the deep safeties' threat heavily. It's defensible football but can feel timid. User throws are unaffected.
+
+**Checks.** `npm run check` passes (446 tests):
+- the outcome bands;
+- mechanics tests: the catch in stride, the lead at full speed and the break penalty, context pace, the burst and its cooldown, the scramble (throw on the run, then a runner past the line), the slide (spot and no hit), run schemes and the handoff, play-action belief, and fatigue carried over;
+- the three touchdown cases.
+
+All 71 clips pass the Blender gates (foot slide, loops, clearance). The Practice screen crash that blanked the page on load (the box score's initial state used before definition) was caught by the screenshot run and fixed before this round was declared done.
 
 ### M5 Core play (merged, PR #7)
 

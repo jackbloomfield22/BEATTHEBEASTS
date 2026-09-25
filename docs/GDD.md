@@ -177,25 +177,27 @@ All bindings can be rebound per context. The gamepad has Madden-style defaults. 
 | Context | Action | Key |
 |---|---|---|
 | **Play call** | Navigate / select / back | Mouse, arrows, Enter, Esc |
-| | Formation tabs / Suggested tab | Q/E or LB/RB-style tabs, `G` = Suggested |
+| | Play-type tabs (Quick, Intermediate, Shots, Screens and play action, Runs) / Suggested tab | `Q`/`E` (LB/RB), `G` = Suggested |
 | **Pre-snap** | Snap | `Space` |
-| | Hot route | `H`, then click a receiver, then pick a route from the radial |
+| | Show every route | Hold `Tab` |
+| | Hot route | `H`, then the receiver's number, then the route's number (or arrows and `Enter`) |
 | | Audible (4 presets, set on the play-call screen) | `Z`, then `1`–`4` |
 | | Motion | `M` (then `A`/`D` for direction) |
-| | Flip play | `Tab` |
+| | Flip play | `F` |
 | | Show receiver reads / coverage shell | Hold `Alt` |
 | **Pocket (QB)** | Move (step up, drift, roll out), camera-relative | Arrow keys (the left hand stays on `1`–`5`) |
 | | Throw to receiver | `1`–`5` or left-click the receiver icon. **Tap = touch/lob, hold = bullet** (power ring fills around the icon) |
 | | Placement | Mouse offset from the icon while choosing: a small reticle sets lead / back shoulder / high / low |
 | | Pump fake | Right-click (or `Shift`+number) |
 | | Throw it away (outside the pocket) | `Q` |
-| | Scramble | Cross the line of scrimmage; the QB becomes a ball carrier |
+| | Scramble: tuck it and run | `Shift`. He can still throw on the run (`1`–`5`) until he crosses the line; past it he's a ball carrier |
 | **Ball in air** (setting: Off / Assist / Full) | Switch to the targeted receiver | Automatic in Full; `Tab` in Assist |
 | | Go up and get it (aggressive) / secure it and go down (possession) / catch and run | `1` / `2` / `3` (prompts appear the moment the ball is thrown; the called catch lights up) |
-| **Ball carrier** | Run / sprint | Arrow keys / hold `Shift` (right Shift sits by the arrows; stamina bar) |
-| | Juke | `Q`: toward the side you're steering, else away from the nearest tackler (gamepad: flick the right stick left / right) |
-| | Stiff arm / spin | `W` / `E` |
-| | Truck / dive (or QB slide) / protect ball | `R` / `F` / hold `C` |
+| **Ball carrier** | Run | Arrow keys. Speed follows the context: flat out in space, controlled with a tackler close, a jog while protecting |
+| | Burst | `Shift`: half a second of extra gear, costs a tenth of his stamina, then a cooldown |
+| | Juke | `1` or `Q`: toward the side you're steering, else away from the nearest tackler (gamepad: flick the right stick left / right) |
+| | Stiff arm / spin | `2` or `W` / `3` or `E` |
+| | Truck / dive (a QB slides: down where the slide began, and he can't be hit) / protect ball | `4` or `R` / `5` or `F` / hold `6` or `C` |
 | **Kick (FG/PAT)** | Aim and power | Press and drag the mouse back, release. Direction = aim, drag length = power. Wind flag on screen |
 | **Global** | Pause | `Esc` (§15 D6 for fullscreen behavior) |
 | | Instant replay after the whistle | `P` or `Backspace` |
@@ -214,7 +216,8 @@ All bindings can be rebound per context. The gamepad has Madden-style defaults. 
 | | Placement | Left stick direction while pressing |
 | | Pump fake / throw away | LB / RS click |
 | Ball in air | Aggressive / RAC / possession catch | Y / X / A |
-| Carrier | Sprint | RT |
+| Pocket | Scramble | RT |
+| Carrier | Burst | RT |
 | | Juke / spin / stiff arm / truck / dive / protect | RS left/right / B / X / RS up / A / LB |
 | Kick | Aim and power | RS pull back, flick forward |
 | Global | Pause / replay | Menu / View |
