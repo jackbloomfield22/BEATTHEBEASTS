@@ -23,7 +23,8 @@ const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 export const SHOTS = {
-  home: { pos: v(0, 1.5, 0.6), look: v(0, 1.3, -8), fov: 47 },
+  /** The row of nine across the frame: from behind the room's center, a band of lit ceiling above and the carpet's mark below. */
+  home: { pos: v(0, 1.45, 3.4), look: v(0, 1.35, -8), fov: 36 },
   pullback: { pos: v(0, 1.8, 4.2), look: v(0, 1.35, -8), fov: 56 },
   wall: { pos: onArc(WALL_ANGLE + 0.2, ARC_R - 4.9, 1.62), look: onArc(WALL_ANGLE, ARC_R, WALL.base + WALL.height / 2), fov: 44 },
   /** Choosing: the wall on the left of frame, the row running away to the right (the pick panel sits right). */

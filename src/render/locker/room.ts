@@ -1,20 +1,44 @@
 import * as THREE from 'three';
 import { ARC_R, CEILING_Y, DOOR, DOOR_ANGLE, LOCKERS, LOCKER_D, LOCKER_H, ROOM_R, WALL, WALL_ANGLE, onArc } from './layout';
 import { lockerLit } from './lockerLights';
-import { carpetTexture, slatTexture, backPanelTexture } from './textures';
+import { bounceTexture, carpetTexture, perforatedTexture, slatTexture, backPanelTexture } from './textures';
 import { createSharedLockerAssets, Locker } from './locker';
 import { VideoWall } from './videoWall';
 
 // The Contenders' locker room shell (M6): carpet, the curved slat wall with
-// the row of stalls, a coffered ceiling with the light ring (ref-04), the
-// bench, the video wall, and the tunnel door with its corridor out to the
-// field. Built once; the stalls dress and undress on top of it.
+// the row of stalls, a lit perforated ceiling panel (ref-04), the bench on
+// its underlit plinth, the video wall, and the tunnel door with its corridor
+// out to the field. Built once; the stalls dress and undress on top of it.
+//
+// The room lights itself the way ref-04's does: every stall's edge frame and
+// interior glow, the ceiling panel's holes, the bench's underlight and the
+// carpet's bounce are self-lit surfaces, and the environment (ambient and
+// reflections) is prefiltered from those same sources. The stalls' analytic
+// lights (lockerLights.ts) add the lamp pools and the gloss on top; the room
+// reads without them.
 
 export type RoomMood = 'pregame' | 'lightsdown';
 
 export interface MoodSpec {
   /** Ceiling ring and downlights (emissive). */
   ceiling: number;
+  /** The perforated panel's holes, and the warm bounce on the ceiling around it. */
+  panel: number;
+  bounce: number;
+  /** The carpet's bounce light (emissive, so its mark always reads). */
+  carpet: number;
+  /** The bench's underlight strip and its pool on the carpet. */
+  bench: number;
+  /** Stall edge frames: bare and dressed. */
+  edgeEmpty: number;
+  edge: number;
+  /** Stall interior glow: bare and dressed. */
+  innerEmpty: number;
+  inner: number;
+  /** A blank nameplate's glow. */
+  plateEmpty: number;
+  /** A bare stall's lamp, as a share of a dressed one's. */
+  emptyStall: number;
   /** Stall lamp and underlight levels. */
   stall: number;
   under: number;
@@ -32,42 +56,86 @@ export interface MoodSpec {
 }
 
 /**
- * Two moods: pregame (house lights up, warm) and lights down (house lights
- * off, only the stalls and the lime accents, as a hype video before the
- * walk-out). Numbers tuned by eye against ref-04 and ref-06 (M6 shots).
+ * Two moods. Pregame: house lights up, warm and full; the ceiling panel
+ * glows, the carpet and its mark read, every stall is lit. Lights down: the
+ * room drops away (panel, bounce and carpet nearly off) and only the stall
+ * edges, the plates, the bench strip and the video wall carry it, as a hype
+ * video before the walk-out. The video wall is the brightest thing in both;
+ * pregame's room sits around a third of its brightness (ref-04). Levels
+ * tuned by eye and by the shots' measured luminance (M6 lighting pass).
  */
 export const MOODS: Record<RoomMood, MoodSpec> = {
   pregame: {
-    ceiling: 1.4,
+    ceiling: 1.6,
+    panel: 1.25,
+    bounce: 0.55,
+    carpet: 0.16,
+    bench: 1.6,
+    edgeEmpty: 1.6,
+    edge: 3.2,
+    innerEmpty: 0.55,
+    inner: 1.2,
+    plateEmpty: 0.8,
+    emptyStall: 0.4,
     stall: 12,
     under: 7,
     plate: 2.4,
     wash: 7,
-    pool: 0.14,
-    env: 0.9,
+    pool: 0.2,
+    env: 1.5,
     exposure: 1.05,
     bloom: 0.7,
     threshold: 0.85,
-    accent: 0.8,
-    grade: { lift: [0.006, 0.003, 0.0], gamma: [0.98, 1.0, 1.03], gain: [1.06, 1.0, 0.92], saturation: 1.08, contrast: 1.08 },
+    accent: 0.9,
+    grade: { lift: [0.01, 0.007, 0.004], gamma: [0.98, 1.0, 1.03], gain: [1.06, 1.0, 0.92], saturation: 1.08, contrast: 1.04 },
   },
   lightsdown: {
-    ceiling: 0.25,
-    stall: 20,
-    under: 12,
-    plate: 3.2,
-    wash: 1.4,
-    pool: 0.3,
-    env: 0.3,
-    exposure: 1.35,
+    ceiling: 0.15,
+    panel: 0.12,
+    bounce: 0.04,
+    carpet: 0.035,
+    bench: 1.3,
+    edgeEmpty: 1.8,
+    edge: 3.6,
+    innerEmpty: 0.35,
+    inner: 1.1,
+    plateEmpty: 0.9,
+    emptyStall: 0.25,
+    stall: 16,
+    under: 10,
+    plate: 3,
+    wash: 1.2,
+    pool: 0.32,
+    env: 0.35,
+    exposure: 1.2,
     bloom: 1.0,
     threshold: 0.75,
     accent: 1.5,
-    grade: { lift: [0.0, 0.004, 0.0], gamma: [1.0, 0.98, 1.02], gain: [1.0, 1.02, 0.96], saturation: 1.15, contrast: 1.14 },
+    grade: { lift: [0.0, 0.004, 0.0], gamma: [1.0, 0.98, 1.02], gain: [1.0, 1.02, 0.96], saturation: 1.15, contrast: 1.12 },
   },
 };
 
 const WARM = new THREE.Color(1, 0.78, 0.55);
+/** The dropped ceiling panel's radius: over the middle of the room, clear of the row's lamps. */
+const PANEL_R = 5.4;
+
+type GlowKind = 'ceiling' | 'accent' | 'tunnel' | 'panel' | 'bench';
+
+/** A strip of pool light: bright along one long edge (the plinth), fading across the carpet. */
+function poolStrip(): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = 8;
+  c.height = 64;
+  const ctx = c.getContext('2d')!;
+  const g = ctx.createLinearGradient(0, 0, 0, 64);
+  // Canvas top = the plane's far edge (-Z in its frame, toward the plinth).
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.25, 'rgba(255,255,255,0.45)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 8, 64);
+  return new THREE.CanvasTexture(c);
+}
 const LIMEC = new THREE.Color(0xaaff00);
 
 /** A frame on the arc: origin on the floor at `angle` and radius `r`, +Z toward the room's center. */
@@ -83,9 +151,12 @@ export class Room {
   readonly doorFrame = arcFrame(DOOR_ANGLE, ROOM_R);
   /** The field seen down the tunnel (a still of the stadium, rendered at entry). */
   readonly fieldView: THREE.MeshBasicMaterial;
-  private emissive: { mat: THREE.MeshBasicMaterial; base: THREE.Color; kind: 'ceiling' | 'accent' | 'tunnel' }[] = [];
+  private emissive: { mat: THREE.MeshBasicMaterial; base: THREE.Color; kind: GlowKind }[] = [];
   private envScene = new THREE.Scene();
-  private envMats: { mat: THREE.MeshBasicMaterial; base: THREE.Color; kind: 'ceiling' | 'stall' | 'accent' }[] = [];
+  private envMats: { mat: THREE.MeshBasicMaterial; base: THREE.Color; kind: 'ceiling' | 'stall' | 'accent' | 'panel' }[] = [];
+  /** Self-lit room surfaces whose emissive the mood sets. */
+  private carpetMat: THREE.MeshStandardMaterial;
+  private bounceMat: THREE.MeshStandardMaterial;
   mood: RoomMood = 'pregame';
 
   constructor() {
@@ -95,8 +166,11 @@ export class Room {
     this.lockers = LOCKERS.map((l) => new Locker(l, shared));
     for (const l of this.lockers) s.add(l.group);
 
-    // Carpet.
-    const carpet = new THREE.Mesh(new THREE.CircleGeometry(ROOM_R + 0.1, 96).rotateX(-Math.PI / 2), lockerLit(new THREE.MeshStandardMaterial({ map: carpetTexture(), roughness: 0.96 })));
+    // Carpet: its own texture as a faint emissive (the bounce off the lit
+    // ceiling and stalls), so the pile and the mark always read.
+    const carpetTex = carpetTexture();
+    this.carpetMat = lockerLit(new THREE.MeshStandardMaterial({ map: carpetTex, roughness: 0.96, emissive: new THREE.Color(1, 0.94, 0.86), emissiveMap: carpetTex, emissiveIntensity: 0 }));
+    const carpet = new THREE.Mesh(new THREE.CircleGeometry(ROOM_R + 0.1, 96).rotateX(-Math.PI / 2), this.carpetMat);
     s.add(carpet);
 
     // Curved slat wall, open at the tunnel door.
@@ -126,17 +200,27 @@ export class Room {
     const fasciaMesh = new THREE.Mesh(fascia, lockerLit(new THREE.MeshStandardMaterial({ color: 0x0c0c0d, roughness: 0.4, side: THREE.BackSide })));
     s.add(fasciaMesh);
 
-    // Ceiling: dark, with a recessed light ring and a ring of downlights.
-    const ceil = new THREE.Mesh(new THREE.CircleGeometry(ROOM_R + 0.1, 96).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.9 }));
+    // Ceiling (ref-04): a dropped perforated panel over the middle of the
+    // room, its holes lit from above with the mark picked out in lime, a lit
+    // reveal around its edge, and the plaster around it warm with bounce
+    // from the panel and the row.
+    this.bounceMat = new THREE.MeshStandardMaterial({ color: 0x1c1a18, roughness: 0.9, emissive: new THREE.Color(1, 0.9, 0.78), emissiveMap: bounceTexture(), emissiveIntensity: 0 });
+    const ceil = new THREE.Mesh(new THREE.CircleGeometry(ROOM_R + 0.1, 96).rotateX(Math.PI / 2), this.bounceMat);
     ceil.position.y = CEILING_Y;
     s.add(ceil);
+    const panel = this.glow(new THREE.Color(1, 1, 1), 'panel');
+    panel.mat.map = perforatedTexture();
+    this.panelMat = panel.mat;
+    const panelMesh = new THREE.Mesh(new THREE.CircleGeometry(PANEL_R, 96).rotateX(Math.PI / 2), panel.mat);
+    panelMesh.position.y = CEILING_Y - 0.16;
+    s.add(panelMesh);
+    const soffit = new THREE.Mesh(new THREE.CylinderGeometry(PANEL_R, PANEL_R, 0.16, 96, 1, true), new THREE.MeshStandardMaterial({ color: 0x151517, roughness: 0.6, metalness: 0.4 }));
+    soffit.position.y = CEILING_Y - 0.08;
+    s.add(soffit);
     const ring = this.glow(WARM, 'ceiling');
-    const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(4.6, 0.06, 8, 128).rotateX(Math.PI / 2), ring.mat);
-    ringMesh.position.y = CEILING_Y - 0.05;
+    const ringMesh = new THREE.Mesh(new THREE.TorusGeometry(PANEL_R + 0.03, 0.03, 6, 160).rotateX(Math.PI / 2), ring.mat);
+    ringMesh.position.y = CEILING_Y - 0.16;
     s.add(ringMesh);
-    const coffer = new THREE.Mesh(new THREE.RingGeometry(4.2, 5.0, 96).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x151517, roughness: 0.7, side: THREE.DoubleSide }));
-    coffer.position.y = CEILING_Y - 0.12;
-    s.add(coffer);
     const dl = this.glow(WARM, 'ceiling');
     const downs = new THREE.InstancedMesh(new THREE.CircleGeometry(0.07, 16).rotateX(Math.PI / 2), dl.mat, 28);
     for (let i = 0; i < 28; i++) {
@@ -170,13 +254,35 @@ export class Room {
     const welt = new THREE.CylinderGeometry(r1 - 0.015, r1 - 0.015, 0.018, 96, 1, true, toTheta(a1), a1 - a0);
     welt.translate(0, 0.37, 0);
     s.add(new THREE.Mesh(welt, accent.mat));
-    const legMat = lockerLit(new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.5, metalness: 0.5 }));
-    const legs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.34, 0.36, 0.06), legMat, 9);
-    for (let i = 0; i < 9; i++) {
-      const a = a0 + ((a1 - a0) * (i + 0.5)) / 9;
-      legs.setMatrixAt(i, arcFrame(a, (r1 + r2) / 2).multiply(new THREE.Matrix4().makeTranslation(0, 0.18, 0)).multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2)));
+    // The plinth under the seat, set back, with the underlight strip at its
+    // foot washing the carpet in front (ref-04's glowing base).
+    const p1 = r1 + 0.1;
+    const p2 = r2 - 0.08;
+    const plinthShape = new THREE.Shape();
+    for (let i = 0; i <= N; i++) {
+      const p = onArc(a0 + 0.01 + ((a1 - a0 - 0.02) * i) / N, p2);
+      if (i === 0) plinthShape.moveTo(p.x, p.z);
+      else plinthShape.lineTo(p.x, p.z);
     }
-    s.add(legs);
+    for (let i = N; i >= 0; i--) {
+      const p = onArc(a0 + 0.01 + ((a1 - a0 - 0.02) * i) / N, p1);
+      plinthShape.lineTo(p.x, p.z);
+    }
+    const plinthGeo = new THREE.ExtrudeGeometry(plinthShape, { depth: 0.34, bevelEnabled: false, curveSegments: 4 });
+    plinthGeo.rotateX(Math.PI / 2);
+    plinthGeo.translate(0, 0.34, 0);
+    s.add(new THREE.Mesh(plinthGeo, lockerLit(new THREE.MeshStandardMaterial({ color: 0x121214, roughness: 0.45, metalness: 0.3 }))));
+    const benchGlow = this.glow(new THREE.Color(0.85, 1, 0.55), 'bench');
+    const strip = new THREE.CylinderGeometry(p1 - 0.012, p1 - 0.012, 0.022, 96, 1, true, toTheta(a1 - 0.01), a1 - a0 - 0.02);
+    strip.translate(0, 0.03, 0);
+    s.add(new THREE.Mesh(strip, benchGlow.mat));
+    // Its pool on the carpet: soft segments along the arc, brightest at the plinth.
+    this.benchPool = new THREE.MeshBasicMaterial({ map: poolStrip(), color: 0x000000, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    const SEG = 28;
+    const segW = ((a1 - a0) * (p1 - 0.35)) / SEG + 0.02;
+    const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(segW, 0.7).rotateX(-Math.PI / 2), this.benchPool, SEG);
+    for (let i = 0; i < SEG; i++) pools.setMatrixAt(i, arcFrame(a0 + ((a1 - a0) * (i + 0.5)) / SEG, p1 - 0.35).multiply(new THREE.Matrix4().makeTranslation(0, 0.005, 0)));
+    s.add(pools);
 
     // Video wall at the row's left end.
     this.wall = new VideoWall();
@@ -237,7 +343,22 @@ export class Room {
     this.buildEnvScene();
   }
 
-  private glow(c: THREE.Color, kind: 'ceiling' | 'accent' | 'tunnel') {
+  private benchPool: THREE.MeshBasicMaterial;
+  private panelMat: THREE.MeshBasicMaterial;
+
+  /** Redraw the carpet's and the ceiling's marks once the display face has loaded. */
+  redrawMarks(): void {
+    const old = [this.carpetMat.map, this.panelMat.map];
+    const carpet = carpetTexture();
+    this.carpetMat.map = carpet;
+    this.carpetMat.emissiveMap = carpet;
+    this.panelMat.map = perforatedTexture();
+    this.carpetMat.needsUpdate = true;
+    this.panelMat.needsUpdate = true;
+    for (const t of old) t?.dispose();
+  }
+
+  private glow(c: THREE.Color, kind: GlowKind) {
     const mat = new THREE.MeshBasicMaterial({ color: c.clone() });
     const e = { mat, base: c.clone(), kind };
     this.emissive.push(e);
@@ -255,7 +376,9 @@ export class Room {
     };
     const shell = new THREE.Mesh(new THREE.SphereGeometry(30, 16, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.035, 0.028, 0.022), side: THREE.BackSide }));
     e.add(shell);
-    add(new THREE.TorusGeometry(4.6, 0.25, 6, 48).rotateX(Math.PI / 2), WARM.clone().multiplyScalar(3), 'ceiling', CEILING_Y);
+    // The ceiling panel: the room's big soft source from above.
+    add(new THREE.CircleGeometry(PANEL_R, 32).rotateX(Math.PI / 2), new THREE.Color(1, 0.93, 0.83).multiplyScalar(0.55), 'panel', CEILING_Y - 0.16);
+    add(new THREE.TorusGeometry(PANEL_R, 0.2, 6, 48).rotateX(Math.PI / 2), WARM.clone().multiplyScalar(2), 'ceiling', CEILING_Y);
     // The lit stalls: a warm band where the row is.
     add(new THREE.CylinderGeometry(ARC_R, ARC_R, 1.2, 48, 1, true, Math.PI - 0.75, 1.5), WARM.clone().multiplyScalar(0.9), 'stall', 1.3);
     add(new THREE.CylinderGeometry(ARC_R, ARC_R, 0.2, 48, 1, true, Math.PI - 0.75, 1.5), LIMEC.clone().multiplyScalar(0.5), 'accent', 0.1);
@@ -265,11 +388,14 @@ export class Room {
   applyMood(mood: RoomMood, pmrem: THREE.PMREMGenerator): void {
     this.mood = mood;
     const m = MOODS[mood];
-    for (const e of this.emissive) e.mat.color.copy(e.base).multiplyScalar(e.kind === 'ceiling' ? m.ceiling : e.kind === 'accent' ? m.accent : 2.5);
-    for (const e of this.envMats) e.mat.color.copy(e.base).multiplyScalar(e.kind === 'ceiling' ? m.ceiling / 2.2 : e.kind === 'accent' ? m.accent / 2.2 : m.stall / 16);
+    const glowLevel: Record<GlowKind, number> = { ceiling: m.ceiling, accent: m.accent, tunnel: 2.5, panel: m.panel, bench: m.bench };
+    for (const e of this.emissive) e.mat.color.copy(e.base).multiplyScalar(glowLevel[e.kind]);
+    for (const e of this.envMats) e.mat.color.copy(e.base).multiplyScalar(e.kind === 'ceiling' ? m.ceiling / 2.2 : e.kind === 'accent' ? m.accent / 2.2 : e.kind === 'panel' ? m.panel : m.stall / 16);
+    this.carpetMat.emissiveIntensity = m.carpet;
+    this.bounceMat.emissiveIntensity = m.bounce;
+    this.benchPool.color.setRGB(0.85, 1, 0.55).multiplyScalar(m.bench * 0.22);
     for (const l of this.lockers) {
-      // A bare stall keeps a low lamp so its empty hanger and dark shelf still read.
-      l.levels = { stall: m.stall, under: m.under, emptyStall: m.stall * 0.12, plate: m.plate, wash: m.wash, pool: m.pool };
+      l.levels = { stall: m.stall, under: m.under, emptyStall: m.stall * m.emptyStall, plate: m.plate, plateEmpty: m.plateEmpty, wash: m.wash, pool: m.pool, edge: m.edge, edgeEmpty: m.edgeEmpty, inner: m.inner, innerEmpty: m.innerEmpty };
       l.applyLights();
     }
     const prev = this.scene.environment;

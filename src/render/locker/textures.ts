@@ -67,7 +67,7 @@ export interface PlateLine {
  * (an empty locker) show only the etched rule. The same canvas is the
  * emissive map, so "lighting" the plate is its emissive intensity.
  */
-export function drawNameplate(c: HTMLCanvasElement, lines: PlateLine[] | null): void {
+export function drawNameplate(c: HTMLCanvasElement, lines: PlateLine[] | null, blank = ''): void {
   const ctx = c.getContext('2d')!;
   const { width: w, height: h } = c;
   ctx.fillStyle = '#0b0b0c';
@@ -82,8 +82,16 @@ export function drawNameplate(c: HTMLCanvasElement, lines: PlateLine[] | null): 
   ctx.lineWidth = 3;
   ctx.strokeRect(6, 6, w - 12, h - 12);
   if (!lines) {
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    ctx.fillRect(w * 0.2, h / 2 - 2, w * 0.6, 4);
+    // A blank plate still says whose stall it is, dimly: the slot, waiting.
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(w * 0.2, h * 0.8, w * 0.6, 3);
+    if (blank) {
+      ctx.fillStyle = 'rgba(170,255,0,0.42)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      fitFont(ctx, blank, 'Bungee', h * 0.42, w * 0.5);
+      ctx.fillText(blank, w / 2, h / 2 + 2);
+    }
     return;
   }
   const colW = w / lines.length;
@@ -309,9 +317,9 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, fi
  */
 export function carpetTexture(): THREE.CanvasTexture {
   const [c, ctx] = canvas(2048, 2048);
-  ctx.fillStyle = '#17181a';
+  ctx.fillStyle = '#26272b';
   ctx.fillRect(0, 0, 2048, 2048);
-  grain(ctx, 2048, 2048, 0.07, 3, 2);
+  grain(ctx, 2048, 2048, 0.09, 3, 2);
   const cx = 1024;
   const cy = 1024;
   // Outer border band follows the room's wall.
@@ -408,6 +416,80 @@ export function backPanelTexture(): THREE.CanvasTexture {
   const t = canvasTexture(c);
   t.wrapS = THREE.RepeatWrapping;
   return t;
+}
+
+/**
+ * The ceiling's perforated panel (ref-04): a dark metal sheet with a grid of
+ * lit holes, warm white, with the Contenders' mark picked out in lime holes.
+ * At a distance the holes average to a soft glow, so the panel lights the
+ * room like the reference's. Drawn for a disc; the corners are unused.
+ */
+export function perforatedTexture(): THREE.CanvasTexture {
+  const N = 2048;
+  const [c, ctx] = canvas(N, N);
+  ctx.fillStyle = '#0c0c0d';
+  ctx.fillRect(0, 0, N, N);
+  // The mark, as a mask: a ring and the C over the middle of the room.
+  const [, mc] = canvas(N, N);
+  const mx = N * 0.5;
+  const my = N * 0.5;
+  mc.strokeStyle = '#fff';
+  mc.lineWidth = 40;
+  mc.beginPath();
+  mc.arc(mx, my, 330, 0, Math.PI * 2);
+  mc.stroke();
+  mc.fillStyle = '#fff';
+  mc.font = '460px Bungee';
+  mc.textAlign = 'center';
+  mc.textBaseline = 'middle';
+  mc.fillText('C', mx, my + 20);
+  const mask = mc.getImageData(0, 0, N, N).data;
+  const pitch = 14;
+  for (let y = pitch / 2; y < N; y += pitch)
+    for (let x = pitch / 2; x < N; x += pitch) {
+      const r = Math.hypot(x - N / 2, y - N / 2) / (N / 2);
+      if (r > 0.985) continue;
+      const inMark = mask[(Math.floor(y) * N + Math.floor(x)) * 4]! > 128;
+      // Holes dim a little toward the rim, as a panel lit from its center.
+      const a = inMark ? 1 : 0.92 - 0.25 * r * r;
+      ctx.fillStyle = inMark ? `rgba(170,255,0,${a})` : `rgba(255,236,212,${a})`;
+      ctx.beginPath();
+      ctx.arc(x, y, inMark ? 3.6 : 3.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  const t = canvasTexture(c);
+  t.anisotropy = 8;
+  return t;
+}
+
+/** The warm bounce on the ceiling around the panel: brighter toward the lit row at the rim, soft in between. */
+export function bounceTexture(): THREE.CanvasTexture {
+  const [c, ctx] = canvas(512, 512);
+  const g = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+  g.addColorStop(0, '#6b5a47');
+  g.addColorStop(0.55, '#3f342a');
+  g.addColorStop(0.88, '#5c4b3b');
+  g.addColorStop(1, '#2a221c');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 512, 512);
+  return canvasTexture(c);
+}
+
+/** A stall's interior wash: brightest just under the top cabinet's lamp, falling toward the seat, softer at the sides. */
+export function washTexture(): THREE.CanvasTexture {
+  const [c, ctx] = canvas(64, 256);
+  const img = ctx.createImageData(64, 256);
+  for (let y = 0; y < 256; y++)
+    for (let x = 0; x < 64; x++) {
+      const v = y / 255;
+      const u = (x - 31.5) / 32;
+      const a = (0.28 + 0.72 * Math.exp(-3.2 * v)) * (1 - 0.35 * u * u);
+      const i = (y * 64 + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.round(255 * a);
+      img.data[i + 3] = 255;
+    }
+  ctx.putImageData(img, 0, 0);
+  return canvasTexture(c, false);
 }
 
 export function makeCanvas(w: number, h: number): HTMLCanvasElement {

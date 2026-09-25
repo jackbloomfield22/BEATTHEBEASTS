@@ -15,7 +15,7 @@ import { loadPlayerAsset } from '../players/playerAsset';
 import type { LightingPreset } from '../lighting/presets';
 import { view } from '../view';
 import { DOOR, frontOf, LOCKER_OF, ARC_R } from './layout';
-import { updateLockerLights } from './lockerLights';
+import { lockerLitState, updateLockerLights } from './lockerLights';
 import { POS_OF_SLOT, type LockerOccupant } from './locker';
 import { Hologram, type SigPos } from './hologram';
 import { MOODS, Room, type RoomMood } from './room';
@@ -74,6 +74,7 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
     whenFontReady().then(() => {
       for (const l of room.lockers) l.redraw();
       room.wall.redraw();
+      room.redrawMarks();
     });
     if (import.meta.env.DEV) Object.assign(window, { __btbRoom: room });
     let cancelled = false;
@@ -94,9 +95,27 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
   }, [room, mood, pmrem]);
 
   // Compile the room's programs off the frame once, so the first view of it doesn't stall.
+  // If this GPU rejects the stall-light patch, relight the room without it
+  // (self-lit surfaces and standard lighting) instead of drawing it black.
   useEffect(() => {
+    const prev = gl.debug.onShaderError;
+    gl.debug.onShaderError = (ctx, program, vs, fs) => {
+      const src = ctx.getShaderSource(fs) ?? '';
+      console.error('THREE.WebGLProgram: shader error', ctx.getShaderInfoLog(fs) || ctx.getShaderInfoLog(vs) || ctx.getProgramInfoLog(program));
+      if (lockerLitState.enabled && src.includes('uLkPos')) {
+        console.warn('Locker room: stall-light shader rejected by this GPU; falling back to standard lighting.');
+        lockerLitState.enabled = false;
+        room.scene.traverse((o) => {
+          const m = (o as THREE.Mesh).material;
+          for (const x of Array.isArray(m) ? m : m ? [m] : []) x.needsUpdate = true;
+        });
+      }
+    };
     const cam = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 100);
     gl.compileAsync(room.scene, cam).catch(() => undefined);
+    return () => {
+      gl.debug.onShaderError = prev;
+    };
   }, [gl, room]);
 
   useEffect(() => {

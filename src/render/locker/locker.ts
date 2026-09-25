@@ -4,7 +4,7 @@ import type { Slot } from '@data/legacy/types';
 import { ARC_R, CEILING_Y, LOCKER_D, LOCKER_H, ROD_Y, SEAT_H, SHELF_Y, TOP_H, frontOf, onArc, type LockerPlace } from './layout';
 import { lockerLit, lockerLightsWorld, lockerLightUniforms } from './lockerLights';
 import { cleatGeometry, gloveGeometry, hangerGeometry, helmetGeometry, jerseyGeometry, towelGeometry } from './props';
-import { canvasTexture, drawJersey, drawNameplate, drawStickers, makeCanvas, type PlateLine, type StickerSpec } from './textures';
+import { canvasTexture, drawJersey, drawNameplate, drawStickers, makeCanvas, washTexture, type PlateLine, type StickerSpec } from './textures';
 
 // One stall of the Contenders' locker room and the way it dresses itself
 // when its man is drafted (M6 brief): the nameplate lights with his name and
@@ -35,6 +35,7 @@ export interface SharedLockerAssets {
   glove: THREE.MeshStandardMaterial;
   towel: THREE.MeshStandardMaterial;
   poolTex: THREE.Texture;
+  washTex: THREE.Texture;
   geo: {
     box: THREE.BoxGeometry;
     plane: THREE.PlaneGeometry;
@@ -51,7 +52,8 @@ export interface SharedLockerAssets {
 export function createSharedLockerAssets(lit: <M extends THREE.MeshStandardMaterial>(m: M) => M, backTex: THREE.Texture): SharedLockerAssets {
   const std = (p: THREE.MeshStandardMaterialParameters) => lit(new THREE.MeshStandardMaterial(p));
   return {
-    lacquer: std({ color: 0x0e0e10, roughness: 0.32, metalness: 0.05 }),
+    // Gloss black with some metal, so the frames pick up the lit room and the edge strips (0x0e0e10 at 0.05 read as holes).
+    lacquer: std({ color: 0x17171b, roughness: 0.3, metalness: 0.3 }),
     back: std({ color: 0x3a3a3e, map: backTex, roughness: 0.75 }),
     cushion: std({ color: 0x151517, roughness: 0.55 }),
     chrome: std({ color: 0xd8d8dc, roughness: 0.25, metalness: 1 }),
@@ -63,6 +65,7 @@ export function createSharedLockerAssets(lit: <M extends THREE.MeshStandardMater
     glove: std({ color: 0x1a1b1e, roughness: 0.6 }),
     towel: std({ color: 0x5e5c58, roughness: 0.97, side: THREE.DoubleSide }),
     poolTex: poolTexture(),
+    washTex: washTexture(),
     geo: {
       box: new THREE.BoxGeometry(1, 1, 1),
       plane: new THREE.PlaneGeometry(1, 1),
@@ -92,6 +95,9 @@ function drop(t: number, start: number, land: number, h: number, bounce = 0.02):
 
 /** Warm white of the stall lights (≈3200 K, as the references' stall lamps). */
 const WARM = new THREE.Color(1, 0.8, 0.58);
+/** The Contenders' lime (#aaff00) for a bare stall's edge frame. */
+const LIME_EDGE = new THREE.Color(0xaaff00);
+const _tint = new THREE.Color();
 
 export class Locker {
   readonly group = new THREE.Group();
@@ -102,6 +108,12 @@ export class Locker {
   private stickers: { canvas: HTMLCanvasElement; tex: THREE.CanvasTexture };
   private strip: THREE.MeshBasicMaterial;
   private under: THREE.MeshBasicMaterial;
+  /** The lime frame around the opening (position color once dressed). */
+  private edge: THREE.MeshBasicMaterial;
+  /** The interior back panel, lit from within (its emissive is the wash). */
+  private backMat: THREE.MeshStandardMaterial;
+  /** What a blank nameplate says: the slot waiting to be filled. */
+  private blank: string;
   private lightIdx: number;
   private kit = new THREE.Group();
   private jerseys: { mesh: THREE.Mesh; canvas: HTMLCanvasElement; tex: THREE.CanvasTexture; hanger: THREE.Mesh; baseY: number }[] = [];
@@ -114,8 +126,13 @@ export class Locker {
   private stickersShown = 0;
   /** 0..1 how "on" the stall's lights are (a lit, dressed stall = 1). */
   private lit = 0;
-  /** The room's light levels (set by the mood). */
-  levels = { stall: 14, under: 9, emptyStall: 0.0, plate: 2.2, wash: 5, pool: 0.5 };
+  /**
+   * The room's light levels (set by the mood). Every stall is lit, empty or
+   * not (ref-04: the lockers are the light): an empty stall has its lime
+   * edge, a soft interior wash and a dim plate; a dressed one brightens and
+   * takes its position's color.
+   */
+  levels = { stall: 14, under: 9, emptyStall: 4, plate: 2.2, plateEmpty: 0.7, wash: 5, pool: 0.5, edge: 3.2, edgeEmpty: 1.4, inner: 1.1, innerEmpty: 0.45 };
   private pool: THREE.MeshBasicMaterial;
 
   constructor(place: LockerPlace, shared: SharedLockerAssets) {
@@ -147,7 +164,8 @@ export class Locker {
     rod.scale.set(1, W - 0.1, 1);
     rod.position.set(0, ROD_Y, -D / 2 - 0.02);
     g.add(rod);
-    const back = new THREE.Mesh(geo.plane, shared.back);
+    this.backMat = lockerLit(new THREE.MeshStandardMaterial({ color: 0x3a3a3e, map: shared.back.map, roughness: 0.75, emissive: WARM.clone(), emissiveMap: shared.washTex, emissiveIntensity: 0 }));
+    const back = new THREE.Mesh(geo.plane, this.backMat);
     back.scale.set(W - 0.1, LOCKER_H - TOP_H - SEAT_H, 1);
     back.position.set(0, SEAT_H + (LOCKER_H - TOP_H - SEAT_H) / 2, -D + 0.02);
     (shared.back.map as THREE.Texture).repeat.set(1, 1);
@@ -155,7 +173,8 @@ export class Locker {
 
     // Nameplate on the top cabinet's face (the canvas is its emissive map too).
     const pc = makeCanvas(place.slot === 'OL' ? 2048 : 1024, 160);
-    drawNameplate(pc, null);
+    this.blank = place.slot === 'OL' ? 'OFFENSIVE LINE' : place.slot;
+    drawNameplate(pc, null, this.blank);
     const ptex = canvasTexture(pc);
     const pmat = new THREE.MeshStandardMaterial({ map: ptex, emissiveMap: ptex, emissive: new THREE.Color(1, 1, 1), emissiveIntensity: 0, roughness: 0.35, metalness: 0.4 });
     const plate = new THREE.Mesh(geo.plane, pmat);
@@ -185,6 +204,20 @@ export class Locker {
     under.scale.set(W - 0.16, 0.014, 0.012);
     under.position.set(0, 0.075, -0.07);
     g.add(under);
+
+    // The edge strip around the opening (ref-04's LED frames): down both
+    // sides' inner edges, across under the top cabinet and along the seat.
+    this.edge = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const openH = LOCKER_H - TOP_H - SEAT_H;
+    const edgeBox = (w: number, h: number, x: number, y: number) => {
+      const e = new THREE.Mesh(geo.box, this.edge);
+      e.scale.set(w, h, 0.012);
+      e.position.set(x, y, 0.004);
+      g.add(e);
+    };
+    for (const sx of [-1, 1]) edgeBox(0.016, openH + 0.016, sx * (W / 2 - 0.058), SEAT_H + openH / 2);
+    edgeBox(W - 0.1, 0.016, 0, LOCKER_H - TOP_H - 0.008);
+    edgeBox(W - 0.1, 0.016, 0, SEAT_H + 0.004);
 
     // The underlight's pool on the carpet (additive; the light loop lights
     // the carpet too, but a soft decal keeps the color reading at a distance).
@@ -294,7 +327,7 @@ export class Locker {
   clear(): void {
     this.occupant = null;
     this.t = null;
-    drawNameplate(this.plate.canvas, null);
+    drawNameplate(this.plate.canvas, null, this.blank);
     this.plate.tex.needsUpdate = true;
     drawStickers(this.stickers.canvas, null);
     this.stickers.tex.needsUpdate = true;
@@ -305,7 +338,7 @@ export class Locker {
     this.shelfKit.visible = false;
     this.cleats.visible = false;
     this.lit = 0;
-    this.plate.mat.emissiveIntensity = 0;
+    this.plate.mat.emissiveIntensity = this.levels.plateEmpty;
     this.applyLights();
   }
 
@@ -317,7 +350,7 @@ export class Locker {
       for (const j of this.jerseys) j.tex.needsUpdate = true;
       drawStickers(this.stickers.canvas, this.occupant.stickers, this.stickersShown);
     } else {
-      drawNameplate(this.plate.canvas, null);
+      drawNameplate(this.plate.canvas, null, this.blank);
       drawStickers(this.stickers.canvas, null);
     }
     this.plate.tex.needsUpdate = true;
@@ -336,7 +369,8 @@ export class Locker {
     // wipes up, the underlight swells in the position color.
     const flick = t < 0.08 ? 1 : t < 0.14 ? 0.1 : t < 0.2 ? 0.8 : t < 0.24 ? 0.3 : 1;
     this.lit = clamp01(t / 0.25) * flick;
-    this.plate.mat.emissiveIntensity = this.levels.plate * ease(clamp01((t - 0.05) / 0.45));
+    const pe = ease(clamp01((t - 0.05) / 0.45));
+    this.plate.mat.emissiveIntensity = this.levels.plateEmpty + (this.levels.plate - this.levels.plateEmpty) * pe;
     const u = ease(clamp01((t - 0.1) / 0.6));
     this.applyLights(u);
     // Jersey drops onto the hanger and sways to rest.
@@ -378,11 +412,17 @@ export class Locker {
 
   /** Push this stall's light levels into the shared loop and the emissive strips. */
   applyLights(under = this.occupant ? 1 : 0): void {
+    const L = this.levels;
     const stall = lockerLightsWorld[this.lightIdx]!;
     const on = this.occupant ? this.lit : 0;
-    // Bare: the empty stall's low lamp (levels.emptyStall).
-    stall.intensity = this.levels.stall * on + this.levels.emptyStall * (1 - on);
-    this.strip.color.copy(WARM).multiplyScalar(0.2 + 5 * on);
+    // Bare: the empty stall's lamp still on (levels.emptyStall), warm and lower.
+    stall.intensity = L.stall * on + L.emptyStall * (1 - on);
+    this.strip.color.copy(WARM).multiplyScalar(1.4 + 3.8 * on);
+    // The edge frame: lime when bare, the position's color as he moves in.
+    this.edge.color.copy(LIME_EDGE).lerp(this.posColor, under).multiplyScalar(L.edgeEmpty + (L.edge - L.edgeEmpty) * under);
+    this.backMat.emissive.copy(WARM).lerp(_tint.copy(WARM).lerp(this.posColor, 0.3), under);
+    this.backMat.emissiveIntensity = L.innerEmpty + (L.inner - L.innerEmpty) * on;
+    if (!this.occupant) this.plate.mat.emissiveIntensity = L.plateEmpty;
     const ul = lockerLightsWorld[9 + this.lightIdx]!;
     ul.intensity = this.levels.under * under;
     this.under.color.copy(this.posColor).multiplyScalar(0.15 + 4 * under);

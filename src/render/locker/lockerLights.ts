@@ -71,17 +71,25 @@ for (int i = 0; i < LK_N; i++) {
 }
 `;
 
+/**
+ * Whether the patch is on. If a GPU's compiler rejects it (LockerRoom
+ * watches the renderer's shader errors), the room falls back to three's
+ * standard lighting and its self-lit surfaces rather than drawing black.
+ */
+export const lockerLitState = { enabled: true };
+
 /** Patch a standard material to take the locker lights (chains any existing hook). */
 export function lockerLit<M extends THREE.MeshStandardMaterial>(mat: M): M {
   const prev = mat.onBeforeCompile;
   mat.onBeforeCompile = (shader, r) => {
     prev.call(mat, shader, r);
+    if (!lockerLitState.enabled) return;
     Object.assign(shader.uniforms, lockerLightUniforms);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>\n${PARS}`)
       .replace('#include <lights_fragment_begin>', `#include <lights_fragment_begin>\n${LOOP}`);
   };
   const key = mat.customProgramCacheKey.bind(mat);
-  mat.customProgramCacheKey = () => `${key()}|locker-lit`;
+  mat.customProgramCacheKey = () => `${key()}|locker-lit${lockerLitState.enabled ? '' : '-off'}`;
   return mat;
 }
