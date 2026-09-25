@@ -10,7 +10,8 @@ import type { GaitClip } from './blend';
 const BASE = `${import.meta.env.BASE_URL}assets/characters/`;
 
 export interface ClipMeta {
-  kind: 'stance' | 'locomotion' | 'transition' | 'overlay';
+  /** 'signature': the locker-room hologram clips (M6), in place, looping; play them raw. */
+  kind: 'stance' | 'locomotion' | 'transition' | 'overlay' | 'signature';
   frames: number;
   duration: number;
   loop: boolean;
@@ -28,6 +29,10 @@ export interface ClipMeta {
   toPhase?: number;
   /** Sideways travel by frame (m, +X left), for moves that cut. */
   side?: number[];
+  /** Transitions that turn the body (a pull, a hip flip): degrees (+ left) it faces away from its start by the last frame; turn the heading by it at the hand-over. */
+  turn?: number;
+  /** Transitions out of a gait: the phase of it they start at (0 = left touch-down). */
+  fromPhase?: number;
   /** Frames where the sim's moments land: the ball leaves the hand, a catch is secured, a tackle's contact. */
   events?: Record<string, number>;
   /** Overlays: the bones they drive. */

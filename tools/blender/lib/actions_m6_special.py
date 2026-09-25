@@ -413,7 +413,7 @@ def ref_idle() -> Clip:
 # hands open and the arms relaxed; ~4.2 m/s keeps up with the play.
 REF_RUN = Gait(
     "ref_run", frames=20, speed=4.2, duty=0.33, width=0.08, pelvis_up=-0.07, bob=0.03, sway=0.013, drop=6, turn=8, counter=9, lean=8,
-    arm_c=2, arm_a=32, elbow=78, elbow_d=10, arm_abd=12, inward=0.08, hand="relaxed",
+    arm_c=-2, arm_a=24, elbow=84, elbow_d=8, arm_abd=12, inward=0.08, hand="relaxed",
     hip_max=50, hip_ext=-16, knee_max=100, retract=6, lift=0.22,
     strike=-4, flat_by=0.12, heel_mid=0, rise_at=0.5, toe_off=50, dorsi=10, gaze=4, ahead=0.36,
 )
@@ -491,7 +491,9 @@ def whistle() -> Clip:
         if k > 1e-3:
             p.hands = {"l": (0.03, -0.13, 1.62, k)}
             p.elbow = {"l": (0.45, -0.1, 1.2)}
-            p.arms.pop("l", None)
+            if "l" in p.arms:
+                # The aimed (hanging) arm hands over to the IK reach and back.
+                p.arms["l"] = replace(p.arms["l"], weight=p.arms["l"].weight * (1.0 - k))
         p.joints.update({**hands_of_state(SPREAD, "r"), **hands_of_state(GRIP, "l")} if 0.1 < t < 1.1 else {})
 
     return _signal("ref_whistle", T, keys, {"whistle": 8}, gaze=lambda t: (2.0, 0.0), mask_hands=hands)
