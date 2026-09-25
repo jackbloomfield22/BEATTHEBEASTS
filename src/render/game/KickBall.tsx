@@ -56,8 +56,9 @@ export function KickBall() {
       if (!alive) return;
       group = new THREE.Group();
       group.name = 'kick-unit';
-      const mk = (num: number, name: string, at: [number, number], stance: string, clip: string, start: number): Man => {
-        const player = new Player(asset, { kit: KITS.blackoutLime!, skin: '#c08552', number: num, name, heightM: 1.88, weightKg: 100 });
+      // The specialists aren't drafted, so their backs carry numbers only.
+      const mk = (num: number, at: [number, number], stance: string, clip: string, start: number): Man => {
+        const player = new Player(asset, { kit: KITS.blackoutLime!, skin: '#c08552', number: num, heightM: 1.88, weightKg: 100 });
         const anim = new PlayerAnimator(player, lib);
         anim.setStance(stance);
         anim.update(10, { speed: 0 });
@@ -67,9 +68,9 @@ export function KickBall() {
       unit.current = {
         group,
         men: [
-          mk(48, 'SNAPPER', [7, 0], 'stance_ls', 'ks_long_snap', 0),
-          mk(9, 'HOLDER', [0, 0.45], 'stance_holder', 'ks_hold', 0),
-          mk(3, 'KICKER', [-KICKER_BACK, -0.35], 'stance_kicker', 'ks_place_kick', KICK_CONTACT - KICKER_LEAD),
+          mk(48, [7, 0], 'stance_ls', 'ks_long_snap', 0),
+          mk(9, [0, 0.45], 'stance_holder', 'ks_hold', 0),
+          mk(3, [-KICKER_BACK, -0.35], 'stance_kicker', 'ks_place_kick', KICK_CONTACT - KICKER_LEAD),
         ],
       };
       group.visible = false;
