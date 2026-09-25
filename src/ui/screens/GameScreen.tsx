@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/app/appStore';
+import { viewRecord } from '@/app/history';
 import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
 import { game, useGame } from '@/game/game';
@@ -17,6 +18,7 @@ import { PlayArt } from '../game/PlayArt';
 import { PlayHud } from './PracticeScreen';
 import '../styles/game.css';
 import '../styles/match.css';
+import '../styles/results.css';
 
 // A full game (GDD §7) over the live stadium: the score bug, the Beasts'
 // "Meanwhile" possessions, the play call with the coordinator's Suggested
@@ -24,27 +26,122 @@ import '../styles/match.css';
 // tries, field goals with the drag kick and the wind, punts, the
 // two-minute drill's clock and overtime. The game ends on the results screen.
 
+/** To the results screen, on this game's record (saved when the match ended). */
+function toResults(): void {
+  const rec = useGame.getState().record;
+  viewRecord(rec?.id ?? null, 'game');
+  if (useApp.getState().screen === 'game') useApp.getState().go('results');
+}
+
+/** Stages a card is up on (the pause menu can come up over them); a snap pauses in the play engine. */
+const PAUSABLE = new Set(['call', 'fourth', 'try', 'meanwhile', 'play']);
+let justResumed = false;
+function resumeGame(): void {
+  justResumed = true;
+  queueMicrotask(() => (justResumed = false));
+  if (usePractice.getState().stage === 'paused') practice.resume();
+  game.resume();
+}
+
 export function GameScreen() {
   const stage = useGame((s) => s.stage);
-  const go = useApp((s) => s.go);
+  const paused = useGame((s) => s.paused);
+  const snapPaused = usePractice((s) => s.stage === 'paused');
+  // The final whistle, then the results: on a timer, or sooner with Enter (FinalBanner).
   useEffect(() => {
     if (stage === 'final') {
-      const t = setTimeout(() => go('results'), urlFlags.shot ? 0 : 1800);
+      const t = setTimeout(toResults, urlFlags.shot ? 0 : 2400);
       return () => clearTimeout(t);
     }
-  }, [stage, go]);
+  }, [stage]);
+  // Esc (Start on a pad) brings the pause menu up over a card; a snap is paused by the play engine.
+  useEffect(() => {
+    return Input.onAction((id, info) => {
+      // (Esc is also menu.back: the pause menu's Back may have just resumed on this same press.)
+      if (id !== 'global.pause' || info.repeat || justResumed) return;
+      const g = useGame.getState();
+      const ps = usePractice.getState().stage;
+      if (g.paused || ps === 'paused') return resumeGame();
+      if (!PAUSABLE.has(g.stage)) return;
+      if (g.stage === 'play' && (ps === 'presnap' || ps === 'live')) practice.pause();
+      else game.pause();
+    });
+  }, []);
+  const showPause = paused || (stage === 'play' && snapPaused);
   return (
     <div className="game-screen">
       {stage === 'loading' ? <div className="practice-loading">Kickoff…</div> : null}
       {stage !== 'loading' ? <ScoreBug /> : null}
-      {stage === 'meanwhile' ? <Meanwhile /> : null}
-      {stage === 'call' ? <GamePlayCall /> : null}
-      {stage === 'play' ? <GamePlay /> : null}
-      {stage === 'fourth' ? <FourthCard /> : null}
-      {stage === 'try' ? <TryCard /> : null}
+      {!paused ? (
+        <>
+          {stage === 'meanwhile' ? <Meanwhile /> : null}
+          {stage === 'call' ? <GamePlayCall /> : null}
+          {stage === 'play' ? <GamePlay /> : null}
+          {stage === 'fourth' ? <FourthCard /> : null}
+          {stage === 'try' ? <TryCard /> : null}
+        </>
+      ) : null}
       {stage === 'kick' ? <KickPanel /> : null}
       {stage === 'punt' ? <PuntCut /> : null}
       {stage === 'final' ? <FinalBanner /> : null}
+      {showPause ? <GamePause /> : null}
+    </div>
+  );
+}
+
+// ---- Pause ---------------------------------------------------------------------------
+
+/**
+ * The pause menu (Esc / Start): resume, or leave the game. Leaving ends it
+ * where it stands and goes to its results (a snap whose whistle has already
+ * blown still counts, so leaving after the last play is a proper final).
+ */
+function GamePause() {
+  useGame((s) => s.v);
+  const m = game.match;
+  const [focus, setFocus] = useState(0);
+  const over = m?.phase === 'final';
+  const items = [
+    { label: 'Resume', sub: '', run: resumeGame },
+    {
+      label: over ? 'See the results' : 'Leave game',
+      sub: over ? 'The game is over' : 'The game ends here and goes in your History with its box score',
+      run: () => {
+        game.quitToResults();
+        toResults();
+      },
+    },
+  ];
+  const pick = (i: number) => {
+    Audio.uiSelect();
+    items[i]!.run();
+  };
+  useMenuNav({ count: items.length, focus, setFocus, onConfirm: pick, onBack: resumeGame });
+  return (
+    <div className="menu-screen pause game-pause">
+      <div className="menu-scrim strong" />
+      <header className="screen-head">
+        <h1 className="screen-title">Paused</h1>
+        {m ? (
+          <div className="call-sit">
+            <span className="call-down">
+              Contenders {m.score.user}, Beasts {m.score.beasts}
+            </span>
+            <span className="call-spot">{clockLabel(m)}</span>
+          </div>
+        ) : null}
+      </header>
+      <nav className="menu-list">
+        {items.map((it, i) => (
+          <MenuItem key={it.label} label={it.label} sub={focus === i ? it.sub : undefined} focused={focus === i} onHover={() => setFocus(i)} onClick={() => pick(i)} />
+        ))}
+      </nav>
+      <Hints
+        items={[
+          { kb: 'Enter', pad: 'A', label: 'Select' },
+          { kb: 'Esc', pad: 'B', label: 'Resume' },
+        ]}
+      />
     </div>
   );
 }
@@ -136,7 +233,7 @@ function Meanwhile() {
         {d.points ? <span className="mw-pts">+{d.points}</span> : null}
       </div>
       <div className="mw-meta">
-        {d.plays} {d.plays === 1 ? 'play' : 'plays'}, {Math.max(0, d.yards)} yd, {d.top}
+        {d.plays} {d.plays === 1 ? 'play' : 'plays'}, {Math.max(0, Math.round(d.yards))} yd, {d.top}
         {d.twoPoint ? ` · two-point try ${d.twoPoint.good ? 'good' : 'failed'}` : ''}
         {d.result === 'Safety' ? ' · +2 Contenders' : ''}
       </div>
@@ -492,15 +589,21 @@ function PuntCut() {
   );
 }
 
+/** The final whistle: the score holds a beat, then the results (Enter goes now). */
 function FinalBanner() {
-  const m = game.match!;
+  const rec = useGame((s) => s.record);
+  const m = game.match;
+  useMenuNav({ count: 1, focus: 0, setFocus: () => undefined, onConfirm: toResults });
+  const score = m?.score ?? rec?.score;
+  if (!score) return null;
   return (
     <div className="meanwhile final">
-      <div className="mw-kicker">{clockLabel(m)}</div>
+      <div className="mw-kicker">{m ? clockLabel(m) : (rec?.clock ?? 'Final')}</div>
       <div className="mw-line">
-        <span className="mw-team">Contenders {m.score.user}</span>
-        <span className="mw-result">Beasts {m.score.beasts}</span>
+        <span className="mw-team">Contenders {score.user}</span>
+        <span className="mw-result">Beasts {score.beasts}</span>
       </div>
+      <Hints items={[{ kb: 'Enter', pad: 'A', label: 'Results' }]} />
     </div>
   );
 }

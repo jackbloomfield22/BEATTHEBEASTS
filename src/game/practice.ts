@@ -234,7 +234,8 @@ class PracticeSession {
     this.firstCatch = true;
     set({ stage: 'loading', result: null, error: null });
     this.offPause ??= Input.onAction((id, info) => {
-      if (id !== 'global.pause' || info.repeat) return;
+      // In a game the game screen owns the pause (its menu can come up over a card too).
+      if (id !== 'global.pause' || info.repeat || this.game) return;
       const st = get().stage;
       // The same Esc that just resumed (menu.back fires first) doesn't pause again.
       if ((st === 'presnap' || st === 'live') && !this.resuming) this.pause();

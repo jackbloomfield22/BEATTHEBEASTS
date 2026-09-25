@@ -139,6 +139,7 @@ class GameSession {
     this.team = rosters.team;
     this.beastsD = rosters.beastsD;
     this.plays = [];
+    this.lastWhistleWall = 0;
     this.capsules = [];
     this.shadowed = -1;
     this.tendencies = emptyTendencies();
