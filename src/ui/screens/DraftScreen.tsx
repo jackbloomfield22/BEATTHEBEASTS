@@ -4,7 +4,7 @@ import { POS_HEX, DECADE_HEX } from '@data/legacy/palette';
 import { PLAYERS } from '@data/legacy/players';
 import type { Slot } from '@data/legacy/types';
 import { useApp } from '@/app/appStore';
-import { useDraft, SPIN_S, isComplete, revealSeconds } from '@/app/draftStore';
+import { useDraft, SPIN_S, isComplete } from '@/app/draftStore';
 import { useHistory } from '@/app/history';
 import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
@@ -116,11 +116,12 @@ export function DraftScreen() {
   }, [d.phase, d.version]);
 
   // Quick Play: the auto-draft's reveal (the stalls dress in turn down the
-  // row), a look at the full row, then straight out of the tunnel.
+  // row), a look at the full row, then straight out of the tunnel. The room
+  // starts the walk-out on its own clock once the reveal is over
+  // (LockerRoom.tsx); the screenshot harness skips straight to it.
   useEffect(() => {
-    if (d.mode !== 'quick' || d.phase !== 'complete') return;
-    const wait = Math.max(3.5, revealSeconds(useDraft.getState().reveal.slots.length));
-    const t = setTimeout(() => useDraft.setState({ phase: 'walkout', focus: null, wallBeasts: null }), urlFlags.shot ? 200 : wait * 1000);
+    if (d.mode !== 'quick' || d.phase !== 'complete' || urlFlags.shot === null) return;
+    const t = setTimeout(() => useDraft.setState({ phase: 'walkout', focus: null, wallBeasts: null }), 200);
     return () => clearTimeout(t);
   }, [d.mode, d.phase]);
 

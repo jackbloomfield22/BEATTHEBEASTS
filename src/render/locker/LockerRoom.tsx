@@ -65,6 +65,8 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
   const handledReveal = useRef(0);
   /** Auto-Draft's reveal: stalls waiting their turn to dress. */
   const revealQueue = useRef<{ slot: Slot; pick: DraftPick; at: number }[]>([]);
+  /** Quick Play's time on the full row, and how long since the reveal went quiet. */
+  const quick = useRef({ t: 0, idle: 0 });
   const wallKey = useRef('');
   const rt = useMemo(() => new THREE.WebGLRenderTarget(512, 640, { type: THREE.HalfFloatType }), []);
   const captured = useRef(-1);
@@ -244,6 +246,16 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
       room.lockers.find((x) => x.place.slot === r.slot)!.dress(occupantOf(r.pick, useDraft.getState().allPro));
     }
     for (const l of room.lockers) l.update(dt);
+    // Quick Play walks out once its reveal is over, timed in the room's own
+    // clock (a wall-clock timer could beat a slow machine's reveal): at least
+    // 3.5 s on the full row, and ~0.9 s after the last stall finishes dressing.
+    const qs = useDraft.getState();
+    if (qs.mode === 'quick' && qs.phase === 'complete' && urlFlags.shot === null) {
+      quick.current.t += dt;
+      const busy = revealQueue.current.length > 0 || room.lockers.some((l) => l.dressing);
+      quick.current.idle = busy ? 0 : quick.current.idle + dt;
+      if (quick.current.t > 3.5 && quick.current.idle > 0.9) useDraft.setState({ phase: 'walkout', focus: null, wallBeasts: null });
+    } else quick.current = { t: 0, idle: 0 };
     holo.current?.update(dt);
     room.wall.update(dt);
     updateLockerLights(camera);

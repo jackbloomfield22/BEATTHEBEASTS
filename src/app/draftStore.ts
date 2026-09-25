@@ -51,8 +51,6 @@ export const DRESS_S = 3.6;
  */
 export const REVEAL_LEAD = 0.6;
 export const REVEAL_STAGGER = 0.35;
-/** Seconds from an Auto-Draft of `n` stalls until the last one is dressed, plus a beat to look at the row. */
-export const revealSeconds = (n: number): number => (n ? REVEAL_LEAD + (n - 1) * REVEAL_STAGGER + 2.9 + 0.9 : 0);
 
 export interface SavedDraft {
   mode: DraftMode;
