@@ -23,6 +23,12 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `stance_ol_pass` | stance | 60 | 0.0 | 0.00 | 0.00 | 41.6 | -0.1 | pass |
 | `stance_ol_ready` | stance | 60 | 0.0 | 0.00 | 0.00 | 39.5 | -1.8 | pass |
 | `stance_db_press` | stance | 60 | 0.0 | 0.00 | 0.00 | 35.8 | -1.0 | pass |
+| `stance_ls` | stance | 60 | 0.0 | 0.00 | 0.00 | 40.2 | 2.8 | pass |
+| `stance_holder` | stance | 60 | 0.0 | 0.00 | 0.00 | 67.4 | — | pass |
+| `stance_holder_watch` | stance | 60 | 0.0 | 0.00 | 0.00 | 66.7 | — | pass |
+| `stance_kicker` | stance | 60 | 0.0 | 0.00 | 0.00 | 24.9 | 6.7 | pass |
+| `stance_punter` | stance | 60 | 0.0 | 0.00 | 0.00 | 26.9 | 8.7 | pass |
+| `stance_ref` | stance | 60 | 0.0 | 0.00 | 0.00 | 23.7 | 10.6 | pass |
 | `loco_walk` | locomotion | 32 | 1.3 | 0.05 | 0.00 | 17.2 | — | pass |
 | `loco_jog` | locomotion | 22 | 3.5 | 0.31 | 0.00 | 21.7 | — | pass |
 | `loco_run` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.8 | — | pass |
@@ -116,5 +122,16 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `db_hip_flip_l` | transition | 18 | 0.0 | 0.00 | 0.00 | 9.1 | — | pass |
 | `db_hip_flip_r` | transition | 18 | 0.0 | 0.00 | 0.00 | 9.1 | — | pass |
 | `db_break` | transition | 27 | 0.0 | 0.00 | 0.00 | 21.5 | — | pass |
+| `ks_long_snap` | transition | 30 | 0.0 | 0.00 | 0.00 | 40.3 | — | pass |
+| `ks_hold` | transition | 36 | 0.0 | 0.00 | 0.00 | 66.9 | — | pass |
+| `ks_place_kick` | transition | 40 | 0.0 | 0.00 | 0.00 | 7.8 | — | pass |
+| `ks_punt` | transition | 63 | 0.0 | 0.00 | 0.00 | 21.6 | — | pass |
+| `ref_idle` | stance | 120 | 0.0 | 0.00 | 0.00 | 23.8 | 10.9 | pass |
+| `ref_run` | locomotion | 20 | 4.2 | 0.00 | 0.00 | 22.8 | — | pass |
+| `ref_touchdown` | transition | 60 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ref_first_down_l` | transition | 54 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ref_first_down_r` | transition | 54 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ref_incomplete` | transition | 45 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ref_whistle` | transition | 45 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 
-**110 of 110 clips pass.**
+**127 of 127 clips pass.**
