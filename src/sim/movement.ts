@@ -27,17 +27,18 @@ export interface SteerOpts {
   /** Braking as a share of the cut deceleration (a carrier coasting off the stick). Default 1. */
   brake?: number;
   /**
-   * A burst (a carrier out of a cut or into open field): he reaches top speed faster and holds a
-   * little over it for its half-second. From the sprint model: a burst is
-   * the acceleration phase compressed (τ × 0.55) and a top end 4% higher,
-   * about the gap between a player's game speed and his best-ever timed run.
+   * A burst (a carrier out of a cut or into open field): he gets back to top
+   * speed faster. From the sprint model: the acceleration phase compressed
+   * (τ × 0.55), not a higher top end (the ratings' "Burst" trait: top speed
+   * ~0.15 s sooner out of a cut). Round two's automatic burst ran 4% over top
+   * speed at first; pursuers could never close, and runs went +0.85 yd a carry.
    */
   burst?: boolean;
 }
 
 export function steer(a: Agent, want: V2, opts: SteerOpts = {}): void {
   const fx = a.fx;
-  const vTop = fx.vmax * (opts.burst ? 1.04 : 1);
+  const vTop = fx.vmax;
   const tau = fx.tau * (opts.burst ? 0.55 : 1);
   const cap = vTop * (opts.pace ?? 1) * (opts.mult ?? 1) * (0.86 + 0.14 * a.stamina);
   let wx = want.x;
