@@ -147,7 +147,7 @@ test('a tackle: the carrier goes down and the next snap is at the new spot', asy
 });
 
 test('scores: a touchdown run ends the series with a touchdown card', async ({ page }) => {
-  await open(page, 37, 'fourVerts');
+  await open(page, 43, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');
@@ -163,7 +163,7 @@ test('scores: a touchdown run ends the series with a touchdown card', async ({ p
   const s = await tickUntil(page, (x) => x.result !== null);
   await page.keyboard.up('ArrowUp');
   await page.keyboard.up('ShiftRight');
-  // Seed 37 with these inputs is a 75-yard catch and run (the replay is exact).
+  // Seed 43 (Cover 2) with these inputs is a 75-yard catch and run (the replay is exact).
   expect(s.result!.touchdown).toBe(true);
   expect(s.events.some((e) => e.type === 'touchdown')).toBe(true);
   await tick(page, 120);

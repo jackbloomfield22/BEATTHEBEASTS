@@ -12,6 +12,7 @@ import { expectStageAlive, trackErrors, waitReady } from './helpers';
 const PAGES: [string, string][] = [
   ['The Game', 'Possessions'],
   ['The Draft', 'Nine rounds'],
+  ['On the Field', 'Before the snap'],
   ['Controls', 'Snap'],
 ];
 
