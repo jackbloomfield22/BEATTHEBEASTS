@@ -45,7 +45,8 @@ export function KickBall() {
   const gl = useThree((s) => s.gl);
   const [ball] = useState(createFootball);
   const unit = useRef<{ group: THREE.Group; men: Man[] } | null>(null);
-  const seen = useRef<unknown>(null);
+  /** The spot the unit last set at (null: not set for this kick). */
+  const placed = useRef<number | null>(null);
 
   useEffect(() => {
     scene.add(ball);
@@ -86,25 +87,23 @@ export function KickBall() {
     ball.visible = kickView.active;
     if (u) u.group.visible = kickView.active;
     if (!kickView.active) {
-      seen.current = null;
+      placed.current = null;
       return;
     }
     const step = urlFlags.video ? 1 / urlFlags.video : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
     const sx = kickView.spotX;
     const p = kickView.path;
-    // A new kick: the unit sets.
-    if (u && seen.current !== p) {
-      if (!p || !seen.current) {
-        for (const m of u.men) {
-          m.started = false;
-          m.anim.reset();
-          m.anim.setStance(m.stance);
-          m.anim.update(10, { speed: 0 });
-          m.player.root.position.set(worldX(m.at[1]), 0, worldZ(sx + m.at[0]));
-          m.player.root.rotation.y = yawOf(0);
-        }
+    // A new kick: the unit sets at its spot (and again if the unit loads after the kick is up).
+    if (u && placed.current !== sx) {
+      placed.current = sx;
+      for (const m of u.men) {
+        m.started = false;
+        m.anim.reset();
+        m.anim.setStance(m.stance);
+        m.anim.update(10, { speed: 0 });
+        m.player.root.position.set(worldX(m.at[1]), 0, worldZ(sx + m.at[0]));
+        m.player.root.rotation.y = yawOf(0);
       }
-      seen.current = p;
     }
     if (p) kickView.t += step;
     const t = p ? kickView.t : 0;
