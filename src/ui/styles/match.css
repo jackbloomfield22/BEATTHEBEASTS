@@ -49,3 +49,7 @@
 .kick-result { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); font-family: var(--font-display); font-size: 3.4rem; animation: lt-in 400ms both; text-shadow: 0 .2rem 2rem rgba(0,0,0,.8); }
 .kick-result.good { color: var(--lime); }
 .kick-result.bad { color: #ff2a4d; }
+
+/* In a game the score bug owns the top centre: the play call sits below it. */
+.game-call .screen-head { top: 7.4rem; }
+.game-call .call-body { top: 12.4rem; }

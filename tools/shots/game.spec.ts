@@ -4,7 +4,8 @@ import { test, type Page } from '@playwright/test';
 // coordinator's Suggested tab, a snap with the officials set, the fourth-down
 // card, the kick view, and the results screen. Quick Play from the menu,
 // played the way the browser test does; each stage is captured the first
-// time it shows. Into tools/shots/out/game.
+// time it shows (?shot: cameras cut straight to their pose, so a slow
+// software-rendered frame still shows the shot as played). Into tools/shots/out/game.
 
 type W = {
   __btbDraft: { getState(): { begin(mode: string, o?: { seed?: number }): Promise<void> } };
@@ -21,7 +22,7 @@ const shot = (page: Page, name: string) => page.screenshot({ path: `${OUT}/${nam
 test('game screens', async ({ page }) => {
   test.setTimeout(3_600_000);
   await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
-  await page.goto(`/?screen=main&nointro&quality=${process.env.BTB_QUALITY ?? 'medium'}&autokick`);
+  await page.goto(`/?screen=main&nointro&quality=${process.env.BTB_QUALITY ?? 'medium'}&autokick&shot=practice`);
   await page.waitForFunction(() => (window as unknown as { __btbReady?: boolean }).__btbReady === true, null, { timeout: 300_000 });
   await page.evaluate(() => {
     const w = window as unknown as W;
@@ -57,7 +58,7 @@ test('game screens', async ({ page }) => {
     if (st === 'final') break;
     if (!seen.has(st) && st !== 'loading' && st !== 'play') {
       seen.add(st);
-      await page.waitForTimeout(st === 'kick' ? 3000 : 1200);
+      await page.waitForTimeout(st === 'kick' ? 150 : 1200);
       if ((await stage()) === st) await shot(page, st);
       continue;
     }
