@@ -367,7 +367,7 @@ export class Room {
 
   private buildEnvScene(): void {
     const e = this.envScene;
-    const add = (geo: THREE.BufferGeometry, color: THREE.Color, kind: 'ceiling' | 'stall' | 'accent', y = 0) => {
+    const add = (geo: THREE.BufferGeometry, color: THREE.Color, kind: 'ceiling' | 'stall' | 'accent' | 'panel', y = 0) => {
       const mat = new THREE.MeshBasicMaterial({ color: color.clone(), side: THREE.DoubleSide });
       const m = new THREE.Mesh(geo, mat);
       m.position.y = y - 1.5; // rendered from eye height
