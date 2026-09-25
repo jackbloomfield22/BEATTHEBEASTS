@@ -224,6 +224,7 @@ export class Controls {
       if (!h || h.src.kind !== 'pad') f.move = this.moveVector(false);
       f.pumpFake = e.has('pocket.pumpFake');
       f.throwAway = e.has('pocket.throwAway');
+      f.scramble = e.has('pocket.scramble');
     } else {
       this.hold = null;
       this.reticle.icon = 0;

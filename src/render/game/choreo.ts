@@ -34,6 +34,8 @@ export interface Body {
   yaw: number;
   /** The speed fed to the gait, eased (a move's sidestep shouldn't jolt the stride). */
   gaitSpeed: number;
+  /** One-shot clips already played this play (the handoff, the fake). */
+  once: Set<string>;
 }
 
 /** Upper body, for a throw on the run (the legs keep running). */
@@ -57,6 +59,7 @@ export function resetBody(b: Body): void {
   b.lie = null;
   b.fallen = false;
   b.lyingClip = false;
+  b.once.clear();
 }
 
 function lyingClip(b: Body, name: string, t0 = 0): void {
@@ -65,11 +68,11 @@ function lyingClip(b: Body, name: string, t0 = 0): void {
   b.lyingClip = true;
 }
 
-function fall(b: Body, vel: THREE.Vector3, push: THREE.Vector3): void {
+function fall(b: Body, vel: THREE.Vector3, push: THREE.Vector3, big = false): void {
   if (b.fallen && !b.lyingClip) return;
   b.lyingClip = false;
   b.fallen = true;
-  b.ragdoll.start(vel, push);
+  b.ragdoll.start(vel, push, big);
 }
 
 /** The snap: get-offs out of the stances, the QB's drop. */
@@ -77,7 +80,7 @@ export function onSnap(bodies: Body[], s: PlayState, stanceOf: (slot: string) =>
   bodies.forEach((b, i) => {
     if (i === s.qb) {
       const k = s.setup.play.drop.kind;
-      if (k === 'gun3' || k === 'gun5') b.animator.play(`qb_drop_${k}`, { now: true });
+      if (k !== 'handoff') b.animator.play(`qb_drop_${k}`, { now: true });
       return;
     }
     const st = stanceOf(b.slot);
@@ -104,7 +107,10 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         const mv = e.data?.move;
         const kind = mv === 'jukeL' || mv === 'jukeR' ? 'juke' : mv;
         if (kind === 'juke' || kind === 'spin' || kind === 'stiffArm' || kind === 'truck' || kind === 'dive') latency.respond(kind);
-        if (mv === 'jukeL') a.animator.play('juke_l', { now: true });
+        if (mv === 'tuck') a.animator.playOverlay('ovl_tuck');
+        else if (mv === 'slide') lyingClip(a, 'qb_slide');
+        else if (mv === 'redirect') a.animator.play(Number(e.data?.side ?? 1) > 0 ? 'rush_redirect_l' : 'rush_redirect_r', { now: true });
+        else if (mv === 'jukeL') a.animator.play('juke_l', { now: true });
         else if (mv === 'jukeR') a.animator.play('juke_r', { now: true });
         else if (mv === 'spin') a.animator.play('spin', { now: true });
         else if (mv === 'dive') lyingClip(a, 'dive');
@@ -121,6 +127,10 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
       case 'missedTackle':
         if (a && e.data?.dive) lyingClip(a, 'dive');
         break;
+      case 'shed':
+        // Off the block: the get-off, pads low into the chase.
+        if (a && !e.data?.whiff && !a.fallen) a.animator.playOverlay('ovl_getoff');
+        break;
       case 'hit': {
         const t = a;
         const c = who[1] !== undefined ? bodies[who[1]] : undefined;
@@ -132,9 +142,12 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
           const force = Number(e.data?.force ?? 5);
           const push = _w.copy(tv).setY(0);
           if (push.lengthSq() < 1e-4) push.subVectors(c.player.root.position, t!.player.root.position).setY(0);
-          push.normalize().multiplyScalar(1.5 + Math.min(4, force * 0.35) * (e.data?.big ? 1.5 : 1));
-          push.y = 0.6;
-          fall(c, vel.multiplyScalar(0.8), push);
+          // The launch: harder on a big hit, but capped (4.5 m/s across, a little lift): a
+          // man is knocked off his feet and back, not thrown across the field.
+          const big = !!e.data?.big;
+          push.normalize().multiplyScalar(Math.min(4.5, 1.5 + Math.min(4, force * 0.35) * (big ? 1.5 : 1)));
+          push.y = big ? 1.1 : 0.6;
+          fall(c, vel.multiplyScalar(0.8), push, big);
         }
         break;
       }
@@ -166,7 +179,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   const tr = anim.transition;
   const out: Drive = { speed: Math.max(0, along) * YARD, backpedal: false, faceVelocity: false, look: null };
   // Backward: a pedal up to a quick pace, else turn and run.
-  if (along < -0.8 && tr?.name !== 'qb_drop_gun3' && tr?.name !== 'qb_drop_gun5') {
+  if (along < -0.8 && !tr?.name.startsWith('qb_drop_')) {
     if (sp * YARD < 5.2) {
       out.backpedal = true;
       out.speed = sp * YARD;
@@ -184,6 +197,25 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     else anim.playOverlay('qb_throw', { rate, mask: THROW_MASK });
     latency.respond('throwRelease');
   }
+  // The handoff (the QB places it, the back's pocket takes it) and the
+  // play-action fake, timed to the sim's mesh: overlays, the legs are the sim's.
+  const play = s.setup.play;
+  const since = simT - s.snapT;
+  if (s.snapT >= 0 && play.run) {
+    const side = play.run.aim < 0 ? 'r' : 'l';
+    if (i === s.qb && since >= play.run.mesh - 0.33 && !b.once.has('handoff')) {
+      b.once.add('handoff');
+      anim.playOverlay(`ovl_handoff_${side}`);
+    }
+    if (a.slot === 'RB' && since >= play.run.mesh - 0.25 && !b.once.has('take')) {
+      b.once.add('take');
+      anim.playOverlay(`ovl_take_${side}`);
+    }
+  }
+  if (s.snapT >= 0 && play.pa && i === s.qb && since >= 0.12 && !b.once.has('fake')) {
+    b.once.add('fake');
+    anim.playOverlay(`ovl_pa_fake_${play.pa.aim < 0 ? 'r' : 'l'}`);
+  }
   // The catch: hands out so the secure frame meets the ball.
   if (ball.mode === 'air' && ball.target === i && b.catchFor !== ball.arrive && ball.arrive - simT <= SECURE) {
     b.catchFor = ball.arrive;
@@ -193,7 +225,8 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   const holder = ball.mode === 'held' && s.phase !== 'presnap' && simT - s.snapT > 0.3 ? ball.holder : -1;
   const throwing = tr?.name === 'qb_throw' && !tr.done;
   if (i === holder && !a.down) {
-    const pocket = i === s.qb && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket');
+    // (A scrambling QB has it tucked; a play-action or handoff overlay owns the hands while it plays.)
+    const pocket = i === s.qb && s.scrambleT < 0 && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket');
     anim.setHold(pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' ? 'ovl_protect' : 'ovl_carry_r');
     if (a.move === 'protect') latency.respond('protect');
   } else anim.setHold(null);

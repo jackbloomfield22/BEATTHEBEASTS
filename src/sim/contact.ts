@@ -88,18 +88,40 @@ export function resolveTackle(s: PlayState, d: Agent, c: Agent): { out: TackleOu
   if (headOn < -0.3) x -= 0.4; // arm tackles from behind get broken more
   const p = logistic(x);
   const force = (d.fx.mass * closing) / 60;
-  if (rng() < p) {
-    const big = closing > 5.5 && d.fx.a('hitPower') > 0.8 && rng() < 0.5;
-    return { out: big ? 'bigHit' : 'tackle', force };
-  }
+  if (rng() < p) return { out: isBigHit(s, d, c, closing, headOn) ? 'bigHit' : 'tackle', force };
   return { out: 'broken', force: force * 0.6 };
 }
 
 /** Fumble on contact: Ball Security against Hit Power; protecting halves it. */
 export function fumbles(s: PlayState, d: Agent, c: Agent, big: boolean): boolean {
   const base = 0.008 + 0.03 * Math.max(0, d.fx.a('hitPower') - c.fx.a('ballSecurity') * 0.8);
-  const p = (base + (big ? 0.025 : 0)) * (c.move === 'protect' ? 0.4 : 1);
+  // A big hit jars it loose far more often (~5–8% for a sure-handed back,
+  // double for a loose one), more again from a Bone Crusher; Ball Security resists.
+  const jar = big ? 0.07 * (1.4 - 0.9 * c.fx.a('ballSecurity')) * (has(d, 'bone-crusher') ? 1.1 : 1) : 0;
+  const p = (base + jar) * (c.move === 'protect' ? 0.4 : 1);
   return s.rng.contact() < p;
+}
+
+const has = (a: Agent, trait: string): boolean => a.p.traits?.includes(trait) ?? false;
+
+/**
+ * A big hit, by design (feedback item 5): the hit's energy against what the
+ * runner can take. Energy is the tackler's closing speed times his weight,
+ * put behind the ball carrier by Hit Power (and an Enforcer's intent); the
+ * runner takes it with Break Tackle, his own mass and his momentum into the
+ * hit (a man running through a tackler braces; one hit from the side or
+ * already slowing doesn't). Only a clearly heavier blow than he can take is
+ * big, and then not every time: a few a game at Pro (~5% of tackles; the
+ * harness counts them).
+ */
+export function isBigHit(s: PlayState, d: Agent, c: Agent, closing: number, headOn: number): boolean {
+  const hp = d.fx.a('hitPower');
+  const power = 0.1 + 1.2 * hp * hp + (has(d, 'enforcer') ? 0.15 : 0);
+  const energy = closing * (d.fx.mass / 100) * power;
+  const into = Math.max(0, headOn) * len(c.vel) * (c.fx.mass / 100);
+  const brace = 9.0 + 3 * c.fx.a('breakTackle') + 3 * (c.fx.mass / 100 - 0.9) + 0.25 * into;
+  if (energy <= brace) return false;
+  return s.rng.contact() < Math.min(0.85, (energy - brace) / 3);
 }
 
 /**
@@ -109,6 +131,9 @@ export function fumbles(s: PlayState, d: Agent, c: Agent, big: boolean): boolean
  * instead of teleporting the velocity in one tick.
  */
 const PLANT: Record<string, number> = { jukeL: 5, jukeR: 5, spin: 6, dive: 3 };
+
+/** A quarterback's dive is a slide (feet first: he gives himself up and can't be hit). */
+export const slides = (c: Agent): boolean => c.slot === 'QB' && c.side === 'off';
 
 /** A carrier's move: commits him for a few frames and sets a cooldown. False if he can't start it now. */
 export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>): boolean {
@@ -133,13 +158,19 @@ export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>
   } else if (mv === 'spin') {
     tx *= 0.7;
     ty *= 0.7;
+  } else if (mv === 'dive' && slides(c)) {
+    // A QB's slide: feet first, giving himself up. He's down where it began
+    // (forward progress), and he slows along the turf (~60% of his speed).
+    c.mem.slideX = c.pos.x;
+    tx = hx * sp * 0.6;
+    ty = hy * sp * 0.6;
   } else if (mv === 'dive') {
     tx = hx * Math.max(sp, 4);
     ty = hy * Math.max(sp, 4);
   }
   const n = PLANT[mv];
   if (n) c.impulse = { x: (tx - c.vel.x) / n, y: (ty - c.vel.y) / n, left: n };
-  s.events.push({ t: s.t, type: 'move', who: [c.i], data: { move: mv } });
+  s.events.push({ t: s.t, type: 'move', who: [c.i], data: { move: mv === 'dive' && slides(c) ? 'slide' : mv } });
   return true;
 }
 

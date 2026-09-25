@@ -43,7 +43,26 @@ export interface PassSample {
   sep: number;
 }
 
+/**
+ * The pocket (feedback item 4). Bands (NFL, NGS/PFF, 2018–2023): sacks on
+ * ~6–7% of dropbacks; QB scrambles on ~4–6% (more for a mobile QB) for ~6–8
+ * yd each; pressure on ~30–35% of dropbacks, the first at a median ~2.5 s.
+ */
+export interface PocketDist {
+  dropbacks: number;
+  sackRate: number;
+  scrambleRate: number;
+  /** Yards per scramble that ended with him running (not sacked). */
+  scrambleYds: number;
+  /** Sacks after he'd tucked it. */
+  scrambleSacks: number;
+  pressureRate: number;
+  /** Median snap-to-first-pressure, s (plays with pressure). */
+  timeToPressure: number;
+}
+
 export interface PassDist {
+  pocket: PocketDist;
   plays: number;
   att: number;
   comp: number;
@@ -83,6 +102,11 @@ export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>;
   const samples: PassSample[] = [];
   let playsRun = 0;
   let sacks = 0;
+  let scrambles = 0;
+  let scrambleYds = 0;
+  let scrambleRuns = 0;
+  let scrambleSacks = 0;
+  const pressures: number[] = [];
   for (const play of plays) {
     for (const def of defs) {
       for (let k = 0; k < n; k++) {
@@ -105,6 +129,15 @@ export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>;
         playsRun++;
         const r = s.result!;
         if (r.sack) sacks++;
+        if (s.pressureT >= 0) pressures.push(s.pressureT - s.snapT);
+        if (s.scrambleT >= 0) {
+          scrambles++;
+          if (r.sack) scrambleSacks++;
+          else if (!r.pass?.attempted) {
+            scrambleRuns++;
+            scrambleYds += r.yards;
+          }
+        }
         if (!r.pass?.attempted) continue;
         // A throwaway has no target: an attempt, but no route or separation.
         const tgt = s.agents[r.pass.target];
@@ -138,7 +171,17 @@ export function passDistribution(rosters: { offense: Record<OffSlot, SimPlayer>;
     while (j < edges.length && p.yards >= edges[j]!) j++;
     buckets[j]!++;
   }
+  const pr = [...pressures].sort((a, b) => a - b);
   return {
+    pocket: {
+      dropbacks: playsRun,
+      sackRate: share(sacks, playsRun),
+      scrambleRate: share(scrambles, playsRun),
+      scrambleYds: scrambleRuns ? scrambleYds / scrambleRuns : 0,
+      scrambleSacks,
+      pressureRate: share(pressures.length, playsRun),
+      timeToPressure: pr[Math.floor(pr.length / 2)] ?? 0,
+    },
     plays: playsRun,
     att: samples.length,
     comp: comp.length,
@@ -168,6 +211,7 @@ export function formatPassDist(d: PassDist): string {
     `YAC short routes ${d.yacShort.toFixed(1)}  all ${d.yacAll.toFixed(1)}`,
     `in phase (< ${IN_PHASE} yd) ${p(d.contestedShare)} of targets, caught ${p(d.contestedCatch)}; 2+ yd open caught ${p(d.openCatch)}`,
     `completions by gain  <0 ${d.buckets[0]}  0-4 ${d.buckets[1]}  5-9 ${d.buckets[2]}  10-19 ${d.buckets[3]}  20-39 ${d.buckets[4]}  40+ ${d.buckets[5]}`,
+    `pocket: sacks ${p(d.pocket.sackRate)} of dropbacks  scrambles ${p(d.pocket.scrambleRate)} for ${d.pocket.scrambleYds.toFixed(1)} yd (${d.pocket.scrambleSacks} sacked after tucking)  pressured ${p(d.pocket.pressureRate)}, first at ${d.pocket.timeToPressure.toFixed(2)} s (median)`,
   ].join('\n');
 }
 

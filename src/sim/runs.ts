@@ -328,15 +328,18 @@ export function belief(s: PlayState, d: Agent): 'run' | 'pass' {
   // man blocks (or the ball's across the line), never off a backfield fake.
   if (as.kind === 'man') {
     const m = s.agents[s.slot[as.on]!]!;
-    const blocking = s.setup.play.assign[m.slot as keyof typeof s.setup.play.assign].kind !== 'route';
+    // His man blocking (or the back he's on carrying it: his run key) shows him run; he fits his gap.
+    const k = s.setup.play.assign[m.slot as keyof typeof s.setup.play.assign].kind;
+    const blocking = k !== 'route';
     return past || (blocking && s.runShow >= 0 && s.t >= s.runShow + reaction(s, d)) ? 'run' : 'pass';
   }
   const rt = reaction(s, d);
   const db = d.slot === 'LCB' || d.slot === 'RCB' || d.slot === 'FS' || d.slot === 'SS';
   // Deep zones are pass-first by coaching (a ball over your head is the one
-  // unforgivable thing): they need to see run a beat longer.
+  // unforgivable thing): they need to see run a beat longer, longer still
+  // against a play-action look (the fake is built to hold them).
   const deep = as.kind === 'zone' && ZONES[as.zone].deep;
-  const tRun = s.runShow >= 0 ? s.runShow + rt + (db ? 0.25 : 0) + (deep ? 0.35 : 0) : Infinity;
+  const tRun = s.runShow >= 0 ? s.runShow + rt + (db ? 0.15 : 0) + (deep ? (s.setup.play.pa ? 0.35 : 0.2) : 0) : Infinity;
   // Seeing the ball come out of a fake takes a sharper eye than seeing the
   // fake (Play Recognition: the best read it almost at once, the worst a
   // quarter-second late).

@@ -3547,7 +3547,919 @@
       ],
       "from": "stance_down_supine",
       "to": "stance_idle"
+    },
+    "qb_drop_uc3": {
+      "kind": "transition",
+      "frames": 28,
+      "duration": 0.9333333333333333,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        -1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            6
+          ],
+          [
+            14,
+            16
+          ]
+        ],
+        "r": [
+          [
+            0,
+            3
+          ],
+          [
+            7,
+            10
+          ],
+          [
+            24,
+            28
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 28.5,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0006,
+        0.0216,
+        0.0707,
+        0.1456,
+        0.2436,
+        0.3626,
+        0.4999,
+        0.6533,
+        0.8203,
+        0.9984,
+        1.1854,
+        1.3786,
+        1.5758,
+        1.7745,
+        1.9723,
+        2.1668,
+        2.3556,
+        2.5361,
+        2.7061,
+        2.8631,
+        3.0047,
+        3.1285,
+        3.232,
+        3.3129,
+        3.3686,
+        3.3969,
+        3.4
+      ],
+      "from": "stance_qb_center",
+      "to": "stance_qb_set"
+    },
+    "qb_drop_uc5": {
+      "kind": "transition",
+      "frames": 39,
+      "duration": 1.3,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        -1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ],
+          [
+            14,
+            16
+          ],
+          [
+            24,
+            26
+          ],
+          [
+            37,
+            39
+          ]
+        ],
+        "r": [
+          [
+            0,
+            3
+          ],
+          [
+            7,
+            11
+          ],
+          [
+            19,
+            21
+          ],
+          [
+            33,
+            39
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 27.0,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.0,
+        0.0005,
+        0.0182,
+        0.0599,
+        0.1241,
+        0.2095,
+        0.3145,
+        0.4377,
+        0.5775,
+        0.7326,
+        0.9015,
+        1.0826,
+        1.2745,
+        1.4758,
+        1.6849,
+        1.9005,
+        2.1209,
+        2.3448,
+        2.5707,
+        2.7972,
+        3.0226,
+        3.2457,
+        3.4648,
+        3.6786,
+        3.8855,
+        4.0841,
+        4.273,
+        4.4505,
+        4.6154,
+        4.7661,
+        4.9011,
+        5.019,
+        5.1182,
+        5.1974,
+        5.2551,
+        5.2897,
+        5.3,
+        5.3,
+        5.3
+      ],
+      "from": "stance_qb_center",
+      "to": "stance_qb_set"
+    },
+    "ovl_handoff_r": {
+      "kind": "overlay",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "place": 10
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "ovl_handoff_l": {
+      "kind": "overlay",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "place": 10
+      },
+      "mask": [
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "ovl_pa_fake_r": {
+      "kind": "overlay",
+      "frames": 21,
+      "duration": 0.7,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            21
+          ]
+        ],
+        "r": [
+          [
+            0,
+            21
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "ovl_pa_fake_l": {
+      "kind": "overlay",
+      "frames": 21,
+      "duration": 0.7,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            21
+          ]
+        ],
+        "r": [
+          [
+            0,
+            21
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "mask": [
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "ovl_take_r": {
+      "kind": "overlay",
+      "frames": 16,
+      "duration": 0.5333333333333333,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            16
+          ]
+        ],
+        "r": [
+          [
+            0,
+            16
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 9
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r"
+      ]
+    },
+    "ovl_take_l": {
+      "kind": "overlay",
+      "frames": 16,
+      "duration": 0.5333333333333333,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            16
+          ]
+        ],
+        "r": [
+          [
+            0,
+            16
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 9
+      },
+      "mask": [
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l"
+      ]
+    },
+    "ovl_tuck": {
+      "kind": "overlay",
+      "frames": 9,
+      "duration": 0.3,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            9
+          ]
+        ],
+        "r": [
+          [
+            0,
+            9
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r"
+      ]
+    },
+    "qb_slide": {
+      "kind": "transition",
+      "frames": 28,
+      "duration": 0.9333333333333333,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            3
+          ],
+          [
+            26,
+            28
+          ]
+        ],
+        "r": [
+          [
+            26,
+            28
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 22.1,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.1907,
+        0.3761,
+        0.5558,
+        0.7296,
+        0.8974,
+        1.0587,
+        1.2135,
+        1.3615,
+        1.5023,
+        1.6359,
+        1.7618,
+        1.88,
+        1.9901,
+        2.0919,
+        2.1852,
+        2.2696,
+        2.3451,
+        2.4112,
+        2.4679,
+        2.5148,
+        2.5517,
+        2.5784,
+        2.5946,
+        2.6,
+        2.6,
+        2.6,
+        2.6,
+        2.6
+      ],
+      "from": "loco_run",
+      "to": "stance_down_supine"
+    },
+    "ovl_getoff": {
+      "kind": "overlay",
+      "frames": 18,
+      "duration": 0.6,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            18
+          ]
+        ],
+        "r": [
+          [
+            0,
+            18
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "mask": [
+        "spine_02",
+        "spine_03",
+        "spine_04",
+        "neck_01",
+        "neck_02",
+        "head"
+      ]
+    },
+    "rush_redirect_l": {
+      "kind": "transition",
+      "frames": 13,
+      "duration": 0.43333333333333335,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            3
+          ],
+          [
+            9,
+            12
+          ]
+        ],
+        "r": [
+          [
+            4,
+            7
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 18.0,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.1733,
+        0.3111,
+        0.4261,
+        0.5363,
+        0.6607,
+        0.8151,
+        1.0084,
+        1.2407,
+        1.5029,
+        1.7794,
+        2.0511,
+        2.3,
+        2.5133
+      ],
+      "from": "loco_run",
+      "to": "loco_run",
+      "toPhase": 0.5,
+      "side": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0176,
+        0.0644,
+        0.1312,
+        0.2089,
+        0.2885,
+        0.3608,
+        0.4167,
+        0.447,
+        0.45,
+        0.45
+      ]
+    },
+    "rush_redirect_r": {
+      "kind": "transition",
+      "frames": 13,
+      "duration": 0.43333333333333335,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            4,
+            7
+          ]
+        ],
+        "r": [
+          [
+            0,
+            3
+          ],
+          [
+            9,
+            12
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 18.0,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.1733,
+        0.3111,
+        0.4261,
+        0.5363,
+        0.6607,
+        0.8151,
+        1.0084,
+        1.2407,
+        1.5029,
+        1.7794,
+        2.0511,
+        2.3,
+        2.5133
+      ],
+      "from": "loco_run",
+      "to": "loco_run",
+      "side": [
+        -0.0,
+        -0.0,
+        -0.0,
+        -0.0,
+        -0.0176,
+        -0.0644,
+        -0.1312,
+        -0.2089,
+        -0.2885,
+        -0.3608,
+        -0.4167,
+        -0.447,
+        -0.45,
+        -0.45
+      ]
     }
   },
-  "bytes": 2547028
+  "bytes": 3004768
 }

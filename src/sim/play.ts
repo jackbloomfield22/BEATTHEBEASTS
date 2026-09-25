@@ -3,7 +3,7 @@
 // whistle. The state is mutated in place and everything that happened is
 // appended to `state.events` for the render, audio and commentary layers.
 
-import { atan2 } from '@/engine/math/detmath';
+import { atan2, cos, sin } from '@/engine/math/detmath';
 import { assignRunBlocks, assignRunFits, backToMesh, belief, qbMesh, runFit, schemeBlock, stalk } from './runs';
 import {
   assignProtection,
@@ -24,7 +24,7 @@ import {
 } from './ai';
 import { stepFlight } from './ball';
 import { blockOf, stepBlocks } from './blocks';
-import { applyImpulse, fumbles, resolveTackle, separate, startMove, tickMoves } from './contact';
+import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tickMoves } from './contact';
 import { releaseTime } from './effects';
 import { BULLET_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { arrive, remember, steer } from './movement';
@@ -60,7 +60,7 @@ function whistle(s: PlayState, reason: WhistleReason, spot: number, offenseBall:
   if (s.result) return;
   const los = s.setup.los;
   const yards = offenseBall ? Math.round((spot - los) * 10) / 10 : 0;
-  const res: PlayResult = { reason, spot, yards, offenseBall, touchdown, sack: s.sack, ticks: s.tick, ...(s.pass ? { pass: s.pass } : {}) };
+  const res: PlayResult = { reason, spot, yards, offenseBall, touchdown, sack: s.sack, ticks: s.tick, ...(s.pass ? { pass: s.pass } : {}), ...(s.bigHit ? { bigHit: s.bigHit } : {}) };
   s.result = res;
   s.phase = 'dead';
   s.whistleT = s.t;
@@ -102,6 +102,103 @@ function doSnap(s: PlayState): void {
     if (edge > 0) r.busy = Math.round(60 * (0.12 + 0.9 * edge));
     else d.busy = Math.round(60 * (0.1 + 0.8 * -edge));
   }
+}
+
+/** Tuck it and go: the scramble starts (the render plays the tuck and take-off). */
+function startScramble(s: PlayState, qb: Agent): void {
+  s.scrambleT = s.t;
+  s.hold = { icon: 0, ticks: 0 };
+  qb.anim = 'carry';
+  s.events.push({ t: s.t, type: 'move', who: [qb.i], data: { move: 'tuck' } });
+}
+
+/**
+ * The AI QB tucks it and runs when coverage has held (he's through most of
+ * his reads), the rush hasn't got to him, and there's a running lane up the
+ * field (runningLane). Mobile QBs (Speed, Elusiveness) take it more often;
+ * a pocket passer mostly keeps looking, then throws it away.
+ */
+function aiScrambles(s: PlayState, qb: Agent): boolean {
+  if (s.phase !== 'pocket' || s.windup || s.ball.mode !== 'held') return false;
+  const held = s.t - s.snapT - s.setup.play.drop.set;
+  // Through most of his reads with nothing there, and no free rusher on him yet.
+  if (held < 1.6 || pressureOn(s, qb) > 0.35 || qb.pos.x < s.setup.los - 10) return false;
+  const lane = runningLane(s, qb);
+  if (!lane) return false;
+  // Checked every tenth of a second while it's there: a mobile QB takes it
+  // within about a second (half the time), a statue almost never.
+  const mobile = qb.fx.a('speed') * 0.5 + qb.fx.a('elusiveness') * 0.5;
+  if (!(s.tick % 6 === 0 && s.rng.ai() < 0.01 + 0.045 * mobile)) return false;
+  qb.mem.laneX = lane.x;
+  qb.mem.laneY = lane.y;
+  return true;
+}
+
+/**
+ * A running lane from the pocket: of five paths up the field (straight, and
+ * 20° and 40° either side) to 3 yd past the line, the first with nobody in
+ * it: no free defender within 2.5 yd of the path, no engaged one within 1.2
+ * (he'd shed into it). Null if the pocket has none.
+ */
+function runningLane(s: PlayState, qb: Agent): V2 | null {
+  const len0 = Math.max(4, s.setup.los + 3 - qb.pos.x);
+  for (const deg of [0, 20, -20, 40, -40]) {
+    const a = (deg * Math.PI) / 180;
+    const dx = cos(a);
+    const dy = sin(a);
+    let clear = true;
+    for (const i of s.def) {
+      const d = s.agents[i]!;
+      if (d.down) continue;
+      const rx = d.pos.x - qb.pos.x;
+      const ry = d.pos.y - qb.pos.y;
+      const along = Math.max(0, Math.min(len0, rx * dx + ry * dy));
+      const px = rx - dx * along;
+      const py = ry - dy * along;
+      if (Math.sqrt(px * px + py * py) < (blockOf(s, i) ? 1.2 : 2.5)) {
+        clear = false;
+        break;
+      }
+    }
+    if (clear) return { x: dx, y: dy };
+  }
+  return null;
+}
+
+/**
+ * The AI's scramble path. Inside the pocket: escape it, away from the
+ * nearest rusher (or to the wider side), bending up a little, clear of the
+ * engaged pairs. Once he's outside the tackles or near the line: read the
+ * field like a ball carrier (carrierAI).
+ */
+function scrambleLane(s: PlayState, qb: Agent, pace: number): V2 {
+  const by = s.setup.ballY ?? 0;
+  // Up the lane he saw, until he's at the line.
+  const lx = qb.mem.laneX as number | undefined;
+  if (lx !== undefined && qb.pos.x < s.setup.los) {
+    const ly = qb.mem.laneY as number;
+    return { x: lx * qb.fx.vmax * pace, y: ly * qb.fx.vmax * pace };
+  }
+  if (Math.abs(qb.pos.y - by) < 5.5 && qb.pos.x < s.setup.los - 1.5) {
+    let near: Agent | null = null;
+    let nd = Infinity;
+    for (const i of s.def) {
+      const d = s.agents[i]!;
+      if (d.down) continue;
+      const k = dist(d.pos, qb.pos);
+      if (k < nd) {
+        nd = k;
+        near = d;
+      }
+    }
+    const away = near && Math.abs(qb.pos.y - near.pos.y) > 0.3 ? Math.sign(qb.pos.y - near.pos.y) : by <= 0 ? 1 : -1;
+    const side = (qb.mem.scrambleSide as number | undefined) ?? away;
+    qb.mem.scrambleSide = side;
+    const n = Math.sqrt(0.3 * 0.3 + 1);
+    return { x: (0.3 / n) * qb.fx.vmax * pace, y: (side / n) * qb.fx.vmax * pace };
+  }
+  const w = carrierAI(s, qb, 1);
+  return { x: w.x * pace, y: w.y * pace };
 }
 
 /**
@@ -148,9 +245,17 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
     return;
   }
   const dropX = s.setup.los - play.drop.depth;
-  if (s.setup.user && since > 0.35 && (inp.move.x !== 0 || inp.move.y !== 0)) {
-    // The user moves the QB (camera-relative input already turned into the field frame).
-    const sp = inp.sprint ? 1 : 0.55;
+  // The scramble: the user's key, or the AI when the pocket's gone and nobody's open.
+  if (s.scrambleT < 0 && since > 0.35 && (s.setup.user ? inp.scramble : aiScrambles(s, qb))) startScramble(s, qb);
+  if (s.scrambleT >= 0) {
+    // Tucked: he runs like a ball carrier (context speed, cuts), eyes still downfield until the line.
+    const pace = carrierPace(s, qb, 1);
+    const want = s.setup.user ? { x: inp.move.x * qb.fx.vmax * pace, y: inp.move.y * qb.fx.vmax * pace } : scrambleLane(s, qb, pace);
+    steer(qb, cutWeight(qb, want), { brake: len(want) < 0.1 ? CARRIER_COAST : 1 });
+    if (qb.anim !== 'throw') qb.anim = 'carry';
+  } else if (s.setup.user && since > 0.35 && (inp.move.x !== 0 || inp.move.y !== 0)) {
+    // The user moves the QB in the pocket (camera-relative input already in the field frame): controlled steps, eyes downfield.
+    const sp = 0.55;
     steer(qb, { x: inp.move.x * qb.fx.vmax * sp, y: inp.move.y * qb.fx.vmax * sp }, { face: 0 });
   } else if (qb.pos.x > dropX + 0.1 && since < play.drop.set + 0.2) {
     steer(qb, { x: -qb.fx.vmax * 0.55, y: (by - qb.pos.y) * 2 }, { face: 0 });
@@ -175,6 +280,8 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
   }
   if (s.phase === 'snap' && since > 0.35) s.phase = 'dropback';
   if (s.phase === 'dropback' && since >= play.drop.set) s.phase = 'pocket';
+  // Out of the pocket: outside the tackles, or tucked. The rush reacts to it.
+  if (s.escapeT < 0 && since > 0.35 && (s.scrambleT >= 0 || Math.abs(qb.pos.y - by) > 4.5)) s.escapeT = s.t;
   // Scramble: crossing the line makes him a runner (he can't throw after).
   if (qb.pos.x > s.setup.los + 0.3 && (s.phase === 'dropback' || s.phase === 'pocket')) {
     s.phase = 'carrier';
@@ -364,6 +471,18 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
   } else {
     want = carrierAI(s, c, attack);
     want = { x: want.x * pace, y: want.y * pace };
+    // A quarterback past the line protects himself: he slides a couple of
+    // strides before a tackler gets there (as QBs are taught) rather than take the hit.
+    if (slides(c) && c.moveCooldown === 0 && c.busy === 0 && (c.pos.x - s.setup.los) * attack > 1) {
+      for (const i of attack > 0 ? s.def : s.off) {
+        const d = s.agents[i]!;
+        if (d.down || blockOf(s, i)) continue;
+        if (dist(d.pos, c.pos) < 3.5 && (d.pos.x - c.pos.x) * attack > -1) {
+          startMove(s, c, 'dive');
+          break;
+        }
+      }
+    }
     // A defender squaring up close: try a move that suits him (AI).
     if (c.moveCooldown === 0 && c.busy === 0) {
       for (const i of attack > 0 ? s.def : s.off) {
@@ -399,7 +518,9 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     c.anim = 'down';
     // The ball over the plane as he lands is a score, before the whistle for him being down.
     lineCheck(s, c);
-    whistle(s, 'tackle', attack > 0 ? Math.max(s.maxX, ballNose(c)) : c.pos.x, c.side === 'off');
+    // A slide is down where it began (the ball carried, not reached out); a dive where the ball ends up.
+    const slideX = c.mem.slideX as number | undefined;
+    whistle(s, 'tackle', attack > 0 ? (slideX !== undefined ? slideX + BALL_NOSE : Math.max(s.maxX, ballNose(c))) : c.pos.x, c.side === 'off');
   }
 }
 
@@ -459,6 +580,8 @@ function contactStep(s: PlayState): void {
   if (c.down || s.result) return;
   const inPocket = holder === s.qb && s.phase !== 'carrier';
   if (s.t - s.snapT < 0.4) return;
+  // A sliding quarterback has given himself up: nobody may hit him.
+  if (c.move === 'dive' && slides(c) && !inPocket) return;
   for (const o of s.agents) {
     if (o.side === c.side || o.down || o.busy > 0) continue;
     // Engaged defenders can come off a block for an arm tackle as he passes (lower odds).
@@ -514,6 +637,7 @@ function contactStep(s: PlayState): void {
     }
     // Down he goes (or the ball comes out).
     s.events.push({ t: s.t, type: 'hit', who: [o.i, c.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10, big: out === 'bigHit' } });
+    if (out === 'bigHit') s.bigHit = { by: o.i, on: c.i, force: Math.round(force * 10) / 10 };
     o.anim = 'tackle';
     if (!inPocket && fumbles(s, o, c, out === 'bigHit')) {
       s.ball.mode = 'loose';
@@ -758,11 +882,14 @@ function runToBall(s: PlayState, a: Agent): void {
   const rt = a.route;
   const settle = !!rt && rt.sit[rt.pts.length - 1] === true && rt.idx >= rt.pts.length - 1;
   // Until he finds the ball in the air he runs to where it should come (the
-  // QB's lead and placement); then he adjusts to where it's really going,
-  // within what his legs can do. Finding it: 0.2–0.45 s by Catching (a ball
-  // off target is a ball he has to track, which is what accuracy is for).
-  const found = s.t - b.releaseT >= 0.2 + 0.25 * (1 - a.fx.a('catching'));
-  const to = found ? { x: b.aim.x, y: b.aim.y } : { x: b.meant.x, y: b.meant.y };
+  // QB's lead and placement). Then he reads where it's really going, better
+  // the longer he watches it (all of it by three-quarters of the way), and
+  // his legs chase the read. Finding it: 0.2–0.45 s by Catching. So a short
+  // throw off target stays off target (no time to correct), a deep one he
+  // can run under: which is what accuracy is for.
+  const findT = b.releaseT + 0.2 + 0.25 * (1 - a.fx.a('catching'));
+  const read = b.arrive > findT ? Math.max(0, Math.min(1, ((s.t - findT) / (b.arrive - findT)) * 1.33)) : 1;
+  const to = { x: b.meant.x + (b.aim.x - b.meant.x) * read, y: b.meant.y + (b.aim.y - b.meant.y) * read };
   const d = dist(a.pos, to);
   const left = b.arrive - s.t;
   if (settle) {
@@ -884,6 +1011,8 @@ export function stepPlay(s: PlayState, inp: InputFrame): void {
   if (s.phase !== 'air' && s.phase !== 'carrier') qbThrow(s, inp);
   offenseRoles(s, inp);
   defenseRoles(s);
+  // Pressure (the harness's time to pressure): a free rusher within ~3 yd of him (pressureOn 0.45), NGS's "pressure" radius.
+  if (s.pressureT < 0 && (s.phase === 'dropback' || s.phase === 'pocket') && pressureOn(s, s.agents[s.qb]!) >= 0.45) s.pressureT = s.t;
   const goal = s.carrier >= 0 ? s.agents[s.carrier]!.pos : s.agents[s.qb]!.pos;
   stepBlocks(s, goal);
   // Where the carrier's own move took him, before bodies push apart: a ball

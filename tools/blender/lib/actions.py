@@ -772,11 +772,14 @@ def getup_supine() -> Clip:
 
 
 def action_clips() -> list[Clip]:
+    from .actions_m55 import m55_clips  # (imports this module's helpers)
+
     jl = juke_left()
     return [
         qb_drop(3), qb_drop(5), qb_throw(),
         carry(), protect(), qb_hold(), catch(False), catch(True), stiff_arm(), truck(), pump(),
         jl, mirrored(jl, "juke_r", to_phase=0.0), spin(), dive(), tackle(), getup_prone(), getup_supine(),
+        *m55_clips(),
     ]
 
 

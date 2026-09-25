@@ -186,4 +186,6 @@ export interface PlayResult {
   };
   sack: boolean;
   ticks: number;
+  /** A big hit on this play: who delivered it, who took it, and its force. */
+  bigHit?: { by: number; on: number; force: number };
 }

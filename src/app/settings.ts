@@ -51,6 +51,8 @@ export interface Settings {
     skipIntros: boolean;
     fastReveal: boolean;
     autoReplay: 'on' | 'big' | 'off';
+    /** The biggest hits play in slow motion for a moment. */
+    bigHitSlowmo: boolean;
   };
   accessibility: {
     colorblind: 'off' | 'deuteranopia' | 'protanopia' | 'tritanopia';
@@ -114,7 +116,7 @@ export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 200, ballInAir: 'assist', keyboard, gamepad },
     audio: { master: 0.8, music: 0.6, sfx: 0.8, crowd: 0.8, ui: 0.7, muteUnfocused: true },
-    gameplay: { difficulty: 'pro', gameLength: 6, camera: 'broadcast', lighting: 'golden', skipIntros: false, fastReveal: false, autoReplay: 'big' },
+    gameplay: { difficulty: 'pro', gameLength: 6, camera: 'broadcast', lighting: 'golden', skipIntros: false, fastReveal: false, autoReplay: 'big', bigHitSlowmo: true },
     accessibility: { colorblind: 'off', captionSize: 'medium', reduceShake: false, reduceFlashing: false, holdToToggle: false, uiScale: 1 },
   };
 }

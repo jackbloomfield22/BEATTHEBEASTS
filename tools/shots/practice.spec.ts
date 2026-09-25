@@ -29,7 +29,9 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   await page.goto(`/?screen=practice&nointro&seed=37&quality=${process.env.BTB_QUALITY ?? 'high'}&shot=practice&lighting=${LIGHTING}`);
   await page.waitForFunction(() => (window as unknown as P).__btbReady === true, null, { timeout: 300_000 });
   await page.waitForFunction(() => (window as unknown as P).__btbPracticeUi?.getState().stage === 'call', null, { timeout: 120_000 });
-  await page.keyboard.press('ArrowDown');
+  // Four Verticals: the first play under Shots (two tabs over from the quick game).
+  await page.keyboard.press('KeyE');
+  await page.keyboard.press('KeyE');
   await shot(page, '01-play-call');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => (window as unknown as P).__btbGameReady === true, null, { timeout: 300_000 });
@@ -97,7 +99,7 @@ test(`practice play-through · ${LIGHTING}`, async ({ page }) => {
   await shot(page, '11-all22');
   await page.keyboard.press('F1');
   await page.keyboard.press('Enter');
-  await page.keyboard.press('ArrowDown');
+  // The call opens on the play just run (Four Verticals, under Shots); down one is Dagger.
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => (window as unknown as P).__btbPracticeUi.getState().stage === 'presnap');

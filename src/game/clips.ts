@@ -48,10 +48,10 @@ export function holdIt(s: PlayState): InputFrame {
 
 // Seeds found by tools/sim/findclips.ts.
 export const CLIPS: Clip[] = [
-  // Four Verticals against Cover 3: the slot's seam, caught at ~45 yards, then 18 more after the catch with a juke.
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 49, play: 'trips-four-verts', def: 'cover3', los: 30, script: throwAndRun(4, 100, 'juke') },
-  // The QB holds it: the four-man rush gets home at 4.4 s, the median pocket time at Pro.
-  { id: 'sack', title: 'Sack', seed: 4, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
-  // A stiff arm sheds the first tackler and he keeps going for 13 after the catch.
-  { id: 'broken-tackle', title: 'Broken tackle', seed: 70, play: 'trips-four-verts', def: 'cover1', los: 30, script: throwAndRun(4, 100, 'stiffArm') },
+  // Mesh against Cover 1: the crosser beats his man across the field, then 13 more after the catch with a juke.
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 71, play: 'doubles-mesh', def: 'cover1', los: 30, script: throwAndRun(4, 84, 'juke') },
+  // The QB holds it: the four-man rush gets home at 4.5 s, the median pocket time at Pro.
+  { id: 'sack', title: 'Sack', seed: 2, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
+  // A stiff arm sheds the first tackler and he keeps going for 12 after the catch.
+  { id: 'broken-tackle', title: 'Broken tackle', seed: 79, play: 'trips-four-verts', def: 'cover1', los: 30, script: throwAndRun(2, 100, 'stiffArm') },
 ];

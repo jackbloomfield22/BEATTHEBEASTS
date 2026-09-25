@@ -8,7 +8,8 @@ import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
 import { loadJSON, saveJSON } from '@/app/storage';
 import type { InputContext } from '@/input/actions';
-import { createPlay, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type DefCall, type InputFrame, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayState, type SimPlayer } from '@/sim';
+import { createPlay, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type DefCall, type InputFrame, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayResult, type PlayState, type SimPlayer } from '@/sim';
+import { getSettings } from '@/app/settings';
 import { Controls } from './controls';
 import { describe, type ResultCard } from './describe';
 import { loadPracticeRosters } from './rosters';
@@ -33,6 +34,10 @@ export interface PracticeUi {
   phase: Phase;
   /** The user's ball carrier (offense) or null. */
   carrier: string | null;
+  /** The QB has tucked it and is scrambling (he can still throw until the line). */
+  scrambling: boolean;
+  /** The session's box score. */
+  box: BoxScore;
   /** The catch the user called while the ball is in the air (null = none yet). */
   catchType: CatchType | null;
   /** The first-play tutorial's step, or null when it's off (done once, or skipped). */
@@ -57,6 +62,8 @@ export const usePractice = create<PracticeUi>(() => ({
   playId: PLAYS[0]!.id,
   phase: 'presnap',
   carrier: null,
+  scrambling: false,
+  box: emptyBox(),
   catchType: null,
   tutorial: null,
   hot: null,
@@ -86,6 +93,52 @@ const READ_STEP = 1.6;
 const FIRST_CATCH_SPEED = 0.6;
 
 const set = (p: Partial<PracticeUi>) => usePractice.setState(p);
+
+/** The practice session's box score (the offense's side). */
+export interface BoxScore {
+  plays: number;
+  yards: number;
+  att: number;
+  comp: number;
+  passYds: number;
+  rushes: number;
+  rushYds: number;
+  sacks: number;
+  turnovers: number;
+  /** Big hits the Beasts put on you. */
+  bigHits: number;
+}
+export const emptyBox = (): BoxScore => ({ plays: 0, yards: 0, att: 0, comp: 0, passYds: 0, rushes: 0, rushYds: 0, sacks: 0, turnovers: 0, bigHits: 0 });
+
+function addToBox(b: BoxScore, r: PlayResult): BoxScore {
+  const n = { ...b, plays: b.plays + 1 };
+  const y = r.offenseBall ? r.yards : 0;
+  n.yards += y;
+  if (r.sack) n.sacks++;
+  if (r.pass?.attempted) {
+    n.att++;
+    if (r.pass.complete && !r.pass.intercepted) {
+      n.comp++;
+      n.passYds += y;
+    }
+  } else if (!r.sack) {
+    n.rushes++;
+    n.rushYds += y;
+  }
+  if (!r.offenseBall) n.turnovers++;
+  if (r.bigHit) n.bigHits++;
+  return n;
+}
+
+/**
+ * A big hit's toll (feedback item 5): the man who took it starts the next
+ * play down this much stamina (by the hit's force), and gets half of it
+ * back each play after.
+ */
+const hitToll = (force: number) => Math.min(0.45, 0.15 + force * 0.02);
+/** Hit-stop on a big hit (wall-clock s at ~5% speed), and the slow motion on the biggest (force ≥ 9) if it's on. */
+const HIT_STOP = 0.09;
+const SLOWMO = { force: 9, secs: 0.8, speed: 0.35 };
 const get = () => usePractice.getState();
 
 function contextFor(phase: Phase, userCarrier: boolean): InputContext {
@@ -131,6 +184,12 @@ class PracticeSession {
   routeFlashUntil = 0;
   /** The session's first catch is still to come (it plays slowed). */
   private firstCatch = true;
+  /** Stamina each offensive player is down going into the next play (a big hit's toll). */
+  private fatigue: Partial<Record<OffSlot, number>> = {};
+  /** Sim events already looked at this play (for the hit-stop). */
+  private seenEvents = 0;
+  private hitStop = 0;
+  private slowmo = 0;
   private sawAir = false;
 
   /** Enter the Practice Field: load the rosters, open the play call. */
@@ -208,15 +267,19 @@ class PracticeSession {
       toGo: sit.toGo,
       user: true,
       difficulty: this.difficulty,
+      fatigue: { ...this.fatigue },
     });
     this.runner = new SimRunner(state);
+    this.seenEvents = 0;
+    this.hitStop = 0;
+    this.slowmo = 0;
     this.lastSit = sit;
     this.playId++;
     this.controls.clear();
     this.setContext('preSnap');
     this.readSince = -1;
     this.sawAir = false;
-    set({ stage: 'presnap', playId, situation: sit, playSit: sit, phase: 'presnap', carrier: null, result: null, lastCover: def.name, seriesOver: false, tutorial: this.tutorialNext ? 'snap' : null });
+    set({ stage: 'presnap', playId, situation: sit, playSit: sit, phase: 'presnap', carrier: null, scrambling: false, result: null, lastCover: def.name, seriesOver: false, tutorial: this.tutorialNext ? 'snap' : null });
   }
 
   /**
@@ -334,8 +397,22 @@ class PracticeSession {
     const r = this.runner!;
     // The session's first catch: ease the play down while the ball is in the air, and back up after.
     const slow = this.firstCatch && r.state.phase === 'air';
-    r.timeScale += ((slow ? FIRST_CATCH_SPEED : 1) - r.timeScale) * (1 - Math.exp(-dt * 10));
-    if (Math.abs(r.timeScale - 1) < 1e-3) r.timeScale = 1;
+    // A big hit: a beat of hit-stop, then (the biggest, if it's on) a moment of slow motion.
+    for (; this.seenEvents < r.state.events.length; this.seenEvents++) {
+      const e = r.state.events[this.seenEvents]!;
+      if (e.type !== 'hit' || !e.data?.big) continue;
+      this.hitStop = HIT_STOP;
+      if (getSettings().gameplay.bigHitSlowmo && Number(e.data.force ?? 0) >= SLOWMO.force) this.slowmo = SLOWMO.secs;
+    }
+    if (this.hitStop > 0) {
+      this.hitStop -= dt;
+      r.timeScale = 0.05;
+    } else {
+      if (this.slowmo > 0) this.slowmo -= dt;
+      const want = this.slowmo > 0 ? SLOWMO.speed : slow ? FIRST_CATCH_SPEED : 1;
+      r.timeScale += (want - r.timeScale) * (1 - Math.exp(-dt * 10));
+      if (Math.abs(r.timeScale - 1) < 1e-3) r.timeScale = 1;
+    }
     r.advance(dt, () => {
       this.sync();
       return this.controls.sample();
@@ -369,6 +446,7 @@ class PracticeSession {
       this.syncContext(false);
     }
     if (s.catchType !== get().catchType) set({ catchType: s.catchType });
+    if (s.scrambleT >= 0 !== get().scrambling) set({ scrambling: s.scrambleT >= 0 });
     if (s.phase === 'air') this.sawAir = true;
     else if (this.sawAir) this.firstCatch = false;
     this.stepTutorial(s);
@@ -376,7 +454,16 @@ class PracticeSession {
       const ui = get();
       const next = nextSituation(ui.situation, s.result, s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y);
       this.setContext(null);
-      set({ stage: 'result', result: describe(s), situation: next ?? startSituation(ui.startSpot, ui.startDowns), seriesOver: next === null });
+      // Fatigue for the next play: last play's toll recovers by half; a big hit adds his.
+      const f: Partial<Record<OffSlot, number>> = {};
+      for (const [k, v] of Object.entries(this.fatigue)) if (v && v / 2 > 0.02) f[k as OffSlot] = v / 2;
+      const bh = s.result.bigHit;
+      if (bh && s.agents[bh.on]!.side === 'off') {
+        const slot = s.agents[bh.on]!.slot as OffSlot;
+        f[slot] = Math.min(0.6, (f[slot] ?? 0) + hitToll(bh.force));
+      }
+      this.fatigue = f;
+      set({ stage: 'result', result: describe(s), situation: next ?? startSituation(ui.startSpot, ui.startDowns), seriesOver: next === null, box: addToBox(ui.box, s.result) });
     }
   }
 

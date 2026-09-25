@@ -83,6 +83,25 @@ export function createRouteArt(): RouteArt {
   };
   const build = (s: PlayState, focus: { icon: number; candidate: RouteName } | null | undefined) => {
     clear();
+    // A designed run: the back's path, to the mesh, through the aiming point and on up (as the play art draws it).
+    const run = s.setup.play.run;
+    if (run) {
+      const rb = s.agents[s.slot.RB!]!;
+      const qb = s.agents[s.qb]!;
+      const los = s.setup.los;
+      const by = s.setup.ballY ?? 0;
+      const side = run.aim >= 0 ? 1 : -1;
+      const jab = run.scheme === 'counter' ? [{ x: rb.pos.x + 0.4, y: rb.pos.y - side * 1.1 }] : [];
+      const path = [rb.pos, ...jab, { x: qb.pos.x + 0.3, y: qb.pos.y + run.aim * 0.25 }, { x: los + 1, y: by + run.aim }, { x: los + 6, y: by + run.aim * (run.scheme === 'outsideZone' ? 1.3 : 1.05) }];
+      const pts = path.map(toWorld);
+      const mat = new THREE.MeshBasicMaterial({ color: POS_COLOR.RB, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, toneMapped: false });
+      mat.userData.base = 0.9;
+      mats.push(mat);
+      const line = new THREE.Mesh(ribbon(pts, WIDTH * 1.2), mat);
+      const head = new THREE.Mesh(cap(pts[pts.length - 1]!, pts[pts.length - 2]!, false), mat);
+      line.renderOrder = head.renderOrder = 3;
+      group.add(line, head);
+    }
     s.icons.forEach((i, k) => {
       const a = s.agents[i]!;
       const mine = focus && focus.icon === k + 1;

@@ -17,10 +17,15 @@ type P = {
 };
 type S = { tick: number; t: number; phase: string; icons: number[]; carrier: number; events: { type: string; who?: number[] }[]; result: { reason: string; yards: number; touchdown: boolean } | null };
 
-async function open(page: Page, seed: number, downs: number) {
+/** The play call's tabs from the first (quick game): 2 is Shots (Four Verticals first). */
+const PLAY: Record<string, [tabs: number, downs: number]> = { stick: [0, 0], fourVerts: [2, 0] };
+
+async function open(page: Page, seed: number, play: keyof typeof PLAY) {
   await page.goto(`/?screen=practice&nointro&seed=${seed}&quality=low&shot=practice`);
   await waitReady(page);
   await page.waitForFunction(() => (window as unknown as P).__btbPracticeUi?.getState().stage === 'call', null, { timeout: 120_000 });
+  const [tabs, downs] = PLAY[play]!;
+  for (let i = 0; i < tabs; i++) await page.keyboard.press('KeyE');
   for (let i = 0; i < downs; i++) await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => (window as unknown as P).__btbGameReady === true, null, { timeout: 150_000 });
@@ -44,7 +49,7 @@ async function tickUntil(page: Page, pred: (s: Awaited<ReturnType<typeof state>>
 
 test('a full play: snap, throw, catch, run, tackle or score, result card', async ({ page }) => {
   const errors = trackErrors(page);
-  await open(page, 37, 1); // Four Verticals against the coverage seed 37 draws (Cover 2)
+  await open(page, 37, 'fourVerts'); // Four Verticals against the coverage seed 37 draws (Cover 2)
   await page.keyboard.press('Space');
   await tick(page, 1);
   let s = await state(page);
@@ -76,7 +81,7 @@ test('a full play: snap, throw, catch, run, tackle or score, result card', async
 });
 
 test('the catch call: 1–3 while the ball is in the air, and the called one lights up', async ({ page }) => {
-  await open(page, 37, 1);
+  await open(page, 37, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');
@@ -96,7 +101,7 @@ test('the catch call: 1–3 while the ball is in the air, and the called one lig
 });
 
 test('pre-snap: the prompts, the route preview key, and a hot route the sim runs', async ({ page }) => {
-  await open(page, 5, 0); // Stick
+  await open(page, 5, 'stick'); // Stick
   // First play: the tutorial's first step and the snap prompt with the route and hot-route keys.
   await expect(page.locator('.tutorial-card')).toContainText('Snap');
   await expect(page.locator('.snap-call')).toContainText('Tab');
@@ -121,7 +126,7 @@ test('pre-snap: the prompts, the route preview key, and a hot route the sim runs
 });
 
 test('a tackle: the carrier goes down and the next snap is at the new spot', async ({ page }) => {
-  await open(page, 5, 0); // Stick
+  await open(page, 5, 'stick'); // Stick
   await page.keyboard.press('Space');
   await tick(page, 78);
   await page.keyboard.down('Digit1');
@@ -142,7 +147,7 @@ test('a tackle: the carrier goes down and the next snap is at the new spot', asy
 });
 
 test('scores: a touchdown run ends the series with a touchdown card', async ({ page }) => {
-  await open(page, 37, 1);
+  await open(page, 37, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');

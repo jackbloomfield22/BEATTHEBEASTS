@@ -94,6 +94,19 @@ export function runRoute(s: PlayState, a: Agent): void {
     steer(a, { x: 0, y: 0 });
     return;
   }
+  // The scramble drill: once the QB's on the move, the short and
+  // intermediate men break off and work across to the side he's running to,
+  // settling in open grass in front of him; the deep men keep going deep.
+  if (s.scrambleT >= 0 && s.t - s.scrambleT > 0.25 && s.phase === 'pocket' && !a.mem.drill) {
+    a.mem.drill = true;
+    const qb = s.agents[s.qb]!;
+    const depth = a.pos.x - s.setup.los;
+    if (depth < 15) {
+      const y = qb.pos.y + Math.max(-12, Math.min(12, (a.pos.y - qb.pos.y) * 0.5));
+      const x = s.setup.los + Math.max(4, Math.min(12, depth + 2));
+      a.route = { pts: [v2(x, Math.max(-FIELD_HALF_W + ROUTE_ROOM, Math.min(FIELD_HALF_W - ROUTE_ROOM, y)))], sit: [true], idx: 0 };
+    }
+  }
   // A late release (the slip screen's back): show pass protection first.
   const name = routeOf(s, a);
   const delay = name ? ROUTE_DELAY[name] : undefined;
@@ -375,8 +388,10 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
   const noise = (1 - qb.fx.a('decision')) * 1.2 * (s.rng.ai() - 0.5);
   // The clock in his head: past ~2.2 s from the set he takes what's there.
   const held = s.t - s.snapT - s.setup.play.drop.set;
-  // The window he wants (yd of separation at the catch point): about a yard. NFL QBs throw ~15% of attempts into tight windows (NGS "aggressiveness").
-  const need = 1.0 - 1.1 * pressure - Math.min(0.8, held * 0.3) - (held > 2.2 ? 2 : 0);
+  // The window he wants (yd of separation at the catch point, after the
+  // closing defenders): under a yard. NFL QBs throw ~15% of attempts into
+  // tight windows (NGS "aggressiveness").
+  const need = 0.7 - 1.1 * pressure - Math.min(0.8, held * 0.3) - (held > 2.2 ? 2 : 0);
   s.eyes = { x: r.pos.x, y: r.pos.y };
   // The progression runs once, in time with the routes: a deep read that
   // wasn't there on schedule isn't come back to late (a QB who's been through
@@ -557,13 +572,67 @@ function track(d: Agent, at: V2, vel: V2, gain = 2.5): V2 {
   return { x: vel.x + (at.x - d.pos.x) * gain, y: vel.y + (at.y - d.pos.y) * gain };
 }
 
-/** Pass rusher: at the QB until blocked (blocks.ts moves engaged pairs). */
+/**
+ * A pass rusher hunting the QB (feedback item 4). Engaged, the block moves
+ * the pair toward wherever the QB is now (stepBlocks' goal). Free, he takes
+ * his lane: the interior straight at the QB, the ends at his outside
+ * shoulder, never rushing past his depth (lose contain and the QB walks out
+ * of the pocket). Once the QB has left the pocket and he's read it, the
+ * nearest free rusher chases, the ends keep contain (outside him, a yard in
+ * front) and everyone else runs him down.
+ */
 export function rush(s: PlayState, d: Agent): void {
   if (blockOf(s, d.i)) return;
   const qb = s.agents[s.qb]!;
-  const dir = norm(sub(qb.pos, d.pos));
-  steer(d, { x: dir.x * d.fx.vmax, y: dir.y * d.fx.vmax });
+  const edge = d.slot === 'LE' ? 1 : d.slot === 'RE' ? -1 : 0;
+  const escaped = s.escapeT >= 0 && s.t >= s.escapeT + reaction(s, d);
   d.anim = 'rush';
+  if (escaped) {
+    let chaser = -1;
+    let cd = Infinity;
+    for (const i of s.def) {
+      const o = s.agents[i]!;
+      if (o.down || blockOf(s, i) || s.setup.def.assign[o.slot as keyof typeof s.setup.def.assign].kind !== 'rush') continue;
+      const k = dist(o.pos, qb.pos);
+      if (k < cd) {
+        cd = k;
+        chaser = i;
+      }
+    }
+    const onMySide = edge !== 0 && (qb.pos.y - (s.setup.ballY ?? 0)) * edge > 0;
+    if (d.i === chaser || edge === 0 || onMySide) {
+      redirect(s, d, sub(qb.pos, d.pos));
+      pursue(s, d, qb);
+      return;
+    }
+    // Contain from the far side: outside him and a yard in front, so he can't bounce back out.
+    const aim = v2(Math.max(qb.pos.x + 1, s.setup.los - 1), qb.pos.y + edge * 2);
+    redirect(s, d, sub(aim, d.pos));
+    steer(d, arrive(d, aim, 1, 0.8));
+    return;
+  }
+  let aim = qb.pos;
+  if (edge !== 0) {
+    // The end's lane: the QB's outside shoulder; past his depth, come back up to it.
+    aim = d.pos.x < qb.pos.x - 0.5 ? v2(qb.pos.x + 0.6, qb.pos.y + edge * 1.3) : v2(qb.pos.x, qb.pos.y + edge * 0.9);
+  }
+  const dir = norm(sub(aim, d.pos));
+  redirect(s, d, dir);
+  steer(d, { x: dir.x * d.fx.vmax, y: dir.y * d.fx.vmax });
+}
+
+/** A rusher's plant-and-redirect when his target moves (the render plays the step); at most every half-second. */
+function redirect(s: PlayState, d: Agent, want: V2): void {
+  const sp = len(d.vel);
+  const wl = len(want);
+  if (sp < 3 || wl < 1e-6) return;
+  const cos = (d.vel.x * want.x + d.vel.y * want.y) / (sp * wl);
+  if (cos < 0.45 && s.t - ((d.mem.redirectAt as number | undefined) ?? -9) > 0.5) {
+    d.mem.redirectAt = s.t;
+    // Which way he cuts (+1 to his left): the plant is on the other foot.
+    const side = d.vel.x * want.y - d.vel.y * want.x > 0 ? 1 : -1;
+    s.events.push({ t: s.t, type: 'move', who: [d.i], data: { move: 'redirect', side } });
+  }
 }
 
 /** Man coverage: mirror the receiver with a delay (Man Coverage), inside leverage, cushion by depth. */
@@ -588,6 +657,15 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
 export function zoneCover(s: PlayState, d: Agent, zone: NonNullable<Parameters<typeof zoneSpot>[1]>): void {
   const spot = zoneSpot(s, zone);
   const deep = zone.startsWith('deep') || zone.startsWith('half');
+  // A QB scrambling toward the line: the underneath zones come up to meet him
+  // (they can't leave while he can still throw it over them from deep in the pocket).
+  if (!deep && s.scrambleT >= 0 && s.t >= s.scrambleT + reaction(s, d)) {
+    const qb = s.agents[s.qb]!;
+    if (qb.pos.x > s.setup.los - 2.5 && dist(d.pos, qb.pos) < 14) {
+      pursue(s, d, qb);
+      return;
+    }
+  }
   // Read step: underneath defenders (linebackers, the box safety) hold and
   // read their keys before they drop; if it's a run they're still there.
   if (!deep && s.t - s.snapT < reaction(s, d) + 0.1 && d.pos.x < s.setup.los + 6) {

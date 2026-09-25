@@ -14,13 +14,15 @@ import { lerpAngle, type AgentSnap } from '@/game/snapshot';
 import { latency } from '@/game/latency';
 import { view } from '@/game/view';
 import { worldX, worldY, worldZ, yawOf } from '@/game/coords';
-import { BULLET_CHARGE, DEF_SLOTS, HOT_ROUTES, OFF_SLOTS, TAP_MAX, TICK, type SimPlayer } from '@/sim';
+import { BULLET_CHARGE, DEF_SLOTS, HOT_ROUTES, OFF_SLOTS, TAP_MAX, TICK, type PlayState, type SimPlayer } from '@/sim';
 import { openness } from '@/sim/ai';
 import { previewThrow } from '@/sim/passing';
 import { openState } from '@/game/view';
 import { YARD } from '../world/constants';
 import { hudDom, RING_LEN } from '@/ui/game/hudDom';
 import { crowdEnergy } from '../crowd/reactions';
+import { activeVfx } from '../vfx/active';
+import { Audio } from '@/audio/audio';
 import { KITS } from '../players/kits';
 import { bodyFromImperial } from '../players/bodyShape';
 import { jerseyName } from '../players/glyphs';
@@ -63,6 +65,9 @@ const STANCE: Record<string, string> = {
   SS: 'stance_db_ready',
 };
 
+/** The stance for a slot on this play: the QB under center or in the gun by the formation. */
+const stanceFor = (slot: string, s: PlayState): string => (slot === 'QB' && s.setup.play.formation.center ? 'stance_qb_center' : STANCE[slot] ?? 'stance_idle');
+
 const RENDER_POS: Record<SimPlayer['pos'], Position> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', OL: 'OL', DE: 'DL', DT: 'DL', LB: 'LB', CB: 'CB', S: 'S' };
 
 function buildTeam(players: SimPlayer[], slots: string[], kit: 'royal' | 'beasts', asset: PlayerAsset, lib: AnimLibrary): Body[] {
@@ -76,7 +81,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: 'royal' | 'beasts
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0 };
+    return { player, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>() };
   });
 }
 
@@ -166,7 +171,7 @@ export function GameScene() {
         b.player.root.rotation.set(0, yawOf(a.face), 0);
         resetBody(b);
         b.animator.reset();
-        b.animator.setStance(STANCE[b.slot] ?? 'stance_idle');
+        b.animator.setStance(stanceFor(b.slot, s));
         b.animator.update(10, { speed: 0 });
         b.lastYaw = yawOf(a.face);
         b.yaw = b.lastYaw;
@@ -179,7 +184,7 @@ export function GameScene() {
     // The snap: everyone who has a get-off out of his stance plays it.
     if (!snapped.current && cur.phase !== 'presnap') {
       snapped.current = true;
-      onSnap(bodies, s, (slot) => STANCE[slot] ?? 'stance_idle');
+      onSnap(bodies, s, (slot) => stanceFor(slot, s));
       latency.respond('snap');
     }
     onEvents(bodies, s, frameEvents);
@@ -234,6 +239,12 @@ export function GameScene() {
       b.lastSpeed = d.speed;
       b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look });
       b.ragdoll.update(animDt);
+      // A body hitting the turf hard kicks up dust (a big hit's landing).
+      const land = b.ragdoll.landing;
+      if (land) {
+        b.ragdoll.landing = null;
+        activeVfx()?.emit('hitDust', [land.x, land.y, land.z], { scale: 1.3 });
+      }
       b.player.updateLod(camera, viewportPx);
       if (urlFlags.pops) measure(b, animDt, latency.frame, s.agents[i]!.anim, cur.phase);
     });
@@ -396,6 +407,7 @@ export function GameScene() {
       else if (e.type === 'interception' || e.type === 'recovery') crowdEnergy.trigger('turnover', now);
       else if (e.type === 'sack') crowdEnergy.trigger('defensiveStop', now);
       else if (e.type === 'hit' && e.data?.big) crowdEnergy.trigger('bigPlay', now);
+      if (e.type === 'hit') Audio.hit(Number(e.data?.force ?? 4), !!e.data?.big);
       else if (e.type === 'drop') crowdEnergy.trigger('groan', now);
     }
   }

@@ -124,3 +124,6 @@
 .tutorial-card .cue { font-size: .82rem; }
 .catch-opt { grid-template-columns: auto auto; grid-template-rows: auto; min-width: 0; }
 .catch-opt .catch-name { text-transform: uppercase; letter-spacing: .1em; font-weight: 800; font-size: 1.5rem; }
+
+/* The session box score under the result (feedback item 5: big hits are counted). */
+.result-box { margin: .2rem 0 .8rem; font-size: .92rem; color: rgba(244,240,255,.62); letter-spacing: .02em; }

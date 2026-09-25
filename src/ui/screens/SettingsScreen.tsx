@@ -98,6 +98,7 @@ function buildTabs(nav: { openEditor: () => void; applyPreset: (p: QualityPreset
         { kind: 'toggle', label: 'Skip intros', desc: 'Go straight to the title screen on launch.', get: (s) => s.gameplay.skipIntros, set: (d, v) => { d.gameplay.skipIntros = v; } },
         { kind: 'toggle', label: 'Fast reveal', desc: 'Shorter Beasts walkout and draft presentation.', get: (s) => s.gameplay.fastReveal, set: (d, v) => { d.gameplay.fastReveal = v; } },
         { kind: 'choice', label: 'Automatic replays', desc: 'When instant replays play by themselves.', options: [{ value: 'on', label: 'All big plays' }, { value: 'big', label: 'Scores and turnovers' }, { value: 'off', label: 'Off' }], get: (s) => s.gameplay.autoReplay, set: (d, v) => { d.gameplay.autoReplay = v as Settings['gameplay']['autoReplay']; } },
+        { kind: 'toggle', label: 'Big-hit slow motion', desc: 'The very biggest hits play in slow motion for a moment.', get: (s) => s.gameplay.bigHitSlowmo, set: (d, v) => { d.gameplay.bigHitSlowmo = v; } },
         { kind: 'action', label: 'Skin-tone editor', desc: 'Assign skin tones to every player and defender. Saved to the game data so they carry across sessions and devices.', run: nav.openEditor, value: 'Open ▸' },
         { kind: 'action', label: 'Reset gameplay settings', desc: 'Restore the defaults on this tab.', run: () => nav.reset('gameplay') },
       ],

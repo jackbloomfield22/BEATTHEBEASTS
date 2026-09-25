@@ -327,6 +327,32 @@ export const DEF_CALLS: DefCall[] = [
   },
 ];
 
+/**
+ * M5.5 additions (feedback item 7: the book above is built to beat three
+ * base coverages; an NFL defense mixes in quarters, man-under and pressure).
+ * Quarters: four deep (the corners and safeties each a quarter), three under.
+ * Two-man: two deep halves, man underneath with the corners pressing.
+ * Cover 1 blitz: the middle linebacker rushes (five-man pressure), man
+ * behind it with a single high safety.
+ */
+DEF_CALLS.push(
+  {
+    id: 'cover4',
+    name: 'Cover 4',
+    assign: { ...RUSH4, LCB: { kind: 'zone', zone: 'deepL' }, RCB: { kind: 'zone', zone: 'deepR' }, FS: { kind: 'zone', zone: 'halfL' }, SS: { kind: 'zone', zone: 'halfR' }, SLB: { kind: 'zone', zone: 'curlL' }, WLB: { kind: 'zone', zone: 'curlR' }, MLB: { kind: 'zone', zone: 'middle' } },
+  },
+  {
+    id: 'cover2man',
+    name: 'Cover 2 Man',
+    assign: { ...RUSH4, LCB: { kind: 'man', on: 'X', press: true }, RCB: { kind: 'man', on: 'Z', press: true }, FS: { kind: 'zone', zone: 'halfL' }, SS: { kind: 'zone', zone: 'halfR' }, WLB: { kind: 'man', on: 'SLOT' }, SLB: { kind: 'man', on: 'RB' }, MLB: { kind: 'man', on: 'TE' } },
+  },
+  {
+    id: 'cover1blitz',
+    name: 'Cover 1 Blitz',
+    assign: { ...RUSH4, MLB: { kind: 'rush' }, LCB: { kind: 'man', on: 'X', press: true }, RCB: { kind: 'man', on: 'Z', press: true }, SS: { kind: 'man', on: 'TE' }, WLB: { kind: 'man', on: 'SLOT' }, SLB: { kind: 'man', on: 'RB' }, FS: { kind: 'zone', zone: 'deepM' } },
+  },
+);
+
 export const defById = (id: string): DefCall => DEF_CALLS.find((d) => d.id === id) ?? DEF_CALLS[0]!;
 
 export const OFF_SLOTS: OffSlot[] = ['QB', 'RB', 'X', 'Z', 'SLOT', 'TE', 'LT', 'LG', 'C', 'RG', 'RT'];

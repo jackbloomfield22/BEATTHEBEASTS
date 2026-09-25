@@ -12,7 +12,7 @@ const run = (play: string, def: string, seed: number, script: Parameters<typeof 
   const s = createPlay({ seed, offense: r.offense, defense: r.defense, play: playById(play), def: defById(def), los: 30, toGo: 10, user: true });
   runToWhistle(s, script);
   const c = s.events.find((e) => e.type === 'catch');
-  return { s, rac: c ? s.agents[s.carrier]!.pos.x - c.at!.x : 0, caught: !!c };
+  return { s, rac: c && s.carrier >= 0 ? s.agents[s.carrier]!.pos.x - c.at!.x : 0, caught: !!c && s.carrier >= 0 };
 };
 const rac: string[] = [];
 const broken: string[] = [];

@@ -40,7 +40,7 @@ export function describe(s: PlayState): ResultCard {
     return { headline: 'Touchdown', detail: caught ? `${c}, ${Math.round(100 - s.setup.los)} yards out, from ${last(who(s.qb))}.` : `${c} takes it in.`, tone: 'good', yards: y };
   }
   if (r.reason === 'safety') return { headline: 'Safety', detail: 'Tackled in the end zone.', tone: 'bad', yards: y };
-  if (r.sack) return { headline: `Sacked ${yds(y)}`, detail: tackler() ? `${tackler()} gets home.` : 'Brought down in the backfield.', tone: 'bad', yards: y };
+  if (r.sack) return { headline: `Sacked ${yds(y)}`, detail: r.bigHit ? `${last(who(r.bigHit.by))} lays him out.` : tackler() ? `${tackler()} gets home.` : 'Brought down in the backfield.', tone: 'bad', yards: y };
   if (r.reason === 'incomplete') {
     const drop = ev('drop');
     const defl = ev('deflection');
@@ -56,6 +56,7 @@ export function describe(s: PlayState): ResultCard {
   // Out of bounds: pushed if a defender was on him, else he stepped out.
   const oob = ev('outOfBounds');
   const pushed = oob && c ? s.def.some((i) => Math.hypot(s.agents[i]!.pos.x - c.pos.x, s.agents[i]!.pos.y - c.pos.y) < 1.6) : false;
-  const how = r.reason === 'outOfBounds' ? (pushed ? 'Pushed out of bounds' : 'Out of bounds') : tackler() ? `Tackled by ${tackler()}` : 'Down';
+  const big = r.bigHit ? last(who(r.bigHit.by)) : '';
+  const how = r.reason === 'outOfBounds' ? (pushed ? 'Pushed out of bounds' : 'Out of bounds') : big ? `Big hit by ${big}, down` : tackler() ? `Tackled by ${tackler()}` : 'Down';
   return { headline: `${verb}, ${yds(y)}`, detail: `${how} at the ${spotLabel(r.spot)}.`, tone: y > 0 ? 'good' : 'neutral', yards: y };
 }

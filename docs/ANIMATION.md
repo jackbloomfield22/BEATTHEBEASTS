@@ -64,5 +64,18 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `tackle` | transition | 27 | 0.0 | 0.00 | 0.00 | 15.7 | — | pass |
 | `getup_prone` | transition | 33 | 0.0 | 0.50 | 0.00 | 23.8 | — | pass |
 | `getup_supine` | transition | 36 | 0.0 | 0.01 | 0.00 | 22.0 | — | pass |
+| `qb_drop_uc3` | transition | 28 | 0.0 | 0.00 | 0.00 | 28.5 | — | pass |
+| `qb_drop_uc5` | transition | 39 | 0.0 | 0.00 | 0.00 | 27.0 | — | pass |
+| `ovl_handoff_r` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_handoff_l` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_pa_fake_r` | overlay | 21 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_pa_fake_l` | overlay | 21 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_take_r` | overlay | 16 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_take_l` | overlay | 16 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_tuck` | overlay | 9 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `qb_slide` | transition | 28 | 0.0 | 0.00 | 0.00 | 22.1 | — | pass |
+| `ovl_getoff` | overlay | 18 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `rush_redirect_l` | transition | 13 | 0.0 | 0.00 | 0.00 | 18.0 | — | pass |
+| `rush_redirect_r` | transition | 13 | 0.0 | 0.00 | 0.00 | 18.0 | — | pass |
 
-**58 of 58 clips pass.**
+**71 of 71 clips pass.**

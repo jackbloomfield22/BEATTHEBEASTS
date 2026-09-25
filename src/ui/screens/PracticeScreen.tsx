@@ -206,6 +206,8 @@ function PlayHud() {
   const icons = runner ? runner.state.icons.map((i) => runner.state.agents[i]!) : [];
   const phase = ui.phase;
   const inPocket = phase === 'snap' || phase === 'dropback' || phase === 'pocket';
+  const runPlay = !!playById(ui.playId).run;
+  const qbRunning = !!runner && runner.state.carrier === runner.state.qb;
   const live = ui.stage === 'live';
   return (
     <div className="play-hud">
@@ -234,7 +236,7 @@ function PlayHud() {
           </div>
           <div className="carrier-keys">
             {MOVES.map((m) => (
-              <Cue key={m.action} k={pad && 'pad' in m ? m.pad : key(m.action)} w={m.word} />
+              <Cue key={m.action} k={pad && 'pad' in m ? m.pad : key(m.action)} w={m.action === 'carrier.dive' && qbRunning ? 'Slide' : m.word} />
             ))}
           </div>
         </div>
@@ -242,15 +244,27 @@ function PlayHud() {
       {ui.stage === 'presnap' && !ui.hot ? (
         <div className="snap-call">
           <Cue className="big" k={key('preSnap.snap')} w="Snap" />
-          <div className="cue-row">
-            <Cue k={receivers} w="Receivers" />
-            <Cue k={key('preSnap.routes')} w="Routes" />
-            <Cue k={key('preSnap.hotRoute')} w="Hot route" />
-          </div>
+          {runPlay ? (
+            <div className="cue-row">
+              <Cue k={key('preSnap.routes')} w="Play" />
+            </div>
+          ) : (
+            <div className="cue-row">
+              <Cue k={receivers} w="Receivers" />
+              <Cue k={key('preSnap.routes')} w="Routes" />
+              <Cue k={key('preSnap.hotRoute')} w="Hot route" />
+            </div>
+          )}
         </div>
       ) : null}
       {ui.stage === 'presnap' && ui.hot ? <HotRoutePicker /> : null}
-      {live && inPocket ? (
+      {live && inPocket && !runPlay && ui.scrambling ? (
+        <div className="prompt-row cue-row">
+          <Cue k={moveKeys('pocket.move')} w="Run" />
+          <Cue k={receivers} w="Throw on the run" />
+          <Cue k={key('pocket.throwAway')} w="Throw away" />
+        </div>
+      ) : live && inPocket && !runPlay ? (
         <div className="prompt-row cue-row">
           <Cue k={moveKeys('pocket.move')} w="Move" />
           <Cue k={receivers} w="Throw" />
@@ -268,6 +282,7 @@ function PlayHud() {
         <div className="prompt-row cue-row">
           <Cue k={moveKeys('carrier.')} w="Run" />
           <Cue k={key('carrier.sprint')} w="Burst" />
+          {qbRunning ? <Cue k={key('carrier.dive')} w="Slide" /> : null}
         </div>
       ) : null}
       <Tutorial />
@@ -407,6 +422,9 @@ function ResultPanel() {
       <h2 className="result-head">{r.headline}</h2>
       <p className="result-detail">{r.detail}</p>
       <p className="result-next">{next}</p>
+      <p className="result-box">
+        Session: {ui.box.plays} {ui.box.plays === 1 ? 'play' : 'plays'}, {ui.box.yards.toFixed(0)} yd · passing {ui.box.comp}/{ui.box.att}, {ui.box.passYds.toFixed(0)} yd · rushing {ui.box.rushes} for {ui.box.rushYds.toFixed(0)} · {ui.box.sacks} {ui.box.sacks === 1 ? 'sack' : 'sacks'} · {ui.box.bigHits} big {ui.box.bigHits === 1 ? 'hit' : 'hits'}
+      </p>
       <nav className="result-actions">
         {items.map((it, i) => (
           <MenuItem key={it.label} size="md" label={it.label} focused={focus === i} onHover={() => setFocus(i)} onClick={() => confirm(i)} />

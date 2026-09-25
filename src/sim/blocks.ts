@@ -23,12 +23,13 @@ const DRIFT = 0.55;
 /**
  * The defender's base drift in a run block (per second, doubled in the
  * update). M5.5 (feedback item 6) lowered it from 0.55: an even run block
- * sheds at ~2.5 s, a clear mismatch at ~1.5 s. On an NFL inside run the back
- * reaches the line ~1.3–1.5 s after the snap (handoff ~0.7–0.9 s, NGS time to
- * line of scrimmage), so blocks have to sustain about that long for the
- * scheme to open a hole; at 0.55 every block was shed by ~1.2 s.
+ * now sheds at ~2 s, a clear mismatch at ~1.3 s. On an NFL inside run the
+ * back reaches the line ~1.3–1.5 s after the snap (handoff ~0.7–0.9 s, NGS
+ * time to line of scrimmage), so blocks have to sustain about that long for
+ * the scheme to open a hole; at 0.55 every block was shed by ~1.2 s. Tuned
+ * with tools/sim/outcomes.ts so yards before contact run ~2 yd.
  */
-const BASE = 0.28;
+const BASE = 0.34;
 /**
  * The rusher's base drift against a pass set. M5.5 lowered it from 0.55 so a
  * QB who never throws goes down at a median ~4.5 s at Pro against the

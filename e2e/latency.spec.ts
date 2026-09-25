@@ -58,7 +58,9 @@ test('every key shows its response within 100 ms at 60 fps', async ({ page }) =>
   await page.goto('/?screen=practice&nointro&seed=37&quality=low&shot=practice');
   await waitReady(page);
   await page.waitForFunction(() => (window as unknown as W).__btbPracticeUi?.getState().stage === 'call', null, { timeout: 120_000 });
-  await page.keyboard.press('ArrowDown'); // Four Verticals
+  // Four Verticals: the first play under Shots (two tabs over from the quick game).
+  await page.keyboard.press('KeyE');
+  await page.keyboard.press('KeyE');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => (window as unknown as W).__btbGameReady === true, null, { timeout: 150_000 });
 

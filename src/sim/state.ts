@@ -35,6 +35,8 @@ export interface PlaySetup {
   difficulty?: Difficulty;
   /** AI snaps immediately; the user snaps with the Snap input. */
   autoSnap?: boolean;
+  /** Stamina each player starts the play without (0–1), e.g. still shaking off a big hit. */
+  fatigue?: Partial<Record<OffSlot | DefSlot, number>>;
 }
 
 export interface Block {
@@ -95,9 +97,17 @@ export interface PlayState {
    */
   runShow: number;
   passShow: number;
+  /** The QB tucked it and is running (a scramble), since this play time; −1 if not. */
+  scrambleT: number;
+  /** The QB left the pocket (outside the tackles, or tucked it), since this play time; −1 if not. The rush reacts to it. */
+  escapeT: number;
+  /** First time a free defender got on the QB (pressure ≥ 0.7), for the harness; −1 if never. */
+  pressureT: number;
   /** Throw bookkeeping for the result. */
   pass: PlayResult['pass'];
   sack: boolean;
+  /** A big hit on this play (for the result). */
+  bigHit: PlayResult['bigHit'];
   /** AI QB read state. */
   read: { idx: number; since: number };
 }
@@ -225,6 +235,7 @@ export function createPlay(s: PlaySetup): PlayState {
   // Effort on this snap: ±2% top speed per player (seeded), so no two plays run alike.
   const effort = deriveStream(s.seed, 'effort');
   for (const a of agents) a.fx.vmax *= 1 + (effort() - 0.5) * 0.04;
+  for (const a of agents) a.stamina = Math.max(0.2, 1 - (s.fatigue?.[a.slot] ?? 0));
   return {
     setup: s,
     t: 0,
@@ -255,8 +266,12 @@ export function createPlay(s: PlaySetup): PlayState {
     runReadT: -1,
     runShow: -1,
     passShow: -1,
+    scrambleT: -1,
+    escapeT: -1,
+    pressureT: -1,
     pass: undefined,
     sack: false,
+    bigHit: undefined,
     read: { idx: 0, since: 0 },
   };
 }

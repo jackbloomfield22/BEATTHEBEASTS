@@ -41,6 +41,8 @@ export interface InputFrame {
   dive: boolean;
   /** Protect the ball (held). */
   protect: boolean;
+  /** In the pocket: tuck it and run (pressed this tick). He can still throw on the run until he crosses the line. */
+  scramble: boolean;
   /** Pre-snap: change a receiver's route (icon 1..5 and one of HOT_ROUTES). Applied before the snap. */
   hotRoute: { icon: number; route: RouteName } | null;
 }
@@ -62,6 +64,7 @@ export const NEUTRAL: InputFrame = Object.freeze({
   truck: false,
   dive: false,
   protect: false,
+  scramble: false,
   hotRoute: null,
 }) as InputFrame;
 
