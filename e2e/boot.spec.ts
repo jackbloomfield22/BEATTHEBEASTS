@@ -46,6 +46,7 @@ test('boots like a PC game: intro → press any key → main menu → settings �
 });
 
 test('History opens (empty on a fresh device) and backs out; Play opens the locker room', async ({ page }) => {
+  test.setTimeout(420_000); // the locker room builds on first entry (slow in the software renderer)
   await page.goto('/?nointro');
   await waitReady(page);
   await page.waitForTimeout(500);
