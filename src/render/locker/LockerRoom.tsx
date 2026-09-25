@@ -8,7 +8,7 @@ import { traitInfo } from '@/engine/ratings/traits';
 import { threatTier } from '@/engine';
 import { loadAnimLibrary } from '@/anim/library';
 import { urlFlags } from '@/app/platform';
-import { useDraft } from '@/app/draftStore';
+import { REVEAL_LEAD, REVEAL_STAGGER, useDraft } from '@/app/draftStore';
 import type { DraftPick } from '@/game/draft';
 import { jerseyName } from '../players/glyphs';
 import { loadPlayerAsset } from '../players/playerAsset';
@@ -62,6 +62,9 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
   const dressed = useRef<Partial<Record<Slot, string | null>>>({});
   const handledSeq = useRef(0);
   const handledInstant = useRef(-1);
+  const handledReveal = useRef(0);
+  /** Auto-Draft's reveal: stalls waiting their turn to dress. */
+  const revealQueue = useRef<{ slot: Slot; pick: DraftPick; at: number }[]>([]);
   const wallKey = useRef('');
   const rt = useMemo(() => new THREE.WebGLRenderTarget(512, 640, { type: THREE.HalfFloatType }), []);
   const captured = useRef(-1);
@@ -139,6 +142,10 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
     handledInstant.current = st.instantSeq;
     const fresh = st.lastPick && st.lastPick.seq !== handledSeq.current ? st.lastPick : null;
     if (fresh) handledSeq.current = fresh.seq;
+    // An Auto-Draft: its stalls dress in turn down the row (left to right).
+    const reveal = st.reveal.seq !== handledReveal.current ? st.reveal.slots : null;
+    if (reveal) handledReveal.current = st.reveal.seq;
+    const order = reveal ? room.lockers.map((l) => l.place.slot).filter((k) => reveal.includes(k)) : [];
     for (const l of room.lockers) {
       const slot = l.place.slot;
       const p = d?.roster[slot] ?? null;
@@ -147,7 +154,10 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
       if (key === (dressed.current[slot] ?? null) && instant && p && l.occupant) continue;
       dressed.current[slot] = key;
       if (!p) l.clear();
-      else if (fresh && fresh.pick.slot === slot && !instant) pending.current = { slot, pick: p, at: clock.current + DRESS_DELAY };
+      else if (reveal && order.includes(slot)) {
+        l.clear();
+        revealQueue.current.push({ slot, pick: p, at: clock.current + REVEAL_LEAD + order.indexOf(slot) * REVEAL_STAGGER });
+      } else if (fresh && fresh.pick.slot === slot && !instant) pending.current = { slot, pick: p, at: clock.current + DRESS_DELAY };
       else l.dress(occupantOf(p, st.allPro), true);
     }
     syncWall();
@@ -224,6 +234,14 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
         const man = pd.pick.linemen ? pd.pick.linemen.find((x) => x.id === id)! : pd.pick;
         h.play({ name: man.name, pos: POS_OF_SLOT[pd.slot] as SigPos, num: man.num, heightIn: e?.heightIn ?? 74, weightLb: e?.weightLb ?? 220 }, l.posColor);
       }
+    }
+    // The reveal: each stall dresses when its turn comes.
+    const q = revealQueue.current;
+    while (q.length && clock.current >= q[0]!.at) {
+      const r = q.shift()!;
+      // Still his stall (the draft could have been restarted meanwhile).
+      if (useDraft.getState().draft?.roster[r.slot]?.id !== r.pick.id) continue;
+      room.lockers.find((x) => x.place.slot === r.slot)!.dress(occupantOf(r.pick, useDraft.getState().allPro));
     }
     for (const l of room.lockers) l.update(dt);
     holo.current?.update(dt);

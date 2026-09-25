@@ -43,6 +43,16 @@ export type DraftPhase = 'loading' | 'intro' | 'spinning' | 'choosing' | 'dressi
 export const SPIN_S = 2.4;
 /** From a pick to the locker dressed (camera move + dressing). */
 export const DRESS_S = 3.6;
+/**
+ * Auto-Draft's reveal (GDD §2: Quick Play is an auto-draft with a short
+ * reveal): the stalls it filled dress one after another down the row, not
+ * all at once. REVEAL_LEAD before the first, REVEAL_STAGGER between them;
+ * each dressing takes ~2.9 s (locker.ts DRESS_END).
+ */
+export const REVEAL_LEAD = 0.6;
+export const REVEAL_STAGGER = 0.35;
+/** Seconds from an Auto-Draft of `n` stalls until the last one is dressed, plus a beat to look at the row. */
+export const revealSeconds = (n: number): number => (n ? REVEAL_LEAD + (n - 1) * REVEAL_STAGGER + 2.9 + 0.9 : 0);
 
 export interface SavedDraft {
   mode: DraftMode;
@@ -67,8 +77,10 @@ interface DraftStore {
   focus: Slot | null;
   /** The last pick, for the dressing beat (seq increments per pick). */
   lastPick: { pick: DraftPick; seq: number } | null;
-  /** Instant dressings (Auto-Draft, a restored room): no per-locker animation. */
+  /** Instant dressings (a restored room): no per-locker animation. */
   instantSeq: number;
+  /** Auto-Draft's reveal: the stalls it filled, dressed in turn (seq increments per Auto-Draft). */
+  reveal: { seq: number; slots: Slot[] };
   /** The wall shows the Beasts (page 0 = all, 1..3 = front, backers, secondary) or the draft. */
   wallBeasts: number | null;
   saved: SavedDraft | null;
@@ -107,6 +119,7 @@ export const useDraft = create<DraftStore>((set, get) => ({
   focus: null,
   lastPick: null,
   instantSeq: 0,
+  reveal: { seq: 0, slots: [] },
   wallBeasts: null,
   starting: false,
   saved: loadJSON<SavedDraft>('lastDraft') ?? null,
@@ -176,7 +189,7 @@ export const useDraft = create<DraftStore>((set, get) => ({
     const { cat, draft } = get();
     if (!cat || !draft) return [];
     const picks = autoDraft(cat, draft);
-    set((s) => ({ version: s.version + 1, instantSeq: s.instantSeq + 1, phase: isComplete(draft) ? 'complete' : s.phase, focus: null }));
+    set((s) => ({ version: s.version + 1, reveal: { seq: s.reveal.seq + 1, slots: picks.map((p) => p.slot) }, phase: isComplete(draft) ? 'complete' : s.phase, focus: null }));
     if (isComplete(draft)) save(draft);
     return picks;
   },
