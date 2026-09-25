@@ -26,7 +26,8 @@ export const SHOTS = {
   /** The row of nine across the frame: from behind the room's center, a band of lit ceiling above and the carpet's mark below. */
   home: { pos: v(0, 1.45, 3.4), look: v(0, 1.35, -8), fov: 36 },
   pullback: { pos: v(0, 1.8, 4.2), look: v(0, 1.35, -8), fov: 56 },
-  wall: { pos: onArc(WALL_ANGLE + 0.2, ARC_R - 4.9, 1.62), look: onArc(WALL_ANGLE, ARC_R, WALL.base + WALL.height / 2), fov: 44 },
+  /** The wall high in frame, so the reels sit above the draft's center-stage readout (which mirrors them). */
+  wall: { pos: onArc(WALL_ANGLE + 0.2, ARC_R - 5.4, 1.5), look: onArc(WALL_ANGLE, ARC_R, WALL.base + WALL.height / 2 - 0.75), fov: 46 },
   /** Choosing: the wall on the left of frame, the row running away to the right (the pick panel sits right). */
   /** Down the tunnel from the room: the field at the far end. */
   door: { pos: onArc(DOOR_ANGLE - 0.02, ROOM_R - 3.6, 1.62), look: onArc(DOOR_ANGLE, ROOM_R + DOOR.depth, 1.4), fov: 46 },
