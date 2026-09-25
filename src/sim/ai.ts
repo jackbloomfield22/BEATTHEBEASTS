@@ -524,14 +524,17 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
 const COLLAPSE = 1.4;
 export function pressureOn(s: PlayState, qb: Agent): number {
   let p = 0;
-  for (const i of s.def) {
-    const d = s.agents[i]!;
-    if (d.down) continue;
-    const k = dist(d.pos, qb.pos);
-    if (blockOf(s, i)) p = Math.max(p, 0.6 * Math.max(0, Math.min(1, 1 - (k - COLLAPSE) / 1.6)));
-    else p = Math.max(p, Math.max(0, 1 - (k - 1) / 3.5));
-  }
+  for (const i of s.def) p = Math.max(p, pressureFrom(s, qb, i));
   return Math.min(1, p);
+}
+
+/** One defender's share of pressureOn (0 when he's down). */
+export function pressureFrom(s: PlayState, qb: Agent, i: number): number {
+  const d = s.agents[i]!;
+  if (d.down) return 0;
+  const k = dist(d.pos, qb.pos);
+  if (blockOf(s, i)) return 0.6 * Math.max(0, Math.min(1, 1 - (k - COLLAPSE) / 1.6));
+  return Math.max(0, 1 - (k - 1) / 3.5);
 }
 
 /** Ball-carrier AI: pick the best running lane toward the goal line. */

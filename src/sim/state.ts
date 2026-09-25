@@ -122,6 +122,8 @@ export interface PlayState {
   escapeT: number;
   /** First time a free defender got on the QB (pressure ≥ 0.7), for the harness; −1 if never. */
   pressureT: number;
+  /** Each defender who got pressure on the QB (his own share ≥ 0.45), when, and the blocker he beat (−1 free). Box-score bookkeeping (play.ts notePressures): not hashed, and nothing in the sim reads it. */
+  pressures: { by: number; beat: number; t: number }[];
   /** The defenders who rally to this throw (decided at the release, keyed by it); the rest keep their men and zones. */
   rally: { at: number; who: number[] } | null;
   /** Throw bookkeeping for the result. */
@@ -360,6 +362,7 @@ export function createPlay(setup: PlaySetup): PlayState {
     scrambleT: -1,
     escapeT: -1,
     pressureT: -1,
+    pressures: [],
     rally: null,
     pass: undefined,
     sack: false,
