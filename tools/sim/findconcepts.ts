@@ -35,13 +35,13 @@ export interface ConceptSpec {
 const range = (a: number, b: number, step: number) => Array.from({ length: Math.floor((b - a) / step) + 1 }, (_, k) => a + k * step);
 
 export const SPECS: ConceptSpec[] = [
-  { id: 'slant', play: 'doubles-slants', icon: 1, ats: range(30, 80, 4), min: 6, timing: 0.7, alts: [['trips-stick', 4], ['bunch-snag', 4], ['empty-quick', 1], ['doubles-slants', 3]] },
-  { id: 'out', play: 'doubles-quick-outs', icon: 1, ats: range(30, 90, 4), min: 5, timing: 0.7, alts: [['doubles-quick-outs', 2], ['empty-quick', 2]] },
+  { id: 'slant', play: 'doubles-slants', icon: 1, ats: range(30, 80, 4), min: 6, timing: 1.0, alts: [['trips-stick', 4], ['bunch-snag', 4], ['empty-quick', 1], ['doubles-slants', 3]] },
+  { id: 'out', play: 'doubles-quick-outs', icon: 1, ats: range(30, 90, 4), min: 5, timing: 1.0, alts: [['doubles-quick-outs', 2], ['empty-quick', 2]] },
   { id: 'curl', play: 'doubles-curls', icon: 1, ats: range(60, 130, 5), min: 10, timing: 0.7, plan: { call: 'possession' } },
   { id: 'go', play: 'trips-four-verts', icon: 3, ats: range(70, 140, 5), min: 25, plan: { hold: 16 } },
-  { id: 'post', play: 'singleback-pa-post', icon: 1, alts: [['singleback-pa-yankee', 2], ['trips-y-cross', 3]], ats: range(80, 160, 5), min: 18, timing: 1.5, plan: { hold: 10 } },
-  { id: 'corner', play: 'doubles-smash', icon: 1, ats: range(60, 140, 5), min: 14, timing: 1.5, plan: { hold: 14 }, alts: [['bunch-snag', 3], ['empty-spot', 2], ['doubles-mesh', 4]] },
-  { id: 'crosser', play: 'trips-y-cross', icon: 1, ats: range(80, 150, 5), min: 12, timing: 1.2, alts: [['ace-pa-crossers', 1], ['singleback-pa-yankee', 1], ['singleback-pa-post', 2]] },
+  { id: 'post', play: 'singleback-pa-post', icon: 1, alts: [['singleback-pa-yankee', 2], ['trips-y-cross', 3]], ats: range(80, 160, 5), min: 18, timing: 1.8, plan: { hold: 10 } },
+  { id: 'corner', play: 'doubles-smash', icon: 1, ats: range(60, 140, 5), min: 14, timing: 1.8, plan: { hold: 14 }, alts: [['bunch-snag', 3], ['empty-spot', 2], ['doubles-mesh', 4]] },
+  { id: 'crosser', play: 'trips-y-cross', icon: 1, ats: range(80, 150, 5), min: 12, timing: 2.0, alts: [['ace-pa-crossers', 1], ['singleback-pa-yankee', 1], ['singleback-pa-post', 2]] },
   { id: 'screen', play: 'doubles-rb-screen', icon: 1, ats: range(60, 120, 4), min: 6 },
   { id: 'back-shoulder', play: 'trips-four-verts', icon: 4, ats: range(70, 130, 5), min: 12, backShoulder: true, plan: { aim: { x: -1, y: -0.2 }, call: 'aggressive' } },
   { id: 'scramble-drill', play: 'trips-y-cross', icon: 0, ats: range(150, 230, 8), min: 8, scramble: true },
@@ -49,6 +49,12 @@ export const SPECS: ConceptSpec[] = [
 
 interface Hit { id: string; play: string; def: string; seed: number; at: number; icon: number; yards: number; sep: number; lag: number; air: number; td: boolean; plan: ConceptPlan }
 
+/** Why candidates were turned down (the last run's tally, for --why). */
+export const WHY: Record<string, number> = {};
+const no = (k: string) => {
+  WHY[k] = (WHY[k] ?? 0) + 1;
+  return null;
+};
 export function tryOne(spec: ConceptSpec, def: string, seed: number, at: number, icon: number, dir = 1, play = spec.play): Hit | null {
   const plan: ConceptPlan = { icon, at, ...spec.plan, ...(spec.scramble ? { scramble: { at: 110, dir: { x: 0.25, y: dir } } } : {}) };
   const s = createPlay({ seed, offense: r.offense, defense: r.defense, play: playById(play), def: defById(def), los: 30, toGo: 10, user: true });
@@ -72,15 +78,19 @@ export function tryOne(spec: ConceptSpec, def: string, seed: number, at: number,
   });
   const res = s.result;
   const p = res?.pass;
-  if (!res || !p?.complete || p.target !== tgt) return null;
+  if (!res || !p?.attempted) return no('no throw');
+  if (p.target !== tgt) return no('another target');
+  if (!p.complete) return no(p.intercepted ? 'intercepted' : 'incomplete');
   const c = s.events.find((e) => e.type === 'catch');
-  if (!c) return null;
+  if (!c) return no('no catch event');
   const th = s.events.find((e) => e.type === 'throw');
-  if (spec.backShoulder && !(Number(th?.data?.place ?? 0) < -0.5)) return null;
-  if (spec.scramble && !(s.scrambleT > 0)) return null;
+  if (spec.backShoulder && !(Number(th?.data?.place ?? 0) < -0.5)) return no('not back-shoulder');
+  if (spec.scramble && !(s.scrambleT > 0)) return no('no scramble');
   const lag = breakT < 0 ? 9 : c.t - breakT;
-  if (spec.timing && (breakT < 0 || lag < 0 || lag > spec.timing)) return null;
-  if (p.sep === undefined || p.sep < 1 || res.yards < spec.min) return null;
+  if (spec.timing && breakT < 0) return no('no break seen');
+  if (spec.timing && (lag < 0 || lag > spec.timing)) return no(lag < 0 ? 'caught before the break' : 'late off the break');
+  if (p.sep === undefined || p.sep < 1) return no('covered');
+  if (res.yards < spec.min) return no('short');
   return { id: spec.id, play, def, seed, at, icon, yards: res.yards, sep: p.sep, lag, air: p.airYards, td: res.touchdown, plan };
 }
 
@@ -103,6 +113,8 @@ if (process.argv[1]?.endsWith('findconcepts.ts')) {
     // A clean look: open but not wide open, on time, a real gain but not a 70-yard fluke (unless it's the go).
     const score = (h: Hit) => -Math.abs(h.sep - 2.5) - (spec.timing ? h.lag * 3 : 0) - Math.max(0, h.yards - spec.min - 25) * 0.1;
     hits.sort((a, b) => score(b) - score(a));
+    if (process.argv.includes('--why')) console.log('  turned down: ' + Object.entries(WHY).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', '));
+    for (const k of Object.keys(WHY)) delete WHY[k];
     console.log(`\n${spec.id} (${spec.play}): ${hits.length} candidates`);
     for (const h of hits.slice(0, 5)) console.log(`  ${h.play.padEnd(22)} ${h.def.padEnd(12)} seed ${String(h.seed).padStart(3)} at ${h.at} icon ${h.icon}${h.plan.scramble ? ` scramble ${JSON.stringify(h.plan.scramble.dir)}` : ''}: ${h.yards.toFixed(1)} yd (air ${h.air.toFixed(1)}), sep ${h.sep.toFixed(2)}, ball ${h.lag.toFixed(2)} s after the break${h.td ? ' TD' : ''}`);
   }
