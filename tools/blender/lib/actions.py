@@ -216,7 +216,9 @@ IDLE = STANCES["idle"]
 
 # The ball tucked high and tight in the right arm: the wrist in front of the
 # chest, the forearm across the ribs, the elbow in at the side and back.
-TUCK_R = (-0.085, -0.255, 1.19)
+# (M6.5 #11 raised it 8 cm: at 1.19 m the hand sat at the belt line and the
+# ball rode on the belly; "high and tight" has the nose at the pec.)
+TUCK_R = (-0.095, -0.235, 1.27)
 TUCK_ELBOW_R = (-0.30, 0.45, 0.85)
 # Both hands on the ball at the chest: the right on the laces, the left on the side.
 HOLD = {"l": (0.07, -0.27, 1.21), "r": (-0.05, -0.23, 1.28)}
@@ -798,6 +800,7 @@ def action_clips() -> list[Clip]:
     from .actions_m55 import m55_clips  # (imports this module's helpers)
     from .actions_m6 import m6_clips
     from .actions_m65 import m65_clips
+    from .actions_m65_carrier import carrier_clips
 
     jl = juke_left()
     return [
@@ -807,6 +810,7 @@ def action_clips() -> list[Clip]:
         *m55_clips(),
         *m6_clips(),
         *m65_clips(),
+        *carrier_clips(),
     ]
 
 
@@ -815,7 +819,7 @@ NO_BALANCE = {"down_prone", "down_supine"}
 
 # The M6 modules add stances to the table when imported (the pass set, the
 # snapper, the holder...): import them now so build_anims.py sees them.
-from . import actions_m6_back7, actions_m6_line, actions_m6_special, actions_m65  # noqa: E402,F401
+from . import actions_m6_back7, actions_m6_line, actions_m6_special, actions_m65, actions_m65_carrier  # noqa: E402,F401
 from .actions_m6 import NO_BALANCE as _M6_NO_BALANCE  # noqa: E402
 
-NO_BALANCE |= _M6_NO_BALANCE | actions_m65.NO_BALANCE
+NO_BALANCE |= _M6_NO_BALANCE | actions_m65.NO_BALANCE | actions_m65_carrier.NO_BALANCE

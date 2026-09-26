@@ -28,7 +28,8 @@ import './anim.css';
 //
 // Hash query: mode=lineup|single|compare|onion|sheet|sequence, pos (sequence stance), clip, speed, t (freeze at time, s), rate
 // (playback rate), lock=0|1, kit, skin, lod, num, name, seed, clip2, yaw, look=1,
-// cam=x,y,z,tx,ty,tz.
+// carry=space|traffic|drive|press (blend: the ball carrier's gaits, M6.5 #11),
+// dip=l|r (blend: the dip before contact), cam=x,y,z,tx,ty,tz.
 
 // Numbers and names exercise the lettering: one and two digits, short,
 // long (squeezed) and accented names.
@@ -67,6 +68,9 @@ interface LabState {
   look: boolean;
   /** Blend mode: an overlay clip laid over the gait, replayed (a catch at speed). */
   ovl: string;
+  /** Blend mode: the ball carrier's gaits (M6.5 #11), and the dip before contact. */
+  carry: '' | 'space' | 'traffic' | 'drive' | 'press';
+  dip: '' | 'l' | 'r';
   /** Re-rolls every player's gear and proportions (variety.ts). */
   seed: string;
   /** Single mode's jersey number and name (lineup players carry their own). */
@@ -284,9 +288,22 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
         readout = { phase: an.phase, time: clock.current, planted: { l: false, r: false }, correction: { ...an.correction }, step: director.label };
       } else if (clipName === 'blend') {
         const an = animators[i]!;
-        const input = { speed, groundVelocity: ground, yawRate: s.yaw, lookAt: s.look ? camera.position : null };
+        const c = s.carry;
+        const input = {
+          speed,
+          groundVelocity: ground,
+          yawRate: s.yaw,
+          lookAt: s.look ? camera.position : null,
+          carry: c ? 1 : 0,
+          traffic: c === 'traffic' ? 1 : c === 'press' ? 0.5 : 0,
+          drive: c === 'drive' ? 1 : 0,
+          press: c === 'press' ? 1 : 0,
+          dip: s.dip === 'l' ? 1 : s.dip === 'r' ? -1 : 0,
+        };
         an.footLock = s.lock;
         an.setStance('stance_idle');
+        // A carrier has the ball tucked (as the game lays it over the right arm).
+        an.setHold(c ? 'ovl_carry_r' : null);
         // An upper-body overlay over the gait (a catch at speed), replayed
         // every so often: first at OVL_START, then once per its length + a gap.
         const ovl = s.ovl && lib.meta[s.ovl]?.kind === 'overlay' ? s.ovl : null;
@@ -374,6 +391,8 @@ export function AnimLab() {
     yaw: Number(q.get('yaw') ?? 0),
     look: q.get('look') === '1',
     ovl: q.get('ovl') ?? '',
+    carry: (q.get('carry') as LabState['carry']) ?? '',
+    dip: (q.get('dip') as LabState['dip']) ?? '',
     seed: q.get('seed') ?? '',
     num: Number(q.get('num') ?? 16),
     name: q.get('name') ?? 'Montana',
@@ -463,6 +482,24 @@ export function AnimLab() {
             </label>
             <label className="lab-check">
               <input type="checkbox" checked={s.look} onChange={(e) => set({ look: e.target.checked })} /> Look at the camera
+            </label>
+            <label>
+              Ball carrier
+              <select value={s.carry} onChange={(e) => set({ carry: e.target.value as LabState['carry'] })}>
+                <option value="">No (receiver's gaits)</option>
+                <option value="space">In space</option>
+                <option value="traffic">In traffic</option>
+                <option value="drive">Burst (drive)</option>
+                <option value="press">Pressing the hole</option>
+              </select>
+            </label>
+            <label>
+              Dip before contact
+              <select value={s.dip} onChange={(e) => set({ dip: e.target.value as LabState['dip'] })}>
+                <option value="">None</option>
+                <option value="l">Tackler on his left</option>
+                <option value="r">Tackler on his right</option>
+              </select>
             </label>
             <label>
               Overlay (replayed)

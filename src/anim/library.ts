@@ -45,6 +45,25 @@ export interface AnimLibrary {
   fps: number;
   /** Forward locomotion cycles, slow to fast (walk, jog, run, sprint). */
   gaits: GaitClip[];
+  /**
+   * The gait families, each slow to fast (M6.5 #11): [receiver, carrier in
+   * space, carrier in traffic, carrier's drive]. A family whose clips are
+   * missing (an older library) is the receiver's.
+   */
+  families: GaitClip[][];
+}
+
+/** The families' clips by name (the walk is shared: a carrier slowed to a walk walks). */
+export const FAMILIES = [
+  ['loco_walk', 'loco_jog', 'loco_run', 'loco_sprint'],
+  ['loco_walk', 'carry_jog', 'carry_run', 'carry_sprint'],
+  ['loco_walk', 'carry_traffic_jog', 'carry_traffic_run'],
+  ['loco_walk', 'carry_drive_jog', 'carry_drive_run', 'carry_drive_sprint'],
+] as const;
+
+function gaitClip(n: string, m: ClipMeta): GaitClip {
+  const [a, b] = m.contacts.l[0]!;
+  return { name: n, speed: m.speed, duration: m.duration, duty: ((b - a + m.frames) % m.frames) / m.frames };
 }
 
 let pending: Promise<AnimLibrary> | null = null;
@@ -69,14 +88,18 @@ export function loadAnimLibrary(): Promise<AnimLibrary> {
       });
       clips.set(c.name, c);
     }
-    const gaits = ['loco_walk', 'loco_jog', 'loco_run', 'loco_sprint']
-      .filter((n) => json.clips[n] && clips.has(n))
-      .map((n) => {
-        const m = json.clips[n]!;
-        const [a, b] = m.contacts.l[0]!;
-        return { name: n, speed: m.speed, duration: m.duration, duty: ((b - a + m.frames) % m.frames) / m.frames };
-      });
-    return { clips, meta: json.clips, fps: json.fps, gaits };
+    const made = new Map<string, GaitClip>();
+    const family = (names: readonly string[]) =>
+      names
+        .filter((n) => json.clips[n] && clips.has(n))
+        .map((n) => made.get(n) ?? made.set(n, gaitClip(n, json.clips[n]!)).get(n)!)
+        .sort((x, y) => x.speed - y.speed);
+    const gaits = family(FAMILIES[0]);
+    const families = FAMILIES.map((f, i) => {
+      const g = family(f);
+      return i > 0 && g.length < f.length ? gaits : g;
+    });
+    return { clips, meta: json.clips, fps: json.fps, gaits, families };
   });
   return pending;
 }

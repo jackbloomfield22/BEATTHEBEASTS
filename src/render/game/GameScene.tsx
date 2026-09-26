@@ -118,7 +118,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: Pl
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null };
+    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9 };
   });
 }
 
@@ -190,6 +190,8 @@ export function GameScene() {
       shadowAttach.requested = true;
       setBodies(all);
       (window as unknown as { __btbGameReady?: boolean }).__btbGameReady = true;
+      // Capture specs read what each body is playing (tools/shots/carriergame.spec.ts); recording only.
+      if (urlFlags.video) (window as unknown as { __btbBodies?: Body[] }).__btbBodies = all;
     }, console.error);
     scene.add(marks.group, ball, routeArt.group);
     return () => {
@@ -334,7 +336,7 @@ export function GameScene() {
       const accel = animDt > 0 ? (d.speed - b.lastSpeed) / Math.max(animDt, 1 / 120) : 0;
       b.lastYaw = yaw;
       b.lastSpeed = d.speed;
-      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look });
+      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, carry: d.carry, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip });
       b.ragdoll.update(animDt);
       // A body hitting the turf hard kicks up dust (a big hit's landing).
       const land = b.ragdoll.landing;

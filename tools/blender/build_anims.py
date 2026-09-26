@@ -61,6 +61,18 @@ MECH_TARGETS = {
     "loco_run": {"lean": (8, 14), "pelvis_v": (4.0, 9.0), "torso_rot": (25, 55), "elbow": (65, 115), "shoulder": (80, 110), "knee_drive": (58, 75), "heel_rec": (105, 125), "strike": (-8, 4)},
     "loco_sprint": {"lean": (11, 18), "pelvis_v": (3.0, 8.0), "torso_rot": (30, 60), "elbow": (65, 115), "shoulder": (105, 140), "knee_drive": (70, 90), "heel_rec": (118, 140), "strike": (-25, -5), "hand_front": (8, 30), "hand_back": (5, 40)},
     "loco_backpedal": {"lean": (18, 40), "elbow": (65, 115)},
+    # M6.5 #11, the ball carrier (lib/actions_m65_carrier.py): against the
+    # receiver's gait at the same speed, the hips lower ("hip", mean pelvis
+    # height, m) and the trunk further forward; the free (left) arm is the
+    # one measured. Traffic: lower still; the drive (burst): the deepest lean.
+    "carry_jog": {"lean": (10, 16), "hip": (0.85, 0.90)},
+    "carry_run": {"lean": (14, 20), "hip": (0.82, 0.88)},
+    "carry_sprint": {"lean": (16, 22), "hip": (0.84, 0.90)},
+    "carry_traffic_jog": {"lean": (13, 19), "hip": (0.78, 0.84)},
+    "carry_traffic_run": {"lean": (15, 21), "hip": (0.77, 0.83)},
+    "carry_drive_jog": {"lean": (21, 28), "hip": (0.81, 0.87)},
+    "carry_drive_run": {"lean": (20, 26), "hip": (0.81, 0.87)},
+    "carry_drive_sprint": {"lean": (18, 24), "hip": (0.83, 0.89)},
 }
 
 # Stances that bear weight on a hand (it joins the support polygon).
@@ -314,6 +326,7 @@ def mech_gates(clip, mech) -> dict:
         "knee_drive": max(mech["thigh"]),
         "heel_rec": max(mech["knee"]),
         "strike": mech["strike"][0] if mech["strike"] else 0.0,
+        "hip": sum(mech["pz"]) / len(mech["pz"]),
         "hand_front": max(mech["hand_up"]),
         "hand_back": max(mech["hand_back"]),
     }
@@ -324,7 +337,7 @@ def mech_gates(clip, mech) -> dict:
                 fails.append(k)
         elif not lo <= m[k] <= hi:
             fails.append(k)
-    out = {"mech": {k: round(v, 1) for k, v in m.items()}}
+    out = {"mech": {k: round(v, 3 if k == "hip" else 1) for k, v in m.items()}}
     if fails:
         out["mech_fail"] = fails
     return out
