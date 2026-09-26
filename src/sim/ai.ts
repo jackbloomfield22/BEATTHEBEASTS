@@ -590,6 +590,7 @@ export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
       const off = Math.abs(c.pos.y + dir.y * 3 - aimY) - wide;
       if (off > 0) score -= off * 2.5;
     }
+    let threats = 0;
     for (const i of attack > 0 ? s.def : s.off) {
       const d = s.agents[i]!;
       if (d.down) continue;
@@ -608,14 +609,18 @@ export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
       const reach = held + (free - held) * (1 - c.fx.a('vision')) * 0.6;
       const threat = Math.max(0, reach + 1.2 - perp) / (1 + along * 0.15);
       score -= threat * 1.1;
+      threats += threat;
     }
     const side = c.pos.y + dir.y * 5;
     if (Math.abs(side) > FIELD_HALF_W - 1.5) score -= 3;
     // Never through the line: a lane that runs him out within a couple of strides is out.
     if (Math.abs(c.pos.y + dir.y * 2) > FIELD_HALF_W - 0.6) score -= 8;
     if (dir.x * attack > 0 && c.pos.x + dir.x * 2 > END_X) score -= 8;
-    // Reads aren't perfect: a lower Vision misjudges lanes (held per lane for a beat).
-    score += ((c.mem[`lane${k}`] as number | undefined) ?? 0) * (1.6 - 1.3 * c.fx.a('vision'));
+    // Reads aren't perfect: a lower Vision misjudges lanes (held per lane for
+    // a beat). What he misjudges is the defenders: in open grass there's
+    // nothing to misread (M6.5 #4: the misread was on every lane, so a
+    // receiver with no one within 50 yd ran off at 70° as often as upfield).
+    score += ((c.mem[`lane${k}`] as number | undefined) ?? 0) * (1.6 - 1.3 * c.fx.a('vision')) * Math.min(1, threats);
     if (score > bestScore) {
       bestScore = score;
       best = dir;
@@ -663,6 +668,14 @@ export function intercept(c: V2, v: number, p: V2, vt: V2): V2 | null {
 }
 
 /**
+ * How much of his reaction time a pursuer sees the runner late by. M6.5 #4
+ * tried the whole of it (a cut read ~0.2 s late): short-route YAC went from
+ * 6.4 to 8.2 and runs to 5.6 a carry, past both targets, so the pursuit
+ * angles weren't the missing YAC threat (tools/sim/throws.ts, runhist.ts).
+ */
+const PURSUIT_LAG = 0.4;
+
+/**
  * A tackler's breakdown pace in front of a runner (share of top speed).
  * M6.5 #8: flying at him flat out, defensive backs in the open field went
  * by at 1.5–2.5 yd without a try on ~40% of meetings (tools/sim/rundiag.ts).
@@ -675,7 +688,7 @@ const BREAKDOWN = 0.6;
  */
 export function pursue(s: PlayState, d: Agent, t: Agent): void {
   // What he saw a beat ago, projected to now (M6: the old sighting itself was chased, so a pursuer arriving from the side aimed a yard behind the runner and missed him by that).
-  const lag = reaction(s, d) * 0.4;
+  const lag = reaction(s, d) * PURSUIT_LAG;
   const seen0 = seen(t, lag);
   const seenT = { pos: { x: seen0.pos.x + seen0.vel.x * lag, y: seen0.pos.y + seen0.vel.y * lag }, vel: seen0.vel };
   // Where he's going: a runner in space goes flat out for the goal line

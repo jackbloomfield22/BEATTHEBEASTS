@@ -541,6 +541,16 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     // The stick is a direction only: his speed is the situation's (a diagonal is as fast as straight ahead).
     const dir = stickDir(inp.move);
     want = { x: dir.x * c.fx.vmax * pace, y: dir.y * c.fx.vmax * pace };
+    // A receiver with the ball comes out of the catch already running his
+    // plan (the lane he'd take: upfield, the sideline when it's there) until
+    // the player steers. M6.5 #4: with the stick at rest through the catch
+    // (the thumb was on the catch button) he coasted to a stop, so every
+    // catch began with him slowing down in front of the pursuit.
+    if (dir.x !== 0 || dir.y !== 0) c.mem.steered = true;
+    else if (c.mem.caughtAt !== undefined && !c.mem.steered) {
+      const plan = carrierAI(s, c, attack);
+      want = { x: plan.x * pace, y: plan.y * pace };
+    }
     const pressed: Move | null = inp.jukeL
       ? 'jukeL'
       : inp.jukeR
@@ -929,6 +939,7 @@ function ballStep(s: PlayState): void {
           a.vel.y *= keep;
           a.busy = Math.max(a.busy, type === 'aggressive' ? 12 : type === 'possession' ? 8 : 4);
           if (s.pass) s.pass.complete = true;
+          a.mem.caughtAt = s.t;
           s.events.push({ t: s.t, type: 'catch', who: [who], at: { x: a.pos.x, y: a.pos.y }, data: { type } });
         } else {
           a.busy = Math.max(a.busy, 10);

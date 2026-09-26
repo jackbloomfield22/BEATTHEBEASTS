@@ -49,3 +49,31 @@ describe('throws (M6.5 #1): accuracy has reasons', () => {
     expect(clean.filter((p) => p.err.off < 1).every((p) => throwWhy(p.err) === 'clean')).toBe(true);
   });
 });
+
+describe('after the catch (M6.5 #4): at speed with a plan', () => {
+  // A receiver who has just caught it in open grass at 8 yd/s (the defense behind him), the player's stick at rest.
+  async function afterCatch(caught: boolean): Promise<number> {
+    const { stepPlay, NEUTRAL, input } = await import('@/sim');
+    const s = createPlay({ seed: 3, offense: rosters.offense, defense: rosters.defense, play: playById('doubles-slants'), def: defById('cover3'), los: 30, toGo: 10, user: true });
+    stepPlay(s, input({ snap: true }));
+    for (let k = 0; k < 20; k++) stepPlay(s, NEUTRAL);
+    const r = s.agents[s.icons[0]!]!;
+    r.pos = { x: 45, y: 0 };
+    r.vel = { x: 8, y: 0 };
+    for (const i of s.def) s.agents[i]!.pos = { x: 25, y: s.agents[i]!.pos.y };
+    s.ball.mode = 'held';
+    s.ball.holder = r.i;
+    s.carrier = r.i;
+    s.phase = 'carrier';
+    if (caught) r.mem.caughtAt = s.t;
+    for (let k = 0; k < 24; k++) stepPlay(s, NEUTRAL);
+    return Math.hypot(r.vel.x, r.vel.y);
+  }
+  it('a receiver the player has not steered yet keeps running his plan instead of coasting to a stop', async () => {
+    // With nothing to run from, his plan is upfield at speed; a carrier who wasn't just
+    // handed the ball by a catch still coasts when the stick is let go (CARRIER_COAST).
+    const [a, b] = [await afterCatch(true), await afterCatch(false)];
+    expect(a).toBeGreaterThan(7.5);
+    expect(b).toBeLessThan(6);
+  });
+});
