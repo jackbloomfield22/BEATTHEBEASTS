@@ -58,6 +58,8 @@ export interface PlaySetup {
    * he finds the ball in the air a little sooner.
    */
   chem?: Partial<Record<OffSlot, number>>;
+  /** The down (1–4), when known: on third and fourth down receivers work back to the sticks (M6.5 #7). */
+  down?: number;
 }
 
 export interface Block {

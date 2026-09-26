@@ -58,8 +58,16 @@ export function routePoints(s: PlayState, a: Agent, as: RouteName | null = route
   const out = a.pos.y >= (s.setup.ballY ?? 0) ? 1 : -1;
   const lim = FIELD_HALF_W - ROUTE_ROOM;
   const raw = ROUTES[name].map((q) => v2(Math.min(END_X - ROUTE_ROOM, a.pos.x + q.d), a.pos.y + q.o * out));
-  const pts = raw.map((p) => v2(p.x, Math.max(-lim, Math.min(lim, p.y))));
   const sit = ROUTES[name].map((q) => !!q.sit);
+  // Third and fourth down: a route that settles short of the sticks works
+  // back to them (M6.5 #7), the whole route pushed deeper to settle a half
+  // yard past the line to gain (not past 15 yd: a long way to go is the
+  // deep routes' job).
+  const down = s.setup.down ?? 0;
+  const lastD = ROUTES[name][ROUTES[name].length - 1]!.d;
+  const push = down >= 3 && sit[sit.length - 1] && s.setup.toGo <= 15 && lastD < s.setup.toGo ? s.setup.toGo + 0.5 - lastD : 0;
+  if (push > 0) for (const p of raw) p.x = Math.min(END_X - ROUTE_ROOM, p.x + push);
+  const pts = raw.map((p) => v2(p.x, Math.max(-lim, Math.min(lim, p.y))));
   // A route that runs out of field (an out, a flat, an arrow or a wheel
   // from a wide split or the far hash) turns upfield along the boundary
   // ROUTE_ROOM inside it, rather than ending at the sideline.
@@ -112,6 +120,10 @@ export function breakCarry(a: Agent, c: number): number {
   return c >= 0 ? c90 + (1 - c90) * c : c180 + (c90 - c180) * (1 + c);
 }
 
+/** A settled receiver reads defenders within this (yd) and slides up to WINDOW_SLIDE away from the nearest, into the open window. */
+const WINDOW_SEE = 5;
+const WINDOW_SLIDE = 1.5;
+
 /** A break sharper than this (cos between the legs) is a plant. */
 const PLANT_COS = 0.7;
 
@@ -130,13 +142,18 @@ export function runRoute(s: PlayState, a: Agent): void {
   // The scramble drill: once the QB's on the move, the short and
   // intermediate men break off and work across to the side he's running to,
   // settling in open grass in front of him; the deep men keep going deep.
-  if (s.scrambleT >= 0 && s.t - s.scrambleT > 0.25 && s.phase === 'pocket' && !a.mem.drill) {
+  // It starts when the QB has actually left the pocket (still a passer) or
+  // tucked it, a beat after (M6.5 #7: only a tuck started it, so a QB
+  // rolling out to throw had his receivers run on away from him), and the
+  // short men come back toward the ball.
+  const out = s.escapeT >= 0 ? s.escapeT : s.scrambleT;
+  if (out >= 0 && s.t - out > 0.25 && s.phase === 'pocket' && !a.mem.drill) {
     a.mem.drill = true;
     const qb = s.agents[s.qb]!;
     const depth = a.pos.x - s.setup.los;
     if (depth < 15) {
       const y = qb.pos.y + Math.max(-12, Math.min(12, (a.pos.y - qb.pos.y) * 0.5));
-      const x = s.setup.los + Math.max(4, Math.min(12, depth + 2));
+      const x = s.setup.los + Math.max(3, Math.min(12, depth - 2));
       a.route = { pts: [v2(x, Math.max(-FIELD_HALF_W + ROUTE_ROOM, Math.min(FIELD_HALF_W - ROUTE_ROOM, y)))], sit: [true], idx: 0 };
     }
   }
@@ -207,10 +224,30 @@ export function runRoute(s: PlayState, a: Agent): void {
     steer(a, boundaryGovern(a, want, ROUTE_ROOM - 0.3), {});
     return;
   }
-  // Settled on a sit route: face the QB and work to the open window.
+  // Settled on a sit route: face the QB and work to the open window. He
+  // slides a step or two across, away from the nearest defender, never more
+  // than WINDOW_SLIDE off his spot (M6.5 #7: he stood still wherever the
+  // spot was, even with a linebacker sitting on it).
   if (rt.sit[rt.pts.length - 1]) {
     const qb = s.agents[s.qb]!;
-    steer(a, { x: 0, y: 0 }, { face: atan2(qb.pos.y - a.pos.y, qb.pos.x - a.pos.x) });
+    const home = rt.pts[rt.pts.length - 1]!;
+    let near: Agent | null = null;
+    let nd = WINDOW_SEE;
+    for (const i of s.def) {
+      const d = s.agents[i]!;
+      if (d.down) continue;
+      const k = dist(d.pos, a.pos);
+      if (k < nd) {
+        nd = k;
+        near = d;
+      }
+    }
+    let to = home;
+    if (near) {
+      const side = a.pos.y >= near.pos.y ? 1 : -1;
+      to = v2(home.x, Math.max(-FIELD_HALF_W + ROUTE_ROOM, Math.min(FIELD_HALF_W - ROUTE_ROOM, home.y + side * WINDOW_SLIDE)));
+    }
+    steer(a, dist(a.pos, to) > 0.3 ? arrive(a, to, 0.45, 0.8) : { x: 0, y: 0 }, { face: atan2(qb.pos.y - a.pos.y, qb.pos.x - a.pos.x) });
     return;
   }
   // Past the last point: keep running the line, bending away from the sideline.

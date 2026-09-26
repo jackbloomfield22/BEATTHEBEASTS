@@ -346,6 +346,7 @@ class PracticeSession {
       difficulty: this.difficulty,
       fatigue: { ...this.fatigue },
       chem: this.chemistry(play),
+      down: sit.down,
     });
     this.runner = new SimRunner(state);
     this.seenEvents = 0;
