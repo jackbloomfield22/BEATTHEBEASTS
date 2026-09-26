@@ -190,6 +190,8 @@ export function GameScene() {
       shadowAttach.requested = true;
       setBodies(all);
       (window as unknown as { __btbGameReady?: boolean }).__btbGameReady = true;
+      // Capture specs read what each body is playing (tools/shots/carriergame.spec.ts); recording only.
+      if (urlFlags.video) (window as unknown as { __btbBodies?: Body[] }).__btbBodies = all;
     }, console.error);
     scene.add(marks.group, ball, routeArt.group);
     return () => {

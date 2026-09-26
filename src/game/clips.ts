@@ -8,7 +8,7 @@ import { input, type InputFrame, type PlayState } from '@/sim';
 import { dist } from '@/sim/vec';
 
 export interface Clip {
-  id: 'completion-rac' | 'sack' | 'broken-tackle';
+  id: 'completion-rac' | 'sack' | 'broken-tackle' | 'cut-run';
   title: string;
   seed: number;
   play: string;
@@ -41,6 +41,31 @@ export function throwAndRun(icon: number, at: number, move: 'juke' | 'stiffArm' 
   };
 }
 
+/**
+ * A designed run the player steers (M6.5 #11's captures): the arrows press
+ * the hole (toward the play's aim a yard and a half past the line), then
+ * `cutPast` yd past the line a hard cut straight across toward `cutY` (90°,
+ * the sim's planted cut), and there a lighter one back up the field on the
+ * diagonal (45°). Pure in the state, so Node and the browser run the same play.
+ */
+export function runAndCut(cutPast: number, cutY: number) {
+  const dir = cutY >= 0 ? 1 : -1;
+  return (s: PlayState): InputFrame => {
+    if (s.phase === 'presnap') return input({ snap: true });
+    if (s.phase !== 'carrier' || s.carrier < 0) return input({});
+    const c = s.agents[s.carrier]!;
+    const past = c.pos.x - s.setup.los;
+    if (past < cutPast) {
+      const hx = s.setup.los + 1.5 - c.pos.x;
+      const hy = (s.setup.ballY ?? 0) + (s.setup.play.run?.aim ?? 0) - c.pos.y;
+      const k = Math.hypot(hx, hy);
+      return input({ move: past < 1.5 && k > 0.5 ? { x: hx / k, y: hy / k } : { x: 1, y: 0 } });
+    }
+    if ((c.pos.y - cutY) * dir < 0 && past < cutPast + 1.5) return input({ move: { x: 0, y: dir } });
+    return input({ move: { x: Math.SQRT1_2, y: dir * Math.SQRT1_2 } });
+  };
+}
+
 /** The QB holds the ball and never throws: the rush gets home. */
 export function holdIt(s: PlayState): InputFrame {
   return input({ snap: s.phase === 'presnap' });
@@ -54,4 +79,6 @@ export const CLIPS: Clip[] = [
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // A stiff arm sheds the first tackler and he takes it the distance (36 after the catch; re-found for M6.5: the slot against Cover 2, seed 71).
   { id: 'broken-tackle', title: 'Broken tackle', seed: 71, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'stiffArm') },
+  // M6.5 #11: inside zone steered by the arrows, a 102° plant-and-cut across and a 45° one back upfield, a burst, and a tackler closing (tools/sim/findcarry.ts: 11.8 yd).
+  { id: 'cut-run', title: 'Cut and burst on a designed run', seed: 17, play: 'singleback-inside-zone', def: 'cover2', los: 30, script: runAndCut(1.5, 3.5) },
 ];
