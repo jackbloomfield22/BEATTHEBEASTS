@@ -31,7 +31,7 @@ import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tick
 import { releaseTime } from './effects';
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { arrive, remember, steer, timeTo } from './movement';
-import { planThrow, release, resolveCatch, stepAir } from './passing';
+import { catchLook, planThrow, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { manOf, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
@@ -481,6 +481,9 @@ export function bufferedMove(s: PlayState, c: Agent, pressed: Move | null): void
  * deceleration: he coasts down over a few strides instead of stopping dead.
  */
 const CARRIER_COAST = 0.55;
+
+/** A SECURE catch goes down with the ball when a defender is this close (yd) as it's caught. */
+const SECURE_DOWN = 2;
 
 /**
  * Weight in a cut: a ball carrier asked to change direction sharply at
@@ -940,7 +943,17 @@ function ballStep(s: PlayState): void {
           a.busy = Math.max(a.busy, type === 'aggressive' ? 12 : type === 'possession' ? 8 : 4);
           if (s.pass) s.pass.complete = true;
           a.mem.caughtAt = s.t;
-          s.events.push({ t: s.t, type: 'catch', who: [who], at: { x: a.pos.x, y: a.pos.y }, data: { type } });
+          const look = catchLook(s, a, b.pos);
+          s.events.push({ t: s.t, type: 'catch', who: [who], at: { x: a.pos.x, y: a.pos.y }, data: { type, look } });
+          // SECURE in traffic: he cradles it and goes to the ground with it
+          // where he caught it (M6.5 #5), rather than turn upfield into the hit.
+          if (look === 'body' && s.def.some((d) => !s.agents[d]!.down && dist(s.agents[d]!.pos, a.pos) < SECURE_DOWN)) {
+            a.down = true;
+            a.anim = 'down';
+            s.events.push({ t: s.t, type: 'move', who: [who], data: { move: 'secureDown' } });
+            whistle(s, 'tackle', Math.max(s.maxX, ballNose(a)), true);
+            return;
+          }
         } else {
           a.busy = Math.max(a.busy, 10);
           if (s.pass) s.pass.intercepted = true;

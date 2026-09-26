@@ -12,7 +12,7 @@ import { continueDir } from './ai';
 import { gauss } from './rand';
 import { exp } from '@/engine/math/detmath';
 import type { PlayState } from './state';
-import { TICK, type Agent, type CatchHard } from './types';
+import { FIELD_HALF_W, TICK, type Agent, type CatchHard } from './types';
 import { dist, len, type V2 } from './vec';
 
 /** Ball height at a comfortable catch (chest), yd. */
@@ -354,6 +354,43 @@ export function throwErrData(plan: ThrowPlan): Record<string, number | string> {
   const e = plan.err;
   const r = (x: number) => Math.round(x * 1000) / 1000;
   return { why: throwWhy(e), meantX: r(plan.meant.x), meantY: r(plan.meant.y), acc: e.acc, sigma: r(e.sigma), base: r(e.base), fDist: r(e.distance), fMoving: r(e.moving), fPressure: r(e.pressure), fPlatform: r(e.platform), pMiss: r(e.pMiss), mech: e.miss ?? '', off: r(e.off) };
+}
+
+/**
+ * What a catch looks like (M6.5 #5): the call and the ball decide the
+ * motion, so the call changes what you see, not only the odds. Pure: the
+ * render asks it a beat before the ball arrives to start the right clip,
+ * and the catch event carries the final answer.
+ * - dive: low and away, he has to lay out for it;
+ * - oneHand: high and outside his frame, and he's a spectacular catcher;
+ * - highPoint: GO UP, or a ball over his head, taken at the top of his jump;
+ * - overShoulder: a deep ball dropping in over him as he runs away from the throw;
+ * - toeTap: on the sideline, feet dragged in bounds;
+ * - body: SECURE, cradled into the chest (he goes down with it in traffic);
+ * - hands: RUN, the hands catch in stride.
+ */
+export type CatchLook = 'dive' | 'oneHand' | 'highPoint' | 'overShoulder' | 'toeTap' | 'body' | 'hands';
+export function catchLook(s: PlayState, r: Agent, at: { x: number; y: number; z: number } = s.ball.aim): CatchLook {
+  const call = s.catchType ?? 'rac';
+  const sp = len(r.vel);
+  const hx = sp > 1 ? r.vel.x / sp : 1;
+  const hy = sp > 1 ? r.vel.y / sp : 0;
+  // Where the ball arrives relative to where he'll be: across his run, and its height.
+  const T = Math.max(0, s.ball.arrive - s.t);
+  const px = r.pos.x + r.vel.x * T;
+  const py = r.pos.y + r.vel.y * T;
+  const across = Math.abs((at.x - px) * -hy + (at.y - py) * hx);
+  const away = Math.sqrt((at.x - px) * (at.x - px) + (at.y - py) * (at.y - py));
+  const air = at.x - s.setup.los;
+  const bv = len(s.ball.vel);
+  const fromBehind = sp > 5 && bv > 1 && (s.ball.vel.x * hx + s.ball.vel.y * hy) / bv > 0.55;
+  if (at.z < 0.8 && away > 1.1) return 'dive';
+  if (at.z > 1.9 && across > 0.8 && r.fx.a('spectacular') > 0.6) return 'oneHand';
+  if (call === 'aggressive' || at.z > 2.35) return 'highPoint';
+  if (air >= 18 && fromBehind) return 'overShoulder';
+  if (FIELD_HALF_W - Math.abs(at.y) < 1.2) return 'toeTap';
+  if (call === 'possession') return 'body';
+  return 'hands';
 }
 
 /** How far a player can reach for a ball: standing reach plus a jump. */
