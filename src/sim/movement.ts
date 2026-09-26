@@ -102,6 +102,18 @@ export function steer(a: Agent, want0: V2, opts: SteerOpts = {}): void {
   }
   v.x += hx * along + px;
   v.y += hy * along + py;
+  advance(a, sp, faceTo);
+}
+
+/**
+ * Move him one tick on the velocity he has, turn his body toward it (or
+ * `faceTo`) at his turn rate, and pay the stamina for running at `sp`.
+ * The end of every steer, and a carrier's planted cut (play.ts), which sets
+ * the velocity itself.
+ */
+export function advance(a: Agent, sp: number, faceTo?: number): void {
+  const fx = a.fx;
+  const v = a.vel;
   a.pos.x += v.x * TICK;
   a.pos.y += v.y * TICK;
   // Facing.

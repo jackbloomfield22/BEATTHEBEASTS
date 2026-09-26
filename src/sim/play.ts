@@ -31,7 +31,7 @@ import { blockOf, stepBlocks } from './blocks';
 import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tickMoves } from './contact';
 import { releaseTime } from './effects';
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
-import { arrive, remember, steer, timeTo } from './movement';
+import { advance, arrive, remember, steer, timeTo } from './movement';
 import { carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
 import { catchLook, findsBallAt, planThrow, reach, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
@@ -590,6 +590,8 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
   const attack: 1 | -1 = c.side === 'off' ? 1 : -1;
   const userCarrier = s.setup.user && c.side === 'off';
   let want: V2;
+  // The player's arrows are steering him (not the after-catch plan): his changes of direction are planted cuts.
+  let steering = false;
   // Context speed (feedback item 3): flat out in space, controlled with a tackler on him.
   const pace = carrierPace(s, c, attack);
   if (userCarrier) {
@@ -601,8 +603,12 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     // the player steers. M6.5 #4: with the stick at rest through the catch
     // (the thumb was on the catch button) he coasted to a stop, so every
     // catch began with him slowing down in front of the pursuit.
-    if (dir.x !== 0 || dir.y !== 0) c.mem.steered = true;
-    else if (c.mem.caughtAt !== undefined && !c.mem.steered) {
+    steering = dir.x !== 0 || dir.y !== 0;
+    if (steering) c.mem.steered = true;
+    else if (s.t < ((c.mem.cutHold as number | undefined) ?? -1)) {
+      // A tapped cut (the arrow let go in the plant) runs on out of it along its new line.
+      want = { x: (c.mem.cutDx as number) * c.fx.vmax * pace, y: (c.mem.cutDy as number) * c.fx.vmax * pace };
+    } else if (c.mem.caughtAt !== undefined && !c.mem.steered) {
       const plan = carrierAI(s, c, attack);
       want = { x: plan.x * pace, y: plan.y * pace };
     }
@@ -683,7 +689,10 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
   // Committed moves carry him (their velocity change builds over the plant); protecting costs speed.
   applyImpulse(c);
   if (c.busy > 0 && c.move && c.move !== 'protect' && c.move !== 'stiffArm') {
+    c.mem.cutLeft = 0;
     steer(c, c.vel, { mult: 1 });
+  } else if (userCarrier && (steering || (c.mem.cutLeft as number) > 0) && plantCut(s, c, want, pace)) {
+    // In a planted cut (M6.5 #10): the cut sets his velocity itself.
   } else {
     // Protecting the ball (two hands, covered up) is the one slow gait: a jog.
     steer(c, cutWeight(c, want), { mult: c.move === 'protect' ? PROTECT_PACE : 1, brake: len(want) < 0.1 ? CARRIER_COAST : 1, burst: c.burst > 0 });
@@ -791,6 +800,87 @@ function autoBurst(s: PlayState, c: Agent, pace: number, want: V2): void {
   c.stamina = Math.max(0, c.stamina - BURST_COST);
   s.events.push({ t: s.t, type: 'move', who: [c.i], data: { move: 'burst' } });
 }
+/**
+ * A planted cut (M6.5 #10). Asked at speed for a direction CUT_MIN or more
+ * off his run, the carrier plants and cuts: over the plant his velocity goes
+ * straight from the old run to the new one at the exit speed (the plant foot
+ * takes the old speed off as the hips turn), then the burst out of the cut
+ * (autoBurst) takes him back up to speed. Before, a direction change was the
+ * steer's lateral-acceleration limit alone: an arc of ~11 yd radius at full
+ * speed, 1.05 s to turn 90° for a 90-Agility back and 4.5 yd carried on the
+ * old line (tools/sim/cuts.ts). The brief's measure: 90° at full speed in
+ * under 0.4 s for a 90-Agility back.
+ *
+ * The plant's length (s): (CUT_T0 + CUT_T1·angle/π) × (1.6 − 0.85·Agility)
+ * × (0.55 + 0.45·speed/top speed), ×CUT_NEAR with a tackler on him (the
+ * controlled pace makes cuts sharper, not slower). A 90° cut at full speed:
+ * ~0.26 s at 90 Agility, ~0.34 s at 60; a reversal ~0.38 s and ~0.5 s. One
+ * change-of-direction plant step on film is ~0.2–0.3 s of ground contact
+ * plus the push-off (Dos'Santos et al. 2018 on cutting mechanics).
+ *
+ * The speed kept: 1 − (0.55 − 0.2·Agility)·angle/90°, at least CUT_KEEP_MIN:
+ * a 90° cut keeps ~63% at 90 Agility and ~57% at 60, a reversal ~25%, a 45°
+ * cut ~80%. The arrow let go in the plant (a tap) still finishes the cut and
+ * runs on along it for CUT_HOLD.
+ */
+function plantCut(s: PlayState, c: Agent, want: V2, pace: number): boolean {
+  let left = (c.mem.cutLeft as number | undefined) ?? 0;
+  if (left > 0) {
+    // Hit in the plant (a tackle broken, a collision): the cut is off; he runs from what the hit left him.
+    if (Math.abs(c.vel.x - (c.mem.cutVx as number)) + Math.abs(c.vel.y - (c.mem.cutVy as number)) > 1.5) {
+      c.mem.cutLeft = 0;
+      return false;
+    }
+  } else {
+    const sp = len(c.vel);
+    const wl = len(want);
+    if (sp < CUT_MIN_SPEED || wl < 0.3 * c.fx.vmax) return false;
+    const dot = (c.vel.x * want.x + c.vel.y * want.y) / (sp * wl);
+    const cross = (c.vel.x * want.y - c.vel.y * want.x) / (sp * wl);
+    const ang = Math.abs(atan2(cross, dot));
+    if (ang < CUT_MIN) return false;
+    const ag = c.fx.a('agility');
+    const T = (CUT_T0 + (CUT_T1 * ang) / Math.PI) * (1.6 - 0.85 * ag) * (0.55 + 0.45 * Math.min(1, sp / c.fx.vmax)) * (pace < 1 ? CUT_NEAR : 1);
+    const keep = Math.max(CUT_KEEP_MIN, 1 - (0.55 - 0.2 * ag) * (ang / (Math.PI / 2)));
+    const out = Math.min(keep * sp, wl);
+    left = Math.max(3, Math.round(T / TICK));
+    c.mem.cutN = left;
+    c.mem.cutX0 = c.vel.x;
+    c.mem.cutY0 = c.vel.y;
+    c.mem.cutDx = want.x / wl;
+    c.mem.cutDy = want.y / wl;
+    c.mem.cutX1 = (want.x / wl) * out;
+    c.mem.cutY1 = (want.y / wl) * out;
+    // For the render's plant-and-cut (M6.5 #11): which way, how sharp, how long.
+    s.events.push({ t: s.t, type: 'move', who: [c.i], data: { move: 'cut', side: cross > 0 ? 'L' : 'R', deg: Math.round((ang * 180) / Math.PI), dur: left * TICK } });
+  }
+  const n = c.mem.cutN as number;
+  const u = 1 - (left - 1) / n;
+  const x0 = c.mem.cutX0 as number;
+  const y0 = c.mem.cutY0 as number;
+  c.vel.x = x0 + ((c.mem.cutX1 as number) - x0) * u;
+  c.vel.y = y0 + ((c.mem.cutY1 as number) - y0) * u;
+  c.mem.cutVx = c.vel.x;
+  c.mem.cutVy = c.vel.y;
+  c.mem.cutLeft = left - 1;
+  if (left === 1) c.mem.cutHold = s.t + CUT_HOLD;
+  advance(c, len(c.vel));
+  return true;
+}
+/** A change of direction at least this far off his run (rad, 30°) is a planted cut; less is a bend (the steer's lateral limit). */
+const CUT_MIN = Math.PI / 6;
+/** Below this speed (yd/s) there's nothing to plant against: he just turns. */
+const CUT_MIN_SPEED = 3;
+/** The plant's base length and its growth with the angle (s, before Agility and speed). */
+const CUT_T0 = 0.16;
+const CUT_T1 = 0.3;
+/** The plant with a tackler on him: shorter (the controlled pace sets him up to cut). */
+const CUT_NEAR = 0.85;
+/** The least of his speed a cut keeps (a full reversal). */
+const CUT_KEEP_MIN = 0.15;
+/** After a tapped cut, he runs on along its line this long (s) before the stick at rest lets him coast. */
+const CUT_HOLD = 0.3;
+
 /** Protecting the ball: a jog, ~78% (two hands on it, pads over it). */
 const PROTECT_PACE = 0.78;
 
