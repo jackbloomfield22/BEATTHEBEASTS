@@ -23,8 +23,9 @@ const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
 const LEAD_IN = Math.round(FPS * 1.2);
 const TAIL = Math.round(FPS * 2.5);
-const W = 1280;
-const H = 720;
+/** Frame size (BTB_VIDEO_W, 16:9): the concepts record at 960 wide here, where a frame takes seconds to draw. */
+const W = Number(process.env.BTB_VIDEO_W ?? 1280);
+const H = Math.round((W * 9) / 16);
 /** Quality tier for the recording (Low renders fastest here; the look is judged on the screenshots). */
 const QUALITY = process.env.BTB_VIDEO_QUALITY ?? 'medium';
 
