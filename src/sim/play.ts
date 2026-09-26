@@ -1340,6 +1340,15 @@ function defenseRoles(s: PlayState): void {
       const t0 = (d.mem.sawThrow as number | undefined) ?? -1;
       if (t0 < 0) d.mem.sawThrow = s.t;
       const since = s.t - ((d.mem.sawThrow as number | undefined) ?? s.t);
+      // A man who read the windup and jumped it keeps going to the ball as
+      // it leaves (M6.5 calibration: he used to stop and wait a whole
+      // reaction time at the release, and drift back toward his zone just
+      // as the ball came out).
+      const jumped = d.mem.onBall === true && s.ball.target >= 0;
+      if (jumped && !rallies(s).includes(i)) {
+        breakOnBall(s, d);
+        continue;
+      }
       if (s.ball.target >= 0 && since >= reaction(s, d)) {
         if (rallies(s).includes(i)) {
           breakOnBall(s, d);
