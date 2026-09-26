@@ -230,6 +230,18 @@ export class PlayerAnimator {
     else this.start(name, opts.rate ?? 1, opts.t0 ?? 0);
   }
 
+  /**
+   * Let a transition out of a gait go early: it fades out over the gait,
+   * which carries on from the phase it's at (a cut's run-out steps giving
+   * way to the burst's drive).
+   */
+  release(): void {
+    const tr = this.trans;
+    if (!tr || tr.done) return;
+    tr.done = true;
+    this.loco = 1;
+  }
+
   /** The transition playing now and its time (s), or null. */
   get transition(): { name: string; t: number; done: boolean } | null {
     return this.trans ? { name: this.trans.name, t: this.trans.t, done: this.trans.done } : null;

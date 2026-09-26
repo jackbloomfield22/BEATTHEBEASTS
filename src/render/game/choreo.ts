@@ -234,6 +234,8 @@ export function catchMagnet(b: Body, ball: THREE.Vector3, out: THREE.Vector3): n
 // before contact, the hurdle over a downed man, the reach for the line, and
 // where his eyes are.
 
+/** A cut's clip gives way to the burst's drive gait this long (clip s) after its push-off: the first step out of the plant is the clip's. */
+const CUT_RELEASE = 0.05;
 /** A cut this sharp (deg) or more plays the deep plant (the sim's cuts run 30° to 180°). */
 const SHARP_CUT = 75;
 /** Traffic is all the way in at the sim's slowest context pace (carrierPace: 0.86 with a free tackler at 1.2 yd). */
@@ -315,6 +317,17 @@ export function trafficOf(s: PlayState, i: number): number {
   return clamp01((1 - carrierPace(s, a, a.side === 'off' ? 1 : -1)) / (1 - TRAFFIC_PACE));
 }
 
+/**
+ * A full-body clip owns him (no dip, no hurdle, no AI cut over it); a cut
+ * once he has pushed off is only running back into his stride, so a
+ * hurdle or a dip may take over from there.
+ */
+function clipBusy(b: Body, tr: { name: string; t: number; done: boolean } | null): boolean {
+  if (!tr || tr.done || tr.name === 'getup_prone') return false;
+  if (tr.name.startsWith('cut_plant')) return tr.t < (eventAt(b, tr.name, 'push') ?? 0.3) + 0.06;
+  return true;
+}
+
 function carrierDrive(b: Body, i: number, s: PlayState, simT: number, out: Drive, busy: boolean): void {
   const a = s.agents[i]!;
   const anim = b.animator;
@@ -328,6 +341,9 @@ function carrierDrive(b: Body, i: number, s: PlayState, simT: number, out: Drive
   }
   out.traffic = traffic;
   out.drive = a.burst > 0 ? 1 : 0;
+  // Out of a cut into the burst: once he has pushed off, the cut's own run-out steps give way to the drive.
+  const tr = anim.transition;
+  if (a.burst > 0 && tr && !tr.done && tr.name.startsWith('cut_plant') && tr.t > (eventAt(b, tr.name, 'push') ?? 0.3) + CUT_RELEASE) anim.release();
   const moving = !busy && a.busy <= 0;
   out.dip = moving ? dipFor(s, i) : 0;
   const sp = Math.hypot(a.vel.x, a.vel.y);
@@ -690,7 +706,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   if (ball.mode === 'air') out.look = _look.set(-ball.pos.y * YARD, Math.max(ball.pos.z, 1.2) * YARD, (50 - ball.pos.x) * YARD);
   else if (i === s.qb && s.phase !== 'presnap' && s.phase !== 'carrier') out.look = _look.set(-s.eyes.y * YARD, 1.6, (50 - s.eyes.x) * YARD);
   // The ball carrier runs like one (M6.5 #11): the carry gaits, and his eyes up.
-  if (carrying && !b.fallen) carrierDrive(b, i, s, simT, out, !!tr && !tr.done && tr.name !== 'getup_prone');
+  if (carrying && !b.fallen) carrierDrive(b, i, s, simT, out, clipBusy(b, tr));
   return out;
 }
 
