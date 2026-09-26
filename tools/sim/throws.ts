@@ -16,7 +16,7 @@ const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as
 const rosters = practiceRosters(snap);
 const N = Number(process.argv[2] ?? 20);
 
-interface Throw { sep: number; hard: string; dropped: boolean; hands: number; acc: number; air: number; off: number; sigma: number; fDist: number; fMoving: number; fPressure: number; fPlatform: number; pMiss: number; mech: string; complete: boolean }
+interface Throw { place: number; sep: number; hard: string; dropped: boolean; hands: number; acc: number; air: number; off: number; sigma: number; fDist: number; fMoving: number; fPressure: number; fPlatform: number; pMiss: number; mech: string; complete: boolean }
 const out: Throw[] = [];
 for (const play of PLAYS.filter((p) => !p.run)) {
   for (const def of DEF_CALLS) {
@@ -28,7 +28,7 @@ for (const play of PLAYS.filter((p) => !p.run)) {
       const d = e.data as Record<string, number | string>;
       const drop = s.events.some((ev) => ev.type === 'drop');
       const rec = s.agents[e.who![1]!]!;
-      out.push({ sep: s.result?.pass?.sep ?? -1, hard: s.result?.pass?.hard ?? '', dropped: drop, hands: rec.fx.a('catching'), acc: d.acc as number, air: d.air as number, off: d.off as number, sigma: d.sigma as number, fDist: d.fDist as number, fMoving: d.fMoving as number, fPressure: d.fPressure as number, fPlatform: d.fPlatform as number, pMiss: d.pMiss as number, mech: d.mech as string, complete: !!s.result?.pass?.complete });
+      out.push({ place: Number(d.place ?? 0), sep: s.result?.pass?.sep ?? -1, hard: s.result?.pass?.hard ?? '', dropped: drop, hands: rec.fx.a('catching'), acc: d.acc as number, air: d.air as number, off: d.off as number, sigma: d.sigma as number, fDist: d.fDist as number, fMoving: d.fMoving as number, fPressure: d.fPressure as number, fPlatform: d.fPlatform as number, pMiss: d.pMiss as number, mech: d.mech as string, complete: !!s.result?.pass?.complete });
     }
   }
 }
@@ -73,3 +73,5 @@ for (const [n, lo, hi] of [['sure hands (Catching 0.8+)', 0.8, 2], ['middling (0
 }
 const drops = reached.filter((t) => t.dropped);
 console.log(`drops ${drops.length} (${pct(drops.length, reached.length)} of balls that got to him), by cause: ${[...new Set(drops.map((t) => t.hard))].map((h) => `${h || '?'} ${drops.filter((t) => t.hard === h).length}`).join(', ')}`);
+const bs = out.filter((t) => t.place < -0.5);
+console.log(`back-shoulder throws ${bs.length} (${pct(bs.length, out.length)}): completed ${pct(bs.filter((t) => t.complete).length, bs.length)}`);

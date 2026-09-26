@@ -8,11 +8,11 @@
 
 import { flightTime, G, solveLaunch, speed3, stepFlight, type V3 } from './ball';
 import { errorAt20, maxRange, maxThrowSpeed } from './effects';
-import { continueDir } from './ai';
+import { breakCarry, continueDir } from './ai';
 import { gauss } from './rand';
 import { exp } from '@/engine/math/detmath';
 import type { PlayState } from './state';
-import { FIELD_HALF_W, TICK, type Agent, type CatchHard } from './types';
+import { FIELD_HALF_W, TICK, type Agent, type CatchHard, type OffSlot } from './types';
 import { dist, len, type V2 } from './vec';
 
 /** Ball height at a comfortable catch (chest), yd. */
@@ -47,27 +47,51 @@ export function lead(r: Agent, T: number): V2 {
   }
   // Settled on a sit route: he's there.
   if (rt.idx >= rt.pts.length && rt.sit[rt.pts.length - 1]) return { x: r.pos.x, y: r.pos.y };
-  let left = fullSpeedRun(r, T);
+  // Run the route forward the way he'll run it (M6.5 #6), tick by tick: the
+  // stem at ~92%, braking into each break to the speed he can carry through
+  // it (breakCarry), the plant, then building back up (the sprint model, τ),
+  // exactly as ai.ts runRoute and movement.ts do. M6 charged each break
+  // v²(1 − cos θ)/a of ground (~5 yd round a right angle, against the ~2 he
+  // loses), so a ball thrown before the break was led short and he
+  // throttled down to wait for it coming out of the break.
+  const vTop = r.fx.vmax * (0.86 + 0.14 * r.stamina);
+  const brake = r.fx.cutAccel * 0.8;
+  let v = Math.min(len(r.vel), vTop);
   let at = { x: r.pos.x, y: r.pos.y };
-  // Each break costs ground: redirecting his run by θ at speed v takes
-  // ~v(1 − cos θ)/a of his cut acceleration a, and while he turns he makes
-  // next to no ground along the new leg: about v²(1 − cos θ)/a lost.
-  const v = Math.max(len(r.vel), r.fx.vmax * 0.8);
-  let dir = len(r.vel) > 0.5 ? { x: r.vel.x / len(r.vel), y: r.vel.y / len(r.vel) } : null;
+  let t = 0;
   for (let k = rt.idx; k < rt.pts.length; k++) {
     const q = rt.pts[k]!;
-    const d = dist(at, q);
-    if (d > 1e-6) {
-      const nd = { x: (q.x - at.x) / d, y: (q.y - at.y) / d };
-      if (dir) left -= (v * v * (1 - (dir.x * nd.x + dir.y * nd.y))) / r.fx.cutAccel;
-      dir = nd;
+    const nx = rt.pts[k + 1];
+    let vq = vTop;
+    if (rt.sit[k]) vq = 0;
+    else if (nx) {
+      const d0 = dist(at, q);
+      const d1 = dist(q, nx);
+      if (d0 > 1e-6 && d1 > 1e-6) vq = breakCarry(r, ((q.x - at.x) * (nx.x - q.x) + (q.y - at.y) * (nx.y - q.y)) / (d0 * d1)) * r.fx.vmax;
     }
-    if (left <= 0) return at;
-    if (d >= left) return { x: at.x + ((q.x - at.x) / d) * left, y: at.y + ((q.y - at.y) / d) * left };
-    left -= d;
-    at = { x: q.x, y: q.y };
+    const top = k === 0 ? vTop * 0.92 : vTop;
+    for (let n = 0; n < 600; n++) {
+      const d = dist(at, q);
+      if (d < 1e-3) break;
+      if (t >= T) return at;
+      const want = Math.min(top, Math.sqrt(vq * vq + 2 * brake * d));
+      v = v > want ? Math.max(want, v - brake * TICK) : v + ((want - v) / r.fx.tau) * TICK;
+      const step = Math.max(0.01, v * TICK);
+      if (step >= d) {
+        at = { x: q.x, y: q.y };
+        t += d / Math.max(0.5, v);
+        break;
+      }
+      at = { x: at.x + ((q.x - at.x) / d) * step, y: at.y + ((q.y - at.y) / d) * step };
+      t += TICK;
+    }
     if (rt.sit[k]) return at;
+    v = Math.min(v, vq);
   }
+  if (t >= T) return at;
+  // What's left of the time, run on from his speed out of the last point.
+  const rest = T - t;
+  let left = vTop * rest - (vTop - v) * r.fx.tau * (1 - exp(-rest / r.fx.tau));
   // Past the last point: keep going the way the route ends (upfield near the sideline).
   const n = rt.pts.length;
   const a = n > 1 ? rt.pts[n - 2]! : r.pos;
@@ -153,6 +177,14 @@ function clearLoft(s: PlayState, from: V3, to: V3, T: number): number {
 const CONTEST_R = 2.6;
 /** The mechanics miss for accuracy alone, × (1 − accuracy/99): a 70 passer ~4% of his clean throws, a 95 under 1%. */
 const MISS_ACC = 0.14;
+/** The most a QB–receiver chemistry of 1 takes off the cone to him (15%), and off the time he takes to find the ball in the air (s). Small by design: a timing bonus, not a new receiver. */
+const CHEM_CONE = 0.15;
+const CHEM_FIND = 0.08;
+
+/** When a receiver has found the ball in the air: 0.2–0.45 s after the release by Catching, sooner with his QB's chemistry. */
+export function findsBallAt(s: PlayState, a: Agent): number {
+  return s.ball.releaseT + 0.2 + 0.25 * (1 - a.fx.a('catching')) - CHEM_FIND * Math.max(0, Math.min(1, s.setup.chem?.[a.slot as OffSlot] ?? 0));
+}
 
 export const coneScale = (d: number): number => (d >= 20 ? d / 20 : 0.7 + 0.3 * (d / 20));
 
@@ -185,6 +217,10 @@ export interface ThrowError {
   moving: number;
   pressure: number;
   platform: number;
+  /** Chemistry with this receiver (≤ 1: it tightens the cone). */
+  chem: number;
+  /** The placement asked for along his path (−1 back shoulder … +1 lead). */
+  place: number;
   sigma: number;
   /** The mechanics miss: its odds, and whether it happened ('sail' long and high, 'short' in the dirt). */
   pMiss: number;
@@ -234,7 +270,9 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const fMoving = 1 + moving * (0.35 + 0.8 * (1 - qb.fx.a('throwOnRun')));
   const fPressure = 1 + pressure * (1.0 + 1.2 * (1 - qb.fx.a('underPressure')));
   const fPlatform = offPlatform ? 1.25 : 1;
-  const sigma = base * coneScale(d) * fMoving * fPressure * fPlatform;
+  // Chemistry with this receiver (M6.5 #6): a tighter cone, up to CHEM_CONE.
+  const fChem = 1 - CHEM_CONE * Math.max(0, Math.min(1, s.setup.chem?.[rec.slot as OffSlot] ?? 0));
+  const sigma = base * coneScale(d) * fMoving * fPressure * fPlatform * fChem;
   // The mechanics miss: a ball that gets away from him, sailing or dying in
   // the dirt, 2–4 yd off. Only for a reason (M6.5 #1): M6 gave every throw a
   // 13% floor, so 79% of the misses came from a clean pocket and a quarter of
@@ -274,7 +312,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const Tf = clearLoft(s, from, to, hang(to));
   const kind = touch || Tf > hang(to) * 1.01 ? 'touch' : 'driven';
   const v0 = solveLaunch(from, to, Tf);
-  const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, sigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
+  const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, chem: fChem, place: aim.x, sigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
   return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err };
 }
 
@@ -323,12 +361,14 @@ export function release(s: PlayState, qb: Agent, rec: Agent, plan: ThrowPlan): v
   b.aim = { ...plan.to };
   b.arrive = s.t + plan.T;
   b.meant = { ...plan.meant };
+  b.place = plan.err.place;
   b.releaseT = s.t;
   b.thrower = qb.i;
   b.kind = plan.kind;
   b.spin = 0;
   s.touched = [];
   s.phase = 'air';
+  rec.mem.catchLeg = catchLeg(rec, plan.meant);
   s.pass = { attempted: true, complete: false, intercepted: false, airYards: Math.round(plan.airYards * 10) / 10, target: rec.i };
   s.events.push({ t: s.t, type: 'throw', who: [qb.i, rec.i], at: { x: plan.to.x, y: plan.to.y }, data: { kind: plan.kind, air: Math.round(plan.airYards), ...(plan.missed ? { missed: true } : {}), ...throwErrData(plan) } });
 }
@@ -353,7 +393,52 @@ export function throwWhy(e: ThrowError): 'pressure' | 'on the run' | 'feet not s
 export function throwErrData(plan: ThrowPlan): Record<string, number | string> {
   const e = plan.err;
   const r = (x: number) => Math.round(x * 1000) / 1000;
-  return { why: throwWhy(e), meantX: r(plan.meant.x), meantY: r(plan.meant.y), acc: e.acc, sigma: r(e.sigma), base: r(e.base), fDist: r(e.distance), fMoving: r(e.moving), fPressure: r(e.pressure), fPlatform: r(e.platform), pMiss: r(e.pMiss), mech: e.miss ?? '', off: r(e.off) };
+  return { why: throwWhy(e), meantX: r(plan.meant.x), meantY: r(plan.meant.y), acc: e.acc, sigma: r(e.sigma), base: r(e.base), fDist: r(e.distance), fMoving: r(e.moving), fPressure: r(e.pressure), fPlatform: r(e.platform), fChem: r(e.chem), place: r(e.place), pMiss: r(e.pMiss), mech: e.miss ?? '', off: r(e.off) };
+}
+
+/**
+ * The leg of his route the ball is thrown to (M6.5 #6): the index of the
+ * route point that ends it (the route's length for the run on past its last
+ * point), or −1 when the ball isn't on his route at all (a scramble throw,
+ * a back-shoulder). A ball thrown before the break to a spot after it is an
+ * anticipation throw: he keeps running his route through the break and the
+ * ball meets him on that leg.
+ */
+export function catchLeg(r: Agent, meant: V2): number {
+  const rt = r.route;
+  if (!rt) return -1;
+  // The nearest leg (a catch point just past a break is nearer the leg out of it than the stem into it).
+  let from: V2 = r.pos;
+  let best = -1;
+  let bd = LEG_NEAR;
+  for (let k = rt.idx; k < rt.pts.length; k++) {
+    const q = rt.pts[k]!;
+    const d = segDist(meant, from, q);
+    if (d <= bd) {
+      bd = d;
+      best = k;
+    }
+    from = q;
+  }
+  if (best >= 0) return best;
+  // On past the last point (not a settle route): along the last leg carried on.
+  const n = rt.pts.length;
+  if (n > 0 && !rt.sit[n - 1]) {
+    const a = n > 1 ? rt.pts[n - 2]! : r.pos;
+    const b = rt.pts[n - 1]!;
+    const l = dist(a, b) || 1;
+    const far = { x: b.x + ((b.x - a.x) / l) * 40, y: b.y + ((b.y - a.y) / l) * 40 };
+    if (segDist(meant, b, far) < LEG_NEAR * 2) return n;
+  }
+  return -1;
+}
+/** How near his route the meant catch point must be to count as on it (yd). */
+const LEG_NEAR = 1.5;
+function segDist(p: V2, a: V2, b: V2): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const u = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / Math.max(1e-9, dx * dx + dy * dy)));
+  return dist(p, { x: a.x + dx * u, y: a.y + dy * u });
 }
 
 /**

@@ -120,6 +120,8 @@ export interface Ball {
   arrive: number;
   /** Where the QB meant it to go (his lead and placement, before the error cone), and when it left his hand. */
   meant: { x: number; y: number };
+  /** The placement asked for along his path (−1 back shoulder … +1 lead): a back-shoulder ball is one he stops and turns back to. */
+  place?: number;
   releaseT: number;
   thrower: number;
   /** 'driven' (the default, flat) | 'touch' (held, or lofted over a defender) of the last throw. */

@@ -98,6 +98,23 @@ export function continueDir(at: V2, p0: V2, p1: V2): V2 {
   return dir;
 }
 
+/**
+ * The share of his top speed a route runner carries through a break whose
+ * legs meet at cos `c`: full speed through a bend, ~40% round a right angle
+ * (a plant), ~25% turning back (a hitch, a curl), a sharp route runner a
+ * little more. The throw's lead (passing.ts lead) uses the same, so a ball
+ * thrown before the break meets him at speed coming out of it.
+ */
+export function breakCarry(a: Agent, c: number): number {
+  const rr = Math.max(a.fx.a('shortRoute'), a.fx.a('deepRoute'), a.fx.a('routeRunning'));
+  const c90 = 0.3 + 0.15 * rr;
+  const c180 = 0.15 + 0.1 * rr;
+  return c >= 0 ? c90 + (1 - c90) * c : c180 + (c90 - c180) * (1 + c);
+}
+
+/** A break sharper than this (cos between the legs) is a plant. */
+const PLANT_COS = 0.7;
+
 /** Within this of a route's break point (yd) and moving away from it, he's made the break. */
 const BREAK_PASS = 2;
 
@@ -146,6 +163,20 @@ export function runRoute(s: PlayState, a: Agent): void {
     const past = !rt.sit[rt.idx] && k < BREAK_PASS && a.vel.x * (q.x - a.pos.x) + a.vel.y * (q.y - a.pos.y) < 0;
     if (k < (rt.sit[rt.idx] ? 0.25 : early) || past) {
       rt.idx++;
+      // The plant: at a hard break his foot takes the momentum and sends him
+      // down the new leg at the speed he brought into it (M6.5 #6: steering
+      // alone swung his run round over half a second, so out of a right-angle
+      // break he drifted a yard and a half on up the stem at 3 yd/s).
+      const nx = rt.pts[rt.idx];
+      const sp = len(a.vel);
+      if (nx && sp > 1) {
+        const w = norm(sub(nx, a.pos));
+        const c = (a.vel.x * w.x + a.vel.y * w.y) / sp;
+        if (c < PLANT_COS) {
+          const vb = Math.min(sp, breakCarry(a, c) * a.fx.vmax);
+          a.vel = { x: w.x * vb, y: w.y * vb };
+        }
+      }
     }
   }
   if (rt.idx < rt.pts.length) {
@@ -168,11 +199,7 @@ export function runRoute(s: PlayState, a: Agent): void {
       const p0 = rt.idx > 0 ? rt.pts[rt.idx - 1]! : a.pos;
       const u = norm(sub(q, p0));
       const w = norm(sub(nx, q));
-      const c = u.x * w.x + u.y * w.y;
-      const c90 = 0.3 + 0.15 * rr;
-      const c180 = 0.15 + 0.1 * rr;
-      const carry = c >= 0 ? c90 + (1 - c90) * c : c180 + (c90 - c180) * (1 + c);
-      const vb = carry * a.fx.vmax;
+      const vb = breakCarry(a, u.x * w.x + u.y * w.y) * a.fx.vmax;
       const cap = Math.sqrt(vb * vb + 2 * a.fx.cutAccel * 0.8 * dist(a.pos, q));
       pace = Math.min(pace, cap / a.fx.vmax);
     }

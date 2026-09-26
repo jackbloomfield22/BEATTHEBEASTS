@@ -19,6 +19,7 @@ import {
   pursue,
   qbRead,
   reaction,
+  routeOf,
   runBlock,
   runRoute,
   rush,
@@ -31,7 +32,7 @@ import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tick
 import { releaseTime } from './effects';
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { arrive, remember, steer, timeTo } from './movement';
-import { catchLook, planThrow, release, resolveCatch, stepAir } from './passing';
+import { catchLook, findsBallAt, planThrow, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { manOf, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
@@ -450,7 +451,10 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
   const pick = qbRead(s, qb, pressure);
   if (pick >= 0) {
     // The driven ball; planThrow puts air under it when a defender is in the way.
-    start(pick, 0, v2());
+    // A vertical with the corner on top of him (level or deeper, on his
+    // hip): the back-shoulder ball, short and behind him, where only he can
+    // turn back to it (M6.5 #6).
+    start(pick, 0, backShoulder(s, s.agents[s.icons[pick]!]!) ? v2(-1, -0.2) : v2());
   } else if ((pressure > 0.9 || s.t - s.snapT - s.setup.play.drop.set > 3) && Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) > 3.5) {
     // Nothing there and he's outside the pocket: throw it away.
     start(0, 0.3, v2(), true);
@@ -459,6 +463,21 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     const qbY = qb.pos.y - (s.setup.ballY ?? 0);
     qb.mem.escape = qbY >= 0 ? 1 : -1;
   }
+}
+
+/** A vertical route with the man covering him level or on top of him, close: the back-shoulder throw. */
+function backShoulder(s: PlayState, r: Agent): boolean {
+  const name = routeOf(s, r);
+  if (name !== 'go' && name !== 'fade' && name !== 'seam') return false;
+  // A 12–25 yd ball (past that it's a bomb, not a back-shoulder).
+  const depth = r.pos.x - s.setup.los;
+  if (depth < 10 || depth > 22 || r.vel.x < 5) return false;
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (d.down) continue;
+    if (dist(d.pos, r.pos) < 2.2 && d.pos.x > r.pos.x - 0.5) return true;
+  }
+  return false;
 }
 
 /** Ticks a carrier move stays pressed when he can't start it yet (0.15 s). */
@@ -1078,7 +1097,16 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
         stalk(s, a, s.agents[s.icons[0]!]!.pos);
         break;
       case 'route':
-        if (s.phase === 'air' && s.ball.target === i) runToBall(s, a);
+        // Thrown to him: on an anticipation throw he runs his route through
+        // the break to the leg the ball's thrown to (M6.5 #6: he used to cut
+        // straight for the catch point the moment it left, rounding off the
+        // break), unless it's off target and he's found it in the air.
+        if (s.phase === 'air' && s.ball.target === i) {
+          const leg = (a.mem.catchLeg as number | undefined) ?? -1;
+          const off = s.t > findsBallAt(s, a) && dist(s.ball.aim, s.ball.meant) > 1.2;
+          if (a.route && leg > a.route.idx && !off) runRoute(s, a);
+          else runToBall(s, a);
+        }
         // The ball's thrown to someone else: work to the nearest threat to
         // the catch point, ready to block when it's caught (no contact before
         // the catch: that's interference).
@@ -1140,7 +1168,7 @@ function runToBall(s: PlayState, a: Agent): void {
   // his legs chase the read. Finding it: 0.2–0.45 s by Catching. So a short
   // throw off target stays off target (no time to correct), a deep one he
   // can run under: which is what accuracy is for.
-  const findT = b.releaseT + 0.2 + 0.25 * (1 - a.fx.a('catching'));
+  const findT = findsBallAt(s, a);
   const read = b.arrive > findT ? Math.max(0, Math.min(1, ((s.t - findT) / (b.arrive - findT)) * 1.33)) : 1;
   const to = { x: b.meant.x + (b.aim.x - b.meant.x) * read, y: b.meant.y + (b.aim.y - b.meant.y) * read };
   const d = dist(a.pos, to);
@@ -1157,7 +1185,10 @@ function runToBall(s: PlayState, a: Agent): void {
     // at under 60% of his run) makes him throttle down and come back to it.
     const need = d / left;
     const cur = len(a.vel);
-    const sp = Math.min(top, need < 0.6 * cur ? need : Math.max(need, cur));
+    // A back-shoulder ball he paces to exactly: he throttles down and turns
+    // back to it as it comes (M6.5 #6: at full stride he ran past every one).
+    const back = (b.place ?? 0) < -0.5;
+    const sp = Math.min(top, back || need < 0.6 * cur ? need : Math.max(need, cur));
     steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp }, 0.25));
     return;
   }

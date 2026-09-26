@@ -16,6 +16,13 @@ import { loadPracticeRosters } from './rosters';
 import { SimRunner } from './runner';
 import type { Clip } from './clips';
 import { routeOf } from '@/sim/ai';
+import type { OffPlay } from '@/sim/plays';
+import { detectSynergies } from '@/engine/ratings/traits/synergies';
+import type { RatedPos } from '@/engine/ratings/types';
+
+/** QB–receiver chemistry (M6.5 #6): a passing synergy on the roster starts it here; each throw to him in a game adds this; it tops out at 1. */
+const CHEM_SYNERGY = 0.3;
+const CHEM_PER_TARGET = 0.07;
 import { nextSituation, startSituation, type Situation } from './situation';
 
 export type PracticeStage = 'loading' | 'call' | 'presnap' | 'live' | 'result' | 'paused';
@@ -214,6 +221,8 @@ class PracticeSession {
   private firstCatch = true;
   /** Stamina each offensive player is down going into the next play (a big hit's toll). */
   private fatigue: Partial<Record<OffSlot, number>> = {};
+  /** Throws to each receiver (by player id) this game: QB–receiver chemistry builds with them (M6.5 #6). */
+  private targets: Record<string, number> = {};
   /** Sim events already looked at this play (for the hit-stop). */
   private seenEvents = 0;
   private hitStop = 0;
@@ -232,6 +241,7 @@ class PracticeSession {
     this.offenseKit = this.game ? 'blackoutLime' : 'royal';
     this.snaps = 0;
     this.firstCatch = true;
+    this.targets = {};
     set({ stage: 'loading', result: null, error: null });
     this.offPause ??= Input.onAction((id, info) => {
       // In a game the game screen owns the pause (its menu can come up over a card too).
@@ -295,6 +305,28 @@ class PracticeSession {
     this.sync();
   }
 
+  /**
+   * QB–receiver chemistry for this play's receivers (M6.5 #6): 0.3 for a
+   * pair with a passing synergy on the roster (Timing Offense, Moonball,
+   * Throw It Up, Pitch and Catch), plus 0.07 a throw to him this game, to 1.
+   */
+  private chemistry(play: OffPlay): Partial<Record<OffSlot, number>> {
+    const off = this.teams ? offenseFor(play, this.teams.team) : this.rosters?.offense;
+    if (!off) return {};
+    const qb = off.QB;
+    const recs = (['X', 'Z', 'SLOT', 'TE', 'RB'] as const).filter((k) => off[k]);
+    const hits = detectSynergies({ players: [qb, ...recs.map((k) => off[k])].map((p) => ({ id: p.id, pos: p.pos as RatedPos, traits: p.traits ?? [] })) });
+    const passing = new Set(['pass.deepError', 'route.breakSeparation', 'catch.contested', 'catch.thirdDown']);
+    const out: Partial<Record<OffSlot, number>> = {};
+    for (const k of recs) {
+      const p = off[k];
+      const syn = hits.some((h) => passing.has(h.synergy.effect.key) && ((h.a.id === qb.id && h.b.id === p.id) || (h.b.id === qb.id && h.a.id === p.id)));
+      const c = (syn ? CHEM_SYNERGY : 0) + CHEM_PER_TARGET * (this.targets[p.id] ?? 0);
+      if (c > 0) out[k] = Math.min(1, c);
+    }
+    return out;
+  }
+
   private setUp(playId: string, seed: number, def: DefCall, sit: Situation): void {
     if (!this.rosters) return;
     this.closeHot();
@@ -313,6 +345,7 @@ class PracticeSession {
       user: true,
       difficulty: this.difficulty,
       fatigue: { ...this.fatigue },
+      chem: this.chemistry(play),
     });
     this.runner = new SimRunner(state);
     this.seenEvents = 0;
@@ -536,6 +569,12 @@ class PracticeSession {
       f[slot] = Math.min(0.6, (f[slot] ?? 0) + hitToll(bh.force));
     }
     this.fatigue = f;
+    // Chemistry: every throw to a receiver counts toward his timing with the QB.
+    const tgt = s.ball.target;
+    if (s.pass?.attempted && tgt >= 0 && s.agents[tgt]!.side === 'off') {
+      const id = s.agents[tgt]!.p.id;
+      this.targets[id] = (this.targets[id] ?? 0) + 1;
+    }
     set({ stage: 'result', result: describe(s), situation: next ?? (g ? g.next : startSituation(ui.startSpot, ui.startDowns)), seriesOver: next === null, box: addToBox(ui.box, s.result) });
   }
 

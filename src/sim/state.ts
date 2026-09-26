@@ -51,6 +51,13 @@ export interface PlaySetup {
   tapMax?: number;
   /** Run the play flipped (its mirror image: the strength, the run and the fake to the other side; the line stays put). */
   flip?: boolean;
+  /**
+   * QB–receiver chemistry, 0–1 per receiver slot (M6.5 #6): a roster
+   * synergy between them to start with, growing as the QB keeps going to
+   * him over a game (src/game). It tightens the throw to him a little and
+   * he finds the ball in the air a little sooner.
+   */
+  chem?: Partial<Record<OffSlot, number>>;
 }
 
 export interface Block {
