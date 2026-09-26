@@ -125,7 +125,7 @@ const WINDOW_SEE = 5;
 const WINDOW_SLIDE = 1.5;
 
 /** A break sharper than this (cos between the legs) is a plant. */
-const PLANT_COS = 0.7;
+const PLANT_COS = 0.9;
 
 /** Within this of a route's break point (yd) and moving away from it, he's made the break. */
 const BREAK_PASS = 2;
@@ -902,12 +902,43 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   const over = Math.max(depth > 12 ? 1.2 : 0.4, off ? 5.5 - 0.42 * Math.max(0, depth) : 0);
   // He mirrors what he saw `delay` ago, projected to now.
   const aim = v2(v.pos.x + v.vel.x * delay + over, v.pos.y + v.vel.y * delay + inside);
-  const want = track(d, aim, v.vel, 2.2);
+  const want = boundaryGovern(d, track(d, aim, v.vel, 2.2), 1);
   // Backpedal while he's in front, turn and run when he's even.
   const face = r.pos.x > d.pos.x - 0.5 ? atan2(v.vel.y, v.vel.x) : Math.PI;
-  steer(d, boundaryGovern(d, want, 1), { face });
+  coverPlant(s, d, want);
+  steer(d, want, { face });
   d.anim = r.pos.x < d.pos.x - 1 && len(d.vel) < 5 ? 'backpedal' : 'run';
 }
+
+/**
+ * A cover man (man, or a zone defender carrying the man in his area) breaking with a route (M6.5: the receivers' plant at every
+ * break of 25°+, PLANT_COS). He plants too, once he's seen the break (his
+ * read is the man-coverage delay above): his run is sent down the new line
+ * at the speed he can carry through the angle (breakCarry's shape, from his
+ * Agility), instead of the steer's arc. Without it the receiver planted and
+ * the defender swung round on an ~11 yd radius, and every break was a yard
+ * or two of free separation (completions 71%, ypa 9.1 in the pass harness).
+ * One plant per COVER_PLANT_GAP, so a wobble in what he's tracking isn't a
+ * string of cuts.
+ */
+function coverPlant(s: PlayState, d: Agent, want: V2): void {
+  const sp = len(d.vel);
+  const wl = len(want);
+  if (sp < 3 || wl < 3) return;
+  const c = (d.vel.x * want.x + d.vel.y * want.y) / (sp * wl);
+  if (c > COVER_PLANT_COS || s.t - ((d.mem.plantAt as number | undefined) ?? -9) < COVER_PLANT_GAP) return;
+  d.mem.plantAt = s.t;
+  const ag = d.fx.a('agility');
+  const c90 = 0.3 + 0.15 * ag;
+  const c180 = 0.15 + 0.1 * ag;
+  const keep = c >= 0 ? c90 + (1 - c90) * c : c180 + (c90 - c180) * (1 + c);
+  const vb = Math.min(sp, keep * d.fx.vmax, wl);
+  d.vel = { x: (want.x / wl) * vb, y: (want.y / wl) * vb };
+}
+/** A cover man plants when what he's tracking turns this far off his run (cos, ~35°). */
+const COVER_PLANT_COS = 0.82;
+/** At most one plant this often (s). */
+const COVER_PLANT_GAP = 0.35;
 
 /** How a zone plays (GDD §10.4): deep (thirds, halves, the middle), the Tampa 2 runner, the flat, curl-to-flat, the hook. */
 type ZoneRole = 'deep' | 'tampa' | 'flat' | 'curl' | 'hook';
@@ -1052,8 +1083,9 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
       aim = v2(Math.max(spot.x - (role === 'tampa' ? 2 : 4), v.pos.x + cushion), v.pos.y * 0.75 + spot.y * 0.25);
       aimVel = { x: Math.max(0, v.vel.x), y: v.vel.y * 0.75 };
     }
-    const want = threat ? track(d, aim, aimVel, 2.2) : arrive(d, aim, 0.95, 1.2);
-    steer(d, boundaryGovern(d, want, 1), { face });
+    const want = boundaryGovern(d, threat ? track(d, aim, aimVel, 2.2) : arrive(d, aim, 0.95, 1.2), 1);
+    if (threat) coverPlant(s, d, want);
+    steer(d, want, { face });
     d.anim = d.vel.x > 0.8 ? 'backpedal' : 'run';
     return;
   }
@@ -1214,8 +1246,9 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
   const ex = Math.max(-lim, Math.min(lim, (s.eyes.x - aim.x) * pull * 0.3));
   const ey = Math.max(-lim, Math.min(lim, (s.eyes.y - aim.y) * pull));
   aim = v2(aim.x + ex, aim.y + ey);
-  const want = match && mode !== 'sit' ? track(d, aim, aimVel, 2.6) : arrive(d, aim, 0.9, 1.2);
-  steer(d, boundaryGovern(d, want, 1), { face });
+  const want = boundaryGovern(d, match && mode !== 'sit' ? track(d, aim, aimVel, 2.6) : arrive(d, aim, 0.9, 1.2), 1);
+  if (match && mode !== 'sit') coverPlant(s, d, want);
+  steer(d, want, { face });
   d.anim = d.vel.x > 0.8 ? 'backpedal' : 'run';
 }
 /**
