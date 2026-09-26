@@ -32,7 +32,7 @@ import { prepareLate, shadowAttach } from '../lighting/shadows';
 import { createFootball } from './football';
 import { createFieldMarks } from './fieldMarks';
 import { frameEvents } from './frameEvents';
-import { ballInHands, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
+import { ballInHands, catchMagnet, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
 import { Officials } from './officials';
 import { kickView } from './kickView';
 
@@ -118,7 +118,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: Pl
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>() };
+    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null };
   });
 }
 
@@ -140,6 +140,7 @@ const _q = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
 const _X = new THREE.Vector3(1, 0, 0);
 const _dir = new THREE.Vector3();
+const _hands = new THREE.Vector3();
 /** Fastest the drawn facing turns (rad/s): a sharp pivot, ~180° in a quarter second. */
 const YAW_MAX = 12;
 const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move: null, down: false, stamina: 1 };
@@ -390,6 +391,11 @@ export function GameScene() {
       _q.setFromUnitVectors(_X, _dir);
       _q2.setFromAxisAngle(_X, b0.spin + (b1.spin - b0.spin) * a);
       ball.quaternion.copy(_q).multiply(_q2);
+    }
+    // The last frames of the flight bend into the catcher's hands (M6.5 #5).
+    if (b1.mode === 'air' && r.state.ball.target >= 0 && bodies) {
+      const k = catchMagnet(bodies[r.state.ball.target]!, ball.position, _hands);
+      if (k > 0) ball.position.lerp(_hands, k);
     }
   }
 

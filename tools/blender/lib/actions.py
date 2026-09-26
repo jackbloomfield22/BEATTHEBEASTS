@@ -797,6 +797,7 @@ def getup_supine() -> Clip:
 def action_clips() -> list[Clip]:
     from .actions_m55 import m55_clips  # (imports this module's helpers)
     from .actions_m6 import m6_clips
+    from .actions_m65 import m65_clips
 
     jl = juke_left()
     return [
@@ -805,6 +806,7 @@ def action_clips() -> list[Clip]:
         jl, mirrored(jl, "juke_r", to_phase=0.0), spin(), dive(), tackle(), getup_prone(), getup_supine(),
         *m55_clips(),
         *m6_clips(),
+        *m65_clips(),
     ]
 
 
@@ -813,7 +815,7 @@ NO_BALANCE = {"down_prone", "down_supine"}
 
 # The M6 modules add stances to the table when imported (the pass set, the
 # snapper, the holder...): import them now so build_anims.py sees them.
-from . import actions_m6_back7, actions_m6_line, actions_m6_special  # noqa: E402,F401
+from . import actions_m6_back7, actions_m6_line, actions_m6_special, actions_m65  # noqa: E402,F401
 from .actions_m6 import NO_BALANCE as _M6_NO_BALANCE  # noqa: E402
 
-NO_BALANCE |= _M6_NO_BALANCE
+NO_BALANCE |= _M6_NO_BALANCE | actions_m65.NO_BALANCE

@@ -124,6 +124,9 @@ VIEWS = {
     "broadcast": ((2.6, -2.6, 3.0), (0, -0.2, 0.7), 55),
     # Three-quarter front at chest height, close: arms and hands read (M6 line play).
     "three": ((2.3, -2.6, 1.25), (0, -0.2, 0.8), 50),
+    # Side on, pulled back and up: a jump or a layout stays in frame (M6.5 catches).
+    "tall": ((5.2, -0.6, 1.2), (0, -0.6, 1.05), 50),
+    "tall_three": ((3.6, -4.0, 1.5), (0, -0.4, 1.0), 50),
     "head": ((0.55, -1.3, 1.78), (0, 0, 1.62), 50),
     "head_back": ((-0.5, 1.2, 1.85), (0, 0, 1.55), 50),
 }

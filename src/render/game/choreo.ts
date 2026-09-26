@@ -7,6 +7,7 @@ import type { Player } from '../players/playerAsset';
 import { YARD } from '../world/constants';
 import { worldDir } from '@/game/coords';
 import { latency } from '@/game/latency';
+import { catchLook, type CatchLook } from '@/sim/passing';
 
 // The choreographer: which clip each player plays, from the sim's state and
 // events (TECH_PLAN §9.2). The sim decides everything; this only picks and
@@ -40,6 +41,8 @@ export interface Body {
   gaitSpeed: number;
   /** One-shot clips already played this play (the handoff, the fake). */
   once: Set<string>;
+  /** The catch clip playing for this play's catch (M6.5 #5), or null. */
+  catchClip: string | null;
 }
 
 /** Upper body, for a throw on the run (the legs keep running). */
@@ -64,12 +67,151 @@ export function resetBody(b: Body): void {
   b.fallen = false;
   b.lyingClip = false;
   b.once.clear();
+  b.catchClip = null;
+  b.animator.onTurn = null;
 }
 
 function lyingClip(b: Body, name: string, t0 = 0): void {
   b.animator.play(name, { now: true, t0 });
   b.fallen = true;
   b.lyingClip = true;
+  // A clip that lays him down turned (the dive toward the ball) turns his
+  // root by as much as it hands over, so he lies where the clip left him.
+  b.animator.onTurn = (deg) => {
+    const r = b.player.root;
+    r.rotation.y += (deg * Math.PI) / 180;
+    b.lie = { x: r.position.x, z: r.position.z, yaw: r.rotation.y, prone: true };
+    b.lyingClip = false;
+    b.animator.onTurn = null;
+  };
+}
+
+// --- The catch (M6.5 #5) ------------------------------------------------------
+// The catch call and the ball decide the look (sim/passing.ts catchLook);
+// this picks the clip for it, starts it so its secure frame meets the ball,
+// holds the ball in the hands until the clip's tuck, and puts him down with
+// it on a SECURE catch in traffic.
+
+/** Catch clips that drive the whole body (the rest are overlays over the legs' gait). */
+const CATCH_FULL = new Set(['catch_high_point', 'catch_body_down', 'catch_dive_l', 'catch_dive_r', 'catch_toe_tap_l', 'catch_toe_tap_r']);
+/** The ones that leave him lying on the ball. */
+const CATCH_LYING = new Set(['catch_body_down', 'catch_dive_l', 'catch_dive_r']);
+/** How far ahead of the ball's arrival (s) the look is asked for: the longest lead (the high point's gather and jump, 0.73 s) and a little. */
+const CATCH_LOOKAHEAD = 0.9;
+/** Below this (yd, ~0.9 m: the belt) a hands catch is taken with the pinkies together. */
+const LOW_HANDS = 1.0;
+/** GO UP leaps only for a ball arriving at least this high (yd, ~1.6 m: the shoulders). */
+const LEAP_MIN = 1.75;
+/** The drawn ball bends into the hands only when they're this close to its flight (m); farther, a pull would read as a warp. */
+const MAGNET_NEAR = 0.45;
+const MAGNET_FAR = 1.0;
+
+/** The clip for a look, from where the ball is going relative to his run. */
+export function catchClip(s: PlayState, i: number, look: CatchLook): string {
+  const a = s.agents[i]!;
+  const ball = s.ball;
+  const sp = Math.hypot(a.vel.x, a.vel.y);
+  const hx = sp > 1 ? a.vel.x / sp : Math.cos(a.face);
+  const hy = sp > 1 ? a.vel.y / sp : Math.sin(a.face);
+  // The sim's y is to the left of its x: a point is on his left when the cross product is positive.
+  const leftOf = (dx: number, dy: number) => hx * dy - hy * dx > 0;
+  const T = Math.max(0, ball.arrive - s.t);
+  const aimLeft = leftOf(ball.aim.x - (a.pos.x + a.vel.x * T), ball.aim.y - (a.pos.y + a.vel.y * T));
+  switch (look) {
+    case 'hands':
+      return ball.aim.z < LOW_HANDS ? 'catch_hands_run_low' : 'catch_hands_run';
+    case 'body':
+      return 'catch_body';
+    case 'highPoint':
+      // GO UP on a ball he can't jump for (it arrives below his shoulders):
+      // leaping over it would read wrong, so he attacks it with his hands.
+      return ball.aim.z >= LEAP_MIN ? 'catch_high_point' : ball.aim.z < LOW_HANDS ? 'catch_hands_run_low' : 'catch_hands_run';
+    case 'overShoulder':
+      // Over the shoulder on the side the ball is dropping in from.
+      return leftOf(ball.pos.x - a.pos.x, ball.pos.y - a.pos.y) ? 'catch_over_shoulder_l' : 'catch_over_shoulder_r';
+    case 'dive':
+      return aimLeft ? 'catch_dive_l' : 'catch_dive_r';
+    case 'toeTap':
+      // The upper body leans out over the nearer sideline.
+      return leftOf(0, ball.aim.y >= 0 ? 1 : -1) ? 'catch_toe_tap_l' : 'catch_toe_tap_r';
+    case 'oneHand':
+      return aimLeft ? 'catch_one_hand_l' : 'catch_one_hand_r';
+  }
+}
+
+/** A clip event's time (s), or null when the clip or the event is missing. */
+function eventAt(b: Body, clip: string, ev: string): number | null {
+  const f = b.animator.lib.meta[clip]?.events?.[ev];
+  return f === undefined ? null : f / b.animator.lib.fps;
+}
+
+/** Start a catch clip at t0 (s into it). */
+function startCatch(b: Body, clip: string, t0: number): void {
+  b.catchClip = clip;
+  if (CATCH_LYING.has(clip)) lyingClip(b, clip, t0);
+  else if (CATCH_FULL.has(clip)) b.animator.play(clip, { now: true, t0 });
+  else b.animator.playOverlay(clip, { t0 });
+}
+
+/** The catch clip's time now, or null when it isn't the one playing. */
+function catchTime(b: Body): number | null {
+  const c = b.catchClip;
+  if (!c) return null;
+  const tr = b.animator.transition;
+  if (tr && tr.name === c && !tr.done) return tr.t;
+  const ov = b.animator.overlayAction;
+  if (ov && ov.name === c) return ov.t;
+  return null;
+}
+
+function catchHands(clip: string): 'two' | 'l' | 'r' {
+  return clip.startsWith('catch_one_hand_') ? (clip.endsWith('_l') ? 'l' : 'r') : 'two';
+}
+
+/**
+ * The ball held in the hands through a catch clip: from its secure frame
+ * until the tuck, in both hands or in one, with `k` easing off into the
+ * tuck (along the forearm) over the last 0.1 s.
+ */
+export function catchHold(b: Body): { hands: 'two' | 'l' | 'r'; k: number } | null {
+  const t = catchTime(b);
+  const c = b.catchClip;
+  if (t === null || !c) return null;
+  const secure = eventAt(b, c, 'secure');
+  const tuck = eventAt(b, c, 'tuck');
+  if (secure === null || tuck === null || t < secure - 0.05 || t >= tuck) return null;
+  return { hands: catchHands(c), k: 1 - THREE.MathUtils.smoothstep(t, tuck - 0.1, tuck) };
+}
+
+const _p = new THREE.Vector3();
+
+/** Where the ball sits in the catching hands (world): between the palms, or in the one hand. */
+function handsPoint(b: Body, hands: 'two' | 'l' | 'r', out: THREE.Vector3): boolean {
+  const bones = b.player.bones;
+  const l = bones.get(hands === 'r' ? 'fingers_01_r' : 'fingers_01_l');
+  const r = bones.get(hands === 'l' ? 'fingers_01_l' : 'fingers_01_r');
+  if (!l || !r) return false;
+  l.getWorldPosition(out);
+  r.getWorldPosition(_p);
+  out.add(_p).multiplyScalar(0.5);
+  return true;
+}
+
+/**
+ * The ball's last frames in the air bend into the hands: over the 0.12 s
+ * before the clip's secure frame the drawn ball eases from the sim's flight
+ * onto the catching hands (render only; the sim's ball is untouched).
+ * Returns the blend (0: the sim's position) and writes the hands point.
+ */
+export function catchMagnet(b: Body, ball: THREE.Vector3, out: THREE.Vector3): number {
+  const t = catchTime(b);
+  const c = b.catchClip;
+  if (t === null || !c) return 0;
+  const secure = eventAt(b, c, 'secure');
+  if (secure === null) return 0;
+  const k = THREE.MathUtils.smoothstep(t, secure - 0.12, secure);
+  if (k <= 0 || !handsPoint(b, catchHands(c), out)) return 0;
+  return k * (1 - THREE.MathUtils.smoothstep(ball.distanceTo(out), MAGNET_NEAR, MAGNET_FAR));
 }
 
 function fall(b: Body, vel: THREE.Vector3, push: THREE.Vector3, big = false): void {
@@ -186,9 +328,27 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         else if (mv === 'stiffArm') a.animator.playOverlay('ovl_stiff_arm');
         else if (mv === 'truck') a.animator.playOverlay('ovl_truck');
         else if (mv === 'pumpFake') a.animator.playOverlay('ovl_pump');
+        else if (mv === 'secureDown') {
+          // SECURE in traffic: the cradle turns into going down with it (from the catch's secure frame on).
+          a.animator.stopOverlay();
+          a.catchClip = 'catch_body_down';
+          lyingClip(a, 'catch_body_down', eventAt(a, 'catch_body_down', 'secure') ?? 0);
+        }
         break;
       }
-      case 'catch':
+      case 'catch': {
+        // The final look: if the prediction a beat ago was a different one,
+        // switch to it at its secure frame (a full-body clip already under
+        // way is committed and plays on).
+        if (!a) break;
+        const look = e.data?.look as CatchLook | undefined;
+        if (look) {
+          const want = catchClip(s, who[0]!, look);
+          const committed = a.catchClip !== null && CATCH_FULL.has(a.catchClip) && catchTime(a) !== null;
+          if (a.catchClip !== want && !committed) startCatch(a, want, eventAt(a, want, 'secure') ?? SECURE);
+        } else if (!a.catchClip) a.animator.playOverlay('ovl_catch', { t0: SECURE });
+        break;
+      }
       case 'interception':
         // Already reaching (the catch overlay started before the ball got there)? Let it finish into the tuck.
         if (a && a.animator.overlayAction?.name.startsWith('ovl_catch') !== true) a.animator.playOverlay('ovl_catch', { t0: SECURE });
@@ -288,10 +448,22 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     b.once.add('fake');
     anim.playOverlay(`ovl_pa_fake_${play.pa.aim < 0 ? 'r' : 'l'}`);
   }
-  // The catch: hands out so the secure frame meets the ball.
-  if (ball.mode === 'air' && ball.target === i && b.catchFor !== ball.arrive && ball.arrive - simT <= SECURE) {
-    b.catchFor = ball.arrive;
-    anim.playOverlay(ball.aim.z > 1.75 ? 'ovl_catch_high' : 'ovl_catch');
+  // The catch (M6.5 #5): the look the call and the ball ask for (the sim's
+  // own catchLook, pure), started so its secure frame lands on the arrival.
+  if (ball.mode === 'air' && ball.target === i && b.catchFor !== ball.arrive && ball.arrive - simT <= CATCH_LOOKAHEAD) {
+    const left = ball.arrive - simT;
+    const clip = catchClip(s, i, catchLook(s, a));
+    const lead = eventAt(b, clip, 'secure');
+    if (lead === null) {
+      // (An older clip library without the catch set: the M5 overlay.)
+      if (left <= SECURE) {
+        b.catchFor = ball.arrive;
+        anim.playOverlay(ball.aim.z > 1.75 ? 'ovl_catch_high' : 'ovl_catch');
+      }
+    } else if (left <= lead) {
+      b.catchFor = ball.arrive;
+      startCatch(b, clip, Math.max(0, lead - left));
+    }
   }
   // What the hands hold.
   const holder = ball.mode === 'held' && s.phase !== 'presnap' && simT - s.snapT > 0.3 ? ball.holder : -1;
@@ -299,7 +471,9 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   if (i === holder && !a.down) {
     // (A scrambling QB has it tucked; a play-action or handoff overlay owns the hands while it plays.)
     const pocket = i === s.qb && s.scrambleT < 0 && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket');
-    anim.setHold(pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' ? 'ovl_protect' : 'ovl_carry_r');
+    // A catch clip owns the hands until it has tucked the ball.
+    const catching = catchHold(b) !== null;
+    anim.setHold(catching ? null : pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' ? 'ovl_protect' : 'ovl_carry_r');
     if (a.move === 'protect') latency.respond('protect');
   } else anim.setHold(null);
   // Down without a clip that lies him down: he falls, once (a dove-and-
@@ -310,6 +484,14 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     const r = b.player.root;
     b.lie = { x: r.position.x, z: r.position.z, yaw: r.rotation.y, prone: true };
     b.lyingClip = false;
+  }
+  // A dive catch the sim didn't put down (he's the carrier, still up): off
+  // the turf and after it rather than lie there while he runs on.
+  if (b.lie && !b.lie.up && !a.down && i === s.carrier && s.phase === 'carrier' && b.catchClip && CATCH_LYING.has(b.catchClip)) {
+    b.lie = null;
+    b.fallen = false;
+    b.lyingClip = false;
+    anim.play('getup_prone', { now: true });
   }
   // The fall hands over to lying on the turf once he's down (the ragdoll
   // has no muscles to straighten out with; the lying clips do).
@@ -335,6 +517,7 @@ const _h = new THREE.Vector3();
 const _e = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _X = new THREE.Vector3(1, 0, 0);
+const _c = new THREE.Vector3();
 
 /**
  * The ball in a player's hands: the QB's two-hand hold (between the hands),
@@ -373,5 +556,8 @@ export function ballInHands(b: Body, s: PlayState, ball: THREE.Object3D): boolea
     ball.position.copy(_h).addScaledVector(_d, -0.09);
   }
   ball.quaternion.setFromUnitVectors(_X, _d);
+  // Caught and not yet tucked: in the hands (easing into the tuck above).
+  const held = catchHold(b);
+  if (held && handsPoint(b, held.hands, _c)) ball.position.lerp(_c, held.k);
   return true;
 }

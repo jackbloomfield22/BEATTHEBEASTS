@@ -42,6 +42,10 @@ const LINEUP: { label: string; pos: Position; h: number; w: number; num: number;
   { label: 'DT 6\'3" 335', pos: 'DL', h: 75, w: 335, num: 90, name: 'White' },
 ];
 
+/** Blend mode's overlay: first played this far in (s), then again after its length plus a gap. */
+const OVL_START = 0.6;
+const OVL_GAP = 0.6;
+
 const params = () => new URLSearchParams(location.hash.split('?')[1] ?? '');
 
 interface LabState {
@@ -61,6 +65,8 @@ interface LabState {
   /** Blend mode: turn rate (rad/s, + = left) for the lean, and head tracking of the camera. */
   yaw: number;
   look: boolean;
+  /** Blend mode: an overlay clip laid over the gait, replayed (a catch at speed). */
+  ovl: string;
   /** Re-rolls every player's gear and proportions (variety.ts). */
   seed: string;
   /** Single mode's jersey number and name (lineup players carry their own). */
@@ -234,6 +240,7 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
 
   const director = useMemo(() => new SequenceDirector(sequenceSteps(s.pos, (c) => lib.clips.has(c))), [s.pos, lib]);
   const walked = useRef(0);
+  const ovlClock = useRef(0);
   const floor = useMemo(() => gridTexture(), []);
   const markers = useRef<THREE.Mesh[]>([]);
   const clock = useRef(0);
@@ -280,14 +287,24 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
         const input = { speed, groundVelocity: ground, yawRate: s.yaw, lookAt: s.look ? camera.position : null };
         an.footLock = s.lock;
         an.setStance('stance_idle');
+        // An upper-body overlay over the gait (a catch at speed), replayed
+        // every so often: first at OVL_START, then once per its length + a gap.
+        const ovl = s.ovl && lib.meta[s.ovl]?.kind === 'overlay' ? s.ovl : null;
+        const period = ovl ? lib.meta[ovl]!.duration + OVL_GAP : 0;
+        const due = (t: number) => (t < OVL_START ? -1 : Math.floor((t - OVL_START) / period));
+        const step = (t0: number, h: number) => {
+          if (ovl && due(t0 + h) !== due(t0)) an.playOverlay(ovl);
+          an.update(h, input);
+        };
         if (s.freezeT !== null) {
           // Deterministic: re-run from a clean start to the frozen time.
           an.reset();
           const steps = Math.round(s.freezeT * 60);
-          for (let k = 0; k < steps; k++) an.update(1 / 60, input);
+          for (let k = 0; k < steps; k++) step(k / 60, 1 / 60);
           an.update(0, input);
         } else {
-          an.update(dt, input);
+          step(ovlClock.current, dt);
+          ovlClock.current += dt;
         }
         if (i === 0) readout = { phase: an.phase, time: clock.current, planted: { l: false, r: false }, correction: { ...an.correction } };
       } else {
@@ -356,6 +373,7 @@ export function AnimLab() {
     freezeT: q.has('t') ? Number(q.get('t')) : null,
     yaw: Number(q.get('yaw') ?? 0),
     look: q.get('look') === '1',
+    ovl: q.get('ovl') ?? '',
     seed: q.get('seed') ?? '',
     num: Number(q.get('num') ?? 16),
     name: q.get('name') ?? 'Montana',
@@ -445,6 +463,19 @@ export function AnimLab() {
             </label>
             <label className="lab-check">
               <input type="checkbox" checked={s.look} onChange={(e) => set({ look: e.target.checked })} /> Look at the camera
+            </label>
+            <label>
+              Overlay (replayed)
+              <select value={s.ovl} onChange={(e) => set({ ovl: e.target.value })}>
+                <option value="">None</option>
+                {clipNames
+                  .filter((n) => lib?.meta[n]?.kind === 'overlay')
+                  .map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+              </select>
             </label>
           </>
         ) : null}
