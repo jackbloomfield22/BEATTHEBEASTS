@@ -29,6 +29,7 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `stance_kicker` | stance | 60 | 0.0 | 0.00 | 0.00 | 24.9 | 6.7 | pass |
 | `stance_punter` | stance | 60 | 0.0 | 0.00 | 0.00 | 26.9 | 8.7 | pass |
 | `stance_ref` | stance | 60 | 0.0 | 0.00 | 0.00 | 23.7 | 10.6 | pass |
+| `stance_down_prone_ball` | stance | 60 | 0.0 | 0.00 | 0.00 | 25.3 | — | pass |
 | `loco_walk` | locomotion | 32 | 1.3 | 0.05 | 0.00 | 17.2 | — | pass |
 | `loco_jog` | locomotion | 22 | 3.5 | 0.31 | 0.00 | 21.7 | — | pass |
 | `loco_run` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.8 | — | pass |
@@ -138,5 +139,18 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `sig_rb` | signature | 93 | 0.0 | 0.00 | 0.00 | 17.2 | — | pass |
 | `sig_te` | signature | 105 | 0.0 | 0.00 | 0.00 | 18.6 | — | pass |
 | `sig_ol` | signature | 86 | 0.0 | 0.00 | 0.00 | 35.0 | — | pass |
+| `catch_hands_run` | overlay | 18 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_hands_run_low` | overlay | 18 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_high_point` | transition | 49 | 0.0 | 0.36 | 0.00 | 20.1 | — | pass |
+| `catch_body` | overlay | 22 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_body_down` | transition | 39 | 0.0 | 0.01 | 0.00 | 22.0 | — | pass |
+| `catch_over_shoulder_l` | overlay | 21 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_over_shoulder_r` | overlay | 21 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_dive_l` | transition | 30 | 0.0 | 0.00 | 0.00 | 22.5 | — | pass |
+| `catch_dive_r` | transition | 30 | 0.0 | 0.00 | 0.00 | 22.5 | — | pass |
+| `catch_toe_tap_l` | transition | 30 | 0.0 | 0.00 | 0.00 | 20.4 | — | pass |
+| `catch_toe_tap_r` | transition | 30 | 0.0 | 0.00 | 0.00 | 20.4 | — | pass |
+| `catch_one_hand_l` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_one_hand_r` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 
-**132 of 132 clips pass.**
+**146 of 146 clips pass.**
