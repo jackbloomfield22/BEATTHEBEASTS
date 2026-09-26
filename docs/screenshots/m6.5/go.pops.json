@@ -1,0 +1,97 @@
+{
+ "frames": 4818,
+ "worst": 51,
+ "p99": 27,
+ "spikes": [
+  {
+   "frame": 29,
+   "slot": "LE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_dl_3pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 29,
+   "slot": "LDT",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "getoff_dl_4pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 29,
+   "slot": "RDT",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "getoff_dl_4pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 29,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_dl_3pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 83,
+   "slot": "QB",
+   "bone": "upperarm_l",
+   "rate": 51,
+   "clip": "qb_throw",
+   "overlay": "",
+   "anim": "throw",
+   "phase": "pocket"
+  },
+  {
+   "frame": 83,
+   "slot": "LDT",
+   "bone": "upperarm_l",
+   "rate": 40,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 87,
+   "slot": "QB",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "qb_throw",
+   "overlay": "",
+   "anim": "throw",
+   "phase": "air"
+  },
+  {
+   "frame": 106,
+   "slot": "RDT",
+   "bone": "upperarm_l",
+   "rate": 40,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  },
+  {
+   "frame": 117,
+   "slot": "LE",
+   "bone": "upperarm_l",
+   "rate": 40,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  }
+ ]
+}
