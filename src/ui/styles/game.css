@@ -122,10 +122,10 @@
 .snap-call .cue-row { color: var(--ink-2); }
 .carrier-keys .cue { padding: .2rem .45rem .2rem .2rem; border-radius: .35rem; background: var(--panel); font-size: .74rem; }
 /* The three move options (M6.5 #9): large, one word each, 1 the likeliest to work; the one he's in lights up. */
-.carrier-opts { top: 1.1rem; gap: .6rem; }
-.carrier-keys .cue.opt { padding: .32rem .75rem .32rem .32rem; font-size: 1.15rem; letter-spacing: .1em; border: .12rem solid transparent; transition: transform .1s ease-out; }
+.carrier-opts { top: 1.1rem; gap: .8rem; }
+.carrier-keys .cue.opt { padding: .4rem .95rem .4rem .4rem; font-size: 1.55rem; letter-spacing: .1em; border: .12rem solid transparent; transition: transform .1s ease-out; }
 .carrier-keys .cue.opt .cue-w { display: inline; padding: 0; background: none; min-width: 4.2em; }
-.carrier-keys .cue.opt kbd { font-size: 1rem; padding: .15rem .45rem; }
+.carrier-keys .cue.opt kbd { font-size: 1.25rem; padding: .2rem .55rem; }
 .carrier-keys .cue.opt:first-child { border-color: color-mix(in srgb, var(--ink) 30%, transparent); }
 .carrier-keys .cue.opt.lit { transform: scale(1.12); border-color: var(--lime); color: var(--lime); background: color-mix(in srgb, var(--lime) 28%, var(--panel-strong)); box-shadow: 0 0 1.2rem color-mix(in srgb, var(--lime) 55%, transparent); }
 .tutorial-card .cue { font-size: .82rem; }
