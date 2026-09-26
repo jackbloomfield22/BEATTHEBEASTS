@@ -53,7 +53,7 @@ export function tryOne(spec: ConceptSpec, def: string, seed: number, at: number,
   const tgt = s.icons[icon - 1]!;
   let breakT = -1;
   const script = concept(plan);
-  // The break: the first time after his release that his run turns 30°+ within a quarter second at speed.
+  // The break: the first time after his release that his run turns 22°+ within a quarter second at speed.
   const hist: { x: number; y: number }[] = [];
   runToWhistle(s, (st) => {
     const a = st.agents[tgt]!;
@@ -63,7 +63,7 @@ export function tryOne(spec: ConceptSpec, def: string, seed: number, at: number,
       const sp = Math.hypot(a.vel.x, a.vel.y);
       if (breakT < 0 && was && st.t - st.snapT > 0.5 && sp > 3 && Math.hypot(was.x, was.y) > 3) {
         const cos = (was.x * a.vel.x + was.y * a.vel.y) / (Math.hypot(was.x, was.y) * sp);
-        if (cos < Math.cos(Math.PI / 6)) breakT = st.t;
+        if (cos < Math.cos((22 * Math.PI) / 180)) breakT = st.t;
       }
     }
     return script(st);
