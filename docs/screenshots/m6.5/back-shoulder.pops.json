@@ -1,7 +1,7 @@
 {
- "frames": 2705,
- "worst": 55,
- "p99": 26,
+ "frames": 2198,
+ "worst": 38,
+ "p99": 28,
  "spikes": [
   {
    "frame": 31,
@@ -17,7 +17,7 @@
    "frame": 31,
    "slot": "LDT",
    "bone": "upperarm_r",
-   "rate": 30,
+   "rate": 31,
    "clip": "getoff_dl_4pt",
    "overlay": "",
    "anim": "rush",
@@ -27,7 +27,7 @@
    "frame": 31,
    "slot": "RDT",
    "bone": "upperarm_r",
-   "rate": 30,
+   "rate": 31,
    "clip": "getoff_dl_4pt",
    "overlay": "",
    "anim": "rush",
@@ -94,20 +94,30 @@
    "phase": "air"
   },
   {
-   "frame": 88,
+   "frame": 89,
    "slot": "RCB",
    "bone": "forearm_l",
-   "rate": 50,
+   "rate": 31,
    "clip": "tackle",
    "overlay": "",
    "anim": "tackle",
    "phase": "dead"
   },
   {
-   "frame": 88,
+   "frame": 89,
    "slot": "RCB",
    "bone": "forearm_r",
-   "rate": 55,
+   "rate": 33,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "dead"
+  },
+  {
+   "frame": 90,
+   "slot": "RCB",
+   "bone": "forearm_r",
+   "rate": 31,
    "clip": "tackle",
    "overlay": "",
    "anim": "tackle",

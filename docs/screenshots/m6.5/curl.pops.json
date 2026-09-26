@@ -1,10 +1,10 @@
 {
- "frames": 2837,
+ "frames": 2286,
  "worst": 56,
- "p99": 25,
+ "p99": 28,
  "spikes": [
   {
-   "frame": 29,
+   "frame": 31,
    "slot": "LE",
    "bone": "upperarm_r",
    "rate": 31,
@@ -14,27 +14,27 @@
    "phase": "snap"
   },
   {
-   "frame": 29,
+   "frame": 31,
    "slot": "LDT",
    "bone": "upperarm_r",
-   "rate": 30,
+   "rate": 31,
    "clip": "getoff_dl_4pt",
    "overlay": "",
    "anim": "rush",
    "phase": "snap"
   },
   {
-   "frame": 29,
+   "frame": 31,
    "slot": "RDT",
    "bone": "upperarm_r",
-   "rate": 30,
+   "rate": 31,
    "clip": "getoff_dl_4pt",
    "overlay": "",
    "anim": "rush",
    "phase": "snap"
   },
   {
-   "frame": 29,
+   "frame": 31,
    "slot": "RE",
    "bone": "upperarm_r",
    "rate": 31,
@@ -44,7 +44,7 @@
    "phase": "snap"
   },
   {
-   "frame": 50,
+   "frame": 52,
    "slot": "QB",
    "bone": "upperarm_r",
    "rate": 34,
@@ -54,7 +54,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 52,
+   "frame": 54,
    "slot": "QB",
    "bone": "upperarm_l",
    "rate": 34,
@@ -64,7 +64,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 54,
+   "frame": 56,
    "slot": "QB",
    "bone": "upperarm_l",
    "rate": 32,
@@ -74,7 +74,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 54,
+   "frame": 56,
    "slot": "QB",
    "bone": "upperarm_r",
    "rate": 34,
@@ -84,7 +84,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 91,
+   "frame": 93,
    "slot": "LCB",
    "bone": "forearm_l",
    "rate": 51,
@@ -94,7 +94,7 @@
    "phase": "dead"
   },
   {
-   "frame": 91,
+   "frame": 93,
    "slot": "LCB",
    "bone": "forearm_r",
    "rate": 56,

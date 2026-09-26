@@ -1,10 +1,10 @@
 {
- "frames": 2705,
+ "frames": 2155,
  "worst": 56,
- "p99": 28,
+ "p99": 29,
  "spikes": [
   {
-   "frame": 29,
+   "frame": 31,
    "slot": "LE",
    "bone": "upperarm_r",
    "rate": 31,
@@ -14,27 +14,27 @@
    "phase": "snap"
   },
   {
-   "frame": 29,
+   "frame": 31,
    "slot": "LDT",
    "bone": "upperarm_r",
-   "rate": 30,
+   "rate": 31,
    "clip": "getoff_dl_4pt",
    "overlay": "",
    "anim": "rush",
    "phase": "snap"
   },
   {
-   "frame": 29,
+   "frame": 31,
    "slot": "RDT",
    "bone": "upperarm_r",
-   "rate": 30,
+   "rate": 31,
    "clip": "getoff_dl_4pt",
    "overlay": "",
    "anim": "rush",
    "phase": "snap"
   },
   {
-   "frame": 29,
+   "frame": 31,
    "slot": "RE",
    "bone": "upperarm_r",
    "rate": 31,
@@ -44,7 +44,7 @@
    "phase": "snap"
   },
   {
-   "frame": 40,
+   "frame": 42,
    "slot": "QB",
    "bone": "upperarm_r",
    "rate": 34,
@@ -54,7 +54,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 42,
+   "frame": 44,
    "slot": "QB",
    "bone": "upperarm_l",
    "rate": 34,
@@ -64,7 +64,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 44,
+   "frame": 46,
    "slot": "QB",
    "bone": "upperarm_l",
    "rate": 32,
@@ -74,7 +74,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 44,
+   "frame": 46,
    "slot": "QB",
    "bone": "upperarm_r",
    "rate": 34,
@@ -84,7 +84,7 @@
    "phase": "pocket"
   },
   {
-   "frame": 62,
+   "frame": 64,
    "slot": "RDT",
    "bone": "upperarm_l",
    "rate": 40,
@@ -94,7 +94,7 @@
    "phase": "air"
   },
   {
-   "frame": 64,
+   "frame": 66,
    "slot": "RDT",
    "bone": "upperarm_r",
    "rate": 31,
@@ -104,7 +104,7 @@
    "phase": "air"
   },
   {
-   "frame": 67,
+   "frame": 69,
    "slot": "LDT",
    "bone": "upperarm_l",
    "rate": 40,
@@ -114,7 +114,7 @@
    "phase": "carrier"
   },
   {
-   "frame": 81,
+   "frame": 83,
    "slot": "LDT",
    "bone": "upperarm_l",
    "rate": 31,
@@ -124,7 +124,7 @@
    "phase": "dead"
   },
   {
-   "frame": 85,
+   "frame": 87,
    "slot": "LCB",
    "bone": "forearm_l",
    "rate": 51,
@@ -134,7 +134,7 @@
    "phase": "dead"
   },
   {
-   "frame": 85,
+   "frame": 87,
    "slot": "LCB",
    "bone": "forearm_r",
    "rate": 56,
