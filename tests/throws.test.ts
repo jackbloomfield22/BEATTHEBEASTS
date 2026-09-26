@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createPlay, defById, playById, practiceRosters, type SnapshotLike } from '@/sim';
-import { planThrow, throwWhy } from '@/sim/passing';
+import { catchLook, planThrow, throwWhy } from '@/sim/passing';
 import type { Agent } from '@/sim/types';
 
 // M6.5 #1: the same throw to the same spot lands in the same place, give or
@@ -75,5 +75,17 @@ describe('after the catch (M6.5 #4): at speed with a plan', () => {
     const [a, b] = [await afterCatch(true), await afterCatch(false)];
     expect(a).toBeGreaterThan(7.5);
     expect(b).toBeLessThan(6);
+  });
+});
+
+describe('what a catch looks like (M6.5 #5)', () => {
+  it('GO UP jumps only for a ball at his shoulders or higher; lower, he attacks it with his hands', () => {
+    const s = createPlay({ seed: 1, offense: rosters.offense, defense: rosters.defense, play: playById('trips-stick'), def: defById('cover3'), los: 35, toGo: 10, user: true });
+    const r = s.agents[s.icons[0]!]!;
+    r.pos = { x: 45, y: 0 };
+    r.vel = { x: 6, y: 0 };
+    s.catchType = 'aggressive';
+    expect(catchLook(s, r, { x: 45, y: 0, z: 1.2 })).toBe('hands');
+    expect(catchLook(s, r, { x: 45, y: 0, z: 2.0 })).toBe('highPoint');
   });
 });

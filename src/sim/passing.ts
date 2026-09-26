@@ -448,12 +448,14 @@ function segDist(p: V2, a: V2, b: V2): number {
  * and the catch event carries the final answer.
  * - dive: low and away, he has to lay out for it;
  * - oneHand: high and outside his frame, and he's a spectacular catcher;
- * - highPoint: GO UP, or a ball over his head, taken at the top of his jump;
+ * - highPoint: GO UP on a ball at his shoulders or higher, or a ball over his head, taken at the top of his jump;
  * - overShoulder: a deep ball dropping in over him as he runs away from the throw;
  * - toeTap: on the sideline, feet dragged in bounds;
  * - body: SECURE, cradled into the chest (he goes down with it in traffic);
  * - hands: RUN, the hands catch in stride.
  */
+/** A GO UP call jumps only for a ball arriving this high (yd, about his shoulders): below it the jump reads as leaping over the ball (the M6.5 #5 in-game capture). */
+const GO_UP_Z = 1.75;
 export type CatchLook = 'dive' | 'oneHand' | 'highPoint' | 'overShoulder' | 'toeTap' | 'body' | 'hands';
 export function catchLook(s: PlayState, r: Agent, at: { x: number; y: number; z: number } = s.ball.aim): CatchLook {
   const call = s.catchType ?? 'rac';
@@ -471,7 +473,8 @@ export function catchLook(s: PlayState, r: Agent, at: { x: number; y: number; z:
   const fromBehind = sp > 5 && bv > 1 && (s.ball.vel.x * hx + s.ball.vel.y * hy) / bv > 0.55;
   if (at.z < 0.8 && away > 1.1) return 'dive';
   if (at.z > 1.9 && across > 0.8 && r.fx.a('spectacular') > 0.6) return 'oneHand';
-  if (call === 'aggressive' || at.z > 2.35) return 'highPoint';
+  // GO UP leaps only for a ball at the shoulders or higher (GO_UP_Z); lower, he attacks it with his hands.
+  if ((call === 'aggressive' && at.z > GO_UP_Z) || at.z > 2.35) return 'highPoint';
   if (air >= 18 && fromBehind) return 'overShoulder';
   if (FIELD_HALF_W - Math.abs(at.y) < 1.2) return 'toeTap';
   if (call === 'possession') return 'body';

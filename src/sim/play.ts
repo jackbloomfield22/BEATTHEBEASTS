@@ -534,6 +534,8 @@ const CARRIER_COAST = 0.55;
 
 /** A SECURE catch goes down with the ball when a defender is this close (yd) as it's caught. */
 const SECURE_DOWN = 2;
+/** Ticks from a diving catch to landing on the turf (catch_dive: secure at the reach, chest down ~0.4 s later). */
+const DIVE_CATCH_LAND = 24;
 
 /**
  * Weight in a cut: a ball carrier asked to change direction sharply at
@@ -1014,6 +1016,13 @@ function ballStep(s: PlayState): void {
             s.events.push({ t: s.t, type: 'move', who: [who], data: { move: 'secureDown' } });
             whistle(s, 'tackle', Math.max(s.maxX, ballNose(a)), true);
             return;
+          }
+          // Laid out for it low and away: he lands with it and is down where
+          // the ball ends up, like the carrier's dive (the catch_dive clip lands
+          // on the forearms and chest about 0.4 s after the catch).
+          if (look === 'dive') {
+            a.move = 'dive';
+            a.busy = Math.max(a.busy, DIVE_CATCH_LAND);
           }
         } else {
           a.busy = Math.max(a.busy, 10);

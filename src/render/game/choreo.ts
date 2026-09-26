@@ -485,9 +485,10 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     b.lie = { x: r.position.x, z: r.position.z, yaw: r.rotation.y, prone: true };
     b.lyingClip = false;
   }
-  // A dive catch the sim didn't put down (he's the carrier, still up): off
-  // the turf and after it rather than lie there while he runs on.
-  if (b.lie && !b.lie.up && !a.down && i === s.carrier && s.phase === 'carrier' && b.catchClip && CATCH_LYING.has(b.catchClip)) {
+  // A lying catch the sim didn't put down (the sim downs a diving catch
+  // when he lands, busy running out; this is the guard if it ever doesn't):
+  // off the turf and after it rather than lie there while he runs on.
+  if (b.lie && !b.lie.up && !a.down && a.busy <= 0 && i === s.carrier && s.phase === 'carrier' && b.catchClip && CATCH_LYING.has(b.catchClip)) {
     b.lie = null;
     b.fallen = false;
     b.lyingClip = false;
