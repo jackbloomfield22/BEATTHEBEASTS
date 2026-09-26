@@ -11,14 +11,18 @@ import { test, type Page } from '@playwright/test';
 // The pop meter's log (?pops) goes next to each video.
 //   BTB_VIDEO=1 npm run shots                 all three clips
 //   BTB_VIDEO=1 BTB_CLIP=sack npm run shots   one clip
-// Output: docs/screenshots/m5.5/<clip>.mp4 and <clip>.pops.json.
+//   BTB_VIDEO=1 BTB_CONCEPTS=1 npm run shots  the M6.5 broadcast concepts (BTB_CLIP picks one)
+// Output: docs/screenshots/m5.5/<clip>.mp4 and <clip>.pops.json (the concepts: docs/screenshots/m6.5/).
+// BTB_VIDEO_FPS sets the frame rate (the concepts default to 20: this
+// container renders ~2 frames a minute, and 20 still reads a cut).
 
-const OUT = 'docs/screenshots/m5.5';
-const FPS = 30;
+const CONCEPTS = !!process.env.BTB_CONCEPTS;
+const OUT = CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
+const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
-const LEAD_IN = 36;
-const TAIL = 75;
+const LEAD_IN = Math.round(FPS * 1.2);
+const TAIL = Math.round(FPS * 2.5);
 const W = 1280;
 const H = 720;
 /** Quality tier for the recording (Low renders fastest here; the look is judged on the screenshots). */
@@ -115,7 +119,8 @@ async function record(page: Page, clip: Clip) {
   console.log(`${clip.id}: ${n} frames, pops worst ${pops.worst} rad/s, ${pops.spikes.length} spikes`);
 }
 
-const IDS = ['completion-rac', 'sack', 'broken-tackle'].filter((id) => !process.env.BTB_CLIP || process.env.BTB_CLIP === id);
+const CONCEPT_IDS = ['slant', 'out', 'curl', 'go', 'post', 'corner', 'crosser', 'screen', 'back-shoulder', 'scramble-drill'];
+const IDS = (CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || process.env.BTB_CLIP === id);
 test.use({ viewport: { width: W, height: H } });
 for (const id of IDS) {
   test(`feel video · ${id}`, async ({ page }) => {

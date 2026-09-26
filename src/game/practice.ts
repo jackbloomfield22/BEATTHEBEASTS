@@ -294,7 +294,7 @@ class PracticeSession {
   /** A scripted clip's play (the feel videos): its seed, coverage and spot. Step it with tickWith. */
   callClip(c: Clip): void {
     set({ playId: c.play });
-    this.setUp(c.play, c.seed, defById(c.def), { ...startSituation(0, 0), los: c.los, ballY: 0, toGo: 10, down: 1 });
+    this.setUp(c.play, c.seed, defById(c.def), { ...startSituation(0, 0), los: c.los, ballY: 0, toGo: 10, down: 1 }, true);
   }
 
   /** Step one tick with a given input (a scripted clip), through the same path as tick(). */
@@ -327,7 +327,8 @@ class PracticeSession {
     return out;
   }
 
-  private setUp(playId: string, seed: number, def: DefCall, sit: Situation): void {
+  /** `clip`: a scripted clip's play, set up exactly as Node finds it (createPlay's defaults: no chemistry, fatigue or difficulty from this session). */
+  private setUp(playId: string, seed: number, def: DefCall, sit: Situation, clip = false): void {
     if (!this.rosters) return;
     this.closeHot();
     const play = playById(playId);
@@ -337,15 +338,15 @@ class PracticeSession {
       defense: this.teams ? defenseFor(def, this.teams.beasts) : this.rosters.defense,
       play,
       // The Touch pass hold setting: how long a receiver key is held before a driven ball becomes touch.
-      tapMax: getSettings().controls.bulletHoldMs / 1000,
+      tapMax: clip ? undefined : getSettings().controls.bulletHoldMs / 1000,
       def,
       los: sit.los,
       ballY: sit.ballY,
       toGo: sit.toGo,
       user: true,
-      difficulty: this.difficulty,
-      fatigue: { ...this.fatigue },
-      chem: this.chemistry(play),
+      difficulty: clip ? undefined : this.difficulty,
+      fatigue: clip ? undefined : { ...this.fatigue },
+      chem: clip ? undefined : this.chemistry(play),
       down: sit.down,
     });
     this.runner = new SimRunner(state);
