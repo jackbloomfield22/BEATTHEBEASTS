@@ -33,8 +33,22 @@ const DRIFT = 0.55;
 const BASE = 0.3;
 /** A rusher picked up again soon after beating his man starts the new rep this far ahead (leverage). */
 const REPICK_LEV = 0.2;
-/** A run block's rep-to-rep spread (σ of skill edge): some reps the lineman wins cleanly, some he's beaten at once (penetration: the stuffs). M5.5 had 0.3. */
-const RUN_BIAS = 0.7;
+/**
+ * A run block's rep-to-rep spread (σ of skill edge): some reps the lineman
+ * wins cleanly, some he's beaten at once (penetration: the stuffs). M5.5 had
+ * 0.3; M6 widened it to 0.7 for penetration, which made a lucky rep shed
+ * inside a second (M6.5 #8, tools/sim/runblocks.ts: median shed 1.0 s after
+ * the engage, 61% of sheds before the back reached the line). 0.4 keeps the
+ * stuffs and ends the boom-or-bust.
+ */
+const RUN_BIAS = 0.4;
+/**
+ * A defender comes off his block to the ball only when the back is within
+ * this (yd) and on the far side of him from the blocker: a step and an arm.
+ * At 4 yd (M6) every back running the gap beside an engaged tackle pulled him
+ * off the block as he arrived (M6.5 #8), so the run died at the line.
+ */
+const COME_OFF = 2.5;
 /** A pass set's rep-to-rep spread (σ of skill edge), M6: without it every rep of a matchup took the same time, and the rush never won early. */
 const PASS_BIAS = 0.4;
 /**
@@ -192,7 +206,7 @@ export function stepBlocks(s: PlayState, goal: V2): void {
       const toB = norm(sub(b.pos, d.pos));
       const toC = norm(sub(goal, d.pos));
       const cover = toB.x * toC.x + toB.y * toC.y;
-      if (dist(d.pos, goal) < 4) e += Math.max(0, 0.4 - cover) * 1.5;
+      if (dist(d.pos, goal) < COME_OFF) e += Math.max(0, 0.4 - cover) * 1.2;
     }
     // Drift toward whoever has the edge, plus a base drift for the rusher
     // (blocks don't hold forever), plus matchup noise.

@@ -47,8 +47,22 @@ const SCRAMBLE_THROW = 5;
 
 /** The most a tackled runner carries the pile on (yd). */
 const FALL_MAX = 2.5;
-/** How much of his speed downhill a tackled runner carries on (× his share of the pair's mass, s): tuned so backs average ~2.2 yd after contact against the Beasts. */
-const FALL_K = 0.55;
+/**
+ * How much of his speed downhill a tackled runner carries on (× his share of
+ * the pair's mass, s), and how much a tackler coming the other way takes off
+ * it. M6.5 #8: 0.55 and 0.15 gave every short run the same yard and a half
+ * after contact wherever he was hit; a back at speed now falls for two and
+ * more, one met square by a linebacker filling downhill stops where he is
+ * (4–7 yd runs 24% → 27% of carries, tools/sim/runhist.ts).
+ */
+const FALL_K = 0.7;
+const FALL_STOP = 0.45;
+/** How much further than his arms a defender going by can lunge (yd): a full-length dive at the legs. */
+const LUNGE = 1.0;
+/** ...and only this far past the line (yd). */
+const LUNGE_PAST = 4;
+/** ...and how much of a squared-up tackle he keeps at the fingertips. */
+const LUNGE_KEEP = 0.85;
 
 /** The closest to a sideline a player who isn't carrying it pulls up (yd): a stride inside the white (keepInBounds); route runners keep more. */
 const PULL_UP = 0.35;
@@ -737,9 +751,16 @@ function contactStep(s: PlayState): void {
   if (c.move === 'dive' && slides(c) && !inPocket) return;
   for (const o of s.agents) {
     if (o.side === c.side || o.down || o.busy > 0 || o.mem.outOfPlay) continue;
-    // Engaged defenders can come off a block for an arm tackle as he passes (lower odds).
+    // Engaged defenders can come off a block for an arm tackle as he passes:
+    // one reach per pass (M6.5 #8: a 25% roll every tick gave a blocked
+    // tackle near-certain tries at every back going by; 36% of the 1–4 yd
+    // runs were first stopped by a man still in a block, tools/sim/rundiag.ts).
     const engaged = blockOf(s, o.i);
-    if (engaged && (dist(o.pos, c.pos) > o.fx.radius + c.fx.radius + 0.35 || s.rng.contact() > 0.25)) continue;
+    if (engaged) {
+      if (dist(o.pos, c.pos) > o.fx.radius + c.fx.radius + 0.35) continue;
+      if (((o.mem.armAt as number | undefined) ?? -9) > s.t - 1) continue;
+      o.mem.armAt = s.t;
+    }
     if (((o.mem.tackleCd as number | undefined) ?? -1) > s.t) continue;
     // Closest they came during this tick (both moving: at 18 yd/s closing a
     // pair covers 0.3 yd a tick, so the end-of-tick gap alone lets a runner
@@ -749,22 +770,45 @@ function contactStep(s: PlayState): void {
     // can't close on a runner pulling away (lower odds, and he's on the ground after).
     const armReach = o.fx.radius + c.fx.radius + 0.6;
     let dive = false;
+    let lunge = -1;
     if (k > armReach) {
       // Level with him or losing ground: a diving tackle (~1 yd more reach).
       const closing = ((o.vel.x - c.vel.x) * (c.pos.x - o.pos.x) + (o.vel.y - c.vel.y) * (c.pos.y - o.pos.y)) / Math.max(1e-6, k);
-      if (k < armReach + 1.0 && closing < 0.6 && s.rng.contact() < 0.02) dive = true; // M6: 5% a tick dove at nearly every runner pulling away (0.15 missed dives a carry)
+      // A man who was in front of him as he goes by (M6.5 #8): he lunges
+      // once, at the closest point. Without it, 40% of the open-field
+      // meetings with a defensive back in front went by at 1.5–2.5 yd with
+      // no try at all, and one in five runs that got past the linebackers
+      // got past every safety too (tools/sim/rundiag.ts).
+      // (Attacking him, closing fast, in the last half-second: a man he runs by, not one chasing from behind.)
+      if (closing > 2 && k < armReach + 3) o.mem.attackT = s.t;
+      const attacking = s.t - ((o.mem.attackT as number | undefined) ?? -9) < 0.5;
+      const lungeAt = (o.mem.lungeAt as number | undefined) ?? -9;
+      // In the open field only: in the trash at the line a back going by a man a yard and a half off is past him.
+      const openField = !inPocket && (c.pos.x - s.setup.los) * (c.side === 'off' ? 1 : -1) > LUNGE_PAST;
+      if (!engaged && openField && k < armReach + LUNGE && closing < 0.6 && attacking && s.t - lungeAt > 1.5) {
+        o.mem.lungeAt = s.t;
+        lunge = (k - armReach) / LUNGE;
+        dive = true;
+      } else if (k < armReach + 1.0 && closing < 0.6 && s.rng.contact() < 0.02) dive = true; // M6: 5% a tick dove at nearly every runner pulling away (0.15 missed dives a carry)
       else continue;
     }
     const { out: out0, force } = resolveTackle(s, o, c);
     let out = out0;
     if (engaged) {
-      // Off the block: he gets an arm on him half the time it would have been a tackle.
-      if ((out === 'tackle' || out === 'bigHit') && s.rng.contact() < 0.5) out = 'broken';
-      if (out === 'tackle' || out === 'bigHit') s.blocks.splice(s.blocks.indexOf(engaged), 1);
+      // Off the block it's only an arm, and only if he's winning the block:
+      // a lineman his blocker has controlled (leverage toward −1) can't get
+      // free enough to finish (~16% of what would have been a tackle, even
+      // block; ~45% when he's about to shed).
+      const hold = 0.9 - 0.3 * Math.max(0, engaged.lev + 0.2);
+      if ((out === 'tackle' || out === 'bigHit') && s.rng.contact() < hold) out = 'broken';
+      if (out === 'bigHit') out = 'tackle';
+      if (out === 'tackle') s.blocks.splice(s.blocks.indexOf(engaged), 1);
     }
     if (dive) {
       o.anim = 'dive';
-      if ((out === 'tackle' || out === 'bigHit') && s.rng.contact() > 0.65) out = 'broken';
+      // A dive at a man pulling away keeps 65% of a squared-up tackle; a lunge at
+      // a man going by, LUNGE_KEEP at the fingertips down to 0.3 less at full stretch.
+      if ((out === 'tackle' || out === 'bigHit') && s.rng.contact() > (lunge >= 0 ? LUNGE_KEEP - 0.3 * lunge : 0.65)) out = 'broken';
       if (out !== 'tackle' && out !== 'bigHit') {
         o.down = true;
         o.anim = 'down';
@@ -781,8 +825,10 @@ function contactStep(s: PlayState): void {
       continue;
     }
     if (out === 'broken') {
-      c.vel.x *= 0.62;
-      c.vel.y *= 0.62;
+      // An arm off a block barely slows him (M6.5 #8); a real tackle broken costs him his stride.
+      const keep = engaged ? 0.88 : 0.62;
+      c.vel.x *= keep;
+      c.vel.y *= keep;
       o.busy = 28;
       o.mem.tackleCd = s.t + 0.9;
       s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10 } });
@@ -821,7 +867,7 @@ function contactStep(s: PlayState): void {
       let drive = 0;
       if (out !== 'bigHit') {
         const mr = c.fx.mass / (c.fx.mass + o.fx.mass);
-        drive = FALL_K * Math.max(0, c.vel.x * attack) * mr - 0.15 * Math.max(0, -o.vel.x * attack) * (1 - mr);
+        drive = FALL_K * Math.max(0, c.vel.x * attack) * mr - FALL_STOP * Math.max(0, -o.vel.x * attack) * (1 - mr);
         drive = Math.max(0, Math.min(FALL_MAX, drive));
       }
       const at = attack > 0 ? Math.max(s.maxX, ballNose(c)) + drive : c.pos.x - drive;

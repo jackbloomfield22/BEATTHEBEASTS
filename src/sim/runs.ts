@@ -22,8 +22,12 @@ const DB_READ = 0.05;
 /** Deep zones are pass-first: a beat more still (s; M5.5 0.2, which left the deep safeties backpedalling as backs reached the second level). */
 const DEEP_READ = 0.1;
 
-/** How deep a linebacker sits over his gap before the back gets to the line (yd): level at depth, then downhill as he arrives. */
-const LB_FIT = 1;
+/**
+ * How deep a linebacker sits over his gap before the back gets to the line
+ * (yd): level at depth, then downhill as he arrives. M6.5 #8: at 1 he met
+ * the back at the line on most short runs; NFL backers fill ~2 yd off it.
+ */
+const LB_FIT = 2;
 
 /** Gap offsets from the ball (yd): A (center–guard), B (guard–tackle), C (outside the tackle), D (outside the tight end). */
 export const GAPS = [0.7, 2.0, 3.4, 5.2];

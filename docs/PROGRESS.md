@@ -10,6 +10,7 @@
 - **M5 Core play:** merged (PR #7), with the quick pass (pass camera, 1/2/3 catches, arrows, Q–F moves).
 - **M5.5 Game feel:** merged (PR #8), with the round-two fixes (diagonal speed, the automatic burst, driven throws, no slowdown at the catch, defenders that don't bunch).
 - **M6 Full game:** built on `claude/trusting-ptolemy-m2i78d`, PR open. The draft in the Contenders' locker room, and a full game against the Beasts from Quick Play, Classic, Film Room or the Daily through the walk-out, every possession, kicks, the two-minute drill and overtime to the results screen. **Perf gate closed:** mid-game on the preview, Classic, Ultra (auto-selected) on your M1 Pro at 100% resolution (2029×1023): 88.4 fps average, 11.3 ms, p99 12.8 ms, 206 draw calls, 1.71 M triangles.
+- **M6.5 Gameplay pass:** in progress on `claude/m65-gameplay` (brief: `docs/M6_5_BRIEF.md`). Item 8 (the run game's explosive plays) first, then the passing items 1–7, then 9–11.
 - **Next: M7** (presentation): the tunnel reveal grows from the walk-out, pre-game, broadcast overlay, replays, celebrations, commentary, audio.
 
 ## Known legacy issues (do not rebuild)
@@ -33,6 +34,54 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 | L13 | `todayKey` uses the player's local date | 4606 | Kept on purpose (Wordle-style: the daily flips at local midnight) |
 
 ## Milestone log
+
+### M6.5 Gameplay pass (in progress)
+
+The owner's 11-point brief is in `docs/M6_5_BRIEF.md`. Each item is diagnosed in the sim first, then fixed. Order: the run game's explosive plays (#8), the passing game (#1–7), then carrier controls, steering and carrier animation (#9–11).
+
+**#8 The run game: diagnosis.** New tools: `tools/sim/rundiag.ts` follows every carry of the run harness (speed at the line and at contact, free defenders near him at the line, who makes first contact and whether he was still in a block, whether the back got past the linebackers and then the safeties). `tools/sim/runblocks.ts` gives the run-block win rate, the shed times and when the sheds happen relative to the back reaching the line. `tools/sim/runhist.ts` now bins whole yards against an NFL reference (RB carries 2018–23, approximate). What it found, suspect by suspect from the brief:
+- *Speed before contact:* not the cause. Backs cross the line at about half their top speed on short runs and 0.7 on long ones, and heading churn doesn't separate good runs from bad.
+- *Blocks that never spring a lane:* the main cause, in three forms.
+  - Lucky reps shed too early: the rep-to-rep spread M6 widened (0.7) had the median run block shed 1.0 s after the engage, 61% of sheds before the back reached the line.
+  - Engaged linemen tackled far too often: a man still in a block had a 25% try every tick at a back going by and made first contact on 36% of the 1–4 yd runs.
+  - Blocks that never landed: on 45% of the 1–3 yd runs the tackler was a man a blocker was assigned to and never touched. Linemen climbing to linebackers and receivers stalking corners ran past him (the block only landed at 0.25 yd past the bodies), or whiffed in space.
+- *Second-level defenders who always fill right:* partly. Linebackers fitted at a yard off the ball and met the back at the line.
+- *Safeties who never lose leverage:* the opposite. Safeties and corners in front of the back in the open field went by him at 1.5–2.5 yd without a try on about 40% of meetings; one in five runs that got past the linebackers also got past the safeties, and those went the distance. Most 20+ runs (31 of 51) came against the three Cover 1 calls: the box is blocked, the corners are stalked, and the lone safety misses.
+
+**#8 The fixes.**
+- Run blocks: rep spread 0.7 → 0.4, and a defender comes off his block to the ball only within 2.5 yd (was 4).
+- Engaged arm tackles: one reach per second as the back goes by. It finishes only if he's winning the block (about 16% of what would have been a tackle when the block is even), and a broken arm barely slows the back.
+- Blocks land at arm's length (0.5 yd past the bodies).
+- Linebackers fit 2 yd off the ball.
+- Open field: a defender who was attacking the back lunges once at the closest point (4+ yd past the line), and tacklers break down in front of a runner instead of flying at him.
+- Falling forward depends on the collision: a back at speed carries on 2+ yd; one met square by a man filling downhill stops.
+- Tried and reverted, because they didn't move the numbers: a stronger drive in run blocks (stuffs fell to 9%), a 3% speed cost for carrying the ball, a lighter speed loss on broken tackles, and a lineman beating his block off the snap (it made no losses, since the back still falls to the line).
+
+**#8 Before / after** (the run harness: 12 runs × 10 calls × 10 reps, 80s 49ers offense vs the Beasts; whole yards; NFL reference approximate):
+
+| | M6 | now | NFL |
+|---|---|---|---|
+| Yards per carry | 4.35 | 5.17 | ~4.3 |
+| Median carry | 2 | 3 | 3 |
+| Stuffs (0 or loss) | 18.6% | 10.3% | ~18% |
+| 1–3 yd | 47.6% | 44.3% | 34% |
+| 4–6 yd | 19.2% | 20.6% | 25% |
+| 4–7 yd | 23.1% | 27.2% | |
+| 7–9 yd | 6.8% | 13.6% | 11% |
+| 10+ | 7.0% | 9.6% | ~12% |
+| 20–39 | 1.1% | 1.6% | 2.2% |
+| 40+ | 2.2% | 2.0% | 0.5% |
+| Run-block win rate | | 68% | ~70% (ESPN RBWR) |
+
+Passing is unchanged by it (whole harness: 60% completions, 8.6 yd/att against 8.5).
+
+**#8 Honest read.** The median is where it should be, mid-length runs are up, 10+ is up and stuffs are down. But it isn't there yet:
+- *Too many 1–3 yd runs, too few 4–6.* On most short runs contact still comes right at the line. The shed timing is centered on the back's arrival, so the hole closes as he gets to it. That's the next thing to look at in the run fits, together with the carrier's pressing the hole (#10, #11).
+- *Too few losses.* A back hit in the backfield still falls forward to about the line.
+- *The 40+ tail is four times the NFL's.* It mostly comes from Cover 1, where the one safety is the whole defense once the box is blocked.
+- *Stuffs now sit at the bottom of the harness band (10–26%).*
+
+I haven't watched these runs in the browser yet; that happens with the concept videos before the PR. The M5.5 catch-and-run clip moved to seed 42 (the lunge tackled the old one at 4.8 yd after the catch).
 
 ### M6 Full game (built, PR open)
 

@@ -8,12 +8,28 @@ import { formatRunDist, runDistribution } from '../../src/sim/outcomes.ts';
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const d = runDistribution(practiceRosters(snap), Number(process.argv[2] ?? 10));
 console.log(formatRunDist(d));
-const edges = [-99, 0, 1, 2, 3, 4, 6, 10, 20, 99];
-const ys = d.samples.map((p) => p.yards);
-for (let k = 0; k < edges.length - 1; k++) {
-  const n = ys.filter((y) => y >= edges[k]! && y < edges[k + 1]!).length;
-  console.log(`[${edges[k]},${edges[k + 1]}) ${((100 * n) / ys.length).toFixed(1).padStart(5)}% ${'#'.repeat(Math.round((100 * n) / ys.length))}`);
+// Whole yards, as the stat sheet spots them, beside an NFL reference: RB
+// carries 2018–23 (nflverse play-by-play, designed runs), approximate shares
+// to the nearest point. A reference for the shape, not a target to the decimal.
+const BINS: [string, number, number, number][] = [
+  ['loss', -99, -1, 10],
+  ['0', 0, 0, 8],
+  ['1–3', 1, 3, 34],
+  ['4–6', 4, 6, 25],
+  ['7–9', 7, 9, 11],
+  ['10–19', 10, 19, 9.5],
+  ['20–39', 20, 39, 2.2],
+  ['40+', 40, 999, 0.5],
+];
+const ys = d.samples.map((p) => Math.round(p.yards));
+console.log('yards    sim     NFL');
+for (const [name, lo, hi, ref] of BINS) {
+  const n = ys.filter((y) => y >= lo && y <= hi).length;
+  const pc = (100 * n) / ys.length;
+  console.log(`${name.padEnd(6)} ${pc.toFixed(1).padStart(5)}%  ${ref.toFixed(1).padStart(4)}%  ${'#'.repeat(Math.round(pc))}`);
 }
+const sorted = [...ys].sort((a, b) => a - b);
+console.log(`median (whole yards) ${sorted[sorted.length >> 1]}; 4–7 yd ${((100 * ys.filter((y) => y >= 4 && y <= 7).length) / ys.length).toFixed(1)}%`);
 const byPlay = new Map<string, number[]>();
 for (const p of d.samples) byPlay.set(p.play, [...(byPlay.get(p.play) ?? []), p.yards]);
 for (const [k, v] of byPlay) {

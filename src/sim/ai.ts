@@ -264,6 +264,9 @@ export const blockable = (s: PlayState, d: Agent): boolean => s.t - ((d.mem.shed
 /** A rusher who's just beaten his man can be picked up by a help blocker (a guard sliding over, the back) this soon after, s (M5.5: 1.6 s, i.e. never in a dropback). With M6's faster rush, the help is what keeps a no-throw pocket near 4 s. */
 const REPICK = 0.75;
 
+/** How far past the bodies a block lands (yd). */
+const ENGAGE_REACH = 0.5;
+
 /**
  * Run blocking (and stalk blocks downfield): pick the nearest threat to the
  * play and drive him. `downfield`: only defenders in front of the carrier,
@@ -307,7 +310,11 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, 
   steer(b, arrive(b, mid, 0.95));
   // Downfield, a block only lands from between him and the ball (else it's a block in the back).
   const between = !downfield || (b.pos.x - d.pos.x) * (toward.x - d.pos.x) + (b.pos.y - d.pos.y) * (toward.y - d.pos.y) > 0;
-  if (engageOk && between && blockable(s, d) && dist(b.pos, d.pos) < b.fx.radius + d.fx.radius + 0.25) {
+  // A block lands at arm's length (hands to the chest): the bodies ~0.5 yd apart
+  // (M6.5 #8: at 0.25, receivers and climbing linemen ran past a man coming
+  // at them without touching him; 29% of the 1–4 yd runs were ended by a
+  // defender a blocker was assigned to and never reached, tools/sim/rundiag.ts).
+  if (engageOk && between && blockable(s, d) && dist(b.pos, d.pos) < b.fx.radius + d.fx.radius + ENGAGE_REACH) {
     // Getting a hat on a man moving in space: the faster he's going across
     // the blocker and the quicker he is than the blocker, the likelier the
     // whiff (a lineman climbing to a flowing linebacker, a receiver on a
@@ -633,6 +640,13 @@ export function intercept(c: V2, v: number, p: V2, vt: V2): V2 | null {
 }
 
 /**
+ * A tackler's breakdown pace in front of a runner (share of top speed).
+ * M6.5 #8: flying at him flat out, defensive backs in the open field went
+ * by at 1.5–2.5 yd without a try on ~40% of meetings (tools/sim/rundiag.ts).
+ */
+const BREAKDOWN = 0.6;
+
+/**
  * Chase a ball carrier. A good pursuer takes the cut-off angle (the intercept
  * point); a poor one chases where the runner is, and ends up trailing (Pursuit).
  */
@@ -685,7 +699,11 @@ export function pursue(s: PlayState, d: Agent, t: Agent): void {
     const lead = Math.max(0.1, Math.min(0.6, close / Math.max(4, d.fx.vmax)));
     const at = meet ?? { x: seenT.pos.x + seenT.vel.x * lead, y: seenT.pos.y + seenT.vel.y * lead };
     const dir = norm(sub(at, d.pos));
-    steer(d, { x: dir.x * d.fx.vmax, y: dir.y * d.fx.vmax });
+    // In front of him in the open field: break down (short, choppy steps)
+    // so he can't run by, instead of flying at him flat out.
+    const facing = (t.vel.x * (d.pos.x - t.pos.x) + t.vel.y * (d.pos.y - t.pos.y)) / Math.max(1e-6, len(t.vel) * close);
+    const breakDown = facing > 0.3 && close > 1.2 && len(t.vel) > 4 ? BREAKDOWN : 1;
+    steer(d, { x: dir.x * d.fx.vmax, y: dir.y * d.fx.vmax }, { pace: breakDown });
     return;
   }
   const room = FIELD_HALF_W - Math.abs(t.pos.y);
