@@ -5,7 +5,7 @@
 // caught it, on his route after the break (the ball on time: it arrives
 // within 0.6 s of the break), open (1.2+ yd), and gained at least the
 // route's depth. Prints the best few per concept.
-//   node tools/run-ts.mjs tools/sim/findconcepts.ts [seeds] [--only=slant]
+//   node tools/run-ts.mjs tools/sim/findconcepts.ts [seeds] [--only=slant,out]
 import { readFileSync } from 'node:fs';
 import { createPlay, defById, DEF_CALLS, playById, practiceRosters, runToWhistle, type SnapshotLike } from '../../src/sim/index.ts';
 import { concept, type ConceptPlan } from '../../src/game/clips.ts';
@@ -24,6 +24,8 @@ export interface ConceptSpec {
   /** Least gain (yd). */
   min: number;
   plan?: Partial<ConceptPlan>;
+  /** Other plays that run the same route (play id, icon), tried as well. */
+  alts?: [string, number][];
   /** The catch must come off the break (timing routes): the ball arrives within this long after it (s). A go or a screen has none. */
   timing?: number;
   /** Back-shoulder placement must show (the throw's place). */
@@ -33,23 +35,23 @@ export interface ConceptSpec {
 const range = (a: number, b: number, step: number) => Array.from({ length: Math.floor((b - a) / step) + 1 }, (_, k) => a + k * step);
 
 export const SPECS: ConceptSpec[] = [
-  { id: 'slant', play: 'doubles-slants', icon: 1, ats: range(30, 80, 4), min: 6, timing: 0.7 },
-  { id: 'out', play: 'doubles-quick-outs', icon: 1, ats: range(30, 90, 4), min: 5, timing: 0.7 },
+  { id: 'slant', play: 'doubles-slants', icon: 1, ats: range(30, 80, 4), min: 6, timing: 0.7, alts: [['trips-stick', 4], ['bunch-snag', 4], ['empty-quick', 1], ['doubles-slants', 3]] },
+  { id: 'out', play: 'doubles-quick-outs', icon: 1, ats: range(30, 90, 4), min: 5, timing: 0.7, alts: [['doubles-quick-outs', 2], ['empty-quick', 2]] },
   { id: 'curl', play: 'doubles-curls', icon: 1, ats: range(60, 130, 5), min: 10, timing: 0.7, plan: { call: 'possession' } },
   { id: 'go', play: 'trips-four-verts', icon: 3, ats: range(70, 140, 5), min: 25, plan: { hold: 16 } },
-  { id: 'post', play: 'singleback-pa-post', icon: 1, ats: range(80, 160, 5), min: 18, timing: 1.5, plan: { hold: 10 } },
-  { id: 'corner', play: 'doubles-smash', icon: 1, ats: range(60, 140, 5), min: 14, timing: 1.5, plan: { hold: 14 } },
-  { id: 'crosser', play: 'trips-y-cross', icon: 1, ats: range(80, 150, 5), min: 12, timing: 1.2 },
+  { id: 'post', play: 'singleback-pa-post', icon: 1, alts: [['singleback-pa-yankee', 2], ['trips-y-cross', 3]], ats: range(80, 160, 5), min: 18, timing: 1.5, plan: { hold: 10 } },
+  { id: 'corner', play: 'doubles-smash', icon: 1, ats: range(60, 140, 5), min: 14, timing: 1.5, plan: { hold: 14 }, alts: [['bunch-snag', 3], ['empty-spot', 2], ['doubles-mesh', 4]] },
+  { id: 'crosser', play: 'trips-y-cross', icon: 1, ats: range(80, 150, 5), min: 12, timing: 1.2, alts: [['ace-pa-crossers', 1], ['singleback-pa-yankee', 1], ['singleback-pa-post', 2]] },
   { id: 'screen', play: 'doubles-rb-screen', icon: 1, ats: range(60, 120, 4), min: 6 },
   { id: 'back-shoulder', play: 'trips-four-verts', icon: 4, ats: range(70, 130, 5), min: 12, backShoulder: true, plan: { aim: { x: -1, y: -0.2 }, call: 'aggressive' } },
   { id: 'scramble-drill', play: 'trips-y-cross', icon: 0, ats: range(150, 230, 8), min: 8, scramble: true },
 ];
 
-interface Hit { id: string; def: string; seed: number; at: number; icon: number; yards: number; sep: number; lag: number; air: number; td: boolean; plan: ConceptPlan }
+interface Hit { id: string; play: string; def: string; seed: number; at: number; icon: number; yards: number; sep: number; lag: number; air: number; td: boolean; plan: ConceptPlan }
 
-export function tryOne(spec: ConceptSpec, def: string, seed: number, at: number, icon: number, dir = 1): Hit | null {
+export function tryOne(spec: ConceptSpec, def: string, seed: number, at: number, icon: number, dir = 1, play = spec.play): Hit | null {
   const plan: ConceptPlan = { icon, at, ...spec.plan, ...(spec.scramble ? { scramble: { at: 110, dir: { x: 0.25, y: dir } } } : {}) };
-  const s = createPlay({ seed, offense: r.offense, defense: r.defense, play: playById(spec.play), def: defById(def), los: 30, toGo: 10, user: true });
+  const s = createPlay({ seed, offense: r.offense, defense: r.defense, play: playById(play), def: defById(def), los: 30, toGo: 10, user: true });
   const tgt = s.icons[icon - 1]!;
   let breakT = -1;
   const script = concept(plan);
@@ -78,19 +80,20 @@ export function tryOne(spec: ConceptSpec, def: string, seed: number, at: number,
   if (spec.scramble && !(s.scrambleT > 0)) return null;
   const lag = breakT < 0 ? 9 : c.t - breakT;
   if (spec.timing && (breakT < 0 || lag < 0 || lag > spec.timing)) return null;
-  if (p.sep === undefined || p.sep < 1.2 || res.yards < spec.min) return null;
-  return { id: spec.id, def, seed, at, icon, yards: res.yards, sep: p.sep, lag, air: p.airYards, td: res.touchdown, plan };
+  if (p.sep === undefined || p.sep < 1 || res.yards < spec.min) return null;
+  return { id: spec.id, play, def, seed, at, icon, yards: res.yards, sep: p.sep, lag, air: p.airYards, td: res.touchdown, plan };
 }
 
 if (process.argv[1]?.endsWith('findconcepts.ts')) {
-  for (const spec of SPECS.filter((x) => !ONLY || x.id === ONLY)) {
+  for (const spec of SPECS.filter((x) => !ONLY || ONLY.split(',').includes(x.id))) {
     const hits: Hit[] = [];
     for (const d of DEF_CALLS) {
       for (let seed = 1; seed <= SEEDS; seed++) {
         for (const at of spec.ats) {
-          for (const icon of spec.scramble ? [1, 2, 3, 4, 5] : [spec.icon]) {
+          const pairs: [string, number][] = spec.scramble ? [1, 2, 3, 4, 5].map((k) => [spec.play, k]) : [[spec.play, spec.icon], ...(spec.alts ?? [])];
+          for (const [play, icon] of pairs) {
             for (const dir of spec.scramble ? [1, -1] : [1]) {
-              const h = tryOne(spec, d.id, seed, at, icon, dir);
+              const h = tryOne(spec, d.id, seed, at, icon, dir, play);
               if (h) hits.push(h);
             }
           }
@@ -101,6 +104,6 @@ if (process.argv[1]?.endsWith('findconcepts.ts')) {
     const score = (h: Hit) => -Math.abs(h.sep - 2.5) - (spec.timing ? h.lag * 3 : 0) - Math.max(0, h.yards - spec.min - 25) * 0.1;
     hits.sort((a, b) => score(b) - score(a));
     console.log(`\n${spec.id} (${spec.play}): ${hits.length} candidates`);
-    for (const h of hits.slice(0, 5)) console.log(`  ${h.def.padEnd(12)} seed ${String(h.seed).padStart(3)} at ${h.at} icon ${h.icon}${h.plan.scramble ? ` scramble ${JSON.stringify(h.plan.scramble.dir)}` : ''}: ${h.yards.toFixed(1)} yd (air ${h.air.toFixed(1)}), sep ${h.sep.toFixed(2)}, ball ${h.lag.toFixed(2)} s after the break${h.td ? ' TD' : ''}`);
+    for (const h of hits.slice(0, 5)) console.log(`  ${h.play.padEnd(22)} ${h.def.padEnd(12)} seed ${String(h.seed).padStart(3)} at ${h.at} icon ${h.icon}${h.plan.scramble ? ` scramble ${JSON.stringify(h.plan.scramble.dir)}` : ''}: ${h.yards.toFixed(1)} yd (air ${h.air.toFixed(1)}), sep ${h.sep.toFixed(2)}, ball ${h.lag.toFixed(2)} s after the break${h.td ? ' TD' : ''}`);
   }
 }
