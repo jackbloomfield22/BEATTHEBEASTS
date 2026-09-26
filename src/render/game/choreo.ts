@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { pullers } from '@/sim';
+import { carrierPace, GOAL_X, pullers } from '@/sim';
 import type { PlayerAnimator } from '@/anim/animator';
 import type { Ragdoll } from '@/anim/ragdoll';
 import type { PlayState, SimEvent } from '@/sim';
@@ -8,6 +8,7 @@ import { YARD } from '../world/constants';
 import { worldDir } from '@/game/coords';
 import { latency } from '@/game/latency';
 import { catchLook, type CatchLook } from '@/sim/passing';
+import { threatOf } from '@/sim/moves';
 
 // The choreographer: which clip each player plays, from the sim's state and
 // events (TECH_PLAN §9.2). The sim decides everything; this only picks and
@@ -43,6 +44,14 @@ export interface Body {
   once: Set<string>;
   /** The catch clip playing for this play's catch (M6.5 #5), or null. */
   catchClip: string | null;
+  /** M6.5 #11: a dive reaching the ball out (the ball in the hand at full length). */
+  reach: boolean;
+  /** Downed bodies he has hurdled this play (never twice over the same man). */
+  hurdled: Set<number>;
+  /** The AI carrier's heading (rad) and when it was read (sim s), and the last cut played (sim s). */
+  head: number;
+  headT: number;
+  cutAt: number;
 }
 
 /** Upper body, for a throw on the run (the legs keep running). */
@@ -68,6 +77,10 @@ export function resetBody(b: Body): void {
   b.lyingClip = false;
   b.once.clear();
   b.catchClip = null;
+  b.reach = false;
+  b.hurdled.clear();
+  b.headT = -1;
+  b.cutAt = -9;
   b.animator.onTurn = null;
 }
 
@@ -214,6 +227,150 @@ export function catchMagnet(b: Body, ball: THREE.Vector3, out: THREE.Vector3): n
   return k * (1 - THREE.MathUtils.smoothstep(ball.distanceTo(out), MAGNET_NEAR, MAGNET_FAR));
 }
 
+// --- The ball carrier (M6.5 #11) -----------------------------------------------
+// The sim decides where he goes; this picks how he moves: the carrier's gait
+// families (space, traffic by the sim's context pace, the burst's drive),
+// the press of a designed run, the plant-and-cut on the sim's cut, the dip
+// before contact, the hurdle over a downed man, the reach for the line, and
+// where his eyes are.
+
+/** A cut this sharp (deg) or more plays the deep plant (the sim's cuts run 30° to 180°). */
+const SHARP_CUT = 75;
+/** Traffic is all the way in at the sim's slowest context pace (carrierPace: 0.86 with a free tackler at 1.2 yd). */
+const TRAFFIC_PACE = 0.86;
+/** A designed run presses the hole until he's this far past the line (yd). */
+const PRESS_UNTIL = 1;
+/** The dip: a free tackler closing inside this (yd), within 60° of his run, all the way in by DIP_FULL. */
+const DIP_R = 1.6;
+const DIP_FULL = 0.9;
+/** His eyes go to the nearest free tackler inside this (yd); farther, he scans upfield. */
+const LOOK_R = 9;
+/** An AI carrier whose run turns faster than this (rad/s) at speed (yd/s) plays the light cut. */
+const AI_CUT_RATE = 2.5;
+const AI_CUT_SPEED = 5;
+/** The hurdle: at speed (yd/s) over a downed man whose body he'll cross (within BODY_R yd) this far ahead (s). */
+const HURDLE_SPEED = 5;
+const HURDLE_AHEAD = [0.3, 0.62] as const;
+const BODY_R = 0.8;
+/** A dive reaches the ball out within this (yd) of the goal line or the line to gain. */
+const REACH_R = 2.2;
+/** The ball's nose ahead of his body (yd): sim/play.ts BALL_NOSE. */
+const NOSE = 0.4;
+
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+
+/** The plant-and-cut, timed so its plant spans the sim's (dur, s; null: the clip's own pace). */
+function playCut(b: Body, side: 'L' | 'R', deg: number, dur: number | null, simT: number): void {
+  const name = `${deg >= SHARP_CUT ? 'cut_plant_sharp' : 'cut_plant'}_${side === 'L' ? 'l' : 'r'}`;
+  if (!b.animator.lib.meta[name]) return;
+  const plant = eventAt(b, name, 'plant') ?? 0.1;
+  const push = eventAt(b, name, 'push') ?? 0.3;
+  const rate = dur ? Math.max(0.6, Math.min(1.8, (push - plant) / dur)) : 1;
+  // In just before the plant foot lands: the sim's plant has started.
+  b.animator.play(name, { now: true, rate, t0: Math.max(0, plant - 0.04) });
+  b.cutAt = simT;
+}
+
+/** A dive near the goal line or the line to gain reaches the ball out for it. */
+export function reachDive(s: PlayState, i: number): boolean {
+  const a = s.agents[i]!;
+  const attack = a.side === 'off' ? 1 : -1;
+  const nose = a.pos.x + attack * NOSE;
+  const toGoal = ((attack > 0 ? GOAL_X : 0) - nose) * attack;
+  if (toGoal > -0.3 && toGoal < REACH_R) return true;
+  if (a.side !== 'off') return false;
+  const gain = s.setup.los + s.setup.toGo;
+  return gain < GOAL_X && gain - nose > -0.3 && gain - nose < REACH_R;
+}
+
+/**
+ * The dip before contact: a free tackler closing in front of him (within
+ * 60° of his run) and inside DIP_R. + on his left, − on his right; the size
+ * grows as he closes.
+ */
+export function dipFor(s: PlayState, i: number): number {
+  const a = s.agents[i]!;
+  const d = threatOf(s, a);
+  if (!d) return 0;
+  const rx = d.pos.x - a.pos.x;
+  const ry = d.pos.y - a.pos.y;
+  const k = Math.hypot(rx, ry);
+  if (k > DIP_R || k < 1e-3) return 0;
+  const sp = Math.hypot(a.vel.x, a.vel.y);
+  const attack = a.side === 'off' ? 1 : -1;
+  const hx = sp > 1 ? a.vel.x / sp : attack;
+  const hy = sp > 1 ? a.vel.y / sp : 0;
+  if ((rx * hx + ry * hy) / k < 0.5) return 0;
+  // Closing: the gap shrinking (their relative velocity along the line between them).
+  const closing = -((d.vel.x - a.vel.x) * rx + (d.vel.y - a.vel.y) * ry) / k;
+  if (closing < 0.5) return 0;
+  const w = clamp01((DIP_R - k) / (DIP_R - DIP_FULL));
+  // The sim's y is to the left of its x: positive cross is on his left.
+  return (hx * ry - hy * rx >= 0 ? 1 : -1) * w;
+}
+
+/** How much of his run is traffic: the sim's context pace (1 in space, 0.86 with a free tackler at 1.2 yd). */
+export function trafficOf(s: PlayState, i: number): number {
+  const a = s.agents[i]!;
+  return clamp01((1 - carrierPace(s, a, a.side === 'off' ? 1 : -1)) / (1 - TRAFFIC_PACE));
+}
+
+function carrierDrive(b: Body, i: number, s: PlayState, simT: number, out: Drive, busy: boolean): void {
+  const a = s.agents[i]!;
+  const anim = b.animator;
+  const attack = a.side === 'off' ? 1 : -1;
+  out.carry = 1;
+  let traffic = trafficOf(s, i);
+  // A designed run presses the hole: pitched into it, patient choppy steps, until he's through the line.
+  if (s.setup.play.run && a.side === 'off' && (a.pos.x - s.setup.los) * attack < PRESS_UNTIL) {
+    out.press = 1;
+    traffic = Math.max(traffic, 0.5);
+  }
+  out.traffic = traffic;
+  out.drive = a.burst > 0 ? 1 : 0;
+  const moving = !busy && a.busy <= 0;
+  out.dip = moving ? dipFor(s, i) : 0;
+  const sp = Math.hypot(a.vel.x, a.vel.y);
+  // An AI carrier's sharp turn at speed reads as a (light) cut; the player's cuts come from the sim's cut event.
+  const user = s.setup.user && a.side === 'off';
+  if (!user && sp > AI_CUT_SPEED && moving) {
+    const h = Math.atan2(a.vel.y, a.vel.x);
+    if (b.headT < 0) {
+      b.head = h;
+      b.headT = simT;
+    } else if (simT - b.headT >= 1 / 30) {
+      const turn = Math.atan2(Math.sin(h - b.head), Math.cos(h - b.head)) / (simT - b.headT);
+      b.head = h;
+      b.headT = simT;
+      if (Math.abs(turn) > AI_CUT_RATE && simT - b.cutAt > 0.8) playCut(b, turn > 0 ? 'L' : 'R', 45, null, simT);
+    }
+  } else b.headT = -1;
+  // The hurdle over a man on the turf in his path (render only: the sim doesn't block on downed players).
+  if (sp > HURDLE_SPEED && moving && anim.lib.meta.hurdle) {
+    for (let j = 0; j < s.agents.length; j++) {
+      const o = s.agents[j]!;
+      if (j === i || !o.down || b.hurdled.has(j)) continue;
+      const rx = o.pos.x - a.pos.x;
+      const ry = o.pos.y - a.pos.y;
+      const tc = (rx * a.vel.x + ry * a.vel.y) / (sp * sp);
+      if (tc < HURDLE_AHEAD[0] || tc > HURDLE_AHEAD[1]) continue;
+      if (Math.hypot(rx - a.vel.x * tc, ry - a.vel.y * tc) > BODY_R) continue;
+      b.hurdled.add(j);
+      const over = eventAt(b, 'hurdle', 'over') ?? 0.6;
+      anim.play('hurdle', { now: true, t0: Math.max(0, Math.min(0.3, over - tc)) });
+      break;
+    }
+  }
+  // Eyes: on the nearest free tackler in front of him or beside him, else scanning upfield.
+  const d = threatOf(s, a);
+  if (d && Math.hypot(d.pos.x - a.pos.x, d.pos.y - a.pos.y) < LOOK_R) out.look = _look.set(-d.pos.y * YARD, 1.7, (50 - d.pos.x) * YARD);
+  else {
+    const ax = a.pos.x + attack * 12;
+    const ay = a.pos.y + 5 * Math.sin(simT * 1.3 + i);
+    out.look = _look.set(-ay * YARD, 1.6, (50 - ax) * YARD);
+  }
+}
+
 function fall(b: Body, vel: THREE.Vector3, push: THREE.Vector3, big = false): void {
   if (b.fallen && !b.lyingClip) return;
   b.lyingClip = false;
@@ -324,9 +481,22 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         else if (mv === 'jukeL') a.animator.play('juke_l', { now: true });
         else if (mv === 'jukeR') a.animator.play('juke_r', { now: true });
         else if (mv === 'spin') a.animator.play('spin', { now: true });
-        else if (mv === 'dive') lyingClip(a, 'dive');
-        else if (mv === 'stiffArm') a.animator.playOverlay('ovl_stiff_arm');
-        else if (mv === 'truck') a.animator.playOverlay('ovl_truck');
+        else if (mv === 'dive') {
+          // Near the goal line or the sticks the ball goes out for it (M6.5 #11).
+          const reach = !!a.animator.lib.meta.dive_reach && reachDive(s, who[0]!);
+          a.reach = reach;
+          lyingClip(a, reach ? 'dive_reach' : 'dive');
+        } else if (mv === 'cut') {
+          // The player's planted cut (sim/play.ts plantCut): the plant lands in the sim's plant.
+          const dur = Number(e.data?.dur ?? 0);
+          playCut(a, e.data?.side === 'L' ? 'L' : 'R', Number(e.data?.deg ?? 45), dur > 0 ? dur : null, s.t);
+        } else if (mv === 'stiffArm') a.animator.playOverlay('ovl_stiff_arm');
+        else if (mv === 'truck') {
+          // Pads low, the forearm up and through, the legs driving (full body at speed; the overlay standing).
+          const v = s.agents[who[0]!]!.vel;
+          if (a.animator.lib.meta.truck && Math.hypot(v.x, v.y) > 2.5) a.animator.play('truck', { now: true });
+          else a.animator.playOverlay('ovl_truck');
+        }
         else if (mv === 'pumpFake') a.animator.playOverlay('ovl_pump');
         else if (mv === 'secureDown') {
           // SECURE in traffic: the cradle turns into going down with it (from the catch's secure frame on).
@@ -388,6 +558,12 @@ export interface Drive {
   /** Face along the velocity instead of the sim's facing (running away backward). */
   faceVelocity: boolean;
   look: THREE.Vector3 | null;
+  /** The ball carrier's gait and layers (M6.5 #11): see AnimInput. */
+  carry: number;
+  traffic: number;
+  drive: number;
+  press: number;
+  dip: number;
 }
 
 const _look = new THREE.Vector3();
@@ -402,7 +578,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   const anim = b.animator;
   const ball = s.ball;
   const tr = anim.transition;
-  const out: Drive = { speed: Math.max(0, along) * YARD, backpedal: false, faceVelocity: false, look: null };
+  const out: Drive = { speed: Math.max(0, along) * YARD, backpedal: false, faceVelocity: false, look: null, carry: 0, traffic: 0, drive: 0, press: 0, dip: 0 };
   // Backward: a pedal up to a quick pace, else turn and run.
   if (along < -0.8 && !tr?.name.startsWith('qb_drop_')) {
     if (sp * YARD < 5.2) {
@@ -468,12 +644,14 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // What the hands hold.
   const holder = ball.mode === 'held' && s.phase !== 'presnap' && simT - s.snapT > 0.3 ? ball.holder : -1;
   const throwing = tr?.name === 'qb_throw' && !tr.done;
+  let carrying = false;
   if (i === holder && !a.down) {
     // (A scrambling QB has it tucked; a play-action or handoff overlay owns the hands while it plays.)
     const pocket = i === s.qb && s.scrambleT < 0 && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket');
-    // A catch clip owns the hands until it has tucked the ball.
+    // A catch clip owns the hands until it has tucked the ball; the reach for the line holds it out in the hand.
     const catching = catchHold(b) !== null;
-    anim.setHold(catching ? null : pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' ? 'ovl_protect' : 'ovl_carry_r');
+    carrying = !pocket && !catching;
+    anim.setHold(catching || b.reach ? null : pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' ? 'ovl_protect' : 'ovl_carry_r');
     if (a.move === 'protect') latency.respond('protect');
   } else anim.setHold(null);
   // Down without a clip that lies him down: he falls, once (a dove-and-
@@ -511,6 +689,8 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // Eyes: the QB on his read, everyone on a ball in the air.
   if (ball.mode === 'air') out.look = _look.set(-ball.pos.y * YARD, Math.max(ball.pos.z, 1.2) * YARD, (50 - ball.pos.x) * YARD);
   else if (i === s.qb && s.phase !== 'presnap' && s.phase !== 'carrier') out.look = _look.set(-s.eyes.y * YARD, 1.6, (50 - s.eyes.x) * YARD);
+  // The ball carrier runs like one (M6.5 #11): the carry gaits, and his eyes up.
+  if (carrying && !b.fallen) carrierDrive(b, i, s, simT, out, !!tr && !tr.done && tr.name !== 'getup_prone');
   return out;
 }
 
@@ -550,8 +730,8 @@ export function ballInHands(b: Body, s: PlayState, ball: THREE.Object3D): boolea
   }
   // Along the forearm, from the elbow through the hand.
   _d.subVectors(_h, _e).normalize();
-  if (throwing) {
-    // In the fingers: just past the palm.
+  if (throwing || b.reach) {
+    // In the fingers: just past the palm (a throw, or the ball reached out for the line).
     ball.position.copy(_h).addScaledVector(_d, 0.06);
   } else {
     ball.position.copy(_h).addScaledVector(_d, -0.09);

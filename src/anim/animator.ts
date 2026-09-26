@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Player } from '@/render/players/playerAsset';
-import { advancePhase, MIN_LOCO_SPEED, sampleGait, warpPhase } from './blend';
+import { advancePhase, familyWeights, MIN_LOCO_SPEED, sampleSorted, warpPhase, type GaitClip, type GaitSample } from './blend';
 import { rotateBoneWorld, solveTwoBone } from './ik';
 import { planted, travelAt, type AnimLibrary } from './library';
 
@@ -33,6 +33,18 @@ export interface AnimInput {
   groundVelocity?: THREE.Vector3;
   /** Moving backward facing forward (a defensive back's pedal): `speed` is then the backward speed. */
   backpedal?: boolean;
+  /**
+   * The ball carrier (M6.5 #11), each 0..1 and eased here: how much he runs
+   * like a carrier (the carry gaits), how much of that is traffic (short,
+   * choppy steps) and the burst's drive, and the press of a designed run
+   * (the trunk pitched into the hole).
+   */
+  carry?: number;
+  traffic?: number;
+  drive?: number;
+  press?: number;
+  /** The dip before contact: + a tackler closing on his left, − on his right; the size is the weight (0..1). */
+  dip?: number;
 }
 
 const FEET = ['l', 'r'] as const;
@@ -94,6 +106,13 @@ interface OverlayTrack {
 
 const OVERLAY_IN = 0.13;
 const OVERLAY_OUT = 0.16;
+/** The carrier's family weights ease in over ~0.2 s (a burst or traffic reads within a stride, not in a frame). */
+const FAMILY_RATE = 6;
+/** The dip comes in over ~0.12 s and goes over ~0.2 s. */
+const DIP_IN = 0.12;
+const DIP_OUT = 0.2;
+/** The press of a designed run: the trunk pitched this much further forward (rad, ~7°). */
+const PRESS_PITCH = 0.12;
 const _oq = new THREE.Quaternion();
 
 export class PlayerAnimator {
@@ -128,6 +147,20 @@ export class PlayerAnimator {
   /** Overlays: a held one (the ball carried, the QB's hold) and a one-shot action over it. */
   private holdLayer: Overlay | null = null;
   private actionLayer: Overlay | null = null;
+  /** The dip before contact, one held overlay per side, weighted by the input (between the hold and the action). */
+  private dipL: Overlay | null = null;
+  private dipR: Overlay | null = null;
+  /** The gait families' eased inputs (carry, traffic, drive) and the press. */
+  private carryW = 0;
+  private trafficW = 0;
+  private driveW = 0;
+  private pressW = 0;
+  /** Every locomotion clip in the families, its weight this frame and its warped phase (preallocated: no per-frame garbage). */
+  private locos: GaitClip[] = [];
+  private locoW: number[] = [];
+  private locoPhase: number[] = [];
+  private famW = [1, 0, 0, 0];
+  private samples: GaitSample[] = [];
   /** Root motion this update (m along the facing, body-scaled) and its rate (m/s). */
   rootMotion = 0;
   rootSpeed = 0;
@@ -149,6 +182,12 @@ export class PlayerAnimator {
     }
     this.stanceWeights.set(this.stance, 1);
     for (const bone of player.bones.values()) this.animPose.push([bone, bone.quaternion.clone()]);
+    for (const f of lib.families) {
+      for (const g of f) if (!this.locos.includes(g)) this.locos.push(g);
+      this.samples.push({ a: f[0]!, b: f[0]!, w: 0, stride: 0 });
+    }
+    this.locoW = this.locos.map(() => 0);
+    this.locoPhase = this.locos.map(() => 0);
   }
 
   /** Forget all runtime state (phase, planted feet, springs): replay from a clean start. */
@@ -168,6 +207,12 @@ export class PlayerAnimator {
     this.queued = null;
     this.holdLayer = null;
     this.actionLayer = null;
+    this.dipL = null;
+    this.dipR = null;
+    this.carryW = 0;
+    this.trafficW = 0;
+    this.driveW = 0;
+    this.pressW = 0;
     this.rootMotion = 0;
     this.rootSpeed = 0;
   }
@@ -251,12 +296,30 @@ export class PlayerAnimator {
     else if (o.t >= o.duration - OVERLAY_OUT * o.rate) o.out = true;
     o.w = o.out ? o.w - dt / OVERLAY_OUT : Math.min(1, o.w + dt / OVERLAY_IN);
     if (o.w <= 0) return null;
+    this.applyOverlay(o, o.w);
+    return o;
+  }
+
+  private applyOverlay(o: Overlay, w: number): void {
     const t = Math.min(o.t, o.duration - 1e-4);
     for (const k of o.tracks) {
       const v = k.interp.evaluate(t);
       _oq.set(v[0]!, v[1]!, v[2]!, v[3]!);
-      k.bone.quaternion.slerp(_oq, Math.min(1, o.w));
+      k.bone.quaternion.slerp(_oq, Math.min(1, w));
     }
+  }
+
+  /** A held overlay whose weight follows a target (the dip): made when it's wanted, dropped when it has faded out. */
+  private stepWeighted(o: Overlay | null, name: string, target: number, dt: number): Overlay | null {
+    if (!o) {
+      if (target <= 0) return null;
+      o = this.overlay(name, { loop: true });
+      if (!o) return null;
+    }
+    o.t = (o.t + dt) % o.duration;
+    o.w = target > o.w ? Math.min(target, o.w + dt / DIP_IN) : Math.max(target, o.w - dt / DIP_OUT);
+    if (o.w <= 0 && target <= 0) return null;
+    this.applyOverlay(o, o.w);
     return o;
   }
 
@@ -331,12 +394,34 @@ export class PlayerAnimator {
     // 1. Clips.
     const k = 1 - Math.exp(-dt * 8); // ~0.12 s fades
     this.loco += ((speed > MIN_LOCO_SPEED ? 1 : 0) - this.loco) * k;
-    const g = sampleGait(this.lib.gaits, speed, scale);
+    // The gait families (M6.5 #11): every clip of each family with weight,
+    // on one shared phase advanced by the blended stride, each warped so the
+    // feet plant and lift together.
+    const kf = 1 - Math.exp(-dt * FAMILY_RATE);
+    this.carryW += ((input.carry ?? 0) - this.carryW) * kf;
+    this.trafficW += ((input.traffic ?? 0) - this.trafficW) * kf;
+    this.driveW += ((input.drive ?? 0) - this.driveW) * kf;
+    this.pressW += ((input.press ?? 0) - this.pressW) * kf;
+    const fam = familyWeights(this.carryW, this.trafficW, this.driveW, this.famW);
+    const lw = this.locoW;
+    lw.fill(0);
+    let stride = 0;
+    let duty = 0;
+    const families = this.lib.families;
+    for (let f = 0; f < families.length; f++) {
+      const fw = fam[f] ?? 0;
+      if (fw < 1e-3 && f > 0) continue;
+      const smp = sampleSorted(families[f]!, speed, scale, this.samples[f]!);
+      stride += fw * smp.stride;
+      duty += fw * (smp.a.duty + (smp.b.duty - smp.a.duty) * smp.w);
+      lw[this.locos.indexOf(smp.a)]! += fw * (1 - smp.w);
+      lw[this.locos.indexOf(smp.b)]! += fw * smp.w;
+    }
     const lastPhase = this.phase;
     this.back += ((input.backpedal ? 1 : 0) - this.back) * k;
     const bpMeta = this.lib.meta.loco_backpedal;
     if (bpMeta && this.back > 0.01) this.backPhase = advancePhase(this.backPhase, speed, dt, bpMeta.speed * bpMeta.duration * scale);
-    if (!input.backpedal) this.phase = advancePhase(this.phase, speed, dt, g.stride);
+    if (!input.backpedal) this.phase = advancePhase(this.phase, speed, dt, stride);
     // A queued stop starts at the left touch-down (the phase wrapping).
     if (this.queued && (this.phase < lastPhase || this.loco < 0.5)) {
       this.start(this.queued);
@@ -369,16 +454,14 @@ export class PlayerAnimator {
       }
     }
     const tw = this.trans ? this.trans.w : 0;
-    // Both clips plant and lift each foot on the same frame (warped phases),
-    // so the blended foot is either planted in both or swinging in both.
-    const duty = g.a.duty + (g.b.duty - g.a.duty) * g.w;
-    const clipPhase = new Map<string, number>();
-    for (const gait of this.lib.gaits) {
+    // Every clip with weight plants and lifts each foot on the same frame
+    // (warped phases), so the blended foot is either planted in all or swinging in all.
+    for (let j = 0; j < this.locos.length; j++) {
+      const gait = this.locos[j]!;
       const a = this.actions.get(gait.name)!;
-      const w = gait === g.a ? 1 - g.w : gait === g.b ? g.w : 0;
       const p = warpPhase(this.phase, gait.duty, duty);
-      clipPhase.set(gait.name, p);
-      a.setEffectiveWeight(this.loco * w * (1 - tw) * (1 - this.back));
+      this.locoPhase[j] = p;
+      a.setEffectiveWeight(this.loco * lw[j]! * (1 - tw) * (1 - this.back));
       a.time = p * gait.duration;
     }
     const bp = this.actions.get('loco_backpedal');
@@ -412,11 +495,14 @@ export class PlayerAnimator {
     // Overlays over the clips (the snapshot above is what the next frame
     // restores, so they never compound).
     this.holdLayer = this.stepOverlay(this.holdLayer, dt);
+    const dip = input.dip ?? 0;
+    this.dipL = this.stepWeighted(this.dipL, 'ovl_dip_l', dip > 0 ? Math.min(1, dip) : 0, dt);
+    this.dipR = this.stepWeighted(this.dipR, 'ovl_dip_r', dip < 0 ? Math.min(1, -dip) : 0, dt);
     this.actionLayer = this.stepOverlay(this.actionLayer, dt);
     this.player.root.updateMatrixWorld(true);
 
     // 3. Lean (before the feet are locked, so the lock sees the leaned body).
-    this.lean(speed, input.yawRate ?? 0, input.accel ?? 0);
+    this.lean(speed, input.yawRate ?? 0, input.accel ?? 0, this.pressW * PRESS_PITCH);
     // 2. Foot lock.
     // A foot is planted when every clip with weight has it planted (when the
     // warp can't align them, e.g. walk against jog, the stricter of the two).
@@ -432,8 +518,8 @@ export class PlayerAnimator {
         down = planted(bpMeta, s, this.backPhase);
       } else if (this.loco > 0.5) {
         down = true;
-        for (const [gait, w] of [[g.a, 1 - g.w], [g.b, g.w]] as const) {
-          if (w > 0.02) down &&= planted(this.lib.meta[gait.name]!, s, clipPhase.get(gait.name)!);
+        for (let j = 0; j < this.locos.length; j++) {
+          if (lw[j]! > 0.02) down &&= planted(this.lib.meta[this.locos[j]!.name]!, s, this.locoPhase[j]!);
         }
       } else down = this.loco < 0.5;
       this.lockFoot(s, this.loco > 0.5 ? 'loco' : 'stand', down, dt, input.groundVelocity);
@@ -443,12 +529,13 @@ export class PlayerAnimator {
     this.pads(dt);
   }
 
-  private lean(speed: number, yawRate: number, accel: number): void {
+  private lean(speed: number, yawRate: number, accel: number, press = 0): void {
     // A body turning at ω while moving at v leans by atan(v·ω / g) into the
     // turn; a burst pitches it forward (half the physical angle, which reads
-    // right on screen without looking like a fall).
+    // right on screen without looking like a fall); a back pressing the hole
+    // runs pitched a little further into it.
     const bank = THREE.MathUtils.clamp(Math.atan2(speed * yawRate, G), -0.35, 0.35);
-    const pitch = THREE.MathUtils.clamp(Math.atan2(accel, G) * 0.5, -0.15, 0.25);
+    const pitch = THREE.MathUtils.clamp(Math.atan2(accel, G) * 0.5 + press, -0.15, 0.3);
     if (Math.abs(bank) < 1e-4 && Math.abs(pitch) < 1e-4) return;
     const root = this.bone('root');
     const rootQ = this.player.root.getWorldQuaternion(_q2);

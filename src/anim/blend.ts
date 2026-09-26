@@ -31,6 +31,11 @@ export const MIN_LOCO_SPEED = 0.25;
 
 export function sampleGait(gaits: readonly GaitClip[], speed: number, scale = 1): GaitSample {
   const sorted = [...gaits].sort((x, y) => x.speed - y.speed);
+  return sampleSorted(sorted, speed, scale, { a: sorted[0]!, b: sorted[0]!, w: 0, stride: 0 });
+}
+
+/** sampleGait for clips already sorted by speed, written into `out` (no allocation: the animator calls it every frame). */
+export function sampleSorted(sorted: readonly GaitClip[], speed: number, scale: number, out: GaitSample): GaitSample {
   const s = Math.max(speed, 0);
   let i = 0;
   while (i < sorted.length - 2 && s > sorted[i + 1]!.speed) i++;
@@ -39,7 +44,29 @@ export function sampleGait(gaits: readonly GaitClip[], speed: number, scale = 1)
   const w = b === a ? 0 : Math.min(1, Math.max(0, (s - a.speed) / (b.speed - a.speed)));
   const strideA = a.speed * a.duration * scale;
   const strideB = b.speed * b.duration * scale;
-  return { a, b, w, stride: strideA + (strideB - strideA) * w };
+  out.a = a;
+  out.b = b;
+  out.w = w;
+  out.stride = strideA + (strideB - strideA) * w;
+  return out;
+}
+
+/**
+ * The gait families' shares (M6.5 #11): the receiver's gaits, and the ball
+ * carrier's in space, in traffic and in the burst's drive. `carry` is how
+ * much he runs like a carrier, `traffic` and `drive` how much of that is the
+ * choppy traffic set or the burst's drive (the drive wins over traffic: a
+ * burst is the clearing of it). Written into `out` as [base, carry, traffic, drive].
+ */
+export function familyWeights(carry: number, traffic: number, drive: number, out: number[]): number[] {
+  const c = Math.min(1, Math.max(0, carry));
+  const t = Math.min(1, Math.max(0, traffic));
+  const d = Math.min(1, Math.max(0, drive));
+  out[0] = 1 - c;
+  out[1] = c * (1 - t) * (1 - d);
+  out[2] = c * t * (1 - d);
+  out[3] = c * d;
+  return out;
 }
 
 /** Advance the shared phase by the distance travelled. */
