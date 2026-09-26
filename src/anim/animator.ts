@@ -210,6 +210,19 @@ export class PlayerAnimator {
     if (o) this.actionLayer = o;
   }
 
+  /** Let the one-shot overlay go (it fades out): a full-body clip takes the arms over. */
+  stopOverlay(): void {
+    if (this.actionLayer) this.actionLayer.out = true;
+  }
+
+  /**
+   * Called when a transition that turns the body (meta.turn, deg + left)
+   * hands over to a stance: the caller turns the player's root by it at once,
+   * so the stance (authored facing straight) lands where the clip left him.
+   * The transition then cuts instead of fading (its last frame is the turned stance).
+   */
+  onTurn: ((deg: number) => void) | null = null;
+
   /** The one-shot overlay playing now and its time, or null. */
   get overlayAction(): { name: string; t: number } | null {
     return this.actionLayer && !this.actionLayer.out ? { name: this.actionLayer.name, t: this.actionLayer.t } : null;
@@ -341,6 +354,10 @@ export class PlayerAnimator {
           tr.t = trMeta.duration;
           tr.done = true;
           if (trMeta.to) this.handOver(trMeta.to, trMeta.toPhase);
+          if (trMeta.turn && trMeta.to && !trMeta.to.startsWith('loco_') && this.onTurn) {
+            this.onTurn(trMeta.turn);
+            tr.w = 0;
+          }
         }
       }
       this.rootMotion = (travelAt(trMeta, this.lib.fps, tr.t) - before) * scale;
