@@ -79,11 +79,10 @@ async function record(page: Page, clip: Clip) {
     await frame(page);
     await page.screenshot({ path: `${dir}/${String(n++).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 88 });
   };
-  // Before the snap: the formation set, the camera settling (presnap ticks, no input).
-  for (let k = 0; k < LEAD_IN; k++) {
-    await page.evaluate((n) => (window as unknown as Win & { __btbPractice: { tick(n: number): void } }).__btbPractice.tick(n), TICKS_PER_FRAME);
-    await shot();
-  }
+  // Before the snap: the formation set, the camera settling. Drawn frames
+  // only, no sim ticks: the play snaps on its first tick, as in Node (time
+  // before the snap changes the play).
+  for (let k = 0; k < LEAD_IN; k++) await shot();
   let tail = -1;
   for (let guard = 0; guard < 60 * 20 && tail < TAIL; guard++) {
     const done = await page.evaluate(

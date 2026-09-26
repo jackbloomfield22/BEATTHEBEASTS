@@ -295,6 +295,10 @@ class PracticeSession {
   callClip(c: Clip): void {
     set({ playId: c.play });
     this.setUp(c.play, c.seed, defById(c.def), { ...startSituation(0, 0), los: c.los, ballY: 0, toGo: 10, down: 1 }, true);
+    // Held until the script steps it: time before the snap changes the play
+    // (the concept videos: pre-snap ticks run while the page loaded took the
+    // go route from a 48-yard catch to a drop), and Node snaps on tick 0.
+    if (this.runner) this.runner.paused = true;
   }
 
   /** Step one tick with a given input (a scripted clip), through the same path as tick(). */
