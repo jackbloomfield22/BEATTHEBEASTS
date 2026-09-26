@@ -63,7 +63,9 @@ export function describe(s: PlayState): ResultCard {
           : drop
             ? `Dropped by ${last(who(drop.who?.[0]))}${dropWhy}.`
             : defl
-              ? `Broken up by ${who(defl.who?.[0])}.`
+              ? defl.data?.batted
+                ? `Batted down at the line by ${last(who(defl.who?.[0]))}.`
+                : `Broken up by ${who(defl.who?.[0])}.`
               : offTarget
                 ? `${offTarget}${throwWhy}, intended for ${tgt}.`
                 : tgt

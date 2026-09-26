@@ -32,7 +32,7 @@ import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tick
 import { releaseTime } from './effects';
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { arrive, remember, steer, timeTo } from './movement';
-import { catchLook, findsBallAt, planThrow, release, resolveCatch, stepAir } from './passing';
+import { catchLook, findsBallAt, planThrow, reach, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { manOf, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
@@ -464,6 +464,36 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     qb.mem.escape = qbY >= 0 ? 1 : -1;
   }
 }
+
+/**
+ * A ball batted down at the line (M6.5 calibration: the sim had none; ~2% of
+ * NFL attempts, PFF's batted passes). In the first BAT_T of its flight, a
+ * defensive lineman whose hands the ball goes by (within BAT_R, under the
+ * top of his reach) gets one chance to get a hand on it: BAT_P for a
+ * 6'6" lineman, less for a shorter one. It pops up, live, and dies.
+ */
+function batAtLine(s: PlayState): boolean {
+  const b = s.ball;
+  if (s.t - b.releaseT > BAT_T || b.target < 0) return false;
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (d.down || (d.p.pos !== 'DE' && d.p.pos !== 'DT') || s.touched.includes(i)) continue;
+    const dh = Math.sqrt((b.pos.x - d.pos.x) * (b.pos.x - d.pos.x) + (b.pos.y - d.pos.y) * (b.pos.y - d.pos.y));
+    if (dh > BAT_R || b.pos.z > reach(d).top || b.pos.z < 1.2) continue;
+    s.touched.push(i);
+    const tall = Math.max(0, Math.min(1, (d.p.heightIn - 72) / 6));
+    if (s.rng.catch() >= BAT_P * (0.5 + 0.5 * tall)) continue;
+    b.vel = { x: b.vel.x * 0.1 + gauss(s.rng.bounce) * 1.5, y: b.vel.y * 0.1 + gauss(s.rng.bounce) * 1.5, z: 3 + 2 * s.rng.bounce() };
+    b.target = -2;
+    d.anim = 'rush';
+    s.events.push({ t: s.t, type: 'deflection', who: [i], at: { x: b.pos.x, y: b.pos.y }, data: { batted: true } });
+    return true;
+  }
+  return false;
+}
+const BAT_T = 0.3;
+const BAT_R = 0.7;
+const BAT_P = 0.45;
 
 /** A vertical route with the man covering him level or on top of him, close: the back-shoulder throw. */
 function backShoulder(s: PlayState, r: Agent): boolean {
@@ -933,6 +963,7 @@ function ballStep(s: PlayState): void {
     return;
   }
   if (b.mode === 'air') {
+    if (batAtLine(s)) return;
     const who = stepAir(s);
     if (who >= 0) {
       s.touched.push(who);

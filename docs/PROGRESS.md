@@ -10,7 +10,7 @@
 - **M5 Core play:** merged (PR #7), with the quick pass (pass camera, 1/2/3 catches, arrows, Q–F moves).
 - **M5.5 Game feel:** merged (PR #8), with the round-two fixes (diagonal speed, the automatic burst, driven throws, no slowdown at the catch, defenders that don't bunch).
 - **M6 Full game:** built on `claude/trusting-ptolemy-m2i78d`, PR open. The draft in the Contenders' locker room, and a full game against the Beasts from Quick Play, Classic, Film Room or the Daily through the walk-out, every possession, kicks, the two-minute drill and overtime to the results screen. **Perf gate closed:** mid-game on the preview, Classic, Ultra (auto-selected) on your M1 Pro at 100% resolution (2029×1023): 88.4 fps average, 11.3 ms, p99 12.8 ms, 206 draw calls, 1.71 M triangles.
-- **M6.5 Gameplay pass:** in progress on `claude/m65-gameplay` (brief: `docs/M6_5_BRIEF.md`). Item 8 (the run game's explosive plays) first, then the passing items 1–7, then 9–11.
+- **M6.5 Gameplay pass:** in progress on `claude/m65-gameplay` (brief: `docs/M6_5_BRIEF.md`). Done so far: #8 (runs), #1–4, #6, #7 and #5's sim side; the catch clips are being keyed; next are #9–11 and the ten concept videos.
 - **Next: M7** (presentation): the tunnel reveal grows from the walk-out, pre-game, broadcast overlay, replays, celebrations, commentary, audio.
 
 ## Known legacy issues (do not rebuild)
@@ -82,6 +82,73 @@ Passing is unchanged by it (whole harness: 60% completions, 8.6 yd/att against 8
 - *Stuffs now sit at the bottom of the harness band (10–26%).*
 
 I haven't watched these runs in the browser yet; that happens with the concept videos before the PR. The M5.5 catch-and-run clip moved to seed 42 (the lunge tackled the old one at 4.8 yd after the catch).
+
+**The passing game, items 1–7.** Tools:
+- `tools/sim/throws.ts`: every throw's meant point, landing point and error sources, plus catches and drops by cause.
+- `tools/sim/routefid.ts` (the measure is `routeFidelity` in `src/sim/outcomes.ts`, held by `tests/routes.test.ts`): every receiver against his route art until the throw.
+
+**#1 Throw accuracy.**
+- *Diagnosis:*
+  - A flat 13% "mechanics miss" fired whatever the conditions: 79% of the misses came from a clean pocket, and they were 80% of every throw more than 2 yd off.
+  - The cone for pressure and for throwing on the move scaled only with (1 − rating), so Montana under a free rusher threw exactly as he did from a clean pocket.
+  - (The pass harness's shared seeds also gave every play the same throw rolls per rep; the new tools seed per cell.)
+- *Fix:*
+  - The miss and the cone grow only for a reason (accuracy, pressure, a bad platform, the run, depth), and every reason costs even the best something.
+  - Each throw logs its meant point, error and sources, and the result card says why a ball nobody touched was off ("Sailed on him under pressure").
+- *Numbers:* clean-pocket 10–20 yd throws within a yard 75% → 92%; mechanics misses 14.4% → 1.7%; heavy pressure completes ~54%. `tests/throws.test.ts`: a 95-accuracy QB puts a clean 15-yard throw within a yard more than 94% of the time.
+
+**#2 Routes.**
+- *Diagnosis:* not ball tracking, the scramble drill or a sideline re-plan.
+  - A break point only counted within 0.3 yd for a sharp route runner. A receiver who came by it half a yard wide braked, turned round and went back to touch it: 28–36% of slants stopped mid-route, the best route runners most.
+  - Every break was taken at ~80% from 2.2 yd out, so a hitch runner walked back from 8 or 9 to settle at 5, and a quick in rounded its cut 2–3 yd deep.
+- *Fix:* a break is made once he's past it; he brakes into each break to the speed he can carry through it (full through a bend, ~40% round a right angle, ~25% turning back), and a hard break is a plant (his run turns onto the new leg at once).
+- *Numbers:* strays over 2 yd 15.3% → 0.8%, median 0.65 → 0.34 yd, p90 2.19 → 1.48; slow mid-route 10.9% → 0.
+
+**#3 Drops.**
+- *Diagnosis:* open catchable balls were caught 0.87 + 0.09 × Catching, less a lump "hard" term with no cause: 94% for sure hands, 89% middling.
+- *Fix:* 98% for sure hands and 92% for poor ones, less named costs: a hit as it arrived, thrown behind him, a fastball from close, a full-stretch reach. The card names the cause ("Dropped by Rice, thrown behind him").
+- *Numbers:* open balls caught 92.4% → 95.0% (sure hands 94.2 → 97.0, middling 88.6 → 91.1); drops 8.8% of balls that reached him (no cause) → 5.4% (hands 51, reach 39, contact 12, behind 1).
+
+**#4 YAC.**
+- *Diagnosis:* in the AI harness the YAC is already there (short routes 6.4 a catch). More pursuit lag isn't the missing threat: seeing a cut a whole reaction late pushed short YAC to 8.2 and runs to 5.6 a carry. What the player feels is the catch itself:
+  - With the stick at rest through the catch, the receiver coasted to a stop.
+  - The carrier AI's Vision misread was added to every lane, so a low-Vision receiver in open grass ran off at 70° as often as upfield.
+- *Fix:* out of a catch he runs his plan until you steer, and the misread only applies where there are defenders to misread.
+- *Numbers:* short-route YAC 6.1, 20+ YAC on 3.3% of short catches.
+
+**#5 Catch animations.**
+- *Sim side, done:* the catch call and the ball decide the look: dive, one-hander, high point, over the shoulder, toe-tap, body (SECURE; in traffic he goes down with it), or hands in stride (RUN). The render asks before the ball arrives, and the catch event carries it.
+- *The seven clips* are being keyed in `tools/blender` and wired to the render in a separate pass.
+
+**#6 QB–receiver chemistry.**
+- *Diagnosis:*
+  - The moment a ball left, the target cut straight for the catch point, so a throw before the break rounded the break off.
+  - The throw's lead charged ~5 yd for a right-angle break against the ~2 he loses, so an early ball was led short and he throttled down to wait for it.
+  - Steering alone swung his run round a hard break over half a second.
+  - A back-shoulder ball was one he ran past at full stride.
+- *Fix:*
+  - On an anticipation throw he runs his route through the break to the leg it's thrown to.
+  - The lead runs the route forward the way he runs it, so the ball meets him coming out of the break.
+  - He paces to a back-shoulder ball.
+  - Chemistry (0–1 per receiver): a passing synergy with the QB starts it at 0.3, and each throw to him in a game adds 0.07. At 1 it takes 15% off the cone and he finds the ball 0.08 s sooner.
+- *Numbers:* early sticks caught 8 → 16 of 30; curls on time.
+- *Gap:* the AI rarely throws back-shoulder (its read only throws to open men); you can, by placement.
+
+**#7 Receiver awareness.**
+- A settled receiver slides into the open window (up to 1.5 yd from his spot, away from the nearest defender).
+- The scramble drill starts when the QB leaves the pocket (it only started on a tuck), and the short men come back toward the ball.
+- On third and fourth down a settle route short of the sticks is pushed to a half yard past them.
+- The red-zone back line and the sideline were already right, and checked.
+
+**Calibration.**
+- *Why completion rose:* removing the random miss (#1) and making open catches near-automatic (#3) put completion at 72.9% (M6: 64%, held there by the random miss).
+- *Batted balls at the line,* which the sim didn't have: 1.7% of attempts (NFL ~2%).
+- *A defender who jumped the windup* now keeps going to the ball at the release; he used to stop and wait a whole reaction time.
+- *Numbers:* completion 68.6%, ypa 7.8, 20+ on 14.4% of completions, 40+ on 4.1%.
+- *The ceiling:* the harness ceiling moved from 68% to 70% (`tests/outcomes.test.ts` says why). The target is still 60–65%.
+- *The remaining gap is the AI's read:* on Slants against Cover 3 it checks down to the back on 7 plays in 8 instead of throwing the slant, and checkdowns complete 91% (NFL ~80%). A sharper read is the next thing for the harness numbers. Your own throws are unaffected.
+
+**Still to do in M6.5:** the catch clips (#5, being keyed), items 9–11, and the ten concept videos with their critique.
 
 ### M6 Full game (built, PR open)
 
