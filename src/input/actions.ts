@@ -99,16 +99,21 @@ export const ACTIONS: ActionDef[] = [
   a('carrier.down', 'carrier', 'Run back', ['ArrowDown'], ['Pad:LSDown']),
   a('carrier.left', 'carrier', 'Run left', ['ArrowLeft'], ['Pad:LSLeft']),
   a('carrier.right', 'carrier', 'Run right', ['ArrowRight'], ['Pad:LSRight']),
-  // The number row is the moves (1–6, as the prompts show); Q W E R F C stay as second keys.
-  // No speed key: he runs at the pace the play calls for and bursts on his own (out of a cut, into open field).
-  a('carrier.juke', 'carrier', 'Juke (toward the side you steer, else away from the tackler)', ['Digit1', 'KeyQ'], []),
+  // 1, 2, 3 are the three moves the situation offers right now (M6.5 #9:
+  // the likeliest to work in 1), shown under him; Q W E R F C are every move
+  // directly. No speed key: he runs at the pace the play calls for and
+  // bursts on his own (out of a cut, into open field).
+  a('carrier.option1', 'carrier', 'Move option 1 (the likeliest to work)', ['Digit1'], ['Pad:X']),
+  a('carrier.option2', 'carrier', 'Move option 2', ['Digit2'], ['Pad:Y']),
+  a('carrier.option3', 'carrier', 'Move option 3', ['Digit3'], ['Pad:B']),
+  a('carrier.juke', 'carrier', 'Juke (toward the side you steer, else away from the tackler)', ['KeyQ'], []),
   a('carrier.jukeLeft', 'carrier', 'Juke left', [], ['Pad:RSLeft']),
   a('carrier.jukeRight', 'carrier', 'Juke right', [], ['Pad:RSRight']),
-  a('carrier.stiffArm', 'carrier', 'Stiff arm', ['Digit2', 'KeyW'], ['Pad:X']),
-  a('carrier.spin', 'carrier', 'Spin', ['Digit3', 'KeyE'], ['Pad:B']),
-  a('carrier.truck', 'carrier', 'Truck', ['Digit4', 'KeyR'], ['Pad:RSUp']),
-  a('carrier.dive', 'carrier', 'Dive / QB slide', ['Digit5', 'KeyF'], ['Pad:A']),
-  a('carrier.protect', 'carrier', 'Protect ball (hold)', ['Digit6', 'KeyC'], ['Pad:LB']),
+  a('carrier.stiffArm', 'carrier', 'Stiff arm', ['KeyW'], []),
+  a('carrier.spin', 'carrier', 'Spin', ['KeyE'], []),
+  a('carrier.truck', 'carrier', 'Truck', ['KeyR'], ['Pad:RSUp']),
+  a('carrier.dive', 'carrier', 'Dive / QB slide', ['KeyF'], ['Pad:A']),
+  a('carrier.protect', 'carrier', 'Protect ball (hold)', ['KeyC'], ['Pad:LB']),
 
   // Kicking
   a('kick.aim', 'kick', 'Aim and power (drag)', ['Mouse0'], ['Pad:RSDown'], true),
@@ -179,6 +184,21 @@ export const KB_DEFAULTS_V4: Record<string, string[]> = {
 /** Keyboard defaults that changed in settings v6 (the scramble off Shift), with their v5 values. */
 export const KB_DEFAULTS_V5: Record<string, string[]> = {
   'pocket.scramble': ['ShiftLeft', 'ShiftRight'],
+};
+
+/** Keyboard defaults that changed in settings v7 (1–3 are the move options), with their v6 values. */
+export const KB_DEFAULTS_V6: Record<string, string[]> = {
+  'carrier.juke': ['Digit1', 'KeyQ'],
+  'carrier.stiffArm': ['Digit2', 'KeyW'],
+  'carrier.spin': ['Digit3', 'KeyE'],
+  'carrier.truck': ['Digit4', 'KeyR'],
+  'carrier.dive': ['Digit5', 'KeyF'],
+  'carrier.protect': ['Digit6', 'KeyC'],
+};
+/** Gamepad defaults that changed in settings v7 (X, Y, B are the move options), with their v6 values. */
+export const PAD_DEFAULTS_V6: Record<string, string[]> = {
+  'carrier.stiffArm': ['Pad:X'],
+  'carrier.spin': ['Pad:B'],
 };
 
 export const ACTIONS_BY_ID = new Map(ACTIONS.map((d) => [d.id, d]));

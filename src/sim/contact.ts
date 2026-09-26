@@ -9,7 +9,7 @@
 import { exp } from '@/engine/math/detmath';
 import { blockOf } from './blocks';
 import type { PlayState } from './state';
-import { TICK, type Agent } from './types';
+import { TICK, type Agent, type Move } from './types';
 import { dist, len } from './vec';
 
 /** The tackle logistic's base: ~90% for an even matchup (NFL missed-tackle rate ~10–15% of attempts, PFF/SIS). M5.5 had 2.1 (~89% before the move and mass terms). */
@@ -49,11 +49,13 @@ export type TackleOutcome = 'tackle' | 'bigHit' | 'broken' | 'missed';
 const MOVE_ATTR: Record<string, string> = { jukeL: 'elusiveness', jukeR: 'elusiveness', spin: 'elusiveness', stiffArm: 'stiffArm', truck: 'trucking' };
 
 /**
- * Resolve a defender reaching the ball carrier. Returns the outcome and the
- * hit's force (kN-ish, for the camera and the ragdoll).
+ * The odds when a defender reaches the ball carrier who's in `mv` (or no
+ * move): the chance a juke or spin beats him outright (`evade`, 0 for the
+ * other moves), then the chance he makes the tackle (`tackle`). Pure, so the
+ * carrier's move options (moves.ts) are ranked by the same numbers the
+ * roll uses.
  */
-export function resolveTackle(s: PlayState, d: Agent, c: Agent): { out: TackleOutcome; force: number } {
-  const rng = s.rng.contact;
+export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): { evade: number; tackle: number; closing: number; headOn: number } {
   // Approach: closing speed and the angle relative to his run.
   const rvx = d.vel.x - c.vel.x;
   const rvy = d.vel.y - c.vel.y;
@@ -72,15 +74,14 @@ export function resolveTackle(s: PlayState, d: Agent, c: Agent): { out: TackleOu
   }).length;
   const tackle = d.fx.a('tackle') * 0.6 + d.fx.a('hitPower') * 0.2 + d.fx.a('pursuit') * 0.2;
   // The carrier's counter: the move he's in, else Break Tackle.
-  const mv = c.move && c.busy > 0 ? c.move : null;
   const counterAttr = mv ? MOVE_ATTR[mv] ?? 'breakTackle' : 'breakTackle';
   // Spam: each recent move takes a bite out of the next (GDD §9.3).
   const counter = c.fx.a(counterAttr) * (1 - Math.min(0.6, c.moveFatigue * 0.25));
   // Juke / spin: beat the tackler outright, or it's a loss if he's squared up.
+  let evade = 0;
   if (mv === 'jukeL' || mv === 'jukeR' || mv === 'spin') {
     const squared = headOn > 0.7 && closing < 3;
-    const p = logistic(4 * (counter - d.fx.a('tackle') * 0.5 - d.fx.a('pursuit') * 0.3) + (squared ? -1.2 : 0.6));
-    if (rng() < p) return { out: 'missed', force: 0 };
+    evade = logistic(4 * (counter - d.fx.a('tackle') * 0.5 - d.fx.a('pursuit') * 0.3) + (squared ? -1.2 : 0.6));
   }
   // Baseline ~85% per attempt for an even matchup (NFL missed-tackle rate
   // runs 10–15% of attempts: PFF / Sports Info Solutions charting).
@@ -88,9 +89,20 @@ export function resolveTackle(s: PlayState, d: Agent, c: Agent): { out: TackleOu
   if (mv === 'stiffArm') x -= 0.5 * c.fx.a('stiffArm');
   if (mv === 'truck') x -= 0.8 * c.fx.a('trucking') * (c.fx.mass / (c.fx.mass + d.fx.mass)) * 2 - 0.4;
   if (headOn < -0.3) x -= 0.4; // arm tackles from behind get broken more
-  const p = logistic(x);
-  const force = (d.fx.mass * closing) / 60;
-  if (rng() < p) return { out: isBigHit(s, d, c, closing, headOn) ? 'bigHit' : 'tackle', force };
+  return { evade, tackle: logistic(x), closing, headOn };
+}
+
+/**
+ * Resolve a defender reaching the ball carrier. Returns the outcome and the
+ * hit's force (kN-ish, for the camera and the ragdoll).
+ */
+export function resolveTackle(s: PlayState, d: Agent, c: Agent): { out: TackleOutcome; force: number } {
+  const rng = s.rng.contact;
+  const mv = c.move && c.busy > 0 ? c.move : null;
+  const o = tackleOdds(s, d, c, mv);
+  if (o.evade > 0 && rng() < o.evade) return { out: 'missed', force: 0 };
+  const force = (d.fx.mass * o.closing) / 60;
+  if (rng() < o.tackle) return { out: isBigHit(s, d, c, o.closing, o.headOn) ? 'bigHit' : 'tackle', force };
   return { out: 'broken', force: force * 0.6 };
 }
 

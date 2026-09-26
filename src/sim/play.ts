@@ -32,6 +32,7 @@ import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tick
 import { releaseTime } from './effects';
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { arrive, remember, steer, timeTo } from './movement';
+import { carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
 import { catchLook, findsBallAt, planThrow, reach, release, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { manOf, type PlayState } from './state';
@@ -618,9 +619,19 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
                 : inp.dive
                   ? 'dive'
                   : null;
-    bufferedMove(s, c, pressed);
+    // The three options on the HUD (M6.5 #9), re-read every OPTIONS_EVERY
+    // ticks; a press of 1–3 is the move in that slot now.
+    if (c.mem.opts === undefined || s.tick % OPTIONS_EVERY === 0) c.mem.opts = carrierOptions(s, c).join(',');
+    const opt = inp.option > 0 ? ((c.mem.opts as string).split(',')[inp.option - 1] as MoveOption | undefined) : undefined;
+    const optMove: Move | null = !opt ? null : opt === 'juke' ? jukeSide(s, c, inp.move, attack) : opt === 'protect' ? null : opt;
+    // Protecting from the options holds until the next move (the direct key is held).
+    if (opt === 'protect') {
+      c.mem.optProtect = true;
+      if (!c.move) c.move = 'protect';
+    } else if (optMove || pressed) c.mem.optProtect = false;
+    bufferedMove(s, c, pressed ?? optMove);
     if (inp.protect && !c.move) c.move = 'protect';
-    if (!inp.protect && c.move === 'protect') c.move = null;
+    if (!inp.protect && c.move === 'protect' && !c.mem.optProtect) c.move = null;
   } else {
     want = carrierAI(s, c, attack);
     want = { x: want.x * pace, y: want.y * pace };

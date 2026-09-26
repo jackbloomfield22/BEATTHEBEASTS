@@ -144,6 +144,9 @@ const _dir = new THREE.Vector3();
 const YAW_MAX = 12;
 const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move: null, down: false, stamina: 1 };
 
+/** The carrier's move options as the HUD says them (one word each). */
+const OPTION_WORD: Record<string, string> = { juke: 'Juke', stiffArm: 'Stiff arm', spin: 'Spin', truck: 'Truck', dive: 'Dive', protect: 'Protect' };
+
 export function GameScene() {
   const scene = useThree((s) => s.scene);
   const gl = useThree((s) => s.gl);
@@ -491,6 +494,20 @@ export function GameScene() {
         // Kept on screen (a carrier near the bottom edge keeps his keys in view).
         ch.style.transform = `translate(${Math.max(120, Math.min(rect.width - 120, x)).toFixed(1)}px, ${Math.min(rect.height - 90, y).toFixed(1)}px)`;
         if (hudDom.staminaFill) hudDom.staminaFill.style.transform = `scaleX(${c.stamina.toFixed(3)})`;
+        // The three options the sim holds on him now (moves.ts), the move he's in lit.
+        const live = s.agents[cur.carrier]!;
+        const opts = typeof live.mem.opts === 'string' ? live.mem.opts.split(',') : [];
+        const inMove = live.busy > 0 && live.move ? (live.move === 'jukeL' || live.move === 'jukeR' ? 'juke' : live.move) : live.move === 'protect' ? 'protect' : null;
+        for (let k = 0; k < 3; k++) {
+          const el = hudDom.opts[k];
+          if (!el) continue;
+          const o = opts[k] ?? '';
+          const w = OPTION_WORD[o] ?? '';
+          const word = o === 'dive' && live.slot === 'QB' ? 'Slide' : w;
+          const span = el.lastElementChild as HTMLElement | null;
+          if (span && span.textContent !== word) span.textContent = word;
+          el.classList.toggle('lit', !!o && o === inMove);
+        }
       }
     }
   }

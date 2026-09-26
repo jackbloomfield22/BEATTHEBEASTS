@@ -290,15 +290,8 @@ const CATCHES = [
   { type: "rac", action: "air.rac", word: "Run" },
 ] as const;
 
-/** The carrier's moves, in key order (1–6). */
-const MOVES = [
-  { action: "carrier.juke", word: "Juke", pad: "R-Stick ←→" },
-  { action: "carrier.stiffArm", word: "Stiff arm" },
-  { action: "carrier.spin", word: "Spin" },
-  { action: "carrier.truck", word: "Truck" },
-  { action: "carrier.dive", word: "Dive" },
-  { action: "carrier.protect", word: "Protect" },
-] as const;
+/** The carrier's three move options (M6.5 #9): whatever the situation offers now, 1 the likeliest to work. The words are written every frame from the sim (GameScene, hudDom.opts). */
+const OPTIONS = ["carrier.option1", "carrier.option2", "carrier.option3"] as const;
 
 /** The key (or button) bound to an action, for prompts. */
 function useKey() {
@@ -404,7 +397,7 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
           </div>
         ))}
         <div className="aim-reticle" ref={(el) => void (hudDom.reticle = el)} />
-        {/* Under the ball carrier, the whole time he has it: his stamina and his moves, 1–6. */}
+        {/* Under the ball carrier, the whole time he has it: his stamina and his three move options. */}
         <div
           className="carrier-hud"
           ref={(el) => void (hudDom.carrierHud = el)}
@@ -415,13 +408,16 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
               ref={(el) => void (hudDom.staminaFill = el)}
             />
           </div>
-          <div className="carrier-keys">
-            {MOVES.map((m) => (
-              <Cue
-                key={m.action}
-                k={pad && "pad" in m ? m.pad : key(m.action)}
-                w={m.action === "carrier.dive" && qbRunning ? "Slide" : m.word}
-              />
+          <div className="carrier-keys carrier-opts">
+            {OPTIONS.map((a, k) => (
+              <span
+                key={a}
+                className="cue opt"
+                ref={(el) => void (hudDom.opts[k] = el)}
+              >
+                <kbd>{key(a)}</kbd>
+                <span className="cue-w" />
+              </span>
             ))}
           </div>
         </div>
@@ -504,7 +500,7 @@ function Tutorial() {
     catch: CATCHES.map((c) => [key(c.action), c.word]),
     run: [
       [
-        pad ? "R-Stick" : `${key("carrier.juke")}–${key("carrier.protect")}`,
+        `${key("carrier.option1")} ${key("carrier.option2")} ${key("carrier.option3")}`,
         "Moves",
       ],
     ],

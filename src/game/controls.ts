@@ -243,6 +243,7 @@ export class Controls {
       f.truck = e.has('carrier.truck');
       f.dive = e.has('carrier.dive');
       f.protect = Input.isHeld('carrier.protect');
+      f.option = e.has('carrier.option1') ? 1 : e.has('carrier.option2') ? 2 : e.has('carrier.option3') ? 3 : 0;
     }
     e.clear();
     return f;

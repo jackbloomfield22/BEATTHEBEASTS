@@ -11,6 +11,8 @@ export const hudDom = {
   /** The carrier's cluster (stamina and his move keys), placed under him every frame. */
   carrierHud: null as HTMLElement | null,
   staminaFill: null as HTMLElement | null,
+  /** The carrier's three move options (their words are written every frame; the one he's in lights up). */
+  opts: [] as (HTMLElement | null)[],
 };
 
 /** Circumference of the power ring's circle (r = 17). */
