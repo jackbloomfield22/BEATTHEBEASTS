@@ -74,7 +74,7 @@ describe('M5 action clips', () => {
     const overlays = Object.entries(clips).filter(([, m]) => m.kind === 'overlay');
     expect(overlays.map(([n]) => n).sort()).toEqual([
       'catch_body', 'catch_hands_run', 'catch_hands_run_low', 'catch_one_hand_l', 'catch_one_hand_r', 'catch_over_shoulder_l', 'catch_over_shoulder_r',
-      'ovl_carry_r', 'ovl_catch', 'ovl_catch_high', 'ovl_getoff', 'ovl_handoff_l', 'ovl_handoff_r', 'ovl_pa_fake_l', 'ovl_pa_fake_r',
+      'ovl_carry_r', 'ovl_catch', 'ovl_catch_high', 'ovl_dip_l', 'ovl_dip_r', 'ovl_getoff', 'ovl_handoff_l', 'ovl_handoff_r', 'ovl_pa_fake_l', 'ovl_pa_fake_r',
       'ovl_protect', 'ovl_pump', 'ovl_qb_hold', 'ovl_stiff_arm', 'ovl_take_l', 'ovl_take_r', 'ovl_truck', 'ovl_tuck',
     ]);
     for (const [n, m] of overlays) {

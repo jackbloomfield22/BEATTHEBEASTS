@@ -114,7 +114,7 @@ def upper(hands: dict, joints: dict, elbow: dict, base: Pose = IDLE) -> Pose:
 def tuck_pose() -> Pose:
     """High and tight in the right arm, the left hand still over the nose (as the old catch)."""
     return upper(
-        {"r": TUCK_R, "l": (0.03, -0.31, 1.22)},
+        {"r": TUCK_R, "l": (0.02, -0.30, 1.30)},
         {**hands_of(GRIP, "r"), **hands_of(SPREAD, "l"), "hand_r": (-15, 0, 10), "hand_l": (20, 0, -10)},
         {"r": TUCK_ELBOW_R, "l": (0.45, 0.2, 0.9)},
         base=carry_pose(),

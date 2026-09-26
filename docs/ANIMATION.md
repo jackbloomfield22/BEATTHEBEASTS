@@ -30,6 +30,7 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `stance_punter` | stance | 60 | 0.0 | 0.00 | 0.00 | 26.9 | 8.7 | pass |
 | `stance_ref` | stance | 60 | 0.0 | 0.00 | 0.00 | 23.7 | 10.6 | pass |
 | `stance_down_prone_ball` | stance | 60 | 0.0 | 0.00 | 0.00 | 25.3 | — | pass |
+| `stance_down_prone_reach` | stance | 60 | 0.0 | 0.00 | 0.00 | 25.3 | — | pass |
 | `loco_walk` | locomotion | 32 | 1.3 | 0.05 | 0.00 | 17.2 | — | pass |
 | `loco_jog` | locomotion | 22 | 3.5 | 0.31 | 0.00 | 21.7 | — | pass |
 | `loco_run` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.8 | — | pass |
@@ -152,5 +153,22 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `catch_toe_tap_r` | transition | 30 | 0.0 | 0.00 | 0.00 | 20.4 | — | pass |
 | `catch_one_hand_l` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_one_hand_r` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `carry_jog` | locomotion | 22 | 3.5 | 0.01 | 0.00 | 19.8 | — | pass |
+| `carry_run` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.2 | — | pass |
+| `carry_sprint` | locomotion | 14 | 8.5 | 0.00 | 0.00 | 24.7 | — | pass |
+| `carry_traffic_jog` | locomotion | 18 | 3.2 | 0.00 | 0.00 | 21.7 | — | pass |
+| `carry_traffic_run` | locomotion | 15 | 5.6 | 0.00 | 0.00 | 23.7 | — | pass |
+| `carry_drive_jog` | locomotion | 20 | 4.0 | 0.00 | 0.00 | 23.1 | — | pass |
+| `carry_drive_run` | locomotion | 16 | 6.2 | 0.00 | 0.00 | 23.1 | — | pass |
+| `carry_drive_sprint` | locomotion | 14 | 8.2 | 0.00 | 0.00 | 24.6 | — | pass |
+| `cut_plant_l` | transition | 19 | 0.0 | 0.00 | 0.00 | 20.8 | — | pass |
+| `cut_plant_r` | transition | 19 | 0.0 | 0.00 | 0.00 | 20.8 | — | pass |
+| `cut_plant_sharp_l` | transition | 24 | 0.0 | 0.23 | 0.00 | 25.4 | — | pass |
+| `cut_plant_sharp_r` | transition | 24 | 0.0 | 0.23 | 0.00 | 25.4 | — | pass |
+| `truck` | transition | 17 | 0.0 | 0.00 | 0.00 | 14.8 | — | pass |
+| `hurdle` | transition | 36 | 0.0 | 0.00 | 0.00 | 16.0 | — | pass |
+| `dive_reach` | transition | 24 | 0.0 | 0.00 | 0.00 | 22.0 | — | pass |
+| `ovl_dip_l` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `ovl_dip_r` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 
-**146 of 146 clips pass.**
+**164 of 164 clips pass.**
