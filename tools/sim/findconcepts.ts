@@ -24,8 +24,8 @@ export interface ConceptSpec {
   /** Least gain (yd). */
   min: number;
   plan?: Partial<ConceptPlan>;
-  /** The catch must come off the break (timing routes); a go or a screen has none. */
-  timing?: boolean;
+  /** The catch must come off the break (timing routes): the ball arrives within this long after it (s). A go or a screen has none. */
+  timing?: number;
   /** Back-shoulder placement must show (the throw's place). */
   backShoulder?: boolean;
   scramble?: boolean;
@@ -33,13 +33,13 @@ export interface ConceptSpec {
 const range = (a: number, b: number, step: number) => Array.from({ length: Math.floor((b - a) / step) + 1 }, (_, k) => a + k * step);
 
 export const SPECS: ConceptSpec[] = [
-  { id: 'slant', play: 'doubles-slants', icon: 1, ats: range(30, 80, 4), min: 6, timing: true },
-  { id: 'out', play: 'doubles-quick-outs', icon: 1, ats: range(30, 90, 4), min: 5, timing: true },
-  { id: 'curl', play: 'doubles-curls', icon: 1, ats: range(60, 130, 5), min: 10, timing: true, plan: { call: 'possession' } },
+  { id: 'slant', play: 'doubles-slants', icon: 1, ats: range(30, 80, 4), min: 6, timing: 0.7 },
+  { id: 'out', play: 'doubles-quick-outs', icon: 1, ats: range(30, 90, 4), min: 5, timing: 0.7 },
+  { id: 'curl', play: 'doubles-curls', icon: 1, ats: range(60, 130, 5), min: 10, timing: 0.7, plan: { call: 'possession' } },
   { id: 'go', play: 'trips-four-verts', icon: 3, ats: range(70, 140, 5), min: 25, plan: { hold: 16 } },
-  { id: 'post', play: 'singleback-pa-post', icon: 1, ats: range(90, 160, 5), min: 18, timing: true, plan: { hold: 10 } },
-  { id: 'corner', play: 'doubles-smash', icon: 1, ats: range(70, 140, 5), min: 14, timing: true, plan: { hold: 14 } },
-  { id: 'crosser', play: 'trips-y-cross', icon: 1, ats: range(80, 150, 5), min: 12, timing: true },
+  { id: 'post', play: 'singleback-pa-post', icon: 1, ats: range(80, 160, 5), min: 18, timing: 1.5, plan: { hold: 10 } },
+  { id: 'corner', play: 'doubles-smash', icon: 1, ats: range(60, 140, 5), min: 14, timing: 1.5, plan: { hold: 14 } },
+  { id: 'crosser', play: 'trips-y-cross', icon: 1, ats: range(80, 150, 5), min: 12, timing: 1.2 },
   { id: 'screen', play: 'doubles-rb-screen', icon: 1, ats: range(60, 120, 4), min: 6 },
   { id: 'back-shoulder', play: 'trips-four-verts', icon: 4, ats: range(70, 130, 5), min: 12, backShoulder: true, plan: { aim: { x: -1, y: -0.2 }, call: 'aggressive' } },
   { id: 'scramble-drill', play: 'trips-y-cross', icon: 0, ats: range(150, 230, 8), min: 8, scramble: true },
@@ -53,9 +53,19 @@ export function tryOne(spec: ConceptSpec, def: string, seed: number, at: number,
   const tgt = s.icons[icon - 1]!;
   let breakT = -1;
   const script = concept(plan);
+  // The break: the first time after his release that his run turns 30°+ within a quarter second at speed.
+  const hist: { x: number; y: number }[] = [];
   runToWhistle(s, (st) => {
     const a = st.agents[tgt]!;
-    if (breakT < 0 && a.route && a.route.idx >= a.route.pts.length - 1 && st.snapT >= 0) breakT = st.t;
+    if (st.snapT >= 0 && st.phase !== 'carrier') {
+      hist.push({ x: a.vel.x, y: a.vel.y });
+      const was = hist[hist.length - 16];
+      const sp = Math.hypot(a.vel.x, a.vel.y);
+      if (breakT < 0 && was && st.t - st.snapT > 0.5 && sp > 3 && Math.hypot(was.x, was.y) > 3) {
+        const cos = (was.x * a.vel.x + was.y * a.vel.y) / (Math.hypot(was.x, was.y) * sp);
+        if (cos < Math.cos(Math.PI / 6)) breakT = st.t;
+      }
+    }
     return script(st);
   });
   const res = s.result;
@@ -67,7 +77,7 @@ export function tryOne(spec: ConceptSpec, def: string, seed: number, at: number,
   if (spec.backShoulder && !(Number(th?.data?.place ?? 0) < -0.5)) return null;
   if (spec.scramble && !(s.scrambleT > 0)) return null;
   const lag = breakT < 0 ? 9 : c.t - breakT;
-  if (spec.timing && (breakT < 0 || lag < 0 || lag > 0.6)) return null;
+  if (spec.timing && (breakT < 0 || lag < 0 || lag > spec.timing)) return null;
   if (p.sep === undefined || p.sep < 1.2 || res.yards < spec.min) return null;
   return { id: spec.id, def, seed, at, icon, yards: res.yards, sep: p.sep, lag, air: p.airYards, td: res.touchdown, plan };
 }
