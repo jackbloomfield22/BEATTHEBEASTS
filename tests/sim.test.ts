@@ -34,7 +34,7 @@ import { v2 } from '@/sim/vec';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT } from '@/sim/types';
 import { applyImpulse, startMove, tickMoves } from '@/sim/contact';
 import { simPlayer } from '@/sim/roster';
-import { CLIPS } from '@/game/clips';
+import { CLIPS, CONCEPTS } from '@/game/clips';
 
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const rosters = practiceRosters(snap);
@@ -535,6 +535,17 @@ describe('feel clips (M5.5): the scripted plays behind the videos', () => {
     expect(rac!.agents[rac!.carrier]!.pos.x - racCatch.at!.x).toBeGreaterThan(12);
     expect(sack!.result!.sack).toBe(true);
     expect(broken!.events.some((e) => e.type === 'brokenTackle')).toBe(true);
+  });
+  it('each broadcast concept (M6.5) is still a completion to its man, open, for a gain', () => {
+    for (const c of CONCEPTS) {
+      const s = run(c);
+      const p = s.result!.pass!;
+      expect(p.complete, c.id).toBe(true);
+      expect(p.sep ?? 0, c.id).toBeGreaterThan(1);
+      expect(s.result!.yards, c.id).toBeGreaterThan(5);
+      if (c.id === 'back-shoulder') expect(Number(s.events.find((e) => e.type === 'throw')!.data!.place), c.id).toBeLessThan(-0.5);
+      if (c.id === 'scramble-drill') expect(s.scrambleT, c.id).toBeGreaterThan(0);
+    }
   });
 });
 

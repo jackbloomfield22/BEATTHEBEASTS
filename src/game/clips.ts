@@ -108,3 +108,28 @@ export const CLIPS: Clip[] = [
   // A stiff arm sheds the first tackler and he takes it the distance (36 after the catch; re-found for M6.5: the slot against Cover 2, seed 71).
   { id: 'broken-tackle', title: 'Broken tackle', seed: 71, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'stiffArm') },
 ];
+
+// The ten broadcast concepts (M6.5): found by tools/sim/findconcepts.ts, the
+// throw on time off the break, open, a real gain. Each note says what it shows.
+export const CONCEPTS: Clip[] = [
+  // Slants against quarters: the X's slant, the ball on him as he clears the linebacker (12 yd).
+  { id: 'slant', title: 'Slant', seed: 1, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 30 }) },
+  // The quick out against man: the break at 5, the ball out on it, the sideline (9 yd).
+  { id: 'out', title: 'Quick out', seed: 8, play: 'doubles-quick-outs', def: 'cover1', los: 30, script: concept({ icon: 1, at: 30 }) },
+  // Curl against man: settles at 10 facing the QB, SECURE on the catch (10 yd).
+  { id: 'curl', title: 'Curl', seed: 5, play: 'doubles-curls', def: 'cover1', los: 30, script: concept({ icon: 1, at: 60, call: 'possession' }) },
+  // Four verticals against Cover 2: the Z up the sideline, the touch ball dropped in between the corner and the half-field safety (48 yd).
+  { id: 'go', title: 'Go', seed: 6, play: 'trips-four-verts', def: 'cover2', los: 30, script: concept({ icon: 3, at: 140, hold: 16 }) },
+  // Play-action post against man: the fake, the post behind it, the ball led into the middle (27 yd).
+  { id: 'post', title: 'Post', seed: 13, play: 'singleback-pa-post', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 80, hold: 10 }) },
+  // Snag's corner against man: the Z's corner from the bunch, the ball over the outside shoulder (36 yd).
+  { id: 'corner', title: 'Corner', seed: 6, play: 'bunch-snag', def: 'cover2man', los: 30, script: concept({ icon: 3, at: 60, hold: 14 }) },
+  // PA crossers against Cover 3: the X's deep cross under the safety, caught running (15 yd).
+  { id: 'crosser', title: 'Crosser', seed: 7, play: 'ace-pa-crossers', def: 'cover3', los: 30, script: concept({ icon: 1, at: 80 }) },
+  // RB screen against man: the back slips out behind the rush, the linemen release in front of him (11 yd).
+  { id: 'screen', title: 'Screen', seed: 4, play: 'doubles-rb-screen', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 76 }) },
+  // Back shoulder against man: the corner on top of the Z's go, the ball thrown away from him, GO UP (19 yd).
+  { id: 'back-shoulder', title: 'Back shoulder', seed: 2, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 3, at: 48, aim: { x: -1, y: -0.2 }, call: 'aggressive' }) },
+  // The scramble drill: the QB escapes right, the X breaks off his route and works back across to him (12 yd).
+  { id: 'scramble-drill', title: 'Scramble drill', seed: 9, play: 'trips-y-cross', def: 'cover3', los: 30, script: concept({ icon: 4, at: 150, scramble: { at: 110, dir: { x: 0.25, y: 1 } } }) },
+];

@@ -31,19 +31,21 @@ export interface ConceptSpec {
   /** Back-shoulder placement must show (the throw's place). */
   backShoulder?: boolean;
   scramble?: boolean;
+  /** Longest air (yd): a back-shoulder ball is a 12–22 yd throw, not a bomb. */
+  maxAir?: number;
 }
 const range = (a: number, b: number, step: number) => Array.from({ length: Math.floor((b - a) / step) + 1 }, (_, k) => a + k * step);
 
 export const SPECS: ConceptSpec[] = [
-  { id: 'slant', play: 'doubles-slants', icon: 1, ats: range(30, 80, 4), min: 6, timing: 1.0, alts: [['trips-stick', 4], ['bunch-snag', 4], ['empty-quick', 1], ['doubles-slants', 3]] },
+  { id: 'slant', play: 'doubles-slants', icon: 1, ats: range(30, 80, 4), min: 6, timing: 1.2, alts: [['trips-stick', 4], ['bunch-snag', 4], ['empty-quick', 1], ['doubles-slants', 3]] },
   { id: 'out', play: 'doubles-quick-outs', icon: 1, ats: range(30, 90, 4), min: 5, timing: 1.0, alts: [['doubles-quick-outs', 2], ['empty-quick', 2]] },
   { id: 'curl', play: 'doubles-curls', icon: 1, ats: range(60, 130, 5), min: 10, timing: 0.7, plan: { call: 'possession' } },
   { id: 'go', play: 'trips-four-verts', icon: 3, ats: range(70, 140, 5), min: 25, plan: { hold: 16 } },
   { id: 'post', play: 'singleback-pa-post', icon: 1, alts: [['singleback-pa-yankee', 2], ['trips-y-cross', 3]], ats: range(80, 160, 5), min: 18, timing: 1.8, plan: { hold: 10 } },
-  { id: 'corner', play: 'doubles-smash', icon: 1, ats: range(60, 140, 5), min: 14, timing: 1.8, plan: { hold: 14 }, alts: [['bunch-snag', 3], ['empty-spot', 2], ['doubles-mesh', 4]] },
+  { id: 'corner', play: 'doubles-smash', icon: 1, ats: range(60, 140, 5), min: 14, timing: 2.3, plan: { hold: 14 }, alts: [['bunch-snag', 3], ['empty-spot', 2], ['doubles-mesh', 4]] },
   { id: 'crosser', play: 'trips-y-cross', icon: 1, ats: range(80, 150, 5), min: 12, timing: 2.0, alts: [['ace-pa-crossers', 1], ['singleback-pa-yankee', 1], ['singleback-pa-post', 2]] },
   { id: 'screen', play: 'doubles-rb-screen', icon: 1, ats: range(60, 120, 4), min: 6 },
-  { id: 'back-shoulder', play: 'trips-four-verts', icon: 4, ats: range(70, 130, 5), min: 12, backShoulder: true, plan: { aim: { x: -1, y: -0.2 }, call: 'aggressive' } },
+  { id: 'back-shoulder', play: 'trips-four-verts', icon: 4, alts: [['trips-four-verts', 3], ['doubles-dagger', 2], ['singleback-drive', 3]], ats: range(40, 96, 4), min: 12, maxAir: 22, backShoulder: true, plan: { aim: { x: -1, y: -0.2 }, call: 'aggressive' } },
   { id: 'scramble-drill', play: 'trips-y-cross', icon: 0, ats: range(150, 230, 8), min: 8, scramble: true },
 ];
 
@@ -91,6 +93,7 @@ export function tryOne(spec: ConceptSpec, def: string, seed: number, at: number,
   if (spec.timing && (lag < 0 || lag > spec.timing)) return no(lag < 0 ? 'caught before the break' : 'late off the break');
   if (p.sep === undefined || p.sep < 1) return no('covered');
   if (res.yards < spec.min) return no('short');
+  if (spec.maxAir !== undefined && p.airYards > spec.maxAir) return no('too deep');
   return { id: spec.id, play, def, seed, at, icon, yards: res.yards, sep: p.sep, lag, air: p.airYards, td: res.touchdown, plan };
 }
 
@@ -110,8 +113,8 @@ if (process.argv[1]?.endsWith('findconcepts.ts')) {
         }
       }
     }
-    // A clean look: open but not wide open, on time, a real gain but not a 70-yard fluke (unless it's the go).
-    const score = (h: Hit) => -Math.abs(h.sep - 2.5) - (spec.timing ? h.lag * 3 : 0) - Math.max(0, h.yards - spec.min - 25) * 0.1;
+    // A clean look: open but not wide open (a back-shoulder ball goes to a man who's covered, the defender on top), on time, a real gain but not a 70-yard fluke.
+    const score = (h: Hit) => -Math.abs(h.sep - (spec.backShoulder ? 1.4 : 2.5)) - (spec.timing ? h.lag * 3 : 0) - Math.max(0, h.yards - spec.min - 25) * 0.1;
     hits.sort((a, b) => score(b) - score(a));
     if (process.argv.includes('--why')) console.log('  turned down: ' + Object.entries(WHY).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', '));
     for (const k of Object.keys(WHY)) delete WHY[k];
