@@ -11,6 +11,10 @@ export interface ResultCard {
   yards: number;
 }
 
+/** The card's words for why a catchable ball went down, and why a throw was off. */
+const DROP_WHY: Record<string, string> = { contact: ', hit as it arrived', behind: ', thrown behind him', bullet: ', a fastball from close in', reach: ', at full stretch', hands: '' };
+const THROW_WHY: Record<string, string> = { pressure: ' under pressure', 'on the run': ' on the run', 'feet not set': ' with his feet not set', 'long throw': '', clean: '' };
+
 const last = (name: string): string => name.split(' ').slice(-1)[0] ?? name;
 const yds = (n: number): string => `${n >= 0 ? '+' : '−'}${Math.abs(Math.round(n))} yd${Math.abs(Math.round(n)) === 1 ? '' : 's'}`;
 
@@ -47,7 +51,24 @@ export function describe(s: PlayState): ResultCard {
     const thr = ev('throw');
     const tgt = thr ? last(who(thr.who?.[1])) : '';
     const outCatch = ev('catchOutOfBounds');
-    const detail = s.ball.target === -3 ? 'Thrown away.' : outCatch ? `${last(who(outCatch.who?.[0]))} caught it out of bounds.` : drop ? `Dropped by ${last(who(drop.who?.[0]))}.` : defl ? `Broken up by ${who(defl.who?.[0])}.` : tgt ? `Intended for ${tgt}.` : '';
+    // Why (M6.5 #1, #3): a drop says what made it hard; a ball nobody touched says why it was off.
+    const dropWhy = DROP_WHY[String(drop?.data?.why ?? '')] ?? '';
+    const throwWhy = THROW_WHY[String(thr?.data?.why ?? '')] ?? '';
+    const offTarget = thr && !defl && !drop ? (thr.data?.mech === 'sail' ? 'Sailed on him' : thr.data?.mech === 'short' ? 'Short-hopped' : Number(thr.data?.off ?? 0) > 1.5 ? 'Off target' : '') : '';
+    const detail =
+      s.ball.target === -3
+        ? 'Thrown away.'
+        : outCatch
+          ? `${last(who(outCatch.who?.[0]))} caught it out of bounds.`
+          : drop
+            ? `Dropped by ${last(who(drop.who?.[0]))}${dropWhy}.`
+            : defl
+              ? `Broken up by ${who(defl.who?.[0])}.`
+              : offTarget
+                ? `${offTarget}${throwWhy}, intended for ${tgt}.`
+                : tgt
+                  ? `Intended for ${tgt}.`
+                  : '';
     return { headline: 'Incomplete', detail, tone: 'neutral', yards: 0 };
   }
   const caught = ev('catch');

@@ -164,6 +164,9 @@ export interface SimEvent {
   data?: Record<string, number | string | boolean>;
 }
 
+/** Why a catchable ball was hard to catch: a hit as it arrived, thrown behind him, a bullet from close, a reach at full stretch, or only his hands. */
+export type CatchHard = 'contact' | 'behind' | 'bullet' | 'reach' | 'hands';
+
 export interface PlayResult {
   reason: WhistleReason;
   /** Ball spot at the whistle, x yards. */
@@ -183,6 +186,8 @@ export interface PlayResult {
     /** When the ball reached the target: the nearest defender to it (yd) and how hard it was contested (0–1). Unset if it never got to him. */
     sep?: number;
     contest?: number;
+    /** What made the catch hard (M6.5 #3), for a drop's result card: the biggest cost to his odds. */
+    hard?: CatchHard;
   };
   sack: boolean;
   ticks: number;

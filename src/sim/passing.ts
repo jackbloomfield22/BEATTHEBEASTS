@@ -12,7 +12,7 @@ import { continueDir } from './ai';
 import { gauss } from './rand';
 import { exp } from '@/engine/math/detmath';
 import type { PlayState } from './state';
-import { TICK, type Agent } from './types';
+import { TICK, type Agent, type CatchHard } from './types';
 import { dist, len, type V2 } from './vec';
 
 /** Ball height at a comfortable catch (chest), yd. */
@@ -151,9 +151,8 @@ function clearLoft(s: PlayState, from: V3, to: V3, T: number): number {
  */
 /** How far from the ball (yd) a defender still contests the catch: fully at a yard, not at all from here. M5.5 used 2 yd; at 2.6 a defender closing on the ball at the catch still gets a hand in. */
 const CONTEST_R = 2.6;
-/** The mechanics-miss floor: the share of an accurate (99) passer's throws that get away from him. */
-/** The mechanics-miss floor: the share of an accurate (99) passer's throws that get away from him (PFF: ~10–15% of an elite passer's aimed throws are off target). */
-const MISS_BASE = 0.13;
+/** The mechanics miss for accuracy alone, × (1 − accuracy/99): a 70 passer ~4% of his clean throws, a 95 under 1%. */
+const MISS_ACC = 0.14;
 
 export const coneScale = (d: number): number => (d >= 20 ? d / 20 : 0.7 + 0.3 * (d / 20));
 
@@ -172,6 +171,28 @@ export interface ThrowPlan {
   meant: V2;
   /** The ball got away from him (a sailed or short-hopped throw: the mechanics miss). */
   missed: boolean;
+  /** Where the error came from (M6.5 #1): each factor on the cone, and the miss. */
+  err: ThrowError;
+}
+
+/** A throw's error, by source: the cone's 1σ (yd) and what scaled it; the mechanics miss; the error applied. */
+export interface ThrowError {
+  /** His accuracy for the depth, the base cone at 20 yd and the distance scale on it. */
+  acc: number;
+  base: number;
+  distance: number;
+  /** Multipliers on the cone (1 = no effect). */
+  moving: number;
+  pressure: number;
+  platform: number;
+  sigma: number;
+  /** The mechanics miss: its odds, and whether it happened ('sail' long and high, 'short' in the dirt). */
+  pMiss: number;
+  miss: 'sail' | 'short' | null;
+  /** The error applied (yd): downfield and across from the meant point, and its size on the ground. */
+  dx: number;
+  dy: number;
+  off: number;
 }
 
 /**
@@ -204,18 +225,29 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   // Error cone (GDD §9.1): the accuracy for the throw's depth sets the base.
   const air = tx - s.setup.los;
   const acc = air < 12 ? qb.fx.r('shortAcc') : air < 25 ? qb.fx.r('midAcc') : qb.fx.r('deepAcc');
-  let sigma = errorAt20(acc) * coneScale(d);
+  const base = errorAt20(acc);
   const moving = Math.min(1, len(qb.vel) / 4);
-  sigma *= 1 + moving * 1.1 * (1 - qb.fx.a('throwOnRun'));
-  sigma *= 1 + pressure * 1.4 * (1 - qb.fx.a('underPressure'));
-  sigma *= offPlatform ? 1.2 : 1;
-  // The mechanics miss (M6): now and then a throw gets away from him, a
-  // ball that sails or dies in the dirt, 2–3 yd off, whatever his accuracy
-  // at that depth. PFF charts ~10% of even an elite passer's throws off
-  // target and ~15–20% league-wide; the cone above is the good ones' spread.
-  // Rarer for the accurate, and more under pressure, off his platform or on the move.
+  // The cone grows only for a reason (M6.5 #1), and every reason costs even
+  // the best something: throwing on the move, a rusher in his face, feet not
+  // set. His rating decides how much (M6 scaled by 1 − rating alone, so a
+  // Montana under a free rusher threw exactly as he did from a clean pocket).
+  const fMoving = 1 + moving * (0.35 + 0.8 * (1 - qb.fx.a('throwOnRun')));
+  const fPressure = 1 + pressure * (1.0 + 1.2 * (1 - qb.fx.a('underPressure')));
+  const fPlatform = offPlatform ? 1.25 : 1;
+  const sigma = base * coneScale(d) * fMoving * fPressure * fPlatform;
+  // The mechanics miss: a ball that gets away from him, sailing or dying in
+  // the dirt, 2–4 yd off. Only for a reason (M6.5 #1): M6 gave every throw a
+  // 13% floor, so 79% of the misses came from a clean pocket and a quarter of
+  // an elite passer's 15-yard throws landed more than a yard from where he
+  // meant them (tools/sim/throws.ts). Now: a less accurate passer, a rusher
+  // on him, feet not set, on the run, or a long throw. PFF's ~10% of an elite
+  // passer's throws off target come from those.
   const accN = acc / 99;
-  const pMiss = Math.min(0.3, MISS_BASE + 0.1 * (1 - accN) + pressure * 0.08 * (1.2 - qb.fx.a('underPressure')) + (offPlatform ? 0.03 : 0) + moving * 0.05 * (1.1 - qb.fx.a('throwOnRun')));
+  const deep = Math.max(0, air - 20) / 20;
+  const pMiss = Math.min(
+    0.3,
+    MISS_ACC * (1 - accN) + pressure * 0.25 * (1.3 - qb.fx.a('underPressure')) + (offPlatform ? 0.05 : 0) + moving * 0.06 * (1.1 - qb.fx.a('throwOnRun')) + deep * 0.04 * (1.2 - accN),
+  );
   // A sailed ball goes long and high, over his reach; one that dies is
   // short and at his feet (a short hop): either way along the line of the
   // throw, where a receiver can't just drift a step to it.
@@ -242,7 +274,8 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const Tf = clearLoft(s, from, to, hang(to));
   const kind = touch || Tf > hang(to) * 1.01 ? 'touch' : 'driven';
   const v0 = solveLaunch(from, to, Tf);
-  return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed };
+  const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, sigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
+  return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err };
 }
 
 /**
@@ -297,7 +330,30 @@ export function release(s: PlayState, qb: Agent, rec: Agent, plan: ThrowPlan): v
   s.touched = [];
   s.phase = 'air';
   s.pass = { attempted: true, complete: false, intercepted: false, airYards: Math.round(plan.airYards * 10) / 10, target: rec.i };
-  s.events.push({ t: s.t, type: 'throw', who: [qb.i, rec.i], at: { x: plan.to.x, y: plan.to.y }, data: { kind: plan.kind, air: Math.round(plan.airYards), ...(plan.missed ? { missed: true } : {}) } });
+  s.events.push({ t: s.t, type: 'throw', who: [qb.i, rec.i], at: { x: plan.to.x, y: plan.to.y }, data: { kind: plan.kind, air: Math.round(plan.airYards), ...(plan.missed ? { missed: true } : {}), ...throwErrData(plan) } });
+}
+
+/**
+ * The main reason a throw was off, for the result card: the mechanics miss
+ * first (it's the big one), else whichever factor widened the cone most,
+ * else a clean throw (within his cone for the distance).
+ */
+export function throwWhy(e: ThrowError): 'pressure' | 'on the run' | 'feet not set' | 'long throw' | 'clean' {
+  const f: [ReturnType<typeof throwWhy>, number][] = [
+    ['pressure', e.pressure],
+    ['on the run', e.moving],
+    ['feet not set', e.platform],
+    ['long throw', e.distance],
+  ];
+  const [top, k] = f.reduce((a, b) => (b[1] > a[1] ? b : a));
+  return k > 1.15 && (e.miss || e.off > 1) ? top : 'clean';
+}
+
+/** A throw's error sources, flat for its event (the result card and tools/sim/throws.ts read them). */
+export function throwErrData(plan: ThrowPlan): Record<string, number | string> {
+  const e = plan.err;
+  const r = (x: number) => Math.round(x * 1000) / 1000;
+  return { why: throwWhy(e), meantX: r(plan.meant.x), meantY: r(plan.meant.y), acc: e.acc, sigma: r(e.sigma), base: r(e.base), fDist: r(e.distance), fMoving: r(e.moving), fPressure: r(e.pressure), fPlatform: r(e.platform), pMiss: r(e.pMiss), mech: e.miss ?? '', off: r(e.off) };
 }
 
 /** How far a player can reach for a ball: standing reach plus a jump. */
@@ -328,8 +384,6 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
   const cy = py + ry * tc;
   const cz = pz + b.vel.z * tc;
   const off = Math.sqrt(cx * cx + cy * cy + cz * cz * 0.6);
-  // Harder: a ball away from the body, a fast ball.
-  const hard = Math.max(0, off - 0.35) * 0.6 + Math.max(0, vs - 20) * 0.02;
   if (a.side === 'off') {
     // Separation decides it (feedback item 7). The defender best placed to
     // play the ball: how close he is to it at the catch point (in phase is
@@ -365,10 +419,37 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
     const hands = a.fx.a('catching');
     const tough = a.fx.a('catchInTraffic');
     const spect = a.fx.a('spectacular');
-    // Open (2+ yd), catchable: ~93–96% by Catching. NFL drop rates run
-    // ~4–7% of catchable targets (PFF drop rate; the best hands ~3%, a back
-    // or a blocking tight end ~7%); M5.5's 0.91 base caught 97–99%.
-    const clean = 0.87 + 0.09 * hands - hard * (1.1 - 0.5 * spect);
+    // Open and catchable, nothing making it hard: 98% for sure hands (0.9
+    // Catching), 92% for poor ones (0.1), the owner's M6.5 #3 numbers (NFL
+    // drop rates run ~3% of catchable balls for the best hands, ~7% for the
+    // worst). M6 took every open ball down to ~95% and ~90% with a lump
+    // "hard" term, so wide-open balls went down for no reason you could see.
+    // Now each drop has a cause, and the biggest one is kept for the card.
+    const sp = len(a.vel);
+    const along = sp > 3 ? (cx * a.vel.x + cy * a.vel.y) / sp : 0;
+    const thrower = s.agents[b.thrower]!;
+    const range = dist(thrower.pos, a.pos);
+    let hit = 0;
+    for (const o of s.agents) {
+      if (o.side === a.side || o.down) continue;
+      const k = dist(o.pos, a.pos);
+      if (k > 1.1) continue;
+      const closing = ((o.vel.x - a.vel.x) * (a.pos.x - o.pos.x) + (o.vel.y - a.vel.y) * (a.pos.y - o.pos.y)) / Math.max(1e-6, k);
+      hit = Math.max(hit, Math.min(1, (1.1 - k) / 0.6) * (closing > 2 ? 1 : 0.4));
+    }
+    const costs: [CatchHard, number][] = [
+      // A hit as the ball arrives (Catch in Traffic holds on through it).
+      ['contact', hit * 0.1 * (1.1 - 0.6 * tough)],
+      // Thrown behind him: he has to turn back into it at speed.
+      ['behind', Math.min(0.15, Math.max(0, -along - 0.3) * 0.12)],
+      // A fastball from close range: no time to get the hands right.
+      ['bullet', range < 12 ? Math.min(0.08, Math.max(0, vs - 17) * 0.012) : 0],
+      // Away from his body: a reach at full stretch (Spectacular Catch for the one-handers).
+      ['reach', Math.max(0, off - 0.45) * 0.5 * (1.1 - 0.5 * spect)],
+    ];
+    const worst = costs.reduce((m, c) => (c[1] > m[1] ? c : m));
+    const clean = 0.91 + 0.075 * hands - costs.reduce((t, c) => t + c[1], 0);
+    if (s.pass && a.i === b.target && s.pass.hard === undefined) s.pass.hard = worst[1] > 0.02 ? worst[0] : 'hands';
     // In phase: the receiver's Catch in Traffic against the defender's Ball
     // Skills. Contested-catch rates (PFF, NGS) run ~40–50% for the best
     // hands-in-traffic receivers going up for it, ~20–30% for most: here an

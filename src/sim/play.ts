@@ -966,7 +966,7 @@ function ballStep(s: PlayState): void {
             }
           }
         }
-        s.events.push({ t: s.t, type: out === 'drop' ? 'drop' : 'deflection', who: by === who ? [who] : [by, who], at: { x: a.pos.x, y: a.pos.y } });
+        s.events.push({ t: s.t, type: out === 'drop' ? 'drop' : 'deflection', who: by === who ? [who] : [by, who], at: { x: a.pos.x, y: a.pos.y }, ...(out === 'drop' && s.pass?.hard ? { data: { why: s.pass.hard } } : {}) });
       }
     }
     if (b.pos.z <= 0.05) {
