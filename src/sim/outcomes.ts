@@ -16,7 +16,7 @@ import { NEUTRAL } from './input';
 import { stepPlay } from './play';
 import { DEF_CALLS, PASS_PLAYS, RUN_PLAYS, type DefCall, type OffPlay, type RouteName } from './plays';
 import { createPlay, type PlayState } from './state';
-import type { DefSlot, OffSlot, SimPlayer } from './types';
+import { FIELD_HALF_W, TICK, type DefSlot, type OffSlot, type SimPlayer } from './types';
 import { offenseFor, type ContendersRoster } from './personnel';
 import { defenseFor, packageFor, type BeastsDefense } from './defense';
 
@@ -44,7 +44,7 @@ export function sidesFor(r: HarnessRosters, play: OffPlay, def: DefCall): { offe
 /** The harness's book: the everyday plays (situational calls, the sneak and the Hail Mary, are left out). */
 const PASS_BASE = PASS_PLAYS.filter((p) => !p.situ);
 const RUN_BASE = RUN_PLAYS.filter((p) => !p.situ);
-import { dist } from './vec';
+import { dist, type V2 } from './vec';
 
 /**
  * A cell's k-th seed: the play and the call hashed in, so no two cells share
@@ -403,4 +403,100 @@ export function formatRunDist(d: RunDist): string {
     `stuffed ${p(d.stuff)}  10+ ${p(d.exp10)}  20+ ${p(d.exp20)}  fumbles ${d.fumbles} (lost ${d.lost})`,
     `yards before contact ${d.ybc.toFixed(2)}  broken/missed tackles per carry ${d.brokenPer.toFixed(2)}`,
   ].join('\n');
+}
+
+// ---- Route fidelity (M6.5 #2) ------------------------------------------------
+
+/** Distance from p to a route polyline, its last leg carried on 25 yd (a sit route ends at its point). */
+function strayFrom(p: V2, line0: V2[], sitEnd: boolean): number {
+  const line = [...line0];
+  if (!sitEnd && line0.length >= 2) {
+    const a = line0[line0.length - 2]!;
+    const b = line0[line0.length - 1]!;
+    const l = dist(a, b) || 1;
+    line.push({ x: b.x + ((b.x - a.x) / l) * 25, y: b.y + ((b.y - a.y) / l) * 25 });
+  }
+  let best = Infinity;
+  for (let k = 0; k < line.length - 1; k++) {
+    const a = line[k]!;
+    const b = line[k + 1]!;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const u = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / Math.max(1e-9, dx * dx + dy * dy)));
+    best = Math.min(best, dist(p, { x: a.x + dx * u, y: a.y + dy * u }));
+  }
+  return best;
+}
+
+export interface RouteRun {
+  play: string;
+  def: string;
+  k: number;
+  slot: string;
+  route: string;
+  /** The farthest he got from the route art (yd) before the throw, and when (s after the snap). */
+  maxDev: number;
+  devAt: number;
+  /** Time under 35% of his top speed where the route doesn't have him slow (s), and what he was doing then. */
+  slow: number;
+  why: Record<string, number>;
+  /** His route was replaced before the throw. */
+  switched: boolean;
+}
+
+/**
+ * Does every receiver run the called route, at speed, until the ball's in
+ * the air or the QB has left the pocket? The route art is the route as built
+ * at the snap from where he lined up; past its last point he may round
+ * upfield near a sideline (continueDir). Slow time excludes breaking down
+ * into a break, settling at a sit point, a late release showing pass
+ * protection and the first half-second; what's left is tagged: jammed at
+ * the line, a defender on him, near the sideline, or no reason.
+ */
+export function routeFidelity(rosters: HarnessRosters, n: number, plays: OffPlay[] = PASS_BASE.filter((p) => !p.screen), defs: DefCall[] = DEF_CALLS): RouteRun[] {
+  const recs: RouteRun[] = [];
+  for (const play of plays) {
+    for (const def of defs) {
+      for (let k = 0; k < n; k++) {
+        const sd = sidesFor(rosters, play, def);
+        const s = createPlay({ seed: cellSeed(play, def, k), offense: sd.offense, defense: sd.defense, play, def: sd.def, los: 35, ballY: HASHES[k % 3], flip: k % 2 === 1, toGo: 10, user: false });
+        const art = new Map<number, { pts: V2[]; sitEnd: boolean; ref: object; rec: RouteRun }>();
+        for (let t = 0; t < 60 * 40 && !s.result; t++) {
+          stepPlay(s, NEUTRAL);
+          if (s.snapT < 0) continue;
+          for (const i of s.off) {
+            const a = s.agents[i]!;
+            if (!a.route || art.has(i)) continue;
+            const rec: RouteRun = { play: play.id, def: def.id, k, slot: a.slot, route: routeOf(s, a) ?? '?', maxDev: 0, devAt: 0, slow: 0, why: {}, switched: false };
+            art.set(i, { pts: [{ ...a.pos }, ...a.route.pts.map((q) => ({ ...q }))], sitEnd: !!a.route.sit[a.route.sit.length - 1], ref: a.route, rec });
+            recs.push(rec);
+          }
+          if (s.phase === 'air' || s.phase === 'carrier' || s.phase === 'loose' || s.phase === 'dead' || s.escapeT >= 0 || s.scrambleT >= 0) break;
+          const since = s.t - s.snapT;
+          for (const [i, r] of art) {
+            const a = s.agents[i]!;
+            const rt = a.route;
+            if (rt !== r.ref) r.rec.switched = true;
+            const pastEnd = !!rt && rt.idx >= rt.pts.length;
+            const dv = pastEnd && FIELD_HALF_W - Math.abs(a.pos.y) < 6 ? 0 : strayFrom(a.pos, r.pts, r.sitEnd);
+            if (dv > r.rec.maxDev) {
+              r.rec.maxDev = dv;
+              r.rec.devAt = since;
+            }
+            if (since < 0.5) continue;
+            const last = r.pts[r.pts.length - 1]!;
+            const sat = !!rt && rt.idx >= rt.pts.length - 1 && r.sitEnd && dist(a.pos, last) < 2;
+            const atBreak = !!rt && rt.idx < rt.pts.length && dist(a.pos, rt.pts[rt.idx]!) < 1.5;
+            if (Math.sqrt(a.vel.x * a.vel.x + a.vel.y * a.vel.y) / a.fx.vmax >= 0.35 || sat || atBreak || a.anim === 'block') continue;
+            r.rec.slow += TICK;
+            let near = Infinity;
+            for (const d of s.def) near = Math.min(near, dist(s.agents[d]!.pos, a.pos));
+            const why = a.busy > 0 ? 'jammed' : near < 1.0 ? 'defender on him' : Math.abs(a.pos.y) > FIELD_HALF_W - 3 ? 'sideline' : rt && rt.sit[rt.idx] ? 'arriving at a sit point' : 'no reason';
+            r.rec.why[why] = (r.rec.why[why] ?? 0) + TICK;
+          }
+        }
+      }
+    }
+  }
+  return recs;
 }

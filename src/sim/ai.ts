@@ -98,6 +98,9 @@ export function continueDir(at: V2, p0: V2, p1: V2): V2 {
   return dir;
 }
 
+/** Within this of a route's break point (yd) and moving away from it, he's made the break. */
+const BREAK_PASS = 2;
+
 /** Run the route: stem at pace, sharp breaks for good route runners, settle on sits. */
 export function runRoute(s: PlayState, a: Agent): void {
   const rt = a.route;
@@ -133,7 +136,15 @@ export function runRoute(s: PlayState, a: Agent): void {
     const q = rt.pts[rt.idx]!;
     // Better route runners go deeper into the break before turning (sharper cuts).
     const early = 0.9 - 0.65 * rr;
-    if (dist(a.pos, q) < (rt.sit[rt.idx] ? 0.25 : early)) {
+    // A break he runs by at speed is still made: once he's close and moving
+    // away from the point, it's behind him (M6.5 #2: he had to touch it
+    // within `early`, 0.3 yd for a sharp route runner, so a slant runner
+    // who came by it half a yard wide braked, turned round and went back to
+    // it, and the best route runners stopped mid-route the most:
+    // tools/sim/routefid.ts).
+    const k = dist(a.pos, q);
+    const past = !rt.sit[rt.idx] && k < BREAK_PASS && a.vel.x * (q.x - a.pos.x) + a.vel.y * (q.y - a.pos.y) < 0;
+    if (k < (rt.sit[rt.idx] ? 0.25 : early) || past) {
       rt.idx++;
     }
   }
@@ -148,10 +159,22 @@ export function runRoute(s: PlayState, a: Agent): void {
     let pace = rt.idx === 0 ? 0.92 : 1;
     const nx = rt.pts[rt.idx + 1];
     if (nx && !sit) {
+      // Into the break at the speed he can carry through it, braking in
+      // time: full speed through a bend, ~60% of top speed round a right
+      // angle, ~25% turning back (a hitch, a curl), a sharp route runner a
+      // little more. M6.5 #2: M6 came into every break at ~80% from 2.2 yd
+      // out, so a hitch runner took ~3 yd to stop and turned back from 8
+      // or 9 to settle at 5 (tools/sim/routefid.ts).
       const p0 = rt.idx > 0 ? rt.pts[rt.idx - 1]! : a.pos;
       const u = norm(sub(q, p0));
       const w = norm(sub(nx, q));
-      if (u.x * w.x + u.y * w.y < 0.82 && dist(a.pos, q) < 2.2) pace *= 0.65 + 0.2 * rr;
+      const c = u.x * w.x + u.y * w.y;
+      const c90 = 0.3 + 0.15 * rr;
+      const c180 = 0.15 + 0.1 * rr;
+      const carry = c >= 0 ? c90 + (1 - c90) * c : c180 + (c90 - c180) * (1 + c);
+      const vb = carry * a.fx.vmax;
+      const cap = Math.sqrt(vb * vb + 2 * a.fx.cutAccel * 0.8 * dist(a.pos, q));
+      pace = Math.min(pace, cap / a.fx.vmax);
     }
     const want = sit ? arrive(a, q, 1, 1) : arrive(a, q, pace);
     steer(a, boundaryGovern(a, want, ROUTE_ROOM - 0.3), {});
