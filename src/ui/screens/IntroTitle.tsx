@@ -3,6 +3,8 @@ import { useApp } from '@/app/appStore';
 import { getSettings } from '@/app/settings';
 import { enterFullscreen } from '@/app/platform';
 import { Audio } from '@/audio/audio';
+import { Input } from '@/input/InputManager';
+import { useDevice } from '../components/Glyph';
 
 /** Studio sting (silent: audio can't start before the first input). Any input skips. */
 export function StudioIntro() {
@@ -58,6 +60,8 @@ export function TitleScreen() {
   const go = useApp((s) => s.go);
   const setShot = useApp((s) => s.setShot);
   const [leaving, setLeaving] = useState(false);
+  // A controller already seen (or the last input) says button.
+  const pad = useDevice() === 'gamepad' || Input.padConnected;
 
   useEffect(() => {
     setShot('title');
@@ -100,7 +104,7 @@ export function TitleScreen() {
           <span className="title-beasts">Beasts</span>
         </h1>
       </div>
-      <div className="press-any">Press any key</div>
+      <div className="press-any">{pad ? 'Press any button' : 'Press any key'}</div>
       <div className="title-foot">Independent project · not affiliated with the NFL</div>
     </div>
   );

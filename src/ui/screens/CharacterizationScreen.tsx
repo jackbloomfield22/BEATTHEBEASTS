@@ -5,6 +5,7 @@ import { DEFENSE, PLAYERS, SKIN_TONES } from '@data/legacy';
 import { Audio } from '@/audio/audio';
 import { useMenuNav } from '../nav';
 import { Hints } from '../components/controls';
+import { TabKey } from '../components/Glyph';
 
 // Skin-tone editor (legacy CharacterizationEditor, rebuilt as a game menu and
 // reachable from Settings). One row per person key (name, as in legacy; person
@@ -130,13 +131,13 @@ export function CharacterizationScreen() {
       <header className="screen-head">
         <h1 className="screen-title">Skin Tones</h1>
         <div className="tabs">
-          <span className="tab-key">Q</span>
+          <TabKey dir="prev" />
           {GROUPS.map((g) => (
             <button key={g} className={`tab ${g === group ? 'is-active' : ''}`} onClick={() => { setGroup(g); setFocus(0); }} tabIndex={-1}>
               {g === 'ALL' ? 'All' : g === 'DEF' ? 'Defense' : g}
             </button>
           ))}
-          <span className="tab-key">E</span>
+          <TabKey dir="next" />
         </div>
         <div className="char-count">
           <b>{setCount}</b> / {people.length} set{dirty ? <span className="unsaved"> · unsaved</span> : null}

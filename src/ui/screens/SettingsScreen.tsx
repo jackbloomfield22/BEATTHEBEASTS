@@ -6,7 +6,8 @@ import { ACTIONS, ACTIONS_BY_ID, CONTEXT_LABELS, defaultBindings, findConflicts,
 import { Input } from '@/input/InputManager';
 import { Audio } from '@/audio/audio';
 import { useMenuNav } from '../nav';
-import { Choice, Hints, SettingRow, Slider, Toggle, stepValue } from '../components/controls';
+import { Choice, Hints, SettingRow, Slider, Toggle, stepValue, useDevice } from '../components/controls';
+import { InputGlyph, TabKey } from '../components/Glyph';
 
 type Opt<T> = { value: T; label: string };
 type Row =
@@ -246,7 +247,8 @@ export function SettingsScreen() {
     document.querySelector('.settings-rows .is-focused')?.scrollIntoView({ block: 'nearest' });
   }, [focus, tab]);
 
-  const desc = row ? (row.kind === 'bind' ? bindDesc(row.actionId) : row.kind === 'header' ? '' : row.desc) : '';
+  const padPrompts = useDevice() === 'gamepad';
+  const desc = row ? (row.kind === 'bind' ? bindDesc(row.actionId, padPrompts) : row.kind === 'header' ? '' : row.desc) : '';
 
   return (
     <div className="menu-screen settings-screen">
@@ -254,13 +256,13 @@ export function SettingsScreen() {
       <header className="screen-head">
         <h1 className="screen-title">Settings</h1>
         <div className="tabs">
-          <span className="tab-key">Q</span>
+          <TabKey dir="prev" />
           {tabs.map((t, i) => (
             <button key={t.id} className={`tab ${i === tab ? 'is-active' : ''}`} onClick={() => { setTab(i); setFocus(0); Audio.uiTick(); }} tabIndex={-1}>
               {t.label}
             </button>
           ))}
-          <span className="tab-key">E</span>
+          <TabKey dir="next" />
         </div>
       </header>
       <div className="settings-body">
@@ -307,7 +309,17 @@ export function SettingsScreen() {
                         {cap === 'kb' ? 'Press a key…' : kb.map(inputLabel).join(' / ') || '—'}
                       </span>
                       <span className={`bind pad ${cap === 'pad' ? 'capturing' : ''}`} onClick={(e) => { e.stopPropagation(); setFocus(i); startCapture(r.actionId, 'pad'); }}>
-                        {cap === 'pad' ? 'Press a button…' : pad.map(inputLabel).join(' / ') || '—'}
+                        {cap === 'pad' ? (
+                          'Press a button…'
+                        ) : pad.length ? (
+                          <span className="glyph-row">
+                            {pad.map((c) => (
+                              <InputGlyph key={c} code={c} />
+                            ))}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
                       </span>
                     </span>
                   </SettingRow>
@@ -332,9 +344,9 @@ export function SettingsScreen() {
   );
 }
 
-function bindDesc(actionId: string): string {
+function bindDesc(actionId: string, pad: boolean): string {
   const def = ACTIONS_BY_ID.get(actionId);
   if (!def) return '';
   if (def.fixed) return `${def.label}. This one follows the mouse or stick and can't be rebound.`;
-  return `${def.label} (${CONTEXT_LABELS[def.context]}). Enter rebinds the keyboard, R rebinds the gamepad. A key already used in the same context moves here.`;
+  return `${def.label} (${CONTEXT_LABELS[def.context]}). ${pad ? 'A rebinds the keyboard, Y rebinds the gamepad' : 'Enter rebinds the keyboard, R rebinds the gamepad'}. An input already used in the same context moves here.`;
 }

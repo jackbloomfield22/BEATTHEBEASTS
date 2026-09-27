@@ -68,6 +68,7 @@ export const urlFlags = (() => {
     // Video recording (tools/shots/video.spec.ts): every rendered frame is 1/N s of game time, cameras ease as in play.
     video: p.has('video') ? Number(p.get('video')) || 30 : null,
     pops: p.has('pops'), // log animation pops (render/game/popMeter.ts)
+    pad: p.has('pad'), // button prompts held on the gamepad's glyphs (screenshots and dev)
     lighting: p.get('lighting'),
     quality: p.get('quality'),
     noIntro: p.has('nointro'),
