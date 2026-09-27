@@ -125,7 +125,7 @@ Named anchors, M2 value (rank of 634) → now. Air = intended air yards ratio vs
 | Brett Favre (NYJ 2000s) | 62 (#540) | 67.4 (#461) | 0.94 | strong (comparison) |
 | Patrick Mahomes (KC 2010s) | 97 (#3) | 98.6 (#1) | 1.09 | cannon (pro) |
 | Patrick Mahomes (KC 2020s) | 87 (#64) | 91.0 (#35) | 0.94 | cannon (pro) |
-| Josh Allen (BUF 2020s) | 90 (#35) | 96.7 (#5) | 1.08 | cannon (pro) |
+| Josh Allen (BUF 2020s) | 90 (#35) | 96.8 (#5) | 1.08 | cannon (pro) |
 | Josh Allen (BUF 2010s) | 75 (#260) | 95.4 (#9) | 1.22 | cannon (pro) |
 | Terry Bradshaw (PIT 1970s) | 91 (#26) | 97.4 (#3) | – | cannon (pro) |
 | Michael Vick (PHI 2010s) | 93 (#17) | 93.4 (#20) | 1.08 | strong (comparison) |
@@ -141,7 +141,7 @@ Named anchors, M2 value (rank of 634) → now. Air = intended air yards ratio vs
 | Warren Moon (KC 1990s) | 61 (#548) | 78.5 (#198) | – | strong (pre-pro) |
 | Randall Cunningham (MIN 1990s) | 94 (#11) | 93.6 (#19) | – | strong (comparison) |
 | Randall Cunningham (PHI 1990s) | 84 (#96) | 86.9 (#77) | – | strong (comparison) |
-| Randall Cunningham (PHI 1980s) | 73 (#310) | 81.6 (#143) | – | strong (comparison) |
+| Randall Cunningham (PHI 1980s) | 73 (#310) | 81.7 (#142) | – | strong (comparison) |
 | **Expected low** | | | | |
 | Chad Pennington (MIA 2000s) | 72 (#335) | 59.1 (#571) | 0.98 | weak (pro) |
 | Chad Pennington (NYJ 2000s) | 70 (#384) | 57.3 (#586) | – | weak (pro) |
@@ -151,7 +151,7 @@ Named anchors, M2 value (rank of 634) → now. Air = intended air yards ratio vs
 | Sam Bradford (LAR 2010s) | 60 (#560) | 55.7 (#595) | 0.90 | – |
 | Sam Bradford (MIN 2010s) | 62 (#540) | 53.3 (#604) | 0.78 | – |
 | Kirk Cousins (WAS 2010s) | 87 (#64) | 82.1 (#134) | 0.99 | – |
-| Kirk Cousins (MIN 2020s) | 87 (#64) | 81.7 (#142) | 1.00 | – |
+| Kirk Cousins (MIN 2020s) | 87 (#64) | 81.7 (#141) | 1.00 | – |
 | Kirk Cousins (MIN 2010s) | 70 (#384) | 63.5 (#523) | 0.91 | – |
 | Joe Montana (KC 1990s) | 78 (#196) | 72.2 (#336) | – | average (pre-pro) |
 | Joe Montana (SF 1980s) | 77 (#217) | 71.8 (#346) | – | average (pre-pro) |
@@ -168,7 +168,7 @@ Named anchors, M2 value (rank of 634) → now. Air = intended air yards ratio vs
 | Chris Chandler (ATL 1990s) | 98 (#1) | 97.7 (#2) | – | – |
 | Terry Bradshaw (PIT 1970s) | 91 (#26) | 97.4 (#3) | – | cannon (pro) |
 | Jameis Winston (TB 2010s) | 95 (#7) | 97.2 (#4) | 1.25 | – |
-| Josh Allen (BUF 2020s) | 90 (#35) | 96.7 (#5) | 1.08 | cannon (pro) |
+| Josh Allen (BUF 2020s) | 90 (#35) | 96.8 (#5) | 1.08 | cannon (pro) |
 | Boomer Esiason (CIN 1980s) | 97 (#3) | 96.5 (#6) | – | strong (pro) |
 | Dan Marino (MIA 1980s) | 88 (#53) | 95.8 (#7) | – | cannon (pro) |
 | Brock Purdy (SF 2020s) | 98 (#1) | 95.6 (#8) | 1.04 | – |
@@ -191,18 +191,18 @@ Named anchors, M2 value (rank of 634) → now. Air = intended air yards ratio vs
 | Matt Ryan (IND 2020s) | 64 (#513) | 48.2 (#618) | 0.78 | weak (pro) |
 | Blaine Gabbert (JAX 2010s) | 50 (#610) | 47.6 (#619) | 0.90 | – |
 | Joe Webb (MIN 2010s) | 34 (#631) | 46.9 (#620) | 1.06* | – |
-| Jimmy Clausen (CAR 2010s) | 45 (#621) | 46.7 (#621) | – | – |
+| Jimmy Clausen (CAR 2010s) | 45 (#621) | 46.6 (#621) | – | – |
 | Mike White (MIA 2020s) | 39 (#628) | 46.1 (#622) | – | – |
 | Tyson Bagent (CHI 2020s) | 50 (#610) | 45.4 (#623) | 0.73 | weak (pre-pro) |
 | Brodie Croyle (KC 2000s) | 45 (#621) | 45.0 (#624) | 0.86 | – |
 | Tyler Huntley (BAL 2020s) | 40 (#627) | 44.5 (#625) | 0.94 | – |
-| Mark Brunell (NO 2000s) | 41 (#626) | 44.0 (#626) | – | – |
+| Mark Brunell (NO 2000s) | 41 (#626) | 43.9 (#626) | – | – |
 | Doug Pederson (CLE 2000s) | 43 (#623) | 43.3 (#627) | – | – |
 | Donovan McNabb (PHI 1990s) | 43 (#623) | 42.7 (#628) | – | – |
 | Kellen Clemens (LAC 2010s) | 36 (#630) | 42.1 (#629) | – | – |
 | Jim Sorgi (IND 2000s) | 39 (#628) | 41.0 (#630) | – | – |
 | Bruce Gradkowski (TB 2000s) | 42 (#625) | 39.3 (#631) | 0.83 | – |
-| Spergon Wynn (CLE 2000s) | 29 (#632) | 32.5 (#632) | – | – |
+| Spergon Wynn (CLE 2000s) | 29 (#632) | 32.4 (#632) | – | – |
 | Dorian Thompson-Robinson (CLE 2020s) | 25 (#633) | 27.4 (#633) | 0.78 | – |
 | Clayton Tune (ARI 2020s) | 22 (#634) | 24.7 (#634) | – | – |
 
@@ -672,9 +672,9 @@ Movers compare the percentile of OVR with the percentile of `imp` inside the pos
 | George Andrie (DAL 1960s) | DE | 79 (7) | 90 (55) | Pool calibration (elite pool: median 0.49 honors/season ≈ 89 on offense) +11.0; DE prior (typical 40 of 4.78) +6.2; Honors per season (1× All-Pro, 3× 2nd-team, 5× Pro Bowl in 8 seasons) +3.5 |
 | Bill Fralic (ATL 1980s) | OL | 80 (46) | 91 (94) | Honors per season (2× All-Pro, 1× 2nd-team, 4× Pro Bowl in 5 seasons) +12.3; Mass: 285 lb (≈334 in today's game) (285 lb) +7.3; Strength (91.1) +1.9 |
 | Gary Johnson (LAC 1980s) | DT | 81 (18) | 94 (66) | Mass: 257 lb (≈298 in today's game) (257 lb) +8.0; Pool calibration (elite pool: median 0.73 honors/season ≈ 92 on offense) +7.5; Honors per season (2× All-Pro, 1× 2nd-team, 3× Pro Bowl in 5 seasons) +4.5 |
-| Vern Den Herder (MIA 1970s) | TE | 70 (33) | 82 (81) | Weight (250 lb (≈275 today)) +3.4; Height (6'6") +1.4; Strength (73.5) +1.4 |
 | Andy Russell (PIT 1970s) | LB | 80 (9) | 92 (57) | Pool calibration (elite pool: median 0.69 honors/season ≈ 91 on offense) +8.3; LB prior (typical 40 of 4.68) +6.6; Honors per season (1× All-Pro, 2× 2nd-team, 6× Pro Bowl in 7 seasons) +3.2 |
-| Tom Beer (NE 1970s) | TE | 67 (10) | 74 (57) | Weight (235 lb (≈260 today)) +1.3; Strength (69.0) +0.6; Pool-shape adjustment (rank blend) +0.6 |
+| Vern Den Herder (MIA 1970s) | TE | 70 (33) | 82 (81) | Weight (250 lb (≈275 today)) +3.4; Height (6'6") +1.4; Strength (73.5) +1.4 |
+| Tom Beer (NE 1970s) | TE | 67 (10) | 74 (58) | Weight (235 lb (≈260 today)) +1.3; Strength (69.0) +0.6; Pool-shape adjustment (rank blend) +0.6 |
 | Hassan Jones (KC 1990s) | WR | 68 (10) | 74 (57) | Yards per target vs league (12.5 vs league 6.8) +2.4; WR prior (typical 40 of 4.48) +1.9; Experience (8.7 yrs in league) +0.9 |
 | Gary Zimmerman (MIN 1980s) | OL | 79 (40) | 86 (87) | Honors per season (2× All-Pro, 3× Pro Bowl in 4 seasons) +11.9; Mass: 281 lb (≈314 in today's game) (281 lb) +6.8; Pool-shape adjustment (rank blend) +0.3 |
 | Ryan Clady (DEN 2010s) | OL | 77 (19) | 77 (66) | Mass: 315 lb (315 lb) +6.8; Honors per season (1× All-Pro, 3× Pro Bowl in 5 seasons) +6.1; Pool-shape adjustment (rank blend) +1.0 |
@@ -711,7 +711,7 @@ Movers compare the percentile of OVR with the percentile of `imp` inside the pos
 | Kareem Hunt (KC 2020s) | RB | 76 (71) | 61 (15) | Yards per carry vs league (3.69 vs league 4.39) -2.6; Agility (71.8) -2.4; Aging (age 29.7) (29.7) -0.8 |
 | Garrett Wilson (NYJ 2020s) | WR | 82 (90) | 68 (34) | Catch % vs league (59.7% vs league 67.6%) -1.6; Honors per season (no honors in 4 seasons) -1.4; Yards per target vs league (6.9 vs league 7.4) -1.3 |
 | Jeremy Hill (CIN 2010s) | RB | 76 (71) | 61 (16) | Agility (66.5) -3.7; Experience (1.4 yrs in league) -1.1; Fumbles per touch vs league (1.17% vs league 0.91%) -0.8 |
-| Mike Gesicki (MIA 2010s) | TE | 74 (71) | 62 (17) | Catch % vs league (60.3% vs league 66.4%) -2.1; Legacy block grade (hand-set) (68) -1.9; Pool-shape adjustment (rank blend) -1.6 |
+| Mike Gesicki (MIA 2010s) | TE | 74 (71) | 62 (17) | Catch % vs league (60.3% vs league 66.4%) -2.1; Legacy block grade (hand-set) (68) -1.9; Pool-shape adjustment (rank blend) -1.5 |
 | Tom Brahaney (ARI 1970s) | OL | 86 (79) | 64 (24) | Strength (76.2) -3.2; Honors per season (no honors in 7 seasons) -2.5; Weight (225 lb (≈284 today)) -2.2 |
 | Cam Newton (CAR 2020s) | QB | 78 (74) | 63 (19) | Passer rating vs league (64.4 vs league 90.8) -1.5; Completion % vs league (54.8% vs league 64.8%) -1.3; Pool-shape adjustment (rank blend) -1.2 |
 | Noah Fant (DEN 2010s) | TE | 75 (75) | 64 (21) | Experience (0.0 yrs in league) -3.0; Catch % vs league (60.6% vs league 66.1%) -1.4; Honors per season (no honors in 1 season) -1.1 |
@@ -721,7 +721,7 @@ Movers compare the percentile of OVR with the percentile of `imp` inside the pos
 | Gerald Everett (LAR 2010s) | TE | 73 (65) | 59 (12) | Catch % vs league (60.6% vs league 65.3%) -1.8; Pool-shape adjustment (rank blend) -1.6; Weight (245 lb (≈243 today)) -1.3 |
 | Derek Anderson (CLE 2000s) | QB | 75 (61) | 57 (8) | Completion % vs league (52.9% vs league 62.5%) -3.4; INT % vs league (4.1% vs league 3.1%) -2.4; Passer rating vs league (69.7 vs league 84.7) -2.3 |
 | Gerald Everett (CHI 2020s) | TE | 72 (56) | 51 (4) | Receptions/game vs league team completions (0.8 vs league 21.4) -6.1; Receiving yards/game vs league team passing (4 vs league 234) -2.6; Weight (240 lb (≈242 today)) -1.5 |
-| Deshaun Watson (CLE 2020s) | QB | 76 (67) | 61 (15) | Completion % vs league (61.2% vs league 68.1%) -1.9; Pool-shape adjustment (rank blend) -1.7; Passer rating vs league (80.7 vs league 95.1) -1.7 |
+| Deshaun Watson (CLE 2020s) | QB | 76 (67) | 61 (15) | Completion % vs league (61.2% vs league 68.1%) -1.8; Pool-shape adjustment (rank blend) -1.7; Passer rating vs league (80.7 vs league 95.1) -1.7 |
 | Blake Bortles (JAX 2010s) | QB | 76 (67) | 61 (16) | INT % vs league (2.8% vs league 2.4%) -2.2; Pool-shape adjustment (rank blend) -1.9; Passer rating vs league (80.6 vs league 89.5) -1.4 |
 | Jordan Mason (SF 2020s) | RB | 77 (75) | 65 (24) | Receiving yards/game vs league team passing (3 vs league 235) -1.8; Receptions per game (0.3) -1.6; Agility (77.7) -1.2 |
 | Marvin Harrison Jr. (ARI 2020s) | WR | 80 (84) | 67 (33) | Catch % vs league (54.5% vs league 68.0%) -2.9; Honors per season (no honors in 2 seasons) -1.4; Experience (0.6 yrs in league) -1.3 |
@@ -824,7 +824,7 @@ No attribute has more than 5 players at 99.
 | # | Player | OVR | Conf | Short Accuracy | Mid Accuracy | Decision Making | Deep Accuracy | Awareness | Traits |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | Steve Young (SF 1990s) | 98 | medium | 99 | 99 | 97 | 99 | 99 | Backyard Ball, Bomb Squad, Maestro, Red Zone Sniper |
-| 2 | Aaron Rodgers (GB 2010s) | 97 | high | 97 | 98 | 99 | 97 | 99 | Air Raid, Backyard Ball, Maestro, Deep Ball Artist |
+| 2 | Aaron Rodgers (GB 2010s) | 97 | high | 98 | 98 | 99 | 97 | 99 | Air Raid, Backyard Ball, Maestro, Deep Ball Artist |
 | 3 | Patrick Mahomes (KC 2010s) | 97 | high | 94 | 96 | 92 | 98 | 97 | Backyard Ball, Bomb Squad, Air Raid, Unflappable |
 | 4 | Peyton Manning (IND 2000s) | 96 | high | 98 | 98 | 91 | 98 | 98 | Air Raid, Bomb Squad, Maestro, Climber |
 | 5 | Joe Montana (SF 1980s) | 96 | medium | 99 | 99 | 98 | 95 | 98 | Maestro, Efficiency King, Off-Platform, Deep Ball Artist |
@@ -1156,7 +1156,7 @@ No attribute has more than 5 players at 99.
 
 **Throw Power**: Patrick Mahomes KC 10s 99 · Chris Chandler ATL 90s 98* · Terry Bradshaw PIT 70s 97* · Jameis Winston TB 10s 97 · Josh Allen BUF 20s 97 · Boomer Esiason CIN 80s 97* · Dan Marino MIA 80s 96* · Brock Purdy SF 20s 96 · Josh Allen BUF 10s 95 · Daryle Lamonica LV 70s 95* · Dan Marino MIA 90s 95* · Lamar Jackson BAL 20s 95 · Anthony Richardson IND 20s 95 · Ben Roethlisberger PIT 00s 95 · Kurt Warner LAR 00s 94 · John Elway DEN 90s 94* · Tim Tebow DEN 10s 94 · Ryan Tannehill TEN 10s 94 · Randall Cunningham MIN 90s 94* · Michael Vick PHI 10s 93 · Carson Palmer ARI 10s 93 · Tony Romo DAL 00s 93 · Trent Green KC 00s 93 · Jeff George MIN 90s 92 · Joe Namath NYJ 70s 92*
 
-**Short Accuracy**: Steve Young SF 90s 99 · Joe Montana SF 80s 99 · Peyton Manning IND 00s 98 · Fran Tarkenton MIN 70s 98 · Aaron Rodgers GB 10s 97 · Dan Marino MIA 80s 97 · Drew Brees NO 00s 97 · Aaron Rodgers GB 20s 97 · Tom Brady NE 10s 97 · Drew Brees NO 10s 97 · Rich Gannon LV 00s 96 · Ken Anderson CIN 80s 96 · Peyton Manning DEN 10s 96 · Ken Stabler LV 70s 96 · Brett Favre GB 90s 95 · Tom Brady NE 00s 95 · Kurt Warner LAR 00s 95 · Patrick Mahomes KC 10s 94 · Bob Griese MIA 70s 94 · Roger Staubach DAL 70s 94 · Matt Ryan ATL 10s 94 · Brett Favre MIN 00s 94 · Bert Jones IND 70s 94 · Joe Theismann WAS 80s 93 · Warren Moon TEN 90s 93
+**Short Accuracy**: Steve Young SF 90s 99 · Joe Montana SF 80s 99 · Peyton Manning IND 00s 98 · Fran Tarkenton MIN 70s 98 · Aaron Rodgers GB 10s 98 · Dan Marino MIA 80s 97 · Drew Brees NO 00s 97 · Aaron Rodgers GB 20s 97 · Tom Brady NE 10s 97 · Drew Brees NO 10s 97 · Rich Gannon LV 00s 96 · Ken Anderson CIN 80s 96 · Peyton Manning DEN 10s 96 · Ken Stabler LV 70s 96 · Brett Favre GB 90s 95 · Tom Brady NE 00s 95 · Kurt Warner LAR 00s 95 · Patrick Mahomes KC 10s 94 · Bob Griese MIA 70s 94 · Roger Staubach DAL 70s 94 · Matt Ryan ATL 10s 94 · Brett Favre MIN 00s 94 · Bert Jones IND 70s 94 · Joe Theismann WAS 80s 93 · Warren Moon TEN 90s 93
 
 **Mid Accuracy**: Steve Young SF 90s 99 · Joe Montana SF 80s 99 · Peyton Manning IND 00s 98 · Aaron Rodgers GB 10s 98 · Dan Marino MIA 80s 97 · Drew Brees NO 00s 97 · Aaron Rodgers GB 20s 97 · Tom Brady NE 10s 97 · Peyton Manning DEN 10s 96 · Drew Brees NO 10s 96 · Fran Tarkenton MIN 70s 96 · Patrick Mahomes KC 10s 96 · Ken Stabler LV 70s 96 · Brett Favre GB 90s 95 · Rich Gannon LV 00s 95 · Tom Brady NE 00s 95 · Ken Anderson CIN 80s 95 · Kurt Warner LAR 00s 95 · Roger Staubach DAL 70s 95 · Bob Griese MIA 70s 94 · Brett Favre MIN 00s 94 · Matt Ryan ATL 10s 94 · Bert Jones IND 70s 93 · Warren Moon TEN 90s 93 · Boomer Esiason CIN 80s 93
 
@@ -1275,11 +1275,11 @@ _* low confidence_
 
 **Short Route Running**: Kellen Winslow LAC 80s 99 · Charle Young PHI 70s 98* · Shannon Sharpe DEN 90s 98 · George Kittle SF 20s 97 · Todd Christensen LV 80s 97 · Antonio Gates LAC 00s 97 · Travis Kelce KC 10s 97 · Travis Kelce KC 20s 96 · Dave Casper LV 70s 96 · Keith Jackson PHI 80s 96 · Jason Witten DAL 00s 96 · Tony Gonzalez KC 00s 95 · Rob Gronkowski NE 10s 95 · Brock Bowers LV 20s 95 · Mark Bavaro NYG 80s 95 · Riley Odoms DEN 70s 95 · Wesley Walls CAR 90s 94 · Ozzie Newsome CLE 80s 94 · George Kittle SF 10s 94 · Ben Coates NE 90s 94 · Charlie Sanders DET 70s 94 · Jason Witten DAL 10s 94 · Tony Gonzalez ATL 10s 93 · Trey McBride ARI 20s 93 · Jay Novacek DAL 90s 93
 
-**Deep Route Running**: Rob Gronkowski NE 10s 95 · George Kittle SF 20s 94 · Antonio Gates LAC 00s 94 · Travis Kelce KC 10s 93 · George Kittle SF 10s 93 · Tony Gonzalez KC 00s 93 · Travis Kelce KC 20s 92 · Charle Young PHI 70s 92* · Shannon Sharpe DEN 90s 92 · Rich Caster NYJ 70s 91 · Mark Bavaro NYG 80s 91 · Kellen Winslow LAC 80s 91 · Dave Casper LV 70s 91 · Charlie Sanders DET 70s 90 · Todd Christensen LV 80s 90 · Jimmy Graham NO 10s 90 · Jimmie Giles TB 80s 90 · Ozzie Newsome CLE 70s 89 · Riley Odoms DEN 70s 89 · Raymond Chester LV 70s 89 · Brock Bowers LV 20s 89 · Jason Witten DAL 00s 88 · Wesley Walls CAR 90s 88 · Jared Cook NO 10s 88 · Keith Jackson PHI 90s 87
+**Deep Route Running**: Rob Gronkowski NE 10s 95 · George Kittle SF 20s 94 · Antonio Gates LAC 00s 94 · Travis Kelce KC 10s 93 · George Kittle SF 10s 93 · Tony Gonzalez KC 00s 93 · Travis Kelce KC 20s 92 · Charle Young PHI 70s 92* · Shannon Sharpe DEN 90s 92 · Rich Caster NYJ 70s 92 · Mark Bavaro NYG 80s 91 · Kellen Winslow LAC 80s 91 · Dave Casper LV 70s 91 · Charlie Sanders DET 70s 90 · Todd Christensen LV 80s 90 · Jimmy Graham NO 10s 90 · Jimmie Giles TB 80s 90 · Ozzie Newsome CLE 70s 89 · Riley Odoms DEN 70s 89 · Raymond Chester LV 70s 89 · Brock Bowers LV 20s 89 · Jason Witten DAL 00s 88 · Wesley Walls CAR 90s 88 · Jared Cook NO 10s 88 · Keith Jackson PHI 90s 87
 
 **Catching**: Kellen Winslow LAC 80s 99 · Shannon Sharpe DEN 90s 98 · Charle Young PHI 70s 98* · Todd Christensen LV 80s 98 · Keith Jackson PHI 80s 97 · George Kittle SF 20s 97 · Dave Casper LV 70s 97 · Antonio Gates LAC 00s 97 · Travis Kelce KC 10s 97 · Travis Kelce KC 20s 96 · Ozzie Newsome CLE 80s 96 · Jason Witten DAL 00s 96 · Rob Gronkowski NE 10s 96 · Ben Coates NE 90s 95 · Mark Bavaro NYG 80s 95 · Wesley Walls CAR 90s 95 · Riley Odoms DEN 70s 95 · Tony Gonzalez KC 00s 95 · Brock Bowers LV 20s 94 · Charlie Sanders DET 70s 94 · Jay Novacek DAL 90s 94 · George Kittle SF 10s 94 · Jason Witten DAL 10s 94 · Tony Gonzalez ATL 10s 93 · Keith Jackson PHI 90s 93
 
-**Catch in Traffic**: Dave Casper LV 70s 99 · Kellen Winslow LAC 80s 98 · Rob Gronkowski NE 10s 98 · Charle Young PHI 70s 98 · Jimmy Graham NO 10s 97 · Ben Coates NE 90s 96 · Antonio Gates LAC 00s 96 · Travis Kelce KC 20s 96 · Russ Francis NE 70s 96 · Wesley Walls CAR 90s 95 · Tony Gonzalez KC 00s 95 · Travis Kelce KC 10s 95 · Mark Bavaro NYG 80s 95 · Todd Christensen LV 80s 94 · Ferrell Edmunds MIA 80s 94 · Charlie Sanders DET 70s 94 · Riley Odoms DEN 70s 94 · Doug Cosbie DAL 80s 93 · Rich Caster NYJ 70s 93 · Jason Witten DAL 10s 93 · Raymond Chester LV 70s 93 · Keith Jackson PHI 80s 93 · Eric Green PIT 90s 92 · George Kittle SF 20s 92 · Jason Witten DAL 00s 92
+**Catch in Traffic**: Dave Casper LV 70s 99 · Kellen Winslow LAC 80s 98 · Rob Gronkowski NE 10s 98 · Charle Young PHI 70s 98 · Jimmy Graham NO 10s 97 · Ben Coates NE 90s 96 · Antonio Gates LAC 00s 96 · Russ Francis NE 70s 96 · Travis Kelce KC 20s 96 · Wesley Walls CAR 90s 95 · Tony Gonzalez KC 00s 95 · Travis Kelce KC 10s 95 · Mark Bavaro NYG 80s 95 · Todd Christensen LV 80s 94 · Ferrell Edmunds MIA 80s 94 · Charlie Sanders DET 70s 94 · Riley Odoms DEN 70s 94 · Doug Cosbie DAL 80s 93 · Rich Caster NYJ 70s 93 · Jason Witten DAL 10s 93 · Raymond Chester LV 70s 93 · Keith Jackson PHI 80s 93 · Eric Green PIT 90s 92 · George Kittle SF 20s 92 · Jason Witten DAL 00s 92
 
 **Spectacular Catch**: Rob Gronkowski NE 10s 99 · Jimmy Graham NO 10s 99 · George Kittle SF 20s 98 · Travis Kelce KC 10s 98 · George Kittle SF 10s 97 · Tony Gonzalez KC 00s 97 · Shannon Sharpe DEN 90s 97 · Travis Kelce KC 20s 97 · Antonio Gates LAC 00s 96 · Kellen Winslow LAC 80s 96 · Dave Casper LV 70s 95 · Jared Cook NO 10s 95 · Charle Young PHI 70s 95 · Rich Caster NYJ 70s 95 · Todd Christensen LV 80s 95 · Vernon Davis SF 10s 94 · Charlie Sanders DET 70s 94 · Vernon Davis SF 00s 94 · Jimmy Graham SEA 10s 94 · Mark Bavaro NYG 80s 93 · Darren Waller LV 20s 93 · Kyle Pitts ATL 20s 93 · Dallas Clark IND 00s 93 · Wesley Walls CAR 90s 93 · Riley Odoms DEN 70s 92
 
@@ -1291,7 +1291,7 @@ _* low confidence_
 
 **Pass Block**: Dave Casper LV 70s 94 · Brandon Manumaleuna LAC 00s 93 · Marcedes Lewis GB 10s 92 · Bennie Cunningham PIT 80s 92 · Jason Witten DAL 10s 91 · Rob Gronkowski NE 10s 91 · Marcedes Lewis GB 20s 91 · Kyle Brady JAX 00s 90 · Mark Bavaro NYG 80s 90 · Bennie Cunningham PIT 70s 90 · Dan Sullivan IND 70s 90 · Marcedes Lewis JAX 10s 90 · Rob Gronkowski TB 20s 89 · Jason Dunn KC 00s 89 · Paul Seymour BUF 70s 89 · Marcedes Lewis CHI 20s 88 · Vern Den Herder MIA 70s 88 · Eric Green BAL 90s 88 · George Kittle SF 20s 88 · Jim Kleinsasser MIN 00s 87 · Mark Bruener PIT 90s 87 · Pete Holohan LAR 80s 87 · Orson Mobley DEN 80s 87 · Lee Smith LV 10s 86 · Tip Reiman ARI 20s 86
 
-**Impact Block**: Dave Casper LV 70s 97 · Brandon Manumaleuna LAC 00s 96 · Bennie Cunningham PIT 70s 96 · Bennie Cunningham PIT 80s 95 · Rob Gronkowski NE 10s 94 · Tip Reiman ARI 20s 94 · Mark Bavaro NYG 80s 94 · Paul Seymour BUF 70s 93 · Jason Witten DAL 10s 93 · Vern Den Herder MIA 70s 93 · Jason Witten DAL 00s 92 · Marcedes Lewis JAX 10s 92 · Marcedes Lewis GB 10s 92 · Kyle Brady JAX 00s 92 · Dan Sullivan IND 70s 92 · Daniel Coats CIN 00s 91 · Orson Mobley DEN 80s 91 · Robert Awalt ARI 80s 91 · Marcedes Lewis JAX 00s 91 · Jason Dunn KC 00s 91 · Vyto Kab PHI 80s 90 · Vance McDonald PIT 10s 90 · Vance McDonald SF 10s 90 · Dwayne Allen IND 10s 90 · Vernon Davis SF 00s 90
+**Impact Block**: Dave Casper LV 70s 97 · Brandon Manumaleuna LAC 00s 96 · Bennie Cunningham PIT 70s 96 · Bennie Cunningham PIT 80s 95 · Rob Gronkowski NE 10s 94 · Tip Reiman ARI 20s 94 · Mark Bavaro NYG 80s 94 · Paul Seymour BUF 70s 93 · Jason Witten DAL 10s 93 · Vern Den Herder MIA 70s 93 · Jason Witten DAL 00s 92 · Kyle Brady JAX 00s 92 · Marcedes Lewis JAX 10s 92 · Marcedes Lewis GB 10s 92 · Dan Sullivan IND 70s 92 · Daniel Coats CIN 00s 91 · Orson Mobley DEN 80s 91 · Robert Awalt ARI 80s 91 · Marcedes Lewis JAX 00s 91 · Jason Dunn KC 00s 91 · Vyto Kab PHI 80s 90 · Vance McDonald PIT 10s 90 · Vance McDonald SF 10s 90 · Dwayne Allen IND 10s 90 · Vernon Davis SF 00s 90
 
 **Awareness**: Travis Kelce KC 20s 99 · Kellen Winslow LAC 80s 99 · Todd Christensen LV 80s 98 · Shannon Sharpe DEN 90s 98 · Tony Gonzalez KC 00s 98 · Antonio Gates LAC 00s 98 · Dave Casper LV 70s 98 · Travis Kelce KC 10s 98 · George Kittle SF 20s 98 · Wesley Walls CAR 90s 97 · Rob Gronkowski NE 10s 97 · Tony Gonzalez ATL 10s 97 · Ozzie Newsome CLE 80s 97 · Ben Coates NE 90s 96 · Jason Witten DAL 10s 96 · Jay Novacek DAL 90s 96 · Keith Jackson PHI 80s 96 · Charle Young PHI 70s 96 · Charlie Sanders DET 70s 95 · Riley Odoms DEN 70s 95 · Raymond Chester LV 70s 95 · George Kittle SF 10s 94 · Brent Jones SF 90s 94 · Mark Bavaro NYG 80s 94 · Keith Jackson PHI 90s 94
 
@@ -1554,7 +1554,7 @@ Catalog, gameplay effects and icons: `docs/TRAITS.md`. Engine: `src/engine/ratin
 
 | Pos | Players | No trait | 1 | 2 | 3 | 4 |
 |---|---|---|---|---|---|---|
-| QB | 634 | **40%** | 171 | 78 | 39 | 92 |
+| QB | 634 | **40%** | 170 | 79 | 39 | 92 |
 | RB | 822 | **44%** | 161 | 103 | 51 | 142 |
 | WR | 975 | **42%** | 195 | 127 | 62 | 186 |
 | TE | 559 | **41%** | 114 | 70 | 54 | 94 |
@@ -1586,7 +1586,7 @@ Earned: passes the gates. Held: keeps it after combinations and the four-trait c
 | Field General | technical | elite | 63 | 48 | 12 | Surgeon (75%) | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Peyton Manning (IND 00s) |
 | Game Manager | production | standard | 29 | 28 | 28 | Noodle Arm (25%) | Jim McMahon (CHI 80s), Tyrod Taylor (BUF 10s), Jim Harbaugh (IND 90s) |
 | Ice in His Veins | technical | elite | 63 | 33 | 7 | Quick Trigger (79%) | Patrick Mahomes (KC 10s), Dan Marino (MIA 80s), Boomer Esiason (CIN 80s) |
-| Pre-Snap Wizard | production | standard | 60 | 26 | 26 | Climber (50%) | Brian Sipe (CLE 80s), Ben Roethlisberger (PIT 10s), Tony Romo (DAL 00s) |
+| Pre-Snap Wizard | production | standard | 60 | 27 | 27 | Climber (48%) | Brian Sipe (CLE 80s), Ben Roethlisberger (PIT 10s), Tony Romo (DAL 00s) |
 | Checkdown Charlie | production | standard | 13 | 11 | 11 | Quick Trigger (27%) | Kirk Cousins (MIN 10s), Ken O'Brien (NYJ 80s), Sam Bradford (MIN 10s) |
 | Gunslinger | technical | standard | 36 | 36 | 22 | Turnover Machine (39%) | Kurt Warner (LAR 00s), Cam Newton (CAR 10s), Sam Darnold (SEA 20s) |
 | Volume Passer | production | elite | 45 | 43 | 27 | Deep Ball Artist (53%) | Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s), Peyton Manning (IND 00s) |
@@ -1892,7 +1892,7 @@ Pairs whose traits fit together (QB with receiver or back, QB or back with the O
 | Downhill | RB: Battering Ram, Tackle Breaker, Goal Line Hammer, Grinder | OL unit: Road Graders | Inside runs: +0.3 yd before contact. (`run.yardsBeforeContact` +0.3 yd) | 177 × 46 |
 | Outside Zone | RB: One-Cut, Burst, Home Run Hitter | OL unit: Athletic Line | Stretch runs reach the edge 0.1 s sooner. (`run.edgeReach` -0.1 s) | 118 × 44 |
 | Screen Game | RB: Receiving Back, Scatback | OL unit: Athletic Line | On screens the lead blockers arrive 0.1 s sooner. (`screen.blockArrival` -0.1 s) | 87 × 44 |
-| Clean Pocket | QB: Climber, Pre-Snap Wizard, Field General | OL unit: Pass-Pro Wall, Smart Line | Pocket-collapse time +0.1 s. (`pocket.collapseTime` +0.1 s) | 106 × 48 |
+| Clean Pocket | QB: Climber, Pre-Snap Wizard, Field General | OL unit: Pass-Pro Wall, Smart Line | Pocket-collapse time +0.1 s. (`pocket.collapseTime` +0.1 s) | 107 × 48 |
 | −Sitting Duck | QB: Statue, Sack Magnet, Happy Feet | OL unit: Turnstile, Sack-Prone | A clash: pocket-collapse time −0.1 s. (`pocket.collapseTime` -0.1 s) | 120 × 22 |
 
 ## Corrections applied
@@ -2309,22 +2309,22 @@ The legacy sim reads its own ability fields. `src/engine/legacy/adapter.ts` comp
 | Group | Field | Inputs (weights) | R² |
 |---|---|---|---|
 | QB | arm | throwPower -0.154, deepAcc 0.898 | 0.652 |
-| QB | acc | shortAcc -0.549, midAcc 1.240, decision 0.067 | 0.777 |
-| QB | care | decision 0.428 | 0.62 |
+| QB | acc | shortAcc -0.549, midAcc 1.239, decision 0.067 | 0.777 |
+| QB | care | decision 0.428 | 0.621 |
 | QB | explos | deepAcc 1.198, throwPower -0.224 | 0.729 |
 | QB | legs | scramble 0.473, speed -0.149 | 0.382 |
 | RB | power | trucking -0.087, breakTackle 0.079, vision 0.585 | 0.588 |
-| RB | vol | vision 0.087, breakTackle 1.043, stamina 0.533 | 0.725 |
-| RB | recv | catching 1.203, routeRunning -0.560 | 0.623 |
+| RB | vol | vision 0.087, breakTackle 1.042, stamina 0.533 | 0.725 |
+| RB | recv | catching 1.202, routeRunning -0.559 | 0.623 |
 | RB | score | trucking 0.315, vision 0.630 | 0.517 |
 | WR | sep | shortRoute 0.061, deepRoute 0.209, speed 0.040 | 0.297 |
 | WR | big | deepRoute 0.907, speed -0.761, rac 0.259 | 0.601 |
 | WR | hands | catching 0.349, catchInTraffic 0.023 | 0.28 |
 | WR | score | catchInTraffic 0.267, spectacular 0.464 | 0.492 |
 | TE | sep | shortRoute 0.134, deepRoute 0.076, speed -0.015 | 0.643 |
-| TE | big | deepRoute 0.892, speed -0.753, rac 0.436 | 0.7 |
-| TE | hands | catching 0.112, catchInTraffic 0.053 | 0.624 |
-| TE | score | catchInTraffic 0.137, spectacular 0.367 | 0.394 |
+| TE | big | deepRoute 0.891, speed -0.753, rac 0.437 | 0.7 |
+| TE | hands | catching 0.112, catchInTraffic 0.053 | 0.623 |
+| TE | score | catchInTraffic 0.136, spectacular 0.368 | 0.394 |
 | TE | block | runBlock -0.050, passBlock 0.204 | 0.326 |
 | OL | pass | pbPower 2.219, pbFinesse -0.551, anchor -1.093 | 0.919 |
 | OL | run | rbPower -0.270, rbFinesse 1.815, pullMove -1.113 | 0.789 |

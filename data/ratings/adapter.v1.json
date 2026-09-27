@@ -2,50 +2,50 @@
  "version": 1,
  "QB": {
   "arm": {
-   "b0": 12.1651,
+   "b0": 12.1611,
    "w": {
-    "throwPower": -0.15389,
-    "deepAcc": 0.89837
+    "throwPower": -0.15382,
+    "deepAcc": 0.89836
    },
    "lo": 35,
    "hi": 97,
    "r2": 0.652
   },
   "acc": {
-   "b0": 11.853,
+   "b0": 11.8507,
    "w": {
-    "shortAcc": -0.54908,
-    "midAcc": 1.23954,
-    "decision": 0.06664
+    "shortAcc": -0.54853,
+    "midAcc": 1.23863,
+    "decision": 0.06703
    },
    "lo": 35,
    "hi": 97,
    "r2": 0.777
   },
   "care": {
-   "b0": 37.9152,
+   "b0": 37.9138,
    "w": {
-    "decision": 0.42847
+    "decision": 0.42849
    },
    "lo": 35,
    "hi": 97,
-   "r2": 0.62
+   "r2": 0.621
   },
   "explos": {
-   "b0": -5.9302,
+   "b0": -5.9351,
    "w": {
-    "deepAcc": 1.19815,
-    "throwPower": -0.22361
+    "deepAcc": 1.19819,
+    "throwPower": -0.22358
    },
    "lo": 35,
    "hi": 97,
    "r2": 0.729
   },
   "legs": {
-   "b0": 24.5094,
+   "b0": 24.5019,
    "w": {
-    "scramble": 0.47344,
-    "speed": -0.1489
+    "scramble": 0.47338,
+    "speed": -0.14875
    },
    "lo": 30,
    "hi": 97,
@@ -54,41 +54,41 @@
  },
  "RB": {
   "power": {
-   "b0": 27.1637,
+   "b0": 27.1631,
    "w": {
-    "trucking": -0.08735,
-    "breakTackle": 0.07913,
-    "vision": 0.58529
+    "trucking": -0.08734,
+    "breakTackle": 0.07906,
+    "vision": 0.58535
    },
    "lo": 35,
    "hi": 97,
    "r2": 0.588
   },
   "vol": {
-   "b0": -57.1496,
+   "b0": -57.164,
    "w": {
-    "vision": 0.08692,
-    "breakTackle": 1.04258,
-    "stamina": 0.53259
+    "vision": 0.08708,
+    "breakTackle": 1.04238,
+    "stamina": 0.53281
    },
    "lo": 35,
    "hi": 97,
    "r2": 0.725
   },
   "recv": {
-   "b0": 37.9387,
+   "b0": 37.943,
    "w": {
-    "catching": 1.20286,
-    "routeRunning": -0.55955
+    "catching": 1.20245,
+    "routeRunning": -0.55918
    },
    "lo": 25,
    "hi": 97,
    "r2": 0.623
   },
   "score": {
-   "b0": -6.2136,
+   "b0": -6.2106,
    "w": {
-    "trucking": 0.3151,
+    "trucking": 0.31507,
     "vision": 0.62998
    },
    "lo": 35,
@@ -142,52 +142,52 @@
  },
  "TE": {
   "sep": {
-   "b0": 52.8772,
+   "b0": 52.8599,
    "w": {
-    "shortRoute": 0.13355,
-    "deepRoute": 0.07608,
-    "speed": -0.0154
+    "shortRoute": 0.13351,
+    "deepRoute": 0.07607,
+    "speed": -0.01513
    },
    "lo": 35,
    "hi": 97,
    "r2": 0.643
   },
   "big": {
-   "b0": 32.7182,
+   "b0": 32.6735,
    "w": {
-    "deepRoute": 0.89166,
-    "speed": -0.75319,
-    "rac": 0.43575
+    "deepRoute": 0.89116,
+    "speed": -0.75307,
+    "rac": 0.4367
    },
    "lo": 35,
    "hi": 97,
    "r2": 0.7
   },
   "hands": {
-   "b0": 51.3331,
+   "b0": 51.3408,
    "w": {
     "catching": 0.11155,
-    "catchInTraffic": 0.05342
+    "catchInTraffic": 0.05331
    },
    "lo": 30,
    "hi": 97,
-   "r2": 0.624
+   "r2": 0.623
   },
   "score": {
-   "b0": 23.2351,
+   "b0": 23.233,
    "w": {
-    "catchInTraffic": 0.13656,
-    "spectacular": 0.3675
+    "catchInTraffic": 0.13588,
+    "spectacular": 0.36821
    },
    "lo": 35,
    "hi": 97,
    "r2": 0.394
   },
   "block": {
-   "b0": 66.611,
+   "b0": 66.6099,
    "w": {
-    "runBlock": -0.05037,
-    "passBlock": 0.20388
+    "runBlock": -0.0503,
+    "passBlock": 0.20382
    },
    "lo": 25,
    "hi": 97,
