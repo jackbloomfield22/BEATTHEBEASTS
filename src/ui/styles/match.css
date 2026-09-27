@@ -56,3 +56,24 @@
 /* In a game the score bug owns the top centre: the play call sits below it. */
 .game-call .screen-head { top: 7.4rem; }
 .game-call .call-body { top: 12.4rem; }
+
+/* The pre-game moment (M6.6): a lower third over the field with both teams
+   set, the Beasts' eleven, and one explicit prompt to kick off. */
+.pregame { position: absolute; inset: 0; pointer-events: none; }
+.pregame > * { pointer-events: auto; }
+.pg-card { position: absolute; left: 3.5rem; bottom: 5.5rem; width: 44rem; padding: 1.1rem 1.6rem 1.2rem; background: linear-gradient(90deg, rgba(5,5,6,.92), rgba(5,5,6,.66)); border-left: 5px solid #ff2a4d; animation: lt-in 520ms cubic-bezier(.2,.7,.2,1) both; }
+.pg-kicker { font-family: var(--font-num); font-size: .85rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
+.pg-head { margin: .3rem 0 .2rem; font-family: var(--font-display); font-weight: 400; font-size: 2.2rem; line-height: 1.05; }
+.pg-vs { font-family: var(--font-num); font-weight: 600; font-size: 1.2rem; color: var(--ink-3); margin: 0 .3rem; text-transform: uppercase; }
+.pg-beasts { color: #ff2a4d; }
+.pg-sub { margin: 0 0 .8rem; color: var(--ink-2); font-size: 1rem; }
+.pg-lineup { list-style: none; margin: 0; padding: .7rem 0 0; border-top: 1px solid rgba(255,255,255,.1); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem 1.2rem; }
+.pg-lineup li { display: flex; gap: .5rem; align-items: baseline; white-space: nowrap; overflow: hidden; font-size: .95rem; }
+.pg-pos { width: 1.9rem; font-family: var(--font-num); font-weight: 700; font-size: .8rem; color: #ff5a6e; }
+.pg-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.pg-kick { position: absolute; right: 4rem; bottom: 6rem; display: flex; align-items: center; gap: 1rem; padding: 1rem 1.8rem 1rem 1.2rem; color: #fff;
+  font-family: var(--font-display); font-size: 2rem; text-transform: uppercase; letter-spacing: .04em;
+  background: rgba(6,8,4,.72); border: 1px solid rgba(170,255,0,.3); border-radius: .5rem; opacity: .45; transition: opacity 200ms, border-color 200ms; }
+.pg-kick.is-armed { opacity: 1; border-color: rgba(170,255,0,.7); animation: pg-pulse 1.8s ease-in-out infinite; }
+@keyframes pg-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(170,255,0,0); } 50% { box-shadow: 0 0 0 .35rem rgba(170,255,0,.18); } }
+.pg-key { font-size: 1.1rem; min-width: 3.2rem; padding: .35rem .7rem; }

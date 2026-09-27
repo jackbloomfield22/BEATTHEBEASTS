@@ -27,6 +27,18 @@
   color: rgba(244,240,255,.62); transition: color 160ms, transform 220ms cubic-bezier(.2,.7,.2,1); }
 .menu-item.lg .menu-item-label { font-weight: 800; font-size: 2.35rem; letter-spacing: .05em; text-transform: uppercase; line-height: 1.05; }
 .menu-item.md .menu-item-label { font-weight: 700; font-size: 1.5rem; letter-spacing: .06em; text-transform: uppercase; }
+/* The main menu's big button (Playtest 2: New Draft is the big one). */
+.menu-item.hero { padding-top: .2rem; padding-bottom: .55rem; margin-bottom: .5rem; }
+.menu-item.hero .menu-item-label { font-family: var(--font-display); font-weight: 400; font-size: 3.6rem; letter-spacing: .02em; text-transform: uppercase; line-height: 1; }
+.menu-item.hero:not(.is-focused) { color: rgba(244,240,255,.82); }
+.main-menu .menu-item.lg .menu-item-label { font-size: 1.95rem; }
+.main-menu .menu-item.md .menu-item-label { font-size: 1.12rem; letter-spacing: .1em; }
+.main-menu .menu-item.md { padding-top: .3rem; padding-bottom: .3rem; }
+.menu-item.group-start { margin-top: .9rem; }
+.menu-last { margin-top: 1rem; padding-top: .9rem; border-top: 1px solid rgba(244,240,255,.12); display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }
+.menu-last .res-banner { font-size: .85rem; padding: .2rem .6rem; }
+.ml-score { font-family: var(--font-num); font-weight: 800; font-size: 1.5rem; text-transform: uppercase; }
+.ml-meta { flex-basis: 100%; font-family: var(--font-num); font-weight: 600; font-size: .95rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
 .menu-item-bar { position: absolute; left: 0; top: 18%; bottom: 18%; width: .28rem; background: var(--lime); transform: scaleY(0); transform-origin: center;
   transition: transform 220ms cubic-bezier(.2,.7,.2,1); box-shadow: 0 0 1rem rgba(170,255,0,.6); }
 .menu-item.is-focused { color: #fff; transform: translateX(.9rem); }

@@ -1,20 +1,21 @@
-import { forwardRef, type ReactNode } from 'react';
-import { gradeColor, gradeQB, gradeRec, gradeRush, scoreToGrade } from '@/engine/legacy/grades';
+import type { ReactNode } from 'react';
+import { gradeColor } from '@/engine/legacy/grades';
+import { gradePlayers, type PlayerGrade } from '@/game/grades';
 import type { UserDrive } from '@/game/match';
 import type { GameRecord } from '@/game/record';
 import { spotLabel } from '@/game/situation';
-import { passerRating, type GameBox } from '@/game/stats';
+import { passerRating, type BigHit, type GameBox } from '@/game/stats';
 import '../styles/results.css';
 
-// The box score for one game record (GDD §14), as tabs: the summary (the
-// play of the game, the drive chart, the key matchups), passing and rushing,
-// receiving, the offensive line, and the Beasts with the coverage snapshot.
-// Shared by the results screen, the Locker Room's Last Game view and
-// History. Numbers show here in every mode (Film Room included): the game
+// The box score for one game record (GDD §14, Playtest 1): one screen, the
+// way a broadcast shows it, no tabs and no scrolling. Left: the passing
+// line, the rushing lines, the receiving lines and the report card (every
+// skill player's grade, snaps and the reason in one line). Right: the
+// Beasts' defense, the drive chart and the big hits. Every column is
+// labelled in words a fan knows. Shared by the results screen (straight from
+// a game, from the main menu's Last Game and from History) and the My Team
+// board's F key. Numbers show in every mode (Film Room included): the game
 // is over.
-
-export const REPORT_TABS = ['Summary', 'Passing & Rushing', 'Receiving', 'O-Line', 'The Beasts'] as const;
-export type ReportTab = (typeof REPORT_TABS)[number];
 
 /** "1 turnover", "2 turnovers", "1 big hit taken". */
 export function plural(n: number, one: string, many = `${one}s`, tail = ''): string {
@@ -25,7 +26,7 @@ const r0 = (n: number) => Math.round(n);
 const r1 = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '0.0');
 const avg = (y: number, n: number) => (n ? r1(y / n) : '—');
 
-const DRIVE_RESULT: Record<UserDrive['result'], string> = {
+export const DRIVE_RESULT: Record<UserDrive['result'], string> = {
   TD: 'Touchdown',
   FG: 'Field goal',
   MissedFG: 'Missed FG',
@@ -56,28 +57,22 @@ export function resultWord(rec: GameRecord): { word: string; tone: 'win' | 'loss
   return m > 0 ? { word: 'Victory', tone: 'win' } : m < 0 ? { word: 'Defeat', tone: 'loss' } : { word: 'Tie', tone: 'even' };
 }
 
-function GradeCell({ s }: { s: number }) {
-  const g = scoreToGrade(s);
+function Table({ title, head, children, empty, cols, className = '' }: { title: string; head: ReactNode; children: ReactNode; empty?: string | false; cols: number; className?: string }) {
   return (
-    <td className="grade-cell" style={{ color: gradeColor(g) }}>
-      {g}
-    </td>
-  );
-}
-
-function Table({ head, children, empty, cols }: { head: ReactNode; children: ReactNode; empty?: string | false; cols: number }) {
-  return (
-    <table className="rep-table">
-      <thead>{head}</thead>
-      <tbody>
-        {children}
-        {empty ? (
-          <tr className="rep-empty">
-            <td colSpan={cols}>{empty}</td>
-          </tr>
-        ) : null}
-      </tbody>
-    </table>
+    <section className={`bx-sec ${className}`}>
+      <h3>{title}</h3>
+      <table className="rep-table">
+        <thead>{head}</thead>
+        <tbody>
+          {children}
+          {empty ? (
+            <tr className="rep-empty">
+              <td colSpan={cols}>{empty}</td>
+            </tr>
+          ) : null}
+        </tbody>
+      </table>
+    </section>
   );
 }
 
@@ -85,7 +80,7 @@ export function TeamLine({ box }: { box: GameBox }) {
   return (
     <div className="rep-team">
       <span>{plural(box.plays, 'play')}</span>
-      <span>{r0(box.yards)} yd</span>
+      <span>{r0(box.yards)} yards</span>
       <span>{plural(box.firstDowns, 'first down')}</span>
       <span>{plural(box.sacks, 'sack', 'sacks', 'taken')}</span>
       <span>{plural(box.turnovers, 'turnover')}</span>
@@ -94,56 +89,50 @@ export function TeamLine({ box }: { box: GameBox }) {
   );
 }
 
-// ---- Summary ------------------------------------------------------------------------------
+// ---- The drive chart -----------------------------------------------------------------------
 
+/**
+ * The drive chart. Full: one row a round, both sides of it (the Beasts'
+ * result, then your drive: start, plays, yards, result). Compact (History,
+ * the My Team board): the same, without the start.
+ */
 export function DriveChart({ rec, compact = false }: { rec: GameRecord; compact?: boolean }) {
   const n = Math.max(rec.userDrives.length, rec.beastsDrives.length);
   const rows: ReactNode[] = [];
   for (let i = 0; i < n; i++) {
     const b = rec.beastsDrives[i];
     const u = rec.userDrives[i];
-    if (b) {
-      const pts = b.points ? ` +${b.points}` : '';
-      rows.push(
-        <tr key={`b${i}`} className={`dc-beasts ${b.points ? 'scored' : ''}`}>
-          <td className="dc-rd">{roundLabel(rec, i)}</td>
-          <td className="dc-team">Beasts</td>
-          {compact ? null : <td>—</td>}
-          <td>{b.plays}</td>
-          <td>{Math.max(0, Math.round(b.yards))}</td>
-          <td className="dc-res">
-            {BEASTS_RESULT[b.result] ?? b.result}
-            {pts}
-          </td>
-        </tr>,
-      );
-    }
-    if (u) {
-      rows.push(
-        <tr key={`u${i}`} className={`dc-you r-${u.result}`}>
-          <td className="dc-rd">{b ? '' : roundLabel(rec, i)}</td>
-          <td className="dc-team">You</td>
-          {compact ? null : <td>{spotLabel(u.start)}</td>}
-          <td>{u.plays}</td>
-          <td>{r0(u.yards)}</td>
-          <td className="dc-res">
-            {DRIVE_RESULT[u.result] ?? u.result}
-            {u.against ? ` (−${u.against})` : ''}
-          </td>
-        </tr>,
-      );
-    }
+    rows.push(
+      <tr key={i} className={`r-${u?.result ?? 'none'}`}>
+        <td className="dc-rd">{roundLabel(rec, i)}</td>
+        <td className={`dc-beasts ${b?.points ? 'scored' : ''}`}>{b ? `${BEASTS_RESULT[b.result] ?? b.result}${b.points ? ` +${b.points}` : ''}` : ''}</td>
+        {compact ? null : <td className="dc-start">{u ? spotLabel(u.start) : ''}</td>}
+        <td>{u ? u.plays : ''}</td>
+        <td>{u ? r0(u.yards) : ''}</td>
+        <td className="dc-res">
+          {u ? (
+            <>
+              {DRIVE_RESULT[u.result] ?? u.result}
+              {u.result === 'TD' && u.points > 6 ? ` +${u.points}` : u.result === 'FG' ? ' +3' : ''}
+              {u.against ? ` (−${u.against})` : ''}
+            </>
+          ) : (
+            ''
+          )}
+        </td>
+      </tr>,
+    );
   }
   return (
     <table className={`rep-table drive-chart ${compact ? 'compact' : ''}`}>
       <thead>
         <tr>
           <th>Rd</th>
-          <th>Drive</th>
-          {compact ? null : <th>Start</th>}
+          <th>Beasts</th>
+          {compact ? null : <th>Your start</th>}
           <th>Plays</th>
-          <th>Yds</th>
-          <th>Result</th>
+          <th>Yards</th>
+          <th>Your result</th>
         </tr>
       </thead>
       <tbody>{rows}</tbody>
@@ -151,345 +140,323 @@ export function DriveChart({ rec, compact = false }: { rec: GameRecord; compact?
   );
 }
 
-function PlayOfGame({ rec }: { rec: GameRecord }) {
-  const p = rec.playOfGame;
-  if (!p) return <div className="pog empty">No snaps this game.</div>;
-  return (
-    <div className={`pog ${p.touchdown ? 'good' : p.turnover ? 'bad' : ''}`}>
-      <div className="pog-kicker">
-        Play of the game <span className="pog-flag">Flagged for replay</span>
-      </div>
-      <div className="pog-head">{p.headline}</div>
-      <div className="pog-detail">{p.detail}</div>
-      <div className="pog-meta">
-        {whenLabel(rec, p.round, p.ot)} · drive {p.drive + 1}, play {p.n} · {p.down === 1 ? '1st' : p.down === 2 ? '2nd' : p.down === 3 ? '3rd' : '4th'} & {Math.max(1, Math.round(p.toGo))} at {spotLabel(p.los)} · {p.playName}
-      </div>
-    </div>
-  );
-}
+// ---- The box score ----------------------------------------------------------------------------
 
-function Summary({ rec }: { rec: GameRecord }) {
+function Passing({ box }: { box: GameBox }) {
+  const p = box.pass;
   return (
-    <div className="rep-cols">
-      <section>
-        <PlayOfGame rec={rec} />
-        <h3>Team</h3>
-        <TeamLine box={rec.box} />
-        {rec.matchups.length ? (
-          <>
-            <h3>Key matchups</h3>
-            <ul className="res-matchups">
-              {rec.matchups.map((x) => (
-                <li key={x.rec}>
-                  <span className="slot">{x.slot}</span>
-                  <span className="who">
-                    {x.rec} <em>vs</em> {x.def}
-                  </span>
-                  <span className="line">{x.line}</span>
-                  <span className={`verdict v-${x.verdict.split(' ')[0]!.toLowerCase()}`}>{x.verdict}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : null}
-        {rec.perfect ? (
-          <>
-            <h3>The perfect team</h3>
-            <ul className="res-perfect">
-              {rec.perfect.map((p) => (
-                <li key={p.slot} className={p.same ? 'same' : ''}>
-                  <span className="slot">{p.slot}</span>
-                  <span>{p.pick ?? '—'}</span>
-                  <span className="you">{p.same ? '✓ you' : (p.mine ?? '')}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : null}
-      </section>
-      <section>
-        <h3>Drive chart</h3>
-        <DriveChart rec={rec} />
-      </section>
-    </div>
-  );
-}
-
-// ---- The offense --------------------------------------------------------------------------
-
-function PassingRushing({ rec }: { rec: GameRecord }) {
-  const b = rec.box;
-  const p = b.pass;
-  const scale = 10 / rec.drives; // legacy grades read a 10-drive game's yardage
-  const rush = Object.values(b.rush).sort((x, y) => y.yds - x.yds);
-  return (
-    <div className="rep-stack">
-      <h3>Passing</h3>
-      <Table
-        cols={10}
-        head={
-          <tr>
-            <th>Player</th>
-            <th>C/Att</th>
-            <th>Yds</th>
-            <th>Y/A</th>
-            <th>TD</th>
-            <th>Int</th>
-            <th>Sk</th>
-            <th>Long</th>
-            <th>Rating</th>
-            <th>Grade</th>
-          </tr>
-        }
-      >
+    <Table
+      title="Passing"
+      cols={9}
+      head={
         <tr>
-          <td>{p.name}</td>
-          <td>
-            {p.cmp}/{p.att}
-          </td>
-          <td>{r0(p.yds)}</td>
-          <td>{avg(p.yds, p.att)}</td>
-          <td>{p.td}</td>
-          <td>{p.int}</td>
-          <td>
-            {p.sacks}
-            {p.sacks ? <span className="sub">−{r0(p.sackYds)}</span> : null}
-          </td>
-          <td>{r0(p.long)}</td>
-          <td>{r1(passerRating(p))}</td>
-          <GradeCell s={gradeQB({ ...p, yds: p.yds * scale })} />
+          <th>Player</th>
+          <th>Comp–Att</th>
+          <th>Yards</th>
+          <th>Avg</th>
+          <th>TD</th>
+          <th>INT</th>
+          <th>Sacked</th>
+          <th>Long</th>
+          <th>Rating</th>
         </tr>
-      </Table>
-      <h3>Rushing</h3>
-      <Table
-        cols={9}
-        empty={rush.length ? false : 'No carries.'}
-        head={
+      }
+    >
+      <tr>
+        <td>{p.name}</td>
+        <td>
+          {p.cmp}–{p.att}
+        </td>
+        <td>{r0(p.yds)}</td>
+        <td>{avg(p.yds, p.att)}</td>
+        <td>{p.td}</td>
+        <td className={p.int ? 'bad' : ''}>{p.int}</td>
+        <td>
+          {p.sacks}
+          {p.sacks ? <span className="sub">−{r0(p.sackYds)}</span> : null}
+        </td>
+        <td>{r0(p.long)}</td>
+        <td>{r1(passerRating(p))}</td>
+      </tr>
+    </Table>
+  );
+}
+
+function Rushing({ box }: { box: GameBox }) {
+  const rows = Object.values(box.rush).sort((x, y) => y.yds - x.yds || y.car - x.car);
+  return (
+    <Table
+      title="Rushing"
+      cols={8}
+      empty={rows.length ? false : 'No carries.'}
+      head={
+        <tr>
+          <th>Player</th>
+          <th>Carries</th>
+          <th>Yards</th>
+          <th>Avg</th>
+          <th>TD</th>
+          <th>Long</th>
+          <th>Broke tackles</th>
+          <th>Fumbles</th>
+        </tr>
+      }
+    >
+      {rows.map((r) => (
+        <tr key={r.name}>
+          <td>{r.name}</td>
+          <td>{r.car}</td>
+          <td>{r0(r.yds)}</td>
+          <td>{avg(r.yds, r.car)}</td>
+          <td>{r.td}</td>
+          <td>{r0(r.long)}</td>
+          <td>{r.bt}</td>
+          <td className={r.lost ? 'bad' : ''}>
+            {r.fum}
+            {r.lost ? <span className="sub">{r.lost} lost</span> : null}
+          </td>
+        </tr>
+      ))}
+    </Table>
+  );
+}
+
+function Receiving({ box }: { box: GameBox }) {
+  const rows = Object.values(box.rec).sort((x, y) => y.yds - x.yds || y.tgt - x.tgt);
+  return (
+    <Table
+      title="Receiving"
+      cols={9}
+      empty={rows.length ? false : 'No passes thrown.'}
+      head={
+        <tr>
+          <th>Player</th>
+          <th>Catches</th>
+          <th>Targets</th>
+          <th>Yards</th>
+          <th>Avg</th>
+          <th>TD</th>
+          <th>Long</th>
+          <th>After catch</th>
+          <th>Drops</th>
+        </tr>
+      }
+    >
+      {rows.map((r) => (
+        <tr key={r.name}>
+          <td>{r.name}</td>
+          <td>{r.rec}</td>
+          <td>{r.tgt}</td>
+          <td>{r0(r.yds)}</td>
+          <td>{avg(r.yds, r.rec)}</td>
+          <td>{r.td}</td>
+          <td>{r0(r.long)}</td>
+          <td>{r0(r.yac)}</td>
+          <td className={r.drops ? 'bad' : ''}>{r.drops}</td>
+        </tr>
+      ))}
+    </Table>
+  );
+}
+
+const ROLE_LABEL: Record<PlayerGrade['role'], string> = { QB: 'QB', RB1: 'RB1', RB2: 'RB2', WR1: 'WR1', WR2: 'WR2', WR3: 'WR3', TE1: 'TE1', TE2: 'TE2' };
+
+/** Every skill player: his grade, his snaps and why, in one line each. */
+function ReportCard({ rec }: { rec: GameRecord }) {
+  const grades = gradePlayers(rec);
+  return (
+    <section className="bx-sec bx-card">
+      <h3>
+        Player grades <span className="h3-note">against what his role makes in {plural(Math.max(1, rec.userDrives.length), 'drive')}</span>
+      </h3>
+      <table className="rep-table grades">
+        <thead>
           <tr>
-            <th>Player</th>
-            <th>Car</th>
-            <th>Yds</th>
-            <th>Avg</th>
-            <th>TD</th>
-            <th>Long</th>
-            <th title="Broken tackles">BT</th>
-            <th>Fum</th>
             <th>Grade</th>
-          </tr>
-        }
-      >
-        {rush.map((r) => (
-          <tr key={r.name}>
-            <td>{r.name}</td>
-            <td>{r.car}</td>
-            <td>{r0(r.yds)}</td>
-            <td>{avg(r.yds, r.car)}</td>
-            <td>{r.td}</td>
-            <td>{r0(r.long)}</td>
-            <td>{r.bt}</td>
-            <td>
-              {r.fum}
-              {r.lost ? <span className="sub">{r.lost} lost</span> : null}
-            </td>
-            <GradeCell s={gradeRush({ ...r, yds: r.yds * scale })} />
-          </tr>
-        ))}
-      </Table>
-    </div>
-  );
-}
-
-function Receiving({ rec }: { rec: GameRecord }) {
-  const scale = 10 / rec.drives;
-  const rows = Object.values(rec.box.rec).sort((x, y) => y.yds - x.yds || y.tgt - x.tgt);
-  return (
-    <div className="rep-stack">
-      <h3>Receiving</h3>
-      <Table
-        cols={11}
-        empty={rows.length ? false : 'No targets.'}
-        head={
-          <tr>
             <th>Player</th>
-            <th>Tgt</th>
-            <th>Rec</th>
-            <th>Yds</th>
-            <th>Avg</th>
-            <th>TD</th>
-            <th>Long</th>
-            <th title="Yards after the catch">YAC</th>
-            <th>Drops</th>
-            <th title="Contested catches won (a defender within a yard when the ball arrived)">Contested</th>
-            <th>Grade</th>
+            <th>Snaps</th>
+            <th>Why</th>
           </tr>
-        }
-      >
-        {rows.map((r) => (
-          <tr key={r.name}>
-            <td>{r.name}</td>
-            <td>{r.tgt}</td>
-            <td>{r.rec}</td>
-            <td>{r0(r.yds)}</td>
-            <td>{avg(r.yds, r.rec)}</td>
-            <td>{r.td}</td>
-            <td>{r0(r.long)}</td>
-            <td>{r0(r.yac)}</td>
-            <td>{r.drops}</td>
-            <td>
-              {r.contestedWon}/{r.contested}
-            </td>
-            <GradeCell s={gradeRec({ ...r, yds: r.yds * scale })} />
-          </tr>
-        ))}
-      </Table>
-      <p className="rep-note">Contested: caught / targets with a Beast within a yard when the ball got there. YAC: yards after the catch.</p>
-    </div>
-  );
-}
-
-const OL_ORDER = ['LT', 'LG', 'C', 'RG', 'RT'];
-
-function OLine({ rec }: { rec: GameRecord }) {
-  const b = rec.box;
-  const line = rec.offense.filter((o) => OL_ORDER.includes(o.slot)).map((o) => b.ol[o.name] ?? { name: o.name, slot: o.slot, sacks: 0, pressures: 0, runReps: 0, runWins: 0 });
-  const others = Object.values(b.ol).filter((l) => !line.some((x) => x.name === l.name));
-  const rows = [...line, ...others];
-  const pct = (w: number, n: number) => (n ? `${Math.round((w / n) * 100)}%` : '—');
-  return (
-    <div className="rep-stack">
-      <h3>Offensive line</h3>
-      <Table
-        cols={6}
-        head={
-          <tr>
-            <th>Pos</th>
-            <th>Player</th>
-            <th>Sacks allowed</th>
-            <th>Pressures allowed</th>
-            <th>Run blocks won</th>
-            <th>Run-block win rate</th>
-          </tr>
-        }
-      >
-        {rows.map((l) => (
-          <tr key={l.name}>
-            <td className="dim">{l.slot}</td>
-            <td>{l.name}</td>
-            <td className={l.sacks ? 'bad' : ''}>{l.sacks}</td>
-            <td>{l.pressures}</td>
-            <td>
-              {l.runWins}/{l.runReps}
-            </td>
-            <td>{pct(l.runWins, l.runReps)}</td>
-          </tr>
-        ))}
-      </Table>
-      <p className="rep-note">
-        Unblocked: {plural(b.freeRushers.pressures, 'pressure')}, {plural(b.freeRushers.sacks, 'sack')}. A run block is won when the man he engaged doesn't shed him before the play is decided (2.5 s or the whistle).
-      </p>
-    </div>
-  );
-}
-
-// ---- The Beasts ---------------------------------------------------------------------------
-
-function Beasts({ rec }: { rec: GameRecord }) {
-  const b = rec.box;
-  const order = new Map(rec.beasts.map((x, i) => [x.name, i]));
-  const rows = Object.values(b.def).sort((x, y) => (order.get(x.name) ?? 99) - (order.get(y.name) ?? 99));
-  const best = rec.bestReceiver;
-  const sh = best ? b.shadow[best] : undefined;
-  const cover = best ? (b.covered[best] ?? {}) : {};
-  const shadows = sh ? Object.entries(sh.by).sort((x, y) => y[1] - x[1]) : [];
-  return (
-    <div className="rep-cols wide-left">
-      <section>
-        <h3>The Beasts</h3>
-        <Table
-          cols={8}
-          empty={rows.length ? false : 'No defensive plays.'}
-          head={
-            <tr>
-              <th>Pos</th>
-              <th>Player</th>
-              <th>Tkl</th>
-              <th>Sacks</th>
-              <th>Press</th>
-              <th>Int</th>
-              <th title="Passes broken up">PBU</th>
-              <th>Big hits</th>
-            </tr>
-          }
-        >
-          {rows.map((d) => (
-            <tr key={d.name}>
-              <td className="dim">
-                {d.pos} <span className="sub">#{d.num}</span>
+        </thead>
+        <tbody>
+          {grades.map((g) => (
+            <tr key={g.role} className={g.grade ? '' : 'ungraded'}>
+              <td className="grade-cell" style={g.grade ? { color: gradeColor(g.grade) } : undefined}>
+                {g.grade ?? '—'}
               </td>
-              <td>{d.name}</td>
-              <td>{d.tackles}</td>
-              <td>{d.sacks}</td>
-              <td>{d.pressures}</td>
-              <td>{d.ints}</td>
-              <td>{d.pbu}</td>
-              <td className={d.bigHits ? 'hit' : ''}>{d.bigHits}</td>
+              <td>
+                <span className="role">{ROLE_LABEL[g.role]}</span> {g.name}
+              </td>
+              <td>{g.snaps ?? '—'}</td>
+              <td className="why" title={g.contributions.map((c) => `${c.points >= 0 ? '+' : ''}${c.points.toFixed(1)} ${c.label}`).join('\n')}>
+                {g.why}
+              </td>
             </tr>
           ))}
-        </Table>
-      </section>
-      <section>
-        <h3>Coverage snapshot</h3>
-        {best && sh ? (
-          <div className="shadow">
-            <div className="shadow-head">
-              Who shadowed <b>{best}</b>
-            </div>
-            <div className="shadow-sub">Nearest Beast when the ball came out, over {plural(sh.snaps, 'dropback')}</div>
-            <ul>
-              {shadows.map(([name, n]) => {
-                const c = cover[name];
-                return (
-                  <li key={name}>
-                    <span className="sh-name">{name}</span>
-                    <span className="sh-bar">
-                      <i style={{ width: `${(n / sh.snaps) * 100}%` }} />
-                    </span>
-                    <span className="sh-pct">{Math.round((n / sh.snaps) * 100)}%</span>
-                    <span className="sh-line">{c ? `${plural(c.tgt, 'target')}, ${r0(c.yds)} yd` : ''}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ) : (
-          <p className="rep-note">{best ? `No dropbacks with ${best} out on a route.` : 'No dropbacks.'}</p>
-        )}
-      </section>
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+/** The Beasts' defensive lines: everyone who made a play, by impact, the most that fit. */
+const BEASTS_ROWS = 7;
+function BeastsDefense({ rec }: { rec: GameRecord }) {
+  const order = new Map(rec.beasts.map((x, i) => [x.name, i]));
+  const impact = (d: GameBox['def'][string]) => d.sacks * 3 + d.ints * 4 + d.pbu * 1.5 + d.pressures + d.tackles + d.bigHits * 1.5;
+  const all = Object.values(rec.box.def).filter((d) => impact(d) > 0);
+  const rows = all.sort((x, y) => impact(y) - impact(x) || (order.get(x.name) ?? 99) - (order.get(y.name) ?? 99)).slice(0, BEASTS_ROWS);
+  const more = all.length - rows.length;
+  return (
+    <Table
+      title="The Beasts' defense"
+      className="bx-def"
+      cols={7}
+      empty={rows.length ? false : 'No defensive plays.'}
+      head={
+        <tr>
+          <th>Player</th>
+          <th>Tackles</th>
+          <th>Sacks</th>
+          <th>Pressures</th>
+          <th>INT</th>
+          <th>Breakups</th>
+          <th>Big hits</th>
+        </tr>
+      }
+    >
+      {rows.map((d) => (
+        <tr key={d.name}>
+          <td>
+            {d.name} <span className="sub">{d.pos}</span>
+          </td>
+          <td>{d.tackles}</td>
+          <td>{d.sacks}</td>
+          <td>{d.pressures}</td>
+          <td>{d.ints}</td>
+          <td>{d.pbu}</td>
+          <td className={d.bigHits ? 'hit' : ''}>{d.bigHits}</td>
+        </tr>
+      ))}
+      {more > 0 ? (
+        <tr className="rep-empty">
+          <td colSpan={7}>and {plural(more, 'other')}</td>
+        </tr>
+      ) : null}
+    </Table>
+  );
+}
+
+const HITS_SHOWN = 4;
+function BigHits({ rec }: { rec: GameRecord }) {
+  const hits: BigHit[] | undefined = rec.box.hits;
+  const hardest = hits ? [...hits].sort((a, b) => b.force - a.force).slice(0, HITS_SHOWN) : [];
+  const when = (h: BigHit) => (h.ot ? (h.ot > 1 ? `${h.ot}OT` : 'OT') : h.round ? `Rd ${h.round}` : '');
+  return (
+    <section className="bx-sec bx-hits">
+      <h3>
+        Big hits <span className="h3-note">{plural(rec.box.bigHits, 'hit')} taken</span>
+      </h3>
+      {!hits ? (
+        <p className="rep-note">Not recorded for this game.</p>
+      ) : hardest.length ? (
+        <ul>
+          {hardest.map((h, i) => (
+            <li key={i}>
+              <span className="bh-when">{when(h)}</span>
+              <span className="bh-who">
+                <b>{h.by}</b> <span className="sub">{h.pos}</span> on {h.on}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="rep-note">Nobody got blown up.</p>
+      )}
+    </section>
+  );
+}
+
+/** One line: the play of the game (flagged for the M7 replay), and the Daily's perfect-team tally. */
+export function PlayOfGameLine({ rec }: { rec: GameRecord }) {
+  const p = rec.playOfGame;
+  const matched = rec.perfect ? rec.perfect.filter((x) => x.same).length : 0;
+  return (
+    <div className="bx-pog">
+      {p ? (
+        <span className={`pog-line ${p.touchdown ? 'good' : p.turnover ? 'bad' : ''}`}>
+          <span className="pog-k">Play of the game</span>
+          <b>{p.headline}</b> <span className="pog-d">{p.detail}</span> <span className="pog-w">{whenLabel(rec, p.round, p.ot)}</span>
+        </span>
+      ) : null}
+      {rec.perfect ? (
+        <span className="pog-perfect">
+          <span className="pog-k">Perfect team</span>
+          {matched} of {rec.perfect.length} matched
+        </span>
+      ) : null}
     </div>
   );
 }
 
-/** The report body for one tab (the parent draws the tabs and owns the scroll). */
-export const GameReport = forwardRef<HTMLDivElement, { rec: GameRecord; tab: number; className?: string }>(function GameReport({ rec, tab, className = '' }, ref) {
-  const t = REPORT_TABS[tab] ?? 'Summary';
+/** The whole box score on one screen. */
+export function BoxScore({ rec }: { rec: GameRecord }) {
   return (
-    <div className={`rep-body ${className}`} ref={ref} key={t}>
-      {t === 'Summary' ? <Summary rec={rec} /> : t === 'Passing & Rushing' ? <PassingRushing rec={rec} /> : t === 'Receiving' ? <Receiving rec={rec} /> : t === 'O-Line' ? <OLine rec={rec} /> : <Beasts rec={rec} />}
+    <div className="bx">
+      <div className="bx-left">
+        <Passing box={rec.box} />
+        <Rushing box={rec.box} />
+        <Receiving box={rec.box} />
+        <ReportCard rec={rec} />
+      </div>
+      <div className="bx-right">
+        <BeastsDefense rec={rec} />
+        <section className="bx-sec">
+          <h3>
+            Drive chart <TeamLine box={rec.box} />
+          </h3>
+          <DriveChart rec={rec} />
+        </section>
+        <BigHits rec={rec} />
+      </div>
     </div>
   );
-});
+}
 
-export function ReportTabs({ tab, onTab }: { tab: number; onTab: (i: number) => void }) {
+/** The score, the result and the grade: the top of the results screen and the box score over the room. */
+export function ResultHeader({ rec, shown, meta }: { rec: GameRecord; shown?: { u: number; b: number }; meta?: ReactNode }) {
+  const res = resultWord(rec);
   return (
-    <div className="tabs rep-tabs">
-      <span className="tab-key">Q</span>
-      {REPORT_TABS.map((t, i) => (
-        <button key={t} className={`tab ${i === tab ? 'is-active' : ''}`} onClick={() => onTab(i)} tabIndex={-1}>
-          {t}
-        </button>
-      ))}
-      <span className="tab-key">E</span>
-    </div>
+    <header className="res-head">
+      <div className={`res-banner ${res.tone}`}>{res.word}</div>
+      <div className="res-score">
+        <span className="us">
+          Contenders <b>{shown ? shown.u : rec.score.user}</b>
+        </span>
+        <span className="dash">–</span>
+        <span className="them">
+          <b>{shown ? shown.b : rec.score.beasts}</b> Beasts
+        </span>
+      </div>
+      <div className="res-meta">
+        <span>{rec.clock}</span>
+        <span>
+          {modeLabel(rec.mode)} · {rec.drives} rounds
+        </span>
+        {meta}
+      </div>
+      <div className={`res-grade ${res.tone}`}>
+        {rec.grade ? (
+          <>
+            <span className="grade">{rec.grade.grade}</span>
+            <span className="label">{rec.grade.label}</span>
+          </>
+        ) : (
+          <span className="label">No grade: the game wasn&rsquo;t finished</span>
+        )}
+        {rec.ot ? <span className="ot">{rec.ot > 1 ? `${rec.ot} overtimes` : 'Overtime'}</span> : null}
+      </div>
+    </header>
   );
 }
 
