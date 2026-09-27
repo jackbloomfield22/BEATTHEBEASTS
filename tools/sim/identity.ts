@@ -199,7 +199,8 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
       const man = manOf(s, me);
       runToWhistle(s, () => NEUTRAL);
       for (const ev of s.events) {
-        if ((ev.type === 'tackle' || ev.type === 'hit') && ev.who?.[0] === me.i) tries++, (made += ev.type === 'tackle' ? 1 : 0);
+        if (ev.type === 'hit' && ev.who?.[0] === me.i) tries++;
+        if (ev.type === 'tackle' && ev.who?.[0] === me.i) made++;
         if ((ev.type === 'missedTackle' || ev.type === 'brokenTackle') && ev.who?.includes(me.i)) tries++;
       }
       const p = s.result?.pass;
