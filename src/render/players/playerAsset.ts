@@ -9,6 +9,8 @@ import { OFFICIAL_KIT, REFEREE_KIT } from './kits';
 
 /** Bones whose rest position variety.ts scales: upperarm (shoulder width), forearm and hand (arm length). */
 const PROPORTION_BONES = ['upperarm_l', 'upperarm_r', 'forearm_l', 'forearm_r', 'hand_l', 'hand_r'];
+/** The variety shapes (tools/blender/lib/shapes.py) at rest, for a body with no Variety. */
+const NO_VARIETY = { pads: 0, neck: 0, waist: 0, calves: 0, arms: 0 };
 
 // The player asset (tools/blender/build_character.py → public/assets/
 // characters/player.glb): one armature and three LOD skinned meshes sharing
@@ -180,7 +182,10 @@ export class Player {
     const s = this.shape;
     const v = this.variety;
     this.root.scale.setScalar(s.scale);
-    const weights: Record<string, number> = { heavy: s.heavy, lean: s.lean, belly: s.belly, ...(v?.morph ?? {}) };
+    // Every key the file carries is set: its default weight is 1 (the
+    // exporter's), so a body without variety (an official) kept the
+    // pads, neck, waist, calves and arms shapes all the way on.
+    const weights: Record<string, number> = { heavy: s.heavy, lean: s.lean, belly: s.belly, ...NO_VARIETY, ...(v?.morph ?? {}) };
     for (const m of [...this.lods, this.shadowProxy]) {
       const dict = m.morphTargetDictionary;
       const inf = m.morphTargetInfluences;
@@ -212,7 +217,7 @@ export class Player {
    * render target's height in pixels; bias > 1 prefers lower detail.
    */
   updateLod(camera: THREE.Camera, viewportPx: number, bias = 1): void {
-    this.setLod(lodForScreenHeight(screenHeightPx(camera, this.root.position, BASE_HEIGHT_M * this.shape.scale, viewportPx) / bias));
+    this.setLod(lodForScreenHeight(screenHeightPx(camera, this.root.position, BASE_HEIGHT_M * this.shape.scale, viewportPx) / bias, this.lod));
   }
 }
 
@@ -225,6 +230,22 @@ export function screenHeightPx(camera: THREE.Camera, pos: THREE.Vector3, heightM
   return (heightM / view) * viewportPx;
 }
 
-export function lodForScreenHeight(px: number): number {
-  return px >= LOD_SCREEN_PX[0] ? 0 : px >= LOD_SCREEN_PX[1] ? 1 : 2;
+/**
+ * Hysteresis around the switch points (M6.5 #12): a player whose height
+ * on screen hovers at a switch point (the broadcast camera puts players at
+ * 50-70 px, right across the Medium/Low switch at 64) swapped meshes
+ * back and forth as he ran, and the two LODs bend differently at the
+ * shoulders and knees: the swap read as the body deforming. Moving to
+ * another LOD now takes crossing the switch point by this factor.
+ */
+export const LOD_HYSTERESIS = 1.12;
+
+/** The LOD for a height on screen; `current` (the LOD shown now) holds until the height clears a switch point by LOD_HYSTERESIS. */
+export function lodForScreenHeight(px: number, current = -1): number {
+  const plain = px >= LOD_SCREEN_PX[0] ? 0 : px >= LOD_SCREEN_PX[1] ? 1 : 2;
+  if (current < 0 || plain === current) return plain;
+  // Finer (plain < current) needs the height above the switch by the factor; coarser, below it by the factor.
+  const k = plain < current ? 1 / LOD_HYSTERESIS : LOD_HYSTERESIS;
+  const held = px * k >= LOD_SCREEN_PX[0] ? 0 : px * k >= LOD_SCREEN_PX[1] ? 1 : 2;
+  return held === plain ? plain : current;
 }

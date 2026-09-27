@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { RENDER_DPR_CAP, renderDpr } from '@/app/settings';
-import { lodForScreenHeight, screenHeightPx } from '@/render/players/playerAsset';
+import { LOD_HYSTERESIS, LOD_SCREEN_PX, lodForScreenHeight, screenHeightPx } from '@/render/players/playerAsset';
 
 describe('render pixel ratio', () => {
   it('caps each tier, even for small windows on dense displays', () => {
@@ -33,5 +33,16 @@ describe('player LOD by screen size', () => {
     expect(lodForScreenHeight(300)).toBe(0);
     expect(lodForScreenHeight(100)).toBe(1);
     expect(lodForScreenHeight(30)).toBe(2);
+  });
+  it('holds the LOD shown near a switch point instead of swapping meshes every few frames (M6.5 #12)', () => {
+    // Hovering around the Medium/Low switch at 64 px: no swap either way inside the band.
+    expect(lodForScreenHeight(66, 2)).toBe(2);
+    expect(lodForScreenHeight(60, 1)).toBe(1);
+    // Clear of it, the swap happens.
+    expect(lodForScreenHeight(LOD_SCREEN_PX[1] * LOD_HYSTERESIS + 1, 2)).toBe(1);
+    expect(lodForScreenHeight(LOD_SCREEN_PX[1] / LOD_HYSTERESIS - 1, 1)).toBe(2);
+    // A big jump goes straight there.
+    expect(lodForScreenHeight(30, 0)).toBe(2);
+    expect(lodForScreenHeight(400, 2)).toBe(0);
   });
 });
