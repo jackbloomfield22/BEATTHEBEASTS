@@ -47,6 +47,13 @@ describe('the playtest cases', () => {
 });
 
 describe('grades against expectation', () => {
+  it('a couple of balls his way cannot make an A+ on their own (1 of 3 for 34 as the backup tight end)', () => {
+    const g = gradePlayer('TE', 'TE2', box({ rec: { TE: rec({ name: 'TE', tgt: 3, rec: 1, yds: 34 }) } }), 6);
+    expect(g.grade).not.toMatch(/^A/);
+    const big = gradePlayer('WR', 'WR1', box({ rec: { WR: rec({ tgt: 11, rec: 8, yds: 127, td: 1 }) } }), 6);
+    expect(big.grade).toMatch(/^A/);
+  });
+
   it('doing exactly what the role does is a B-', () => {
     const n = 6;
     const exp = (ROLE_NORMS.RB1.perGame / NFL_POSSESSIONS) * n;

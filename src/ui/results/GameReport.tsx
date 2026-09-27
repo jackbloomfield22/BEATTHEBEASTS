@@ -113,7 +113,7 @@ export function DriveChart({ rec, compact = false }: { rec: GameRecord; compact?
           {u ? (
             <>
               {DRIVE_RESULT[u.result] ?? u.result}
-              {u.result === 'TD' && u.points > 6 ? ` +${u.points}` : u.result === 'FG' ? ' +3' : ''}
+              {u.points > 0 ? ` +${u.points}` : ''}
               {u.against ? ` (−${u.against})` : ''}
             </>
           ) : (
@@ -222,7 +222,10 @@ function Rushing({ box }: { box: GameBox }) {
 }
 
 function Receiving({ box }: { box: GameBox }) {
-  const rows = Object.values(box.rec).sort((x, y) => y.yds - x.yds || y.tgt - x.tgt);
+  // (Older records carried a nameless line for balls thrown away.)
+  const rows = Object.values(box.rec)
+    .filter((r) => r.name)
+    .sort((x, y) => y.yds - x.yds || y.tgt - x.tgt);
   return (
     <Table
       title="Receiving"

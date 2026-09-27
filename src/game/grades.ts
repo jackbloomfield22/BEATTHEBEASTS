@@ -23,7 +23,9 @@
 //               ÷ 11 possessions a team game) × your possessions this game;
 //   volume    = 14 × log2((value + k) / (expected + k)), k damping small
 //               samples (a third of the expectation, at least 8 yd), in
-//               [−18, +16]: double the expectation ≈ +12, half ≈ −9;
+//               [−18, +16]: double the expectation ≈ +12, half ≈ −9; then
+//               × n / (n + 4) for his n touches, so a couple of balls his
+//               way can't make an A+ (or an F) on their own;
 //   efficiency = his per-play rate against the league's (ANY/A for a QB,
 //               yards a carry, yards a target), shrunk toward zero when he
 //               had few chances (n / (n + a prior)), in [−10, +10];
@@ -42,6 +44,8 @@ export const NFL_POSSESSIONS = 11;
 /** Adjusted-yards weights (PFR's ANY/A): a touchdown is worth 20 yards, a turnover costs 45. */
 export const TD_YARDS = 20;
 export const TURNOVER_YARDS = 45;
+/** Touches at which the production term counts half (few chances say little: Playtest 2's "3 of 6 for 43, A+"). */
+export const VOLUME_PRIOR = 4;
 
 export type Role = 'QB' | 'RB1' | 'RB2' | 'WR1' | 'WR2' | 'WR3' | 'TE1' | 'TE2';
 
@@ -165,7 +169,10 @@ export function gradePlayer(name: string, role: Role, box: GameBox, possessions:
   }
   const contributions: Contribution[] = [];
   const k = Math.max(8, expected / 3);
-  const volume = clamp(14 * Math.log2(Math.max(1, value + k) / (expected + k)), -18, 16);
+  // Few chances, little evidence: the production term counts in proportion to n / (n + 4) of his
+  // touches (a man with 3 targets is judged at 43% of the swing, one with 20 at 83%).
+  const conf = touched / (touched + VOLUME_PRIOR);
+  const volume = clamp(14 * Math.log2(Math.max(1, value + k) / (expected + k)), -18, 16) * conf;
   contributions.push({ label: `production: ${r0(value)} against ${r0(expected)} for ${norm.who} in ${games}`, points: volume });
   // Efficiency: each line's rate against the league's, weighted by its share of his chances.
   let eff = 0;

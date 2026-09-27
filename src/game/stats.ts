@@ -288,7 +288,9 @@ export function tallySnap(b: GameBox, s: PlayState, r: PlayResult, before: Situa
     b.pass.att++;
     const tgt = s.agents[r.pass.target];
     const rn = tgt?.p.name ?? '';
-    const line = (b.rec[rn] ??= { name: rn, tgt: 0, rec: 0, yds: 0, td: 0, long: 0, yac: 0, drops: 0, contested: 0, contestedWon: 0 });
+    // A ball thrown to nobody (away, out of bounds) is an attempt but no receiver's target (it used to make a nameless receiving line).
+    const blank = (): RecLine => ({ name: rn, tgt: 0, rec: 0, yds: 0, td: 0, long: 0, yac: 0, drops: 0, contested: 0, contestedWon: 0 });
+    const line = tgt ? (b.rec[rn] ??= blank()) : blank();
     line.tgt++;
     const contested = r.pass.sep !== undefined && r.pass.sep < IN_PHASE;
     if (contested) line.contested++;

@@ -545,6 +545,9 @@ function DraftScout({ c, film }: { c: Candidate; film: boolean }) {
  * best player at each position starts, whatever the order he was drafted
  * in): RB1, WR1 and TE1 are the better men, and the order says so.
  */
+/** The backups' jobs on the depth chart (RB2's rotation: src/game/rotation.ts; TE2 in the two-tight-end groupings). */
+const DEPTH_ROLE: Partial<Record<Slot, string>> = { RB2: '3rd down', TE2: '2-TE sets' };
+
 function DraftSlots({ roster, depth, focus }: { roster: Roster; depth: boolean; focus: Slot | null }) {
   const shown = depth ? depthChart(roster) : roster;
   // A click focuses his stall (the stall is where he was drafted, which the depth chart may have moved him from).
@@ -563,7 +566,7 @@ function DraftSlots({ roster, depth, focus }: { roster: Roster; depth: boolean; 
               <span className="slot-key">
                 {depth ? DEPTH_LABEL[k] : POS_OF[k]}
                 {!depth && of > 1 ? <span className="slot-nth">{`${n} of ${of}`}</span> : null}
-                {depth && (k === 'RB' || k === 'WR1' || k === 'TE') ? <span className="slot-nth">Starter</span> : null}
+                {depth && DEPTH_ROLE[k] ? <span className="slot-nth">{DEPTH_ROLE[k]}</span> : null}
               </span>
               <span className="slot-name">{p ? (p.linemen ? `${p.team} ${p.decade}` : p.name.split(' ').slice(-1)[0]) : '—'}</span>
             </li>
