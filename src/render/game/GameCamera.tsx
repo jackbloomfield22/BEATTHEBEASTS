@@ -14,8 +14,8 @@ import { frameEvents } from './frameEvents';
 // through critically damped springs so every cut is a glide:
 //   Broadcast: behind the offense, high enough to see both wideouts; once
 //   the pass is out it rides behind the ball and pushes in on the catch
-//   point, then settles behind the carrier with look-ahead, and swings to a
-//   high sideline angle on a long run.
+//   point, then settles behind the carrier with look-ahead, and on a
+//   breakaway eases out to a higher, wider three-quarter angle.
 //   All-22: high above the backfield, the whole field of play in view.
 //   Field level: tight, behind the ball.
 // Hits add a shake scaled by their force (Reduce Camera Shake scales it down).
@@ -45,6 +45,54 @@ class Spring {
     return this.x;
   }
 }
+
+/**
+ * The breakaway blend (M6.6, Playtest 2: "stay a bit wider on a breakaway
+ * and ease the swing so it doesn't distract"). Before, a long run cut to a
+ * sideline pose 24 yd off him the frame he crossed 18 yd at 6.5 yd/s: a 90°
+ * swing that swung back the moment he slowed for a cut or the whistle blew,
+ * and changed sides if he crossed the middle. Now `k` eases 0 → 1 over
+ * about a second once he's clear (and back only when he's caught up to
+ * the pursuit's pace, never at the whistle), the side is chosen once, and
+ * the breakaway angle is 40° off his run rather than square to it.
+ */
+const breakaway = { k: 0, side: 1, play: -1, on: false };
+/** Enter past the line by this much at this pace; leave below LEAVE_SPEED (yd, yd/s). */
+const BREAK_PAST = 15;
+const BREAK_SPEED = 6.3;
+const LEAVE_SPEED = 4.6;
+/** Seconds to ease in and out (the blend runs through a smoothstep, so the swing starts and ends at rest). */
+const BREAK_IN = 1.1;
+const BREAK_OUT = 0.9;
+
+/** Advance the breakaway blend by dt (the frame's step); a screenshot jumps straight to where it's heading. */
+function stepBreakaway(dt: number, snap: boolean): void {
+  const r = practice.runner;
+  if (!r) return;
+  const s = r.state;
+  const cur = r.cur;
+  if (breakaway.play !== practice.playId) {
+    breakaway.play = practice.playId;
+    breakaway.k = 0;
+    breakaway.on = false;
+  }
+  const c = cur.carrier >= 0 ? cur.agents[cur.carrier]! : null;
+  const mine = !!c && s.agents[cur.carrier]!.side === 'off';
+  if (c && mine && cur.phase === 'carrier') {
+    const sp = Math.hypot(c.vx, c.vy);
+    const past = c.x - s.setup.los;
+    if (!breakaway.on && past > BREAK_PAST && sp > BREAK_SPEED) {
+      breakaway.on = true;
+      // The camera goes to the side he's farther from, and stays there.
+      breakaway.side = c.y >= 0 ? -1 : 1;
+    } else if (breakaway.on && sp < LEAVE_SPEED) breakaway.on = false;
+  } else if (cur.phase !== 'dead') breakaway.on = false;
+  const to = breakaway.on ? 1 : 0;
+  if (snap) breakaway.k = to;
+  else breakaway.k = to > breakaway.k ? Math.min(1, breakaway.k + dt / BREAK_IN) : Math.max(0, breakaway.k - dt / BREAK_OUT);
+}
+
+const smooth = (k: number) => k * k * (3 - 2 * k);
 
 function targetPose(mode: Mode): Pose | null {
   // A field goal or PAT: from behind and above the kicker, the protection and
@@ -95,15 +143,26 @@ function targetPose(mode: Mode): Pose | null {
     const dir = s.agents[cur.carrier]!.side === 'off' ? 1 : -1;
     const lx = c.x + c.vx * 0.55;
     const ly = c.y + c.vy * 0.45;
-    const sp = Math.hypot(c.vx, c.vy);
-    const long = dir > 0 && c.x - los > 18 && sp > 6.5 && cur.phase !== 'dead';
-    if (long) {
-      // High sideline angle, from the sideline he's farther from (the play runs away from the camera less).
-      // 24 yd off him across the field, looking straight at him and his lane.
-      const side = c.y >= 0 ? -1 : 1;
-      return { ex: c.x - 5, ey: c.y + side * 24, eh: 10, lx: lx + 2, ly, lh: 0.5, fov: 40 };
-    }
-    return { ex: c.x - dir * 13, ey: c.y * 0.75, eh: 6.8, lx, ly, lh: 0.6, fov: 52 };
+    // Normal plays: behind him, 11 yd back and 6 up (M6.6: pushed in from
+    // 13 and 6.8, Playtest 2 "it can push in a little closer on normal plays").
+    const near: Pose = { ex: c.x - dir * 11, ey: c.y * 0.75, eh: 6, lx, ly, lh: 0.6, fov: 50 };
+    const k = dir > 0 ? smooth(breakaway.k) : 0;
+    if (k <= 0) return near;
+    // The breakaway: high and wide at three-quarters, 40° off his run from
+    // the side he's farther from, 25 yd from him (the old sideline pose was
+    // 24 at 40° fov; this is 46°, so the pursuit and the open field ahead
+    // stay in frame), looking further ahead of him.
+    const side = breakaway.side;
+    const wide: Pose = { ex: c.x - 19, ey: c.y + side * 16, eh: 11, lx: c.x + c.vx * 0.9 + 3, ly: c.y + c.vy * 0.6, lh: 0.4, fov: 46 };
+    return {
+      ex: near.ex + (wide.ex - near.ex) * k,
+      ey: near.ey + (wide.ey - near.ey) * k,
+      eh: near.eh + (wide.eh - near.eh) * k,
+      lx: near.lx + (wide.lx - near.lx) * k,
+      ly: near.ly + (wide.ly - near.ly) * k,
+      lh: near.lh + (wide.lh - near.lh) * k,
+      fov: near.fov + (wide.fov - near.fov) * k,
+    };
   }
   return base;
 }
@@ -194,6 +253,7 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       videoClock.t = now;
       if (!springs.current) step = 0;
     }
+    stepBreakaway(step, urlFlags.shot !== null && !urlFlags.video);
     const goal = targetPose(modeSetting);
     if (!goal) return;
     // World-space target: eye and look.
