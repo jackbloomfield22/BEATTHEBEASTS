@@ -294,7 +294,7 @@ export function applyPlay(m: Match, r: PlayResult, endY: number, playSecs: numbe
     if (good) m.score.user += 2;
     if (r.touchdown && !r.offenseBall) m.score.beasts += 2; // a defensive two-point return
     m.log.push(`Two-point try ${good ? 'good' : 'no good'}`);
-    endDrive(m, d.result === 'TwoPoint' ? 'TwoPoint' : 'TD', 0);
+    endDrive(m, d.result === 'TwoPoint' ? 'TwoPoint' : 'TD', good ? 2 : 0);
     return { kind: good ? 'twoPointGood' : 'twoPointFailed' };
   }
   if (r.touchdown && !r.offenseBall) {
@@ -400,7 +400,8 @@ export function applyKick(m: Match, good: boolean): void {
   if (k.kind === 'PAT') {
     if (good) m.score.user += 1;
     m.log.push(`PAT ${good ? 'good' : 'no good'}`);
-    endDrive(m, 'TD', 0);
+    // The drive's points include the try (the drive chart's "Touchdown +7").
+    endDrive(m, 'TD', good ? 1 : 0);
   } else {
     if (good) m.score.user += 3;
     m.log.push(`FG ${k.distance} ${good ? 'good' : 'no good'}`);

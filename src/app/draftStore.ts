@@ -207,7 +207,7 @@ export const useDraft = create<DraftStore>((set, get) => ({
     draft.sequence = saved.sequence;
     const daily = saved.dailyKey ? newDaily(saved.dailyKey, cat) : null;
     const beasts = daily ? daily.beasts : assembleRatedBeasts(makeRng(saved.seed ^ 0x9e3779b9), (id) => cat.entry.get(id)?.ovr);
-    set((s) => ({ draft, daily, beasts, mode: saved.mode, phase: 'viewing', focus: null, version: s.version + 1, instantSeq: s.instantSeq + 1, wallBeasts: 0 }));
+    set((s) => ({ draft, daily, beasts, mode: saved.mode, phase: 'viewing', focus: null, version: s.version + 1, instantSeq: s.instantSeq + 1, wallBeasts: null }));
     return true;
   },
   next: 'game',
