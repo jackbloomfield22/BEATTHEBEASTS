@@ -29,6 +29,7 @@ from lib.skeleton import J  # noqa: E402
 from lib.geo import decimate_to, delete_verts, duplicate, tri_count  # noqa: E402
 from lib.rig import bind, build_armature, crotch_weights, fill_bare, limit_weights, remap_weights, transfer_weights  # noqa: E402
 from lib.shapes import PART_AWARE, PART_FOLLOW, SHAPES  # noqa: E402
+from lib.skinfix import pad_shell  # noqa: E402
 from lib.skeleton import RUNTIME_BONES, J  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -415,6 +416,7 @@ def main() -> None:
                 # (neck extension in stances tore the collar open).
                 remap_weights(p, {"neck_01": "spine_04", "neck_02": "spine_04", "head": "spine_04"})
                 pads_rigid(p)
+                pad_shell(p)  # M6.5 #12: the whole cap is shell (lib/skinfix.py)
                 limit_weights(p, 4)
             if name == "pants":
                 crotch_weights(p)
@@ -511,6 +513,10 @@ def main() -> None:
         export_materials="EXPORT",
         export_def_bones=False,
     )
+    # The skinning gate (M6.5 #12, lib/skin.py): the player LODs through the fast clips.
+    from lib.skin import gate_lods
+
+    skin_gate = gate_lods(rig, [o for o in lods if o.name.startswith("player_lod")])
     info = {
         "file": "player.glb",
         "lods": stats,
@@ -522,11 +528,16 @@ def main() -> None:
         "partScale": gear.PART_SCALE,
         "shapes": list(SHAPES),
         "bytes": os.path.getsize(OUT),
+        "skinGate": skin_gate,
     }
     with open(MANIFEST, "w") as f:
         json.dump(info, f, indent=2)
         f.write("\n")
     print(json.dumps({k: info[k] for k in ("lods", "bones", "bytes")}), f"{time.time() - t0:.1f}s")
+    for group, g in skin_gate["groups"].items():
+        for r, w in g["regions"].items():
+            print(f"skin gate {group:5s} {r:9s} collapsed {w['collapsed'] * 100:5.2f}% folded {w['flips'] * 100:5.2f}% {'pass' if w['pass'] else 'FAIL'} {w['at']}")
+    assert skin_gate["pass"], "skinning gate failed (player.json skinGate)"
 
 
 if __name__ == "__main__":
