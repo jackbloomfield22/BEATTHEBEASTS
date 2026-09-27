@@ -931,6 +931,12 @@ function redirect(s: PlayState, d: Agent, want: V2): void {
  * to stay on top, and closes it as the route declares itself (by ~12 yd).
  */
 export function manCover(s: PlayState, d: Agent, r: Agent): void {
+  // His man stayed in to block: he spies the QB (Playtest 1/2, scramble
+  // contain). He mirrors him ~SPY_DEPTH off the line and comes when he runs.
+  if (!r.route && s.phase !== 'air') {
+    spy(s, d);
+    return;
+  }
   const delay = 0.08 + 0.3 * (1 - d.fx.a('manCov')) + latency(s) * 0.5;
   const v = seen(r, delay);
   const by = s.setup.ballY ?? 0;
@@ -979,6 +985,24 @@ function coverPlant(s: PlayState, d: Agent, want: V2): void {
 const COVER_PLANT_COS = 0.82;
 /** At most one plant this often (s). */
 const COVER_PLANT_GAP = 0.35;
+
+/** An underneath zone defender comes up on a scrambling QB within this (yd). */
+const SCRAMBLE_SEE = 20;
+/** A spy sits this far past the line (yd), level with the QB. */
+const SPY_DEPTH = 5;
+
+/** The spy: mirror the QB from ~SPY_DEPTH yd off the line; once he tucks it or crosses the line, go get him. */
+function spy(s: PlayState, d: Agent): void {
+  const qb = s.agents[s.qb]!;
+  const los = s.setup.los;
+  if ((s.scrambleT >= 0 && s.t >= s.scrambleT + reaction(s, d)) || qb.pos.x > los - 1) {
+    pursue(s, d, qb);
+    return;
+  }
+  const at = v2(los + SPY_DEPTH, qb.pos.y + qb.vel.y * 0.3);
+  steer(d, arrive(d, at, 0.9, 1.5), { face: Math.PI });
+  d.anim = 'run';
+}
 
 /** How a zone plays (GDD §10.4): deep (thirds, halves, the middle), the Tampa 2 runner, the flat, curl-to-flat, the hook. */
 type ZoneRole = 'deep' | 'tampa' | 'flat' | 'curl' | 'hook';
@@ -1070,7 +1094,8 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
   // A QB scrambling toward the line: the underneath zones come up to meet him
   // (they can't leave while he can still throw it over them from deep in the pocket).
   if (!deep && s.scrambleT >= 0 && s.t >= s.scrambleT + reaction(s, d)) {
-    if (qb.pos.x > los - 2.5 && dist(d.pos, qb.pos) < 14) {
+    // (Within SCRAMBLE_SEE: Playtest 2, deep calls drop the hook and curl defenders past the 14 yd they read from before, and a QB running up the middle had the field to himself.)
+    if (qb.pos.x > los - 2.5 && dist(d.pos, qb.pos) < SCRAMBLE_SEE) {
       pursue(s, d, qb);
       return;
     }

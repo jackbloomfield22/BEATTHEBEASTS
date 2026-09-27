@@ -14,6 +14,8 @@ import { dist, len } from './vec';
 
 /** The tackle logistic's base: ~90% for an even matchup (NFL missed-tackle rate ~10–15% of attempts, PFF/SIS). M5.5 had 2.1 (~89% before the move and mass terms). */
 const TACKLE0 = 2.4;
+/** A QB behind the line is easier to bring down than a back (logit): the sack. */
+const QB_BACK_EDGE = 0.8;
 const logistic = (x: number): number => 1 / (1 + exp(-x));
 
 /** Push overlapping bodies apart (not engaged pairs), heavier players move less. */
@@ -73,6 +75,12 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
     return o.side === d.side && o.i !== d.i && !o.down && dist(o.pos, c.pos) < 1.6;
   }).length;
   const tackle = d.fx.a('tackle') * 0.6 + d.fx.a('hitPower') * 0.2 + d.fx.a('pursuit') * 0.2;
+  // A quarterback behind the line isn't a back running through a tackle
+  // (Playtest 1/2: a scrambling QB shrugged off the end chasing him on every
+  // long scramble; the tackle was broken as an arm tackle from behind by a
+  // man running away): his momentum counts half, a grab from behind isn't
+  // weaker, and only a big, strong QB (Break Tackle) gets out of it often.
+  const qbBack = c.i === s.qb && (c.pos.x - s.setup.los) * (c.side === 'off' ? 1 : -1) < 0;
   // The carrier's counter: the move he's in, else Break Tackle.
   const counterAttr = mv ? MOVE_ATTR[mv] ?? 'breakTackle' : 'breakTackle';
   // Spam: each recent move takes a bite out of the next (GDD §9.3).
@@ -85,10 +93,10 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
   }
   // Baseline ~85% per attempt for an even matchup (NFL missed-tackle rate
   // runs 10–15% of attempts: PFF / Sports Info Solutions charting).
-  let x = TACKLE0 + 3.2 * (tackle - counter * 0.85) - 1.8 * massEdge + 0.7 * gang;
+  let x = TACKLE0 + 3.2 * (tackle - counter * 0.85) - (qbBack ? 0.9 : 1.8) * massEdge + 0.7 * gang + (qbBack ? QB_BACK_EDGE : 0);
   if (mv === 'stiffArm') x -= 0.5 * c.fx.a('stiffArm');
   if (mv === 'truck') x -= 0.8 * c.fx.a('trucking') * (c.fx.mass / (c.fx.mass + d.fx.mass)) * 2 - 0.4;
-  if (headOn < -0.3) x -= 0.4; // arm tackles from behind get broken more
+  if (headOn < -0.3 && !qbBack) x -= 0.4; // arm tackles from behind get broken more (not on a QB still behind the line)
   return { evade, tackle: logistic(x), closing, headOn };
 }
 
