@@ -192,8 +192,12 @@ class PracticeSession {
    * call). `rosters` stays the base eleven the render builds bodies from.
    */
   teams: { team: ContendersRoster; beasts: BeastsDefense } | null = null;
-  /** The offense's uniform: the classic line-up's Royal on the Practice Field, the Contenders' Blackout Lime in a game. */
-  offenseKit = 'royal';
+  /**
+   * The offense's uniform: the Contenders' white and lime (M6.6, Playtest 1
+   * decision 5), on the Practice Field too, so the kit you practise in is
+   * the one you play in. The render checks it against the Beasts' (kitAgainst).
+   */
+  offenseKit = 'whiteLime';
   runner: SimRunner | null = null;
   rosters: Rosters | null = null;
   readonly controls = new Controls();
@@ -238,7 +242,7 @@ class PracticeSession {
     else if (!this.game && this.customRosters) this.rosters = null;
     this.customRosters = !!opts.rosters;
     this.teams = opts.teams ?? null;
-    this.offenseKit = this.game ? 'blackoutLime' : 'royal';
+    this.offenseKit = 'whiteLime';
     this.snaps = 0;
     this.firstCatch = true;
     this.targets = {};

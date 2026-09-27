@@ -24,7 +24,7 @@ import { hudDom, RING_LEN } from '@/ui/game/hudDom';
 import { crowdEnergy } from '../crowd/reactions';
 import { activeVfx } from '../vfx/active';
 import { Audio } from '@/audio/audio';
-import { KITS } from '../players/kits';
+import { KITS, kitAgainst } from '../players/kits';
 import { bodyFromImperial } from '../players/bodyShape';
 import { jerseyName } from '../players/glyphs';
 import { playerVariety, type Position } from '../players/variety';
@@ -173,7 +173,9 @@ export function GameScene() {
       if (!alive || !practice.rosters) return;
       const R = practice.rosters;
       // Agent order in the sim: OFF_SLOTS then DEF_SLOTS (sim/plays.ts).
-      const all = [...buildTeam(OFF_SLOTS.map((k) => R.offense[k]), OFF_SLOTS, practice.offenseKit, asset, lib), ...buildTeam(DEF_SLOTS.map((k) => R.defense[k]), DEF_SLOTS, 'beasts', asset, lib)];
+      // Never two dark kits on the field (Playtest 1 decision 5): the offense changes to white if its kit is as dark as the Beasts'.
+      const offKit = kitAgainst(practice.offenseKit, 'beasts').id;
+      const all = [...buildTeam(OFF_SLOTS.map((k) => R.offense[k]), OFF_SLOTS, offKit, asset, lib), ...buildTeam(DEF_SLOTS.map((k) => R.defense[k]), DEF_SLOTS, 'beasts', asset, lib)];
       const g = new THREE.Group();
       g.name = 'players';
       for (const b of all) {
