@@ -9,8 +9,11 @@
   --line: rgba(244, 240, 255, 0.14);
   --panel: rgba(8, 7, 15, 0.62);
   --panel-strong: rgba(8, 7, 15, 0.86);
+  /* Three roles, two typefaces (M6.6): Bungee for headlines only; Barlow for
+     body text; Barlow Semi Condensed for numbers, stat tables and labels. */
   --font-display: 'Bungee', 'Arial Black', sans-serif;
-  --font-ui: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-ui: 'Barlow', 'Inter Variable', system-ui, sans-serif;
+  --font-num: 'Barlow Semi Condensed', 'Barlow', 'Inter Variable', system-ui, sans-serif;
   --ui-scale: 1;
   /* 1rem = 16px at 1080p; scales with window height (1440p, 4K, ultrawide). */
   font-size: clamp(10px, calc(100vh / 67.5 * var(--ui-scale)), 64px);

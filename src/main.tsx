@@ -2,6 +2,16 @@ import { StrictMode, lazy, Suspense, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource/bungee/400.css';
 import '@fontsource-variable/inter';
+// The second typeface (M6.6): Barlow for body text, Barlow Semi Condensed for numbers and tables. Bungee is for headlines only.
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/500.css';
+import '@fontsource/barlow/600.css';
+import '@fontsource/barlow/700.css';
+import '@fontsource/barlow/800.css';
+import '@fontsource/barlow-semi-condensed/500.css';
+import '@fontsource/barlow-semi-condensed/600.css';
+import '@fontsource/barlow-semi-condensed/700.css';
+import '@fontsource/barlow-semi-condensed/800.css';
 import './ui/styles/global.css';
 import { App } from './app/App';
 
