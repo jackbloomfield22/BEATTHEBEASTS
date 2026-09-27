@@ -79,7 +79,7 @@ export function DraftScreen() {
   const [focus, setFocus] = useState(0);
   const [roomFocus, setRoomFocus] = useState(0);
   const search = useRef<HTMLInputElement>(null);
-  // The Locker Room entry: the last game on the board, its full box score a key away.
+  // My Team (the main menu): the last game on the board, its full box score a key away.
   const lastGame = useHistory((s) => s.records[0] ?? null);
   const [boxOpen, setBoxOpen] = useState(false);
   const showLast = d.phase === 'viewing' && !!lastGame;

@@ -52,7 +52,12 @@ test('Quick Play: locker room, walk-out and a full six-round game to the results
     seen.add(st);
     if (st === 'final') break;
     if (st === 'loading') await page.waitForTimeout(500);
-    else if (st === 'meanwhile' || st === 'fourth' || st === 'try') {
+    else if (st === 'pregame') {
+      // The pre-game moment waits for an explicit press (armed after ~1 s).
+      await page.waitForTimeout(1200);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(300);
+    } else if (st === 'meanwhile' || st === 'fourth' || st === 'try') {
       await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
     } else if (st === 'call') {
@@ -68,7 +73,7 @@ test('Quick Play: locker room, walk-out and a full six-round game to the results
   expect(m.phase).toBe('final');
   expect(m.cfg.drives).toBe(6);
   expect(snaps).toBeGreaterThan(6);
-  expect([...seen]).toEqual(expect.arrayContaining(['meanwhile', 'call', 'play', 'final']));
+  expect([...seen]).toEqual(expect.arrayContaining(['pregame', 'meanwhile', 'call', 'play', 'final']));
   await page.waitForFunction(() => (window as unknown as W).__btbApp.getState().screen === 'results', null, { timeout: 60_000 });
   await expect(page.locator('.res-score')).toBeVisible();
   expect(errors).toEqual([]);

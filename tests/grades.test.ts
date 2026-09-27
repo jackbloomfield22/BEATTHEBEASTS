@@ -35,7 +35,7 @@ describe('the playtest cases', () => {
     const b = box({ pass: pass({ cmp: 8, att: 14, yds: 101 }), rush: { QB: rush({ name: 'QB', car: 9, yds: 175, long: 48 }) } });
     const g = gradePlayer('QB', 'QB', b, 6);
     expect(g.grade).toMatch(/^A/);
-    expect(g.why).toContain('175 rushing');
+    expect(g.why).toContain('175 yards rushing');
     // Over ten drives the same line is worth less (the game length counts).
     expect(gradePlayer('QB', 'QB', b, 10).score!).toBeLessThan(g.score!);
   });

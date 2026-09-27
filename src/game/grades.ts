@@ -136,7 +136,7 @@ function statLine(pass: PassLine | null, rush: RushLine | null, rec: RecLine | n
     if (pass.td) parts.push(plural(pass.td, 'TD'));
     if (pass.int) parts.push(plural(pass.int, 'pick'));
   }
-  if (rush && rush.car) parts.push(pass ? `${r0(rush.yds)} rushing` : `${plural(rush.car, 'carry', 'carries')} for ${r0(rush.yds)}`);
+  if (rush && rush.car) parts.push(pass ? `${plural(r0(rush.yds), 'yard')} rushing` : `${plural(rush.car, 'carry', 'carries')} for ${r0(rush.yds)}`);
   if (rec && rec.tgt) parts.push(`${rec.rec} of ${plural(rec.tgt, 'target')} for ${r0(rec.yds)}`);
   const tds = (rush?.td ?? 0) + (rec?.td ?? 0);
   if (tds && !pass) parts.push(plural(tds, 'TD'));

@@ -3,7 +3,7 @@ import { trackErrors, waitReady } from './helpers';
 
 // Every game ends on its results (the bug: a Classic game could end with no
 // results screen and no way back to it). A full Classic game from the real
-// draft flow to the results, its box score tabs, the Locker Room's Last Game
+// draft flow to the results, its one-screen box score, My Team's Last Game
 // board and History; then the other endings: overtime, the two-minute drill
 // running out, and leaving from the pause menu on the final play. The sim is
 // stepped tick by tick (the software renderer's frames are slow); every
@@ -12,7 +12,7 @@ import { trackErrors, waitReady } from './helpers';
 type Rec = { id: string; end: string; ot: number; clock: string; score: { user: number; beasts: number }; grade: { grade: string } | null; userDrives: { result: string }[]; box: { plays: number }; playOfGame: unknown };
 type M = { round: number; ot: number; phase: string; score: { user: number; beasts: number }; cfg: { drives: number }; clock: { quarter: number; secs: number; live: boolean; timeouts: number }; sit: { los: number; ballY: number; down: number; toGo: number }; lastWhistle: string };
 type W = {
-  __btbDraft: { getState(): { phase: string; finishWalkout(go: (s: string) => void): void } };
+  __btbDraft: { getState(): { phase: string; finishWalkout(go: (s: string) => void): void; view(): Promise<boolean> } };
   __btbApp: { getState(): { screen: string; go(s: string): void } };
   __btbGameUi: { getState(): { stage: string; paused: boolean; record: Rec | null; match: M | null }; setState(p: object): void };
   __btbGame: { match: M | null };
@@ -58,7 +58,12 @@ async function playOn(page: Page, until?: () => Promise<boolean>, snap: { hold?:
     if (st === 'final' || (await screen(page)) !== 'game') return snaps;
     if (until && (await until())) return snaps;
     if (st === 'loading') await page.waitForTimeout(500);
-    else if (st === 'meanwhile' || st === 'fourth' || st === 'try') {
+    else if (st === 'pregame') {
+      // The pre-game moment holds until a press (it arms after ~1 s).
+      await page.waitForTimeout(1200);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(300);
+    } else if (st === 'meanwhile' || st === 'fourth' || st === 'try') {
       await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
     } else if (st === 'call') {
@@ -76,14 +81,17 @@ async function playOn(page: Page, until?: () => Promise<boolean>, snap: { hold?:
 async function expectResults(page: Page) {
   await page.waitForFunction(() => (window as unknown as W).__btbApp.getState().screen === 'results', null, { timeout: 60_000 });
   await expect(page.locator('.res-score')).toBeVisible();
-  // The reveal lands, then the box score opens.
-  await expect(page.locator('.rep-tabs')).toBeVisible({ timeout: 30_000 });
+  // The reveal lands, then the one-screen box score loads on its own.
+  await expect(page.locator('.bx')).toBeVisible({ timeout: 30_000 });
 }
 
-/** Straight to kickoff with the saved roster (the Locker Room's walk-out, without the camera move). */
+/** Straight to kickoff with the saved roster (the walk-out's end, without the camera move), through the pre-game's press. */
 async function kickoff(page: Page) {
   await ev(page, (w) => w.__btbDraft.getState().finishWalkout((s) => w.__btbApp.getState().go(s)));
   await page.waitForFunction(() => (window as unknown as W).__btbApp.getState().screen === 'game' && !!(window as unknown as W).__btbGame.match, null, { timeout: 120_000 });
+  await page.waitForFunction(() => (window as unknown as W).__btbGameUi.getState().stage === 'pregame', null, { timeout: 120_000 });
+  await page.waitForTimeout(1200);
+  await page.keyboard.press('Enter');
 }
 
 /** Skip to the last round's play call: `secs` on the live clock, the ball on the 20, this score. */
@@ -111,7 +119,7 @@ test('Classic: the real draft, a full game, the results and box score, the Locke
   await page.goto('/?screen=main&nointro&quality=low&autokick');
   await waitReady(page);
   // Play (Classic) from the main menu, Auto-Draft in the locker room, walk out.
-  await expect(page.locator('.menu-item.is-focused')).toContainText('Play');
+  await expect(page.locator('.menu-item.is-focused')).toContainText('New Draft');
   await expect(page.locator('.menu-item.is-focused')).toContainText('Classic');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => (window as unknown as W).__btbDraft.getState().phase === 'intro', null, { timeout: 180_000 });
@@ -128,32 +136,28 @@ test('Classic: the real draft, a full game, the results and box score, the Locke
   await expectResults(page);
   console.log(`classic game: ${snaps} snaps, ${rec!.score.user}-${rec!.score.beasts}, ${Math.round((Date.now() - t0) / 60000)} min`);
 
-  // Every tab of the box score.
-  await expect(page.locator('.pog')).toBeVisible();
-  await expect(page.locator('.drive-chart')).toBeVisible();
-  for (const [tab, sel] of [
-    ['Passing & Rushing', 'text=Rating'],
-    ['Receiving', 'text=YAC'],
-    ['O-Line', 'text=Run-block win rate'],
-    ['The Beasts', 'text=Coverage snapshot'],
-  ] as const) {
-    await page.keyboard.press('KeyE');
-    await expect(page.locator('.tab.is-active')).toHaveText(tab);
-    await expect(page.locator(`.rep-body >> ${sel}`).first()).toBeVisible();
-  }
+  // The box score is one screen: every section at once, labelled in words.
+  for (const sel of ['text=Passing', 'text=Rushing', 'text=Receiving', 'text=Player grades', "text=The Beasts' defense", 'text=Drive chart', 'text=Big hits']) await expect(page.locator(`.bx >> ${sel}`).first()).toBeVisible();
+  await expect(page.locator('.bx th', { hasText: /^Sk$/ })).toHaveCount(0);
+  await expect(page.locator('.bx .grades td.why').first()).not.toBeEmpty();
   // It survives a reload: History has it.
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('btb3d:history.v1') ?? '[]') as { id: string }[]);
   expect(stored[0]?.id).toBe(rec!.id);
 
-  // The Locker Room: the last game on the board, the full box score a key away.
-  await page.keyboard.press('Enter'); // Locker Room (the first action)
+  // After the results: the main menu (Playtest 2), not the locker room.
+  await expect(page.locator('.res-actions .menu-item.is-focused')).toContainText('Main menu');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.main-menu')).toBeVisible();
+  await expect(page.locator('.menu-item.hero')).toContainText('New Draft');
+
+  // My Team: the last game on the board, the full box score a key away; no walk-out with the same roster.
+  await ev(page, (w) => void w.__btbDraft.getState().view().then(() => w.__btbApp.getState().go('draft')));
   await page.waitForFunction(() => (window as unknown as W).__btbDraft.getState().phase === 'viewing', null, { timeout: 120_000 });
   await expect(page.locator('.last-game')).toBeVisible();
   await expect(page.locator('.last-game .lg-score')).toContainText(`Contenders ${rec!.score.user}`);
+  await expect(page.locator('.draft-stage')).toContainText('New draft');
   await page.keyboard.press('KeyF');
-  await expect(page.locator('.report-overlay .rep-tabs')).toBeVisible();
-  await page.keyboard.press('KeyE');
-  await expect(page.locator('.report-overlay .tab.is-active')).toHaveText('Passing & Rushing');
+  await expect(page.locator('.report-overlay .bx')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.report-overlay')).toHaveCount(0);
   await expect(page.locator('.last-game')).toBeVisible();
@@ -161,7 +165,7 @@ test('Classic: the real draft, a full game, the results and box score, the Locke
   // History: the game is there, and opens to its box score.
   await ev(page, (w) => w.__btbApp.getState().go('main'));
   await expect(page.locator('.main-menu')).toBeVisible();
-  await page.keyboard.press('ArrowUp'); // wraps to History
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowUp'); // wraps round to History (above How to Play and Settings)
   await expect(page.locator('.menu-item.is-focused')).toContainText('History');
   await page.keyboard.press('Enter');
   await expect(page.locator('.hist-row')).toHaveCount(1);

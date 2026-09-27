@@ -81,7 +81,7 @@ function GamePage() {
       <h3>The last drive</h3>
       <p>Trailing or tied on your final drive? The clock goes live: two minutes, three timeouts, spike and kneel. Tied at the end means overtime, college style from the 25.</p>
       <h3>The grade</h3>
-      <p>Your margin of victory earns a grade, from Total Domination down to Beatdown.</p>
+      <p>Your margin of victory earns a grade, from Total Domination down to Beatdown. Every player gets his own grade in the box score: what he produced against what his role makes in a game that long, with the reason in one line.</p>
     </div>
   );
 }
@@ -93,6 +93,8 @@ function DraftPage() {
       <ul>
         <li>Roster: QB, two RBs, three WRs, two TEs and an offensive line.</li>
         <li>One Team Skip (keep the decade, new team) and one Era Skip (keep the team, new decade) per game.</li>
+        <li>A position fills its spots in order: the list says &ldquo;2nd WR&rdquo; because your 1st WR spot is filled.</li>
+        <li>Draft order doesn&rsquo;t set the depth chart: your best back, receiver and tight end start. The second back spells the starter and plays third downs and screens; the second tight end comes on in two-tight-end sets.</li>
         <li>No player twice, even from a different team or decade.</li>
         <li>At most one player from the 1970s.</li>
         <li>Classic shows every rating and stat. Film Room hides the numbers: draft from memory.</li>

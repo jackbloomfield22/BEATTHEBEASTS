@@ -53,15 +53,15 @@ test('History opens (empty on a fresh device) and backs out; Play opens the lock
   await page.keyboard.press('Enter');
   await expect(page.locator('.main-menu')).toBeVisible();
   // History: every game played, or a word on what lands there.
-  await page.keyboard.press('ArrowUp'); // wraps to the last item
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowUp'); // wraps round (Settings, How to Play, then History)
   await expect(page.locator('.menu-item.is-focused')).toContainText('History');
   await page.keyboard.press('Enter');
   await expect(page.locator('.history-screen')).toBeVisible();
   await expect(page.locator('.hist-empty')).toContainText('No games yet');
   await page.keyboard.press('Escape');
   await expect(page.locator('.main-menu')).toBeVisible();
-  // Play (M6): the draft in the Contenders' locker room (the menu comes back on its first item).
-  await expect(page.locator('.menu-item.is-focused')).toContainText('Play');
+  // New Draft (M6.6: the big button): the draft in the Contenders' locker room (the menu comes back on its first item).
+  await expect(page.locator('.menu-item.is-focused')).toContainText('New Draft');
   await page.keyboard.press('Enter');
   await expect(page.locator('.draft-screen')).toBeVisible();
 });
