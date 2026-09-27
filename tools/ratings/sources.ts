@@ -120,7 +120,21 @@ function addStints(S: LoadedSources, file: AddedStintsFile): void {
       const tot = (f: string) => pre.reduce((s, y) => s + (r.bySeason[String(y)]![f] ?? 0), 0);
       if ('ea' in e) {
         const rec = tot('rec');
-        (S.estStats as Record<string, EstimatedStats>)[e.id] = { name: e.n, seasons: [a, b], games: tot('games'), recPerGame: rec / Math.max(1, tot('games')), ...(rec > 0 ? { yardsPerRec: tot('yds') / rec } : {}), src, conf: r.conf };
+        const g = Math.max(1, tot('games'));
+        // The rate lines the estimated-stats slot carries, from the cited season
+        // lines: receiving for everyone; carries and fumbles per touch for a
+        // back; attempts, completion %, Y/A, TD %, INT % and sack % for a
+        // quarterback (M6.6 added RB and QB stints).
+        const extra: Partial<EstimatedStats> = {};
+        if (e.p === 'RB') {
+          extra.carriesPerGame = tot('car') / g;
+          if (tot('car') + rec > 0) extra.fumblesPerTouch = tot('fum') / (tot('car') + rec);
+        }
+        if (e.p === 'QB' && tot('att') > 0) {
+          const att = tot('att');
+          Object.assign(extra, { attemptsPerGame: att / g, cmpPct: (100 * tot('cmp')) / att, ypa: tot('passYds') / att, tdPct: (100 * tot('passTd')) / att, intPct: (100 * tot('int')) / att, sackPct: (100 * tot('sck')) / (att + tot('sck')), rushAttPerGame: tot('car') / g });
+        }
+        (S.estStats as Record<string, EstimatedStats>)[e.id] = { name: e.n, seasons: [a, b], games: tot('games'), ...(e.p === 'QB' ? {} : { recPerGame: rec / g }), ...(rec > 0 ? { yardsPerRec: tot('yds') / rec } : {}), ...extra, src, conf: r.conf };
       } else {
         // Games for pre-1999 seasons are read from the estimated-stats slot; here they are the cited games.
         (S.estStats as Record<string, EstimatedStats>)[e.id] = { name: e.n, seasons: [a, b], games: tot('games'), src, conf: r.conf };

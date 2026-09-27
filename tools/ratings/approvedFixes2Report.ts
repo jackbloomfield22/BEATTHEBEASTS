@@ -155,7 +155,8 @@ export function approvedFixes2Section(run: RatingRun, S: LoadedSources): string[
   topTable('DE');
 
   // M4.5: four more of the gaps, named by the user.
-  const m45 = S.added.filter((r) => r.id !== 'defense:reggie-white:PHI:1990s');
+  const M45 = new Set(['defense:deion-sanders:ATL:1990s', 'defense:deion-sanders:SF:1990s', 'players:randy-moss:MIN:2000s', 'players:terrell-owens:SF:2000s', 'defense:charles-woodson:LV:1990s', 'defense:charles-woodson:LV:2000s']);
+  const m45 = S.added.filter((r) => M45.has(r.id));
   if (m45.length) {
     const ranges = (ys: readonly number[]) => (ys.length > 1 ? `${ys[0]}–${ys[ys.length - 1]}` : `${ys[0]}`);
     out(
@@ -169,6 +170,30 @@ export function approvedFixes2Section(run: RatingRun, S: LoadedSources): string[
       const t = r.totals;
       const line = r.id.startsWith('players:') ? `${t.games} G, ${t.rec} rec, ${t.yds} yds, ${t.td} TD` : `${t.games} G, ${t.int} INT, ${t.td} TD, ${t.sk} sk`;
       out(`| ${idWho(r.id, r.entry.n)} | ${ranges(r.seasons)} | ${line} | ${idWho(r.impFrom, r.entry.n)}, imp ${S.players.find((p) => p.id === r.impFrom)?.imp ?? S.defense.find((d) => d.id === r.impFrom)?.imp} | ${e ? `**${f1(e.ovr.value)} (${e.pos} #${rankNow(e)})**` : 'not rated'} | ${e?.ovr.conf ?? '–'} |`);
+    }
+    out('');
+  }
+
+  // M6.6: the data audit's additions (docs/m66/DATA_AUDIT.md has the audit, the sources and the checks).
+  const m66 = S.added.filter((r) => r.id !== 'defense:reggie-white:PHI:1990s' && !M45.has(r.id));
+  if (m66.length) {
+    const ranges = (ys: readonly number[]) => (ys.length > 1 ? `${ys[0]}–${ys[ys.length - 1]}` : `${ys[0]}`);
+    out(
+      `   **Added in M6.6** (PLAYTEST-1 decision 6 and PLAYTEST-2: the stints the user named, Stefon Diggs NE, A.J. Brown TEN and Davante Adams GB in the 2020s and Derrick Henry TEN 2010s, plus every QB/RB/WR/TE stint from the 1970s on that the stint audit found with a first-team All-Pro season in it). Same method; the tool now reads rushing and passing tables too. Audit, sources and checks: \`docs/m66/DATA_AUDIT.md\`.`,
+      '',
+      '| Stint | Seasons | Line | imp from | OVR (rank) | Confidence |',
+      '|---|---|---|---|---|---|',
+    );
+    for (const r of m66) {
+      const e = get(r.id);
+      const t = r.totals;
+      const line =
+        r.entry.p === 'QB'
+          ? `${t.games} G, ${t.cmp}/${t.att}, ${t.passYds} yds, ${t.passTd} TD, ${t.int} INT`
+          : r.entry.p === 'RB'
+            ? `${t.games} G, ${t.car} car, ${t.rushYds} yds, ${t.rushTd} TD; ${t.rec} rec, ${t.yds} yds`
+            : `${t.games} G, ${t.rec} rec, ${t.yds} yds, ${t.td} TD`;
+      out(`| ${idWho(r.id, r.entry.n)} | ${ranges(r.seasons)} | ${line} | ${idWho(r.impFrom, r.entry.n)}, imp ${S.players.find((p) => p.id === r.impFrom)?.imp} | ${e ? `**${f1(e.ovr.value)} (${e.pos} #${rankNow(e)})**` : 'not rated'} | ${e?.ovr.conf ?? '–'} |`);
     }
     out('');
   }

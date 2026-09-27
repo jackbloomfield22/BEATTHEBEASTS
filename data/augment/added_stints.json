@@ -2,8 +2,8 @@
  "_meta": {
   "what": "Stints the legacy data never had, added as an augmentation layer (legacy data untouched). Loaded and validated by src/engine/data/addedStints.ts.",
   "generatedBy": "tools/augment/added-stints.ts",
-  "rule": "Only stints the user named (PR #3 round 2: Reggie White; M4.5: Deion Sanders ATL/SF 1990–94, Randy Moss MIN 2000–04, Terrell Owens SF 2000–03, Charles Woodson LV). Season lines from the cited table, checked against the stated values, the table's Career row, nflverse rosters and (1999+) nflverse stats; 1999+ stats are nflverse's (verified); imp from the same player's legacy stint (impFrom: same franchise in the adjacent decade, else the nearest in time).",
-  "fields": "bySeason/totals, defense: games, sk, int, fr, td (interception + fumble return TDs; forced fumbles left out, not tracked before 1993). Offense: games, rec, yds, td (receiving), rushYds, rushTd, fum. nflverse (1999+ seasons): games per season and stats in the nflverse_entries.json shape."
+  "rule": "Stints the user named (PR #3 round 2: Reggie White; M4.5: Deion Sanders ATL/SF 1990–94, Randy Moss MIN 2000–04, Terrell Owens SF 2000–03, Charles Woodson LV; M6.6: Stefon Diggs, A.J. Brown and Davante Adams GB in the 2020s, Derrick Henry TEN 2010s), and (M6.6, PLAYTEST-1 decision 6) every stint the audit found at QB, RB, WR or TE, 1970s on, with a first-team All-Pro season in it (docs/m66/DATA_AUDIT.md). Season lines from the cited table, checked against the stated values, the table's Career row, nflverse rosters and (1999+) nflverse stats; 1999+ stats are nflverse's (verified); imp from the same player's legacy stint (impFrom: same franchise in the adjacent decade, else the nearest in time).",
+  "fields": "bySeason/totals, defense: games, sk, int, fr, td (interception + fumble return TDs; forced fumbles left out, not tracked before 1993). Offense, by position: WR/TE games, rec, yds, td (receiving), rushYds, rushTd, fum; RB games, car, rushYds, rushTd, rec, yds, td, fum; QB games, cmp, att, passYds, passTd, int, sck (times sacked), car, rushYds, rushTd, fum. nflverse (1999+ seasons): games per season and stats in the nflverse_entries.json shape."
  },
  "stints": [
   {
@@ -634,6 +634,903 @@
     "table = nflverse per season on interceptions, sacks: 2000 int 4 sk 0; 2001 int 1 sk 2; 2002 int 1 sk 0 (GP 8; nflverse games with a stat 7); 2003 int 3 sk 1; 2004 int 1 sk 2.5 (GP 13; nflverse games with a stat 12); 2005 int 1 sk 0"
    ],
    "why": "His 2000–05 Raiders seasons (first-team All-Pro 2001, second-team 2000, Pro Bowl 2000 and 2001) belong to no stint: the legacy list has GB 2000s only."
+  },
+  {
+   "id": "players:stefon-diggs:NE:2020s",
+   "personOf": "players:stefon-diggs:BUF:2020s",
+   "impFrom": "players:stefon-diggs:HOU:2020s",
+   "impWhy": "no NE legacy stint; HOU 2020s (2024) is the legacy stint nearest in time",
+   "entry": {
+    "n": "Stefon Diggs",
+    "p": "WR",
+    "t": "NE",
+    "d": "2020s"
+   },
+   "seasons": [
+    2025
+   ],
+   "bySeason": {
+    "2025": {
+     "games": 17,
+     "rec": 85,
+     "yds": 1013,
+     "td": 4,
+     "rushYds": 0,
+     "rushTd": 0,
+     "fum": 0
+    }
+   },
+   "totals": {
+    "games": 17,
+    "rec": 85,
+    "yds": 1013,
+    "td": 4,
+    "rushYds": 0,
+    "rushTd": 0,
+    "fum": 0
+   },
+   "nflverse": {
+    "games": {
+     "2025": 17
+    },
+    "stats": {
+     "seasons": [
+      2025
+     ],
+     "complete": true,
+     "games": 17,
+     "receptions": 85,
+     "targets": 102,
+     "receiving_yards": 1013,
+     "receiving_tds": 4,
+     "targetsSeasons": [
+      2025
+     ],
+     "targetedReceptions": 85,
+     "targetedReceivingYards": 1013,
+     "src": "nflverse:stats_player_week",
+     "conf": "verified"
+    }
+   },
+   "source": {
+    "title": "Wikipedia: Stefon Diggs, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Stefon_Diggs",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Stefon_Diggs&oldid=1376102933",
+    "retrieved": "2026-09-27"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, rec, yds, td, rushYds, rushTd, fum",
+    "nflverse rosters: NE 2025, the whole 2020s stint",
+    "table = nflverse per season on receptions, receiving yards, receiving TDs: 2025 rec 85 yds 1013 td 4"
+   ],
+   "why": "Named by the user (PLAYTEST-1 decision 6). His 2025 Patriots season (85 catches, 1,013 yards, 4 TDs in 17 games) belongs to no stint: the legacy list has MIN 2010s, BUF 2020s and HOU 2020s."
+  },
+  {
+   "id": "players:a-j-brown:TEN:2020s",
+   "personOf": "players:a-j-brown:TEN:2010s",
+   "impFrom": "players:a-j-brown:TEN:2010s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "A.J. Brown",
+    "p": "WR",
+    "t": "TEN",
+    "d": "2020s"
+   },
+   "seasons": [
+    2020,
+    2021
+   ],
+   "bySeason": {
+    "2020": {
+     "games": 14,
+     "rec": 70,
+     "yds": 1075,
+     "td": 11,
+     "rushYds": 0,
+     "rushTd": 0,
+     "fum": 2
+    },
+    "2021": {
+     "games": 13,
+     "rec": 63,
+     "yds": 869,
+     "td": 5,
+     "rushYds": 10,
+     "rushTd": 0,
+     "fum": 0
+    }
+   },
+   "totals": {
+    "games": 27,
+    "rec": 133,
+    "yds": 1944,
+    "td": 16,
+    "rushYds": 10,
+    "rushTd": 0,
+    "fum": 2
+   },
+   "nflverse": {
+    "games": {
+     "2020": 14,
+     "2021": 13
+    },
+    "stats": {
+     "seasons": [
+      2020,
+      2021
+     ],
+     "complete": true,
+     "games": 27,
+     "attempts": 2,
+     "carries": 2,
+     "rushing_yards": 10,
+     "receptions": 133,
+     "targets": 211,
+     "receiving_yards": 1944,
+     "receiving_tds": 16,
+     "receiving_fumbles": 2,
+     "receiving_fumbles_lost": 1,
+     "targetsSeasons": [
+      2020,
+      2021
+     ],
+     "targetedReceptions": 133,
+     "targetedReceivingYards": 1944,
+     "src": "nflverse:stats_player_week",
+     "conf": "verified"
+    }
+   },
+   "source": {
+    "title": "Wikipedia: A. J. Brown, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/A._J._Brown",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=A._J._Brown&oldid=1376173969",
+    "retrieved": "2026-09-27"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, rec, yds, td, rushYds, rushTd, fum",
+    "nflverse rosters: TEN 2020–2021, the whole 2020s stint",
+    "table = nflverse per season on receptions, receiving yards, receiving TDs: 2020 rec 70 yds 1075 td 11; 2021 rec 63 yds 869 td 5"
+   ],
+   "why": "Named by the user (PLAYTEST-1 decision 6). His 2020–21 Titans seasons (133 catches, 1,944 yards, 16 TDs; Pro Bowl 2020) belong to no stint: the legacy list has TEN 2010s (2019) and PHI 2020s."
+  },
+  {
+   "id": "players:davante-adams:GB:2020s",
+   "personOf": "players:davante-adams:GB:2010s",
+   "impFrom": "players:davante-adams:GB:2010s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "Davante Adams",
+    "p": "WR",
+    "t": "GB",
+    "d": "2020s"
+   },
+   "seasons": [
+    2020,
+    2021
+   ],
+   "bySeason": {
+    "2020": {
+     "games": 14,
+     "rec": 115,
+     "yds": 1374,
+     "td": 18,
+     "rushYds": 0,
+     "rushTd": 0,
+     "fum": 1
+    },
+    "2021": {
+     "games": 16,
+     "rec": 123,
+     "yds": 1553,
+     "td": 11,
+     "rushYds": 0,
+     "rushTd": 0,
+     "fum": 0
+    }
+   },
+   "totals": {
+    "games": 30,
+    "rec": 238,
+    "yds": 2927,
+    "td": 29,
+    "rushYds": 0,
+    "rushTd": 0,
+    "fum": 1
+   },
+   "nflverse": {
+    "games": {
+     "2020": 14,
+     "2021": 16
+    },
+    "stats": {
+     "seasons": [
+      2020,
+      2021
+     ],
+     "complete": true,
+     "games": 30,
+     "receptions": 238,
+     "targets": 318,
+     "receiving_yards": 2927,
+     "receiving_tds": 29,
+     "receiving_fumbles": 1,
+     "receiving_fumbles_lost": 1,
+     "targetsSeasons": [
+      2020,
+      2021
+     ],
+     "targetedReceptions": 238,
+     "targetedReceivingYards": 2927,
+     "src": "nflverse:stats_player_week",
+     "conf": "verified"
+    }
+   },
+   "source": {
+    "title": "Wikipedia: Davante Adams, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Davante_Adams",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Davante_Adams&oldid=1376177109",
+    "retrieved": "2026-09-27"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, rec, yds, td, fum",
+    "nflverse rosters: GB 2020–2021, the whole 2020s stint",
+    "table = nflverse per season on receptions, receiving yards, receiving TDs: 2020 rec 115 yds 1374 td 18; 2021 rec 123 yds 1553 td 11"
+   ],
+   "why": "Named by the user (PLAYTEST-1 decision 6). His 2020–21 Packers seasons (238 catches, 2,927 yards, 29 TDs; first-team All-Pro both years) belong to no stint: the legacy list has GB 2010s, LV 2020s and NYJ 2020s."
+  },
+  {
+   "id": "players:derrick-henry:TEN:2010s",
+   "personOf": "players:derrick-henry:TEN:2020s",
+   "impFrom": "players:derrick-henry:TEN:2020s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "Derrick Henry",
+    "p": "RB",
+    "t": "TEN",
+    "d": "2010s"
+   },
+   "seasons": [
+    2016,
+    2017,
+    2018,
+    2019
+   ],
+   "bySeason": {
+    "2016": {
+     "games": 15,
+     "car": 110,
+     "rushYds": 490,
+     "rushTd": 5,
+     "rec": 13,
+     "yds": 137,
+     "td": 0,
+     "fum": 0
+    },
+    "2017": {
+     "games": 16,
+     "car": 176,
+     "rushYds": 744,
+     "rushTd": 5,
+     "rec": 11,
+     "yds": 136,
+     "td": 1,
+     "fum": 1
+    },
+    "2018": {
+     "games": 16,
+     "car": 215,
+     "rushYds": 1059,
+     "rushTd": 12,
+     "rec": 15,
+     "yds": 99,
+     "td": 0,
+     "fum": 1
+    },
+    "2019": {
+     "games": 15,
+     "car": 303,
+     "rushYds": 1540,
+     "rushTd": 16,
+     "rec": 18,
+     "yds": 206,
+     "td": 2,
+     "fum": 5
+    }
+   },
+   "totals": {
+    "games": 62,
+    "car": 804,
+    "rushYds": 3833,
+    "rushTd": 38,
+    "rec": 57,
+    "yds": 578,
+    "td": 3,
+    "fum": 7
+   },
+   "nflverse": {
+    "games": {
+     "2016": 14,
+     "2017": 16,
+     "2018": 16,
+     "2019": 15
+    },
+    "stats": {
+     "seasons": [
+      2016,
+      2017,
+      2018,
+      2019
+     ],
+     "complete": true,
+     "games": 61,
+     "completions": 2,
+     "attempts": 3,
+     "passing_yards": 14,
+     "carries": 804,
+     "rushing_yards": 3833,
+     "rushing_tds": 38,
+     "rushing_fumbles": 6,
+     "rushing_fumbles_lost": 3,
+     "receptions": 57,
+     "targets": 74,
+     "receiving_yards": 578,
+     "receiving_tds": 3,
+     "receiving_fumbles": 1,
+     "receiving_fumbles_lost": 1,
+     "targetsSeasons": [
+      2016,
+      2017,
+      2018,
+      2019
+     ],
+     "targetedReceptions": 57,
+     "targetedReceivingYards": 578,
+     "src": "nflverse:stats_player_week",
+     "conf": "verified"
+    }
+   },
+   "source": {
+    "title": "Wikipedia: Derrick Henry, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Derrick_Henry",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Derrick_Henry&oldid=1376374937",
+    "retrieved": "2026-09-27"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, car, rushYds, rushTd, rec, yds, td, fum",
+    "nflverse rosters: TEN 2016–2019, the whole 2010s stint",
+    "table = nflverse per season on carries, rushing yards, rushing TDs, receptions, receiving yards, receiving TDs: 2016 car 110 rushYds 490 rushTd 5 rec 13 yds 137 td 0 (GP 15; nflverse games with a stat 14); 2017 car 176 rushYds 744 rushTd 5 rec 11 yds 136 td 1; 2018 car 215 rushYds 1059 rushTd 12 rec 15 yds 99 td 0; 2019 car 303 rushYds 1540 rushTd 16 rec 18 yds 206 td 2"
+   ],
+   "why": "Named by the user (PLAYTEST-2). His 2016–19 Titans seasons (3,833 rushing yards, 38 rushing TDs; the 2019 rushing title, second-team All-Pro and Pro Bowl 2019) belong to no stint: the legacy list has TEN 2020s and BAL 2020s."
+  },
+  {
+   "id": "players:dan-fouts:LAC:1980s",
+   "personOf": "players:dan-fouts:LAC:1970s",
+   "impFrom": "players:dan-fouts:LAC:1970s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "Dan Fouts",
+    "p": "QB",
+    "t": "LAC",
+    "d": "1980s"
+   },
+   "seasons": [
+    1980,
+    1981,
+    1982,
+    1983,
+    1984,
+    1985,
+    1986,
+    1987
+   ],
+   "bySeason": {
+    "1980": {
+     "games": 16,
+     "cmp": 348,
+     "att": 589,
+     "passYds": 4715,
+     "passTd": 30,
+     "int": 24,
+     "sck": 32,
+     "car": 23,
+     "rushYds": 15,
+     "rushTd": 2,
+     "fum": 11
+    },
+    "1981": {
+     "games": 16,
+     "cmp": 360,
+     "att": 609,
+     "passYds": 4802,
+     "passTd": 33,
+     "int": 17,
+     "sck": 19,
+     "car": 22,
+     "rushYds": 56,
+     "rushTd": 0,
+     "fum": 9
+    },
+    "1982": {
+     "games": 9,
+     "cmp": 204,
+     "att": 330,
+     "passYds": 2883,
+     "passTd": 17,
+     "int": 11,
+     "sck": 12,
+     "car": 9,
+     "rushYds": 8,
+     "rushTd": 1,
+     "fum": 2
+    },
+    "1983": {
+     "games": 10,
+     "cmp": 215,
+     "att": 340,
+     "passYds": 2975,
+     "passTd": 20,
+     "int": 15,
+     "sck": 14,
+     "car": 12,
+     "rushYds": -5,
+     "rushTd": 1,
+     "fum": 5
+    },
+    "1984": {
+     "games": 13,
+     "cmp": 317,
+     "att": 507,
+     "passYds": 3740,
+     "passTd": 19,
+     "int": 17,
+     "sck": 29,
+     "car": 12,
+     "rushYds": -29,
+     "rushTd": 0,
+     "fum": 8
+    },
+    "1985": {
+     "games": 14,
+     "cmp": 254,
+     "att": 430,
+     "passYds": 3638,
+     "passTd": 27,
+     "int": 20,
+     "sck": 18,
+     "car": 11,
+     "rushYds": -1,
+     "rushTd": 0,
+     "fum": 13
+    },
+    "1986": {
+     "games": 12,
+     "cmp": 252,
+     "att": 430,
+     "passYds": 3031,
+     "passTd": 16,
+     "int": 22,
+     "sck": 21,
+     "car": 4,
+     "rushYds": -3,
+     "rushTd": 0,
+     "fum": 4
+    },
+    "1987": {
+     "games": 11,
+     "cmp": 206,
+     "att": 364,
+     "passYds": 2517,
+     "passTd": 10,
+     "int": 15,
+     "sck": 24,
+     "car": 12,
+     "rushYds": 0,
+     "rushTd": 2,
+     "fum": 10
+    }
+   },
+   "totals": {
+    "games": 101,
+    "cmp": 2156,
+    "att": 3599,
+    "passYds": 28301,
+    "passTd": 172,
+    "int": 141,
+    "sck": 169,
+    "car": 105,
+    "rushYds": 41,
+    "rushTd": 6,
+    "fum": 62
+   },
+   "source": {
+    "title": "Wikipedia: Dan Fouts, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Dan_Fouts",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Dan_Fouts&oldid=1373586464",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, cmp, att, passYds, passTd, int, sck, car, rushYds, rushTd, fum",
+    "nflverse rosters: LAC 1980–1987, the whole 1980s stint"
+   ],
+   "why": "Audit (first-team All-Pro 1982). His 1980–87 Chargers seasons (NFL passing-yards leader 1980–82, MVP-level 1982; Pro Bowl 1980–83 and 1985) belong to no stint: the legacy list has LAC 1970s only."
+  },
+  {
+   "id": "players:barry-sanders:DET:1980s",
+   "personOf": "players:barry-sanders:DET:1990s",
+   "impFrom": "players:barry-sanders:DET:1990s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "Barry Sanders",
+    "p": "RB",
+    "t": "DET",
+    "d": "1980s"
+   },
+   "seasons": [
+    1989
+   ],
+   "bySeason": {
+    "1989": {
+     "games": 15,
+     "car": 280,
+     "rushYds": 1470,
+     "rushTd": 14,
+     "rec": 24,
+     "yds": 282,
+     "td": 0,
+     "fum": 10
+    }
+   },
+   "totals": {
+    "games": 15,
+    "car": 280,
+    "rushYds": 1470,
+    "rushTd": 14,
+    "rec": 24,
+    "yds": 282,
+    "td": 0,
+    "fum": 10
+   },
+   "source": {
+    "title": "Wikipedia: Barry Sanders, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Barry_Sanders",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Barry_Sanders&oldid=1370825212",
+    "retrieved": "2026-09-27"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, car, rushYds, rushTd, rec, yds, td, fum",
+    "nflverse rosters: DET 1989, the whole 1980s stint"
+   ],
+   "why": "Audit (first-team All-Pro 1989). His 1989 rookie season (1,470 rushing yards, 14 TDs; Pro Bowl) belongs to no stint: the legacy list has DET 1990s only."
+  },
+  {
+   "id": "players:john-jefferson:LAC:1980s",
+   "personOf": "players:john-jefferson:LAC:1970s",
+   "impFrom": "players:john-jefferson:LAC:1970s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "John Jefferson",
+    "p": "WR",
+    "t": "LAC",
+    "d": "1980s"
+   },
+   "seasons": [
+    1980
+   ],
+   "bySeason": {
+    "1980": {
+     "games": 16,
+     "rec": 82,
+     "yds": 1340,
+     "td": 13,
+     "rushYds": 0,
+     "rushTd": 0,
+     "fum": 0
+    }
+   },
+   "totals": {
+    "games": 16,
+    "rec": 82,
+    "yds": 1340,
+    "td": 13,
+    "rushYds": 0,
+    "rushTd": 0,
+    "fum": 0
+   },
+   "source": {
+    "title": "Wikipedia: John Jefferson (American football), \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/John_Jefferson_(American_football)",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=John_Jefferson_(American_football)&oldid=1366171982",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, rec, yds, td",
+    "nflverse rosters: LAC 1980, the whole 1980s stint"
+   ],
+   "why": "Audit (first-team All-Pro 1980). His 1980 Chargers season (82 catches, 1,340 yards, 13 TDs, leading the NFL in receiving yards and TDs) belongs to no stint: the legacy list has LAC 1970s and GB 1980s."
+  },
+  {
+   "id": "players:joe-montana:SF:1990s",
+   "personOf": "players:joe-montana:SF:1980s",
+   "impFrom": "players:joe-montana:SF:1980s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "Joe Montana",
+    "p": "QB",
+    "t": "SF",
+    "d": "1990s"
+   },
+   "seasons": [
+    1990,
+    1991,
+    1992
+   ],
+   "bySeason": {
+    "1990": {
+     "games": 15,
+     "cmp": 321,
+     "att": 520,
+     "passYds": 3944,
+     "passTd": 26,
+     "int": 16,
+     "sck": 29,
+     "car": 40,
+     "rushYds": 162,
+     "rushTd": 1,
+     "fum": 4
+    },
+    "1991": {
+     "games": 0,
+     "cmp": 0,
+     "att": 0,
+     "passYds": 0,
+     "passTd": 0,
+     "int": 0,
+     "sck": 0,
+     "car": 0,
+     "rushYds": 0,
+     "rushTd": 0,
+     "fum": 0
+    },
+    "1992": {
+     "games": 1,
+     "cmp": 15,
+     "att": 21,
+     "passYds": 126,
+     "passTd": 2,
+     "int": 0,
+     "sck": 1,
+     "car": 3,
+     "rushYds": 28,
+     "rushTd": 0,
+     "fum": 0
+    }
+   },
+   "totals": {
+    "games": 16,
+    "cmp": 336,
+    "att": 541,
+    "passYds": 4070,
+    "passTd": 28,
+    "int": 16,
+    "sck": 30,
+    "car": 43,
+    "rushYds": 190,
+    "rushTd": 1,
+    "fum": 4
+   },
+   "source": {
+    "title": "Wikipedia: Joe Montana, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Joe_Montana",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Joe_Montana&oldid=1375761933",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "checks": [
+    "table car: season rows sum to 450, its Career row says 457: the article's 1984 row (outside this stint) is 7 rushes short of its own Career total",
+    "Wikipedia table parsed; season rows sum to its Career row on games, cmp, att, passYds, passTd, int, sck, car, rushYds, rushTd, fum",
+    "nflverse rosters: SF 1990–1992, the whole 1990s stint"
+   ],
+   "why": "Audit (first-team All-Pro 1990). His 1990–92 49ers seasons (1990: NFL MVP; 1991 lost to an elbow injury; one game in 1992) belong to no stint: the legacy list has SF 1980s and KC 1990s."
+  },
+  {
+   "id": "players:kurt-warner:LAR:1990s",
+   "personOf": "players:kurt-warner:LAR:2000s",
+   "impFrom": "players:kurt-warner:LAR:2000s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "Kurt Warner",
+    "p": "QB",
+    "t": "LAR",
+    "d": "1990s"
+   },
+   "seasons": [
+    1998,
+    1999
+   ],
+   "bySeason": {
+    "1998": {
+     "games": 1,
+     "cmp": 4,
+     "att": 11,
+     "passYds": 39,
+     "passTd": 0,
+     "int": 0,
+     "sck": 0,
+     "car": 0,
+     "rushYds": 0,
+     "rushTd": 0,
+     "fum": 0
+    },
+    "1999": {
+     "games": 16,
+     "cmp": 325,
+     "att": 499,
+     "passYds": 4353,
+     "passTd": 41,
+     "int": 13,
+     "sck": 29,
+     "car": 23,
+     "rushYds": 92,
+     "rushTd": 1,
+     "fum": 9
+    }
+   },
+   "totals": {
+    "games": 17,
+    "cmp": 329,
+    "att": 510,
+    "passYds": 4392,
+    "passTd": 41,
+    "int": 13,
+    "sck": 29,
+    "car": 23,
+    "rushYds": 92,
+    "rushTd": 1,
+    "fum": 9
+   },
+   "nflverse": {
+    "games": {
+     "1999": 15
+    },
+    "stats": {
+     "seasons": [
+      1999
+     ],
+     "complete": false,
+     "games": 15,
+     "completions": 297,
+     "attempts": 455,
+     "passing_yards": 4044,
+     "passing_tds": 38,
+     "interceptions": 11,
+     "sacks": 26,
+     "sack_yards": 176,
+     "carries": 22,
+     "rushing_yards": 93,
+     "rushing_tds": 1,
+     "rushing_fumbles": 2,
+     "rushing_fumbles_lost": 2,
+     "targets": 0,
+     "targetsSeasons": [
+      1999
+     ],
+     "targetedReceptions": 0,
+     "targetedReceivingYards": 0,
+     "src": "nflverse:stats_player_week",
+     "conf": "verified"
+    }
+   },
+   "source": {
+    "title": "Wikipedia: Kurt Warner, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Kurt_Warner",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Kurt_Warner&oldid=1374362149",
+    "retrieved": "2026-09-23"
+   },
+   "conf": "reference",
+   "checks": [
+    "table att: season rows sum to 4060, its Career row says 4070: the article's 2007 row (outside this stint) is 10 attempts short of its own Career total",
+    "Wikipedia table parsed; season rows sum to its Career row on games, cmp, att, passYds, passTd, int, sck, car, rushYds, rushTd, fum",
+    "nflverse rosters: LAR 1998–1999, the whole 1990s stint",
+    "1999: nflverse has 15 of 16 games (cmp 297 of 325, att 455 of 499, passYds 4044 of 4353, passTd 38 of 41, int 11 of 13): a source gap; the ratings read nflverse, as for legacy stints",
+    "table = nflverse per season on completions, attempts, passing yards, passing TDs, interceptions: 1999 cmp 325 att 499 passYds 4353 passTd 41 int 13 (GP 16; nflverse games with a stat 15)"
+   ],
+   "why": "Audit (first-team All-Pro 1999). His 1998–99 Rams seasons (1999: NFL MVP, 4,353 yards and 41 TDs; one game in 1998) belong to no stint: the legacy list has LAR, NYG and ARI 2000s."
+  },
+  {
+   "id": "players:tyreek-hill:KC:2020s",
+   "personOf": "players:tyreek-hill:KC:2010s",
+   "impFrom": "players:tyreek-hill:KC:2010s",
+   "impWhy": "same franchise, adjacent decade",
+   "entry": {
+    "n": "Tyreek Hill",
+    "p": "WR",
+    "t": "KC",
+    "d": "2020s"
+   },
+   "seasons": [
+    2020,
+    2021
+   ],
+   "bySeason": {
+    "2020": {
+     "games": 15,
+     "rec": 87,
+     "yds": 1276,
+     "td": 15,
+     "rushYds": 123,
+     "rushTd": 2,
+     "fum": 1
+    },
+    "2021": {
+     "games": 17,
+     "rec": 111,
+     "yds": 1239,
+     "td": 9,
+     "rushYds": 96,
+     "rushTd": 0,
+     "fum": 2
+    }
+   },
+   "totals": {
+    "games": 32,
+    "rec": 198,
+    "yds": 2515,
+    "td": 24,
+    "rushYds": 219,
+    "rushTd": 2,
+    "fum": 3
+   },
+   "nflverse": {
+    "games": {
+     "2020": 15,
+     "2021": 17
+    },
+    "stats": {
+     "seasons": [
+      2020,
+      2021
+     ],
+     "complete": true,
+     "games": 32,
+     "carries": 22,
+     "rushing_yards": 219,
+     "rushing_tds": 2,
+     "receptions": 198,
+     "targets": 294,
+     "receiving_yards": 2515,
+     "receiving_tds": 24,
+     "receiving_fumbles": 2,
+     "receiving_fumbles_lost": 1,
+     "targetsSeasons": [
+      2020,
+      2021
+     ],
+     "targetedReceptions": 198,
+     "targetedReceivingYards": 2515,
+     "src": "nflverse:stats_player_week",
+     "conf": "verified"
+    }
+   },
+   "source": {
+    "title": "Wikipedia: Tyreek Hill, \"Career statistics\"",
+    "url": "https://en.wikipedia.org/wiki/Tyreek_Hill",
+    "permalink": "https://en.wikipedia.org/w/index.php?title=Tyreek_Hill&oldid=1374897101",
+    "retrieved": "2026-09-27"
+   },
+   "conf": "reference",
+   "checks": [
+    "Wikipedia table parsed; season rows sum to its Career row on games, rec, yds, td, rushYds, rushTd, fum",
+    "nflverse rosters: KC 2020–2021, the whole 2020s stint",
+    "table = nflverse per season on receptions, receiving yards, receiving TDs: 2020 rec 87 yds 1276 td 15; 2021 rec 111 yds 1239 td 9"
+   ],
+   "why": "Audit (first-team All-Pro 2020). His 2020–21 Chiefs seasons (198 catches, 2,515 yards, 24 TDs; Pro Bowl both years) belong to no stint: the legacy list has KC 2010s and MIA 2020s."
   }
  ]
 }
