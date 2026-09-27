@@ -497,9 +497,10 @@ class PracticeSession {
       r.timeScale += (want - r.timeScale) * (1 - Math.exp(-dt * 10));
       if (Math.abs(r.timeScale - 1) < 1e-3) r.timeScale = 1;
     }
-    r.advance(dt, () => {
+    // The sim's count of the receiver hold goes back to the controls, so a tap is held until the sim has seen it (controls.ts holdStep).
+    r.advance(dt, (s) => {
       this.sync();
-      return this.controls.sample();
+      return this.controls.sample(s.hold);
     });
     this.sync();
   }
@@ -508,7 +509,7 @@ class PracticeSession {
   tick(n: number): void {
     for (let k = 0; k < n && this.live(); k++) {
       this.sync();
-      this.runner!.step(this.controls.sample());
+      this.runner!.step(this.controls.sample(this.runner!.state.hold));
     }
     this.sync();
   }

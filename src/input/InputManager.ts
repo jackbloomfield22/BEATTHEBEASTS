@@ -15,6 +15,8 @@ const STICK_THRESHOLD = 0.55;
 const STICK_DEAD = 0.2;
 const REPEAT_DELAY_MS = 380;
 const REPEAT_RATE_MS = 90;
+/** Gamepad poll between frames (ms): 125 Hz, the rate of a wired Xbox pad's reports. */
+const PAD_POLL_MS = 8;
 
 /** Keys the browser would otherwise act on (scroll, back, focus change, help). */
 const CAPTURED_CODES = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Backspace', 'PageUp', 'PageDown', 'F1', 'F2', 'F3', 'Home', 'End']);
@@ -185,6 +187,10 @@ class InputManagerImpl {
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+    // The Gamepad API has no button events, only snapshots: between frames
+    // the pad is polled again, so a quick tap is seen (and timed) even when a
+    // frame runs long. Cheap: one getGamepads() read every 8 ms.
+    setInterval(() => this.pollGamepads(performance.now()), PAD_POLL_MS);
   }
 
   private pollGamepads(now: number): void {
