@@ -15,10 +15,12 @@ import { create } from 'zustand';
 import type { Slot } from '@data/legacy/types';
 import { Input } from '@/input/InputManager';
 import { saveRecord } from '@/app/history';
-import { callDefense, emptyTendencies, recordPlay, type BeastsDefense, type ContendersRoster, type DefCall, type DefSlot, type OffSlot, type PlayResult, type PlayState, type SimPlayer, simPlayer, type Difficulty, type Tendencies } from '@/sim';
+import { DEF_CALLS, callDefense, emptyTendencies, recordPlay, type BeastsDefense, type ContendersRoster, type DefCall, type DefSlot, type OffSlot, type PlayResult, type PlayState, type SimPlayer, simPlayer, type Difficulty, type Tendencies } from '@/sim';
 import { deriveStream, type Rng } from '@/engine/rng';
 import type { Catalog, DraftMode, Roster } from './draft';
 import { draftedTeam } from './draft';
+import { depthChart } from './depth';
+import { squadFor } from './rotation';
 import type { RatedBeasts } from './beasts';
 import type { NewDaily } from './daily';
 import { describe } from './describe';
@@ -31,7 +33,12 @@ import { emptyGameBox, pickPlayOfGame, sampleShadow, tallySnap, type GameBox, ty
 
 export { emptyGameBox, type GameBox } from './stats';
 
-export type GameStage = 'loading' | 'meanwhile' | 'call' | 'play' | 'fourth' | 'try' | 'kick' | 'punt' | 'final';
+/**
+ * 'pregame': after the walk-out, the field, the Beasts and the scoreboard,
+ * held until an explicit "press to kick off" (Playtest 1: a button pressed
+ * during the walk-out ran the first play).
+ */
+export type GameStage = 'loading' | 'pregame' | 'meanwhile' | 'call' | 'play' | 'fourth' | 'try' | 'kick' | 'punt' | 'final';
 
 export interface GameUi {
   stage: GameStage;
@@ -56,6 +63,9 @@ export interface GameUi {
 export const useGame = create<GameUi>(() => ({ stage: 'loading', match: null, v: 0, meanwhile: null, punt: null, kick: null, outcome: null, box: emptyGameBox(), mode: 'classic', note: null, paused: false, record: null }));
 const set = (p: Partial<GameUi>) => useGame.setState((s) => ({ ...p, v: s.v + 1 }));
 const get = () => useGame.getState();
+
+/** The pre-game picture's formation: your eleven in 11 personnel, singleback (display only). */
+const PREGAME_PLAY = 'singleback-drive';
 
 /** The Beasts in the sim's defensive slots: legacy order DE DT DT DE / LB LB LB / CB S S CB. */
 const BEAST_SLOTS: DefSlot[] = ['LE', 'LDT', 'RDT', 'RE', 'WLB', 'MLB', 'SLB', 'LCB', 'FS', 'SS', 'RCB'];
@@ -156,6 +166,8 @@ class GameSession {
         defCall: (sit) => this.defCall(sit),
         onResult: (s, r, endY) => this.onResult(s, r, endY),
         onTick: (s) => this.onTick(s),
+        // The depth chart's rotation: RB2 on his downs (src/game/rotation.ts).
+        squad: (play, sit) => squadFor(this.team!, play, sit, (this.m?.drive?.plays ?? 0) + 1),
       },
     });
     this.offKeys?.();
@@ -165,7 +177,15 @@ class GameSession {
       else if (id === 'global.kneel') this.kneel();
       else if (id === 'global.timeout') this.timeout();
     });
-    set({ match: m, box: emptyGameBox(this.names.qb) });
+    set({ match: m, box: emptyGameBox(this.names.qb), stage: 'pregame' });
+    // The pre-game picture: both teams set at the opening spot, the Beasts in their base defense.
+    practice.showLineup(PREGAME_PLAY, DEF_CALLS[0]!, m.sit);
+  }
+
+  /** The pre-game moment's "press to kick off": the Beasts get the ball first. */
+  kickoff(): void {
+    if (!this.m || get().stage !== 'pregame' || get().paused) return;
+    practice.abandon();
     this.nextBeasts();
   }
 
@@ -260,7 +280,7 @@ class GameSession {
       end,
       offense,
       beasts,
-      matchups: keyMatchups(o.cat, o.roster, o.beasts, box),
+      matchups: keyMatchups(o.cat, depthChart(o.roster), o.beasts, box),
       perfect: perfect ?? null,
     };
     const idx = pickPlayOfGame(this.plays);
@@ -316,7 +336,7 @@ class GameSession {
     const n = (m.drive?.plays ?? 0) + 1;
     const round = m.round;
     const ot = m.ot;
-    tallySnap(get().box, s, r, before, this.names.qb);
+    tallySnap(get().box, s, r, before, this.names.qb, { round, ot });
     // The Beasts' staff charts it.
     const tgt = r.pass?.attempted ? s.agents[r.pass.target]?.p.id : undefined;
     this.tendencies = recordPlay(this.tendencies, { targetId: tgt, playId: s.setup.play.id, type: s.setup.play.type, down: before.down, toGo: before.toGo, yards: r.offenseBall ? r.spot - before.los : 0 });

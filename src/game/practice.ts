@@ -178,6 +178,12 @@ export interface GameHooks {
   onResult(s: PlayState, r: PlayResult, endY: number): { next: Situation; over: boolean };
   /** Each tick of a snap, before it steps (read-only: the box score's coverage snapshot). */
   onTick?(s: PlayState): void;
+  /**
+   * The squad for this snap (M6.6: the depth chart's rotation, the change-of-pace
+   * back on his downs). The formation's personnel grouping then fills the
+   * eleven from it as always (sim/personnel.ts). Absent: `teams.team`.
+   */
+  squad?(play: OffPlay, sit: Situation): ContendersRoster;
 }
 
 type Rosters = { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> };
@@ -291,6 +297,24 @@ class PracticeSession {
     this.setUp(playId, seed, def, sit);
   }
 
+  /**
+   * The pre-game picture (M6.6): both teams set at the spot, still, before
+   * the first snap is called. Display only: the play never steps (the stage
+   * stays 'call', so frame() leaves it alone), no input context is pushed
+   * (no key can snap it), and it uses none of the game's seeds or streams.
+   * The next callPlay (or abandon) replaces it.
+   */
+  showLineup(playId: string, def: DefCall, sit: Situation): void {
+    if (!this.rosters || !this.teams) return;
+    const play = playById(playId);
+    const state = createPlay({ seed: 1, offense: offenseFor(play, this.teams.team), defense: defenseFor(def, this.teams.beasts), play, def, los: sit.los, ballY: sit.ballY, toGo: sit.toGo, user: true, down: sit.down });
+    this.runner = new SimRunner(state);
+    this.runner.paused = true;
+    this.playId++;
+    this.setContext(null);
+    set({ stage: 'call', result: null, situation: sit, playSit: sit });
+  }
+
   /** A scripted clip's play (the feel videos): its seed, coverage and spot. Step it with tickWith. */
   callClip(c: Clip): void {
     set({ playId: c.play });
@@ -314,8 +338,8 @@ class PracticeSession {
    * pair with a passing synergy on the roster (Timing Offense, Moonball,
    * Throw It Up, Pitch and Catch), plus 0.07 a throw to him this game, to 1.
    */
-  private chemistry(play: OffPlay): Partial<Record<OffSlot, number>> {
-    const off = this.teams ? offenseFor(play, this.teams.team) : this.rosters?.offense;
+  private chemistry(play: OffPlay, sit: Situation): Partial<Record<OffSlot, number>> {
+    const off = this.teams ? offenseFor(play, this.squadFor(play, sit)) : this.rosters?.offense;
     if (!off) return {};
     const qb = off.QB;
     const recs = (['X', 'Z', 'SLOT', 'TE', 'RB'] as const).filter((k) => off[k]);
@@ -331,6 +355,11 @@ class PracticeSession {
     return out;
   }
 
+  /** The squad a snap draws its eleven from: the game's rotation, or the two teams as they are. */
+  private squadFor(play: OffPlay, sit: Situation): ContendersRoster {
+    return this.game?.squad?.(play, sit) ?? this.teams!.team;
+  }
+
   /** `clip`: a scripted clip's play, set up exactly as Node finds it (createPlay's defaults: no chemistry, fatigue or difficulty from this session). */
   private setUp(playId: string, seed: number, def: DefCall, sit: Situation, clip = false): void {
     if (!this.rosters) return;
@@ -338,7 +367,7 @@ class PracticeSession {
     const play = playById(playId);
     const state = createPlay({
       seed,
-      offense: this.teams ? offenseFor(play, this.teams.team) : this.rosters.offense,
+      offense: this.teams ? offenseFor(play, this.squadFor(play, sit)) : this.rosters.offense,
       defense: this.teams ? defenseFor(def, this.teams.beasts) : this.rosters.defense,
       play,
       // The Touch pass hold setting: how long a receiver key is held before a driven ball becomes touch.
@@ -350,7 +379,7 @@ class PracticeSession {
       user: true,
       difficulty: clip ? undefined : this.difficulty,
       fatigue: clip ? undefined : { ...this.fatigue },
-      chem: clip ? undefined : this.chemistry(play),
+      chem: clip ? undefined : this.chemistry(play, sit),
       down: sit.down,
     });
     this.runner = new SimRunner(state);

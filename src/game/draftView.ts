@@ -62,3 +62,68 @@ export function highlights(c: Pick<Candidate, 'kind' | 'pos' | 'attrs'>, n = 3):
 export function plainTraits(c: Pick<Candidate, 'pos' | 'traits'>): SnapshotTrait[] {
   return c.traits.map((t) => ({ ...t, why: plainWhy(c.pos as RatedPos, t) }));
 }
+
+// ---- The offensive line in the draft (Playtest 1, decision 3) ------------------------
+
+export type UnitWord = 'Elite' | 'Strong' | 'Solid' | 'Weak';
+
+/**
+ * The unit word's cuts, as the share of all rated OL units whose OVR is
+ * below this one's (its percentile in the pool). Our rule, chosen so the
+ * words mean what a fan expects: an Elite line is rare (the top 10%, about
+ * three of a season's 32 lines, the size of the top tier in the yearly
+ * offensive line rankings), Strong is the next quarter, Solid the broad
+ * middle (40%), and the bottom quarter is Weak.
+ */
+export const UNIT_WORD_CUTS: readonly { word: UnitWord; min: number }[] = [
+  { word: 'Elite', min: 0.9 },
+  { word: 'Strong', min: 0.65 },
+  { word: 'Solid', min: 0.25 },
+  { word: 'Weak', min: 0 },
+];
+
+export interface UnitWordResult {
+  word: UnitWord;
+  /** Share of the pool's units rated below this one (0..1). */
+  percentile: number;
+  /** How the word was reached, for the trace (no number reaches the draft's screen). */
+  contributions: { label: string; value: number | string }[];
+}
+
+/**
+ * One word for an OL unit, from the ratings it already has: the unit's OVR
+ * (the snapshot's unit rating, itself built from its five linemen's pass and
+ * run blocking) ranked against every rated unit in the pool, then cut by
+ * UNIT_WORD_CUTS. Traceable: the result carries the OVR, the pool size, the
+ * units below it and the cut that applied.
+ */
+export function unitWord(ovr: number, pool: readonly number[]): UnitWordResult {
+  const below = pool.filter((x) => x < ovr).length;
+  const percentile = pool.length ? below / pool.length : 0.5;
+  const cut = UNIT_WORD_CUTS.find((c) => percentile >= c.min) ?? UNIT_WORD_CUTS[UNIT_WORD_CUTS.length - 1]!;
+  return {
+    word: cut.word,
+    percentile,
+    contributions: [
+      { label: 'unit OVR', value: ovr },
+      { label: 'rated units in the pool', value: pool.length },
+      { label: 'units rated below it', value: below },
+      { label: 'cut', value: `${cut.word}: ${Math.round(cut.min * 100)}th percentile and up` },
+    ],
+  };
+}
+
+/** The pool a unit is ranked in: every rated OL unit in the catalog. */
+export function unitPool(units: Iterable<{ ovr: number }>): number[] {
+  return [...units].map((u) => u.ovr);
+}
+
+/** A lineman's honors as stickers ("3× All-Pro", "7× Pro Bowl"); none when he has neither. */
+export function honorStickers(id: string, allPro: Readonly<Record<string, number>>, proBowl: Readonly<Record<string, number>>): string[] {
+  const out: string[] = [];
+  const ap = allPro[id] ?? 0;
+  const pb = proBowl[id] ?? 0;
+  if (ap) out.push(`${ap}× All-Pro`);
+  if (pb) out.push(`${pb}× Pro Bowl`);
+  return out;
+}
