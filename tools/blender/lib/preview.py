@@ -45,6 +45,12 @@ def import_player(rig: bpy.types.Object, lod: int = 0, variant: str = "player") 
     am = mesh.modifiers.new("rig", "ARMATURE")
     am.object = rig
     mesh.parent = rig
+    # The importer turns every body-shape key on (the file's default weight
+    # is 1): the previews then showed heavy + lean + belly + pads at once, a
+    # body no player has. Preview the base body, as the runtime starts from.
+    if mesh.data.shape_keys:
+        for kb in mesh.data.shape_keys.key_blocks:
+            kb.value = 0.0
     _hide_parts(mesh, HIDDEN)
     _part_material(mesh)
     return mesh
