@@ -801,6 +801,7 @@ def action_clips() -> list[Clip]:
     from .actions_m6 import m6_clips
     from .actions_m65 import m65_clips
     from .actions_m65_carrier import carrier_clips
+    from .actions_m65_contact import contact_clips
 
     jl = juke_left()
     return [
@@ -811,6 +812,7 @@ def action_clips() -> list[Clip]:
         *m6_clips(),
         *m65_clips(),
         *carrier_clips(),
+        *contact_clips(),
     ]
 
 

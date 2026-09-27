@@ -112,7 +112,7 @@
         "slide_cm": 0.0,
         "loop_deg": 0.0,
         "clear_cm": 46.0,
-        "com_cm": 10.4,
+        "com_cm": 10.5,
         "reach_cm": 0.01,
         "pass": true
       }
@@ -673,7 +673,7 @@
         "slide_cm": 0.0,
         "loop_deg": 0.0,
         "clear_cm": 40.2,
-        "com_cm": 2.8,
+        "com_cm": 2.6,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -11377,7 +11377,149 @@
         "spine_03",
         "spine_04"
       ]
+    },
+    "def_contest_l": {
+      "kind": "overlay",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "contact": 9
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "def_contest_r": {
+      "kind": "overlay",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "contact": 9
+      },
+      "mask": [
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
     }
   },
-  "bytes": 6948740
+  "bytes": 7069616
 }

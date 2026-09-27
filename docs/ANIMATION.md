@@ -8,7 +8,7 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 |---|---|---|---|---|---|---|---|---|
 | `stance_idle` | stance | 60 | 0.0 | 0.00 | 0.00 | 23.8 | 10.3 | pass |
 | `stance_ol_3pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 37.6 | 19.7 | pass |
-| `stance_dl_3pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 46.0 | 10.4 | pass |
+| `stance_dl_3pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 46.0 | 10.5 | pass |
 | `stance_dl_4pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 44.0 | 22.5 | pass |
 | `stance_wr_2pt` | stance | 60 | 0.0 | 0.00 | 0.00 | 35.7 | 1.3 | pass |
 | `stance_lb_ready` | stance | 60 | 0.0 | 0.00 | 0.00 | 40.3 | 1.3 | pass |
@@ -23,7 +23,7 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `stance_ol_pass` | stance | 60 | 0.0 | 0.00 | 0.00 | 41.6 | -0.1 | pass |
 | `stance_ol_ready` | stance | 60 | 0.0 | 0.00 | 0.00 | 39.5 | -1.8 | pass |
 | `stance_db_press` | stance | 60 | 0.0 | 0.00 | 0.00 | 35.8 | -1.0 | pass |
-| `stance_ls` | stance | 60 | 0.0 | 0.00 | 0.00 | 40.2 | 2.8 | pass |
+| `stance_ls` | stance | 60 | 0.0 | 0.00 | 0.00 | 40.2 | 2.6 | pass |
 | `stance_holder` | stance | 60 | 0.0 | 0.00 | 0.00 | 67.4 | — | pass |
 | `stance_holder_watch` | stance | 60 | 0.0 | 0.00 | 0.00 | 66.7 | — | pass |
 | `stance_kicker` | stance | 60 | 0.0 | 0.00 | 0.00 | 24.9 | 6.7 | pass |
@@ -170,5 +170,7 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `dive_reach` | transition | 24 | 0.0 | 0.00 | 0.00 | 22.0 | — | pass |
 | `ovl_dip_l` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `ovl_dip_r` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `def_contest_l` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `def_contest_r` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 
-**164 of 164 clips pass.**
+**166 of 166 clips pass.**
