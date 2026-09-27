@@ -344,6 +344,15 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
     ? "A B X Y RB"
     : `${key("pocket.throw1")}–${key("pocket.throw5")}`;
   const runner = practice.runner;
+  // On a screen, the man it's thrown to: the first read.
+  const screenPlay = runner?.state.setup.play;
+  const screenTarget =
+    screenPlay?.type === "screen"
+      ? (runner!.state.icons.find((i) => {
+          const as = screenPlay.assign[runner!.state.agents[i]!.slot as keyof typeof screenPlay.assign];
+          return as.kind === "route" && as.read === 1;
+        }) ?? -1)
+      : -1;
   const icons = runner
     ? runner.state.icons.map((i) => runner.state.agents[i]!)
     : [];
@@ -394,6 +403,8 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
                 : key(`pocket.throw${k + 1}`)}
             </span>
             <span className="rec-name">{a.p.name.split(" ").slice(-1)[0]}</span>
+            {/* The screen's target, marked from the snap count on (Playtest 1: the player couldn't tell who the screen was for). */}
+            {screenTarget === a.i ? <span className="rec-screen">Screen</span> : null}
           </div>
         ))}
         <div className="aim-reticle" ref={(el) => void (hudDom.reticle = el)} />

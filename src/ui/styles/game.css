@@ -17,6 +17,8 @@
 .art-yard { stroke: rgba(244,240,255,.12); stroke-width: 1; }
 .art-los { stroke: #3f8cff; stroke-width: 2; opacity: .8; }
 .art-read { font: 700 13px var(--font-ui); text-anchor: middle; }
+.art-screen-label { font: 800 10px var(--font-ui); letter-spacing: .12em; text-anchor: middle; }
+.art-screen circle { animation: open-pulse 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .call-note { margin: .4rem 0 0; font-size: .85rem; color: var(--ink-3); line-height: 1.5; }
 
 /* Score bug (top left) */
@@ -37,6 +39,7 @@
 .ring-base { fill: rgba(8,7,15,.72); stroke: var(--c); stroke-width: 2.2; }
 .ring-charge { fill: none; stroke: #fff; stroke-width: 3.4; opacity: 0; transition: opacity 80ms; filter: drop-shadow(0 0 3px var(--c)); }
 .rec-glyph { left: -1.3rem; top: -1.3rem; width: 2.6rem; height: 2.6rem; display: grid; place-items: center; font-weight: 800; font-size: 1.05rem; color: var(--c); text-shadow: 0 0 .6rem rgba(0,0,0,.8); }
+.rec-screen { left: 50%; top: -1.45rem; transform: translateX(-50%); padding: .08rem .45rem; border-radius: .3rem; background: var(--lime); color: #0b0a12; font-size: .66rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; animation: open-pulse 1.2s ease-in-out infinite; }
 .rec-name { left: 50%; top: 1.45rem; transform: translateX(-50%); font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; color: rgba(244,240,255,.85); text-shadow: 0 .1rem .5rem rgba(0,0,0,.9); }
 .aim-reticle { position: absolute; left: -.55rem; top: -.55rem; width: 1.1rem; height: 1.1rem; border: 2px solid #fff; border-radius: 50%; visibility: hidden; box-shadow: 0 0 .5rem rgba(0,0,0,.6); }
 .aim-reticle::after { content: ''; position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px; background: var(--lime); border-radius: 50%; }

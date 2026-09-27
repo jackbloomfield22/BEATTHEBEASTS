@@ -165,6 +165,15 @@ export function PlayArt({ play }: { play: OffPlay }) {
         return (
           <g key={k}>
             <circle cx={x} cy={y} r={pos === 'OL' ? 5 : 6.5} fill={pos === 'OL' ? 'none' : color} stroke={color} strokeWidth={2} />
+            {/* The screen's target (Playtest 1): ringed and labelled on the play call. */}
+            {play.type === 'screen' && k === screenTo ? (
+              <g className="art-screen">
+                <circle cx={x} cy={y} r={11} fill="none" stroke="var(--lime)" strokeWidth={2.5} />
+                <text x={x} y={y - 16} className="art-screen-label" fill="var(--lime)">
+                  SCREEN
+                </text>
+              </g>
+            ) : null}
             {as.kind === 'route' ? (
               <text x={x} y={y + 20} className="art-read" fill={color}>
                 {as.read}
