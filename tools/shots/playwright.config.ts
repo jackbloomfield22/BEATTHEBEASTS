@@ -16,7 +16,7 @@ import { chromiumLaunch } from '../../playwright.config';
 const PORT = Number(process.env.BTB_PORT ?? 5174);
 export default defineConfig({
   testDir: '.',
-  testMatch: process.env.BTB_HUD ? 'carrierhud.spec.ts' : process.env.BTB_CARRIERGAME ? 'carriergame.spec.ts' : process.env.BTB_CARRIER ? 'carrier.spec.ts' : process.env.BTB_CATCHGAME ? 'catchgame.spec.ts' : process.env.BTB_CATCH ? 'catch.spec.ts' : process.env.BTB_GAME ? 'game.spec.ts' : process.env.BTB_M6VIDEO ? 'm6video.spec.ts' : process.env.BTB_LOCKER ? 'locker.spec.ts' : process.env.BTB_CONTACT ? 'contact.spec.ts' : process.env.BTB_PRACTICE ? 'practice.spec.ts' : process.env.BTB_VIDEO ? 'video.spec.ts' : 'matrix.spec.ts',
+  testMatch: process.env.BTB_M66 ? 'm66.spec.ts' : process.env.BTB_HUD ? 'carrierhud.spec.ts' : process.env.BTB_CARRIERGAME ? 'carriergame.spec.ts' : process.env.BTB_CARRIER ? 'carrier.spec.ts' : process.env.BTB_CATCHGAME ? 'catchgame.spec.ts' : process.env.BTB_CATCH ? 'catch.spec.ts' : process.env.BTB_GAME ? 'game.spec.ts' : process.env.BTB_M6VIDEO ? 'm6video.spec.ts' : process.env.BTB_LOCKER ? 'locker.spec.ts' : process.env.BTB_CONTACT ? 'contact.spec.ts' : process.env.BTB_PRACTICE ? 'practice.spec.ts' : process.env.BTB_VIDEO ? 'video.spec.ts' : 'matrix.spec.ts',
   timeout: process.env.BTB_VIDEO || process.env.BTB_M6VIDEO ? 14_400_000 : 600_000,
   workers: 1,
   reporter: [['list']],

@@ -136,7 +136,7 @@ for (const [k, w] of Object.entries(cases)) console.log(k.padEnd(44), JSON.strin
 // At runtime (src/render/players/bodyShape.ts): the body scales with
 // stature, the head bone by headScale(). Linear blend skinning: a vertex
 // moves by its weight on the head bone; the helmet is all head.
-const HEAD_BASE = 1.05;
+const HEAD_BASE = 1.06;
 const HEAD_STATURE_EXP = 0.5;
 const joints = read(prim.attributes.JOINTS_0);
 const wts = read(prim.attributes.WEIGHTS_0);

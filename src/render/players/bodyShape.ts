@@ -41,12 +41,12 @@ export function bodyShape(heightM: number, weightKg: number): BodyShape {
  * included, scaled with stature, so a 5'9" corner's helmet was 7% smaller
  * than a 6'2" receiver's (real adult helmets span a few percent), while the
  * heavy and pads shapes spread a lineman's shoulders to 2.9 helmet widths
- * (about 2.5 on a real lineman). So: 5% more head on the base body (7.05
- * heads), and the head scales with only the square root of stature (a
- * 5'9" back is 6.85 heads, a 6'5" tackle 7.2; helmets 0.26 to 0.28 m
- * tall across the roster).
+ * (about 2.5 on a real lineman). So: 6% more head on the base body (7.0
+ * heads; 5% was hard to see side by side at field level), and the head
+ * scales with only the square root of stature (a 5'9" back is 6.8 heads,
+ * a 6'5" tackle 7.1; helmets 0.265 to 0.28 m tall across the roster).
  */
-export const HEAD_BASE = 1.05;
+export const HEAD_BASE = 1.06;
 export const HEAD_STATURE_EXP = 0.5;
 
 /** The head bone's scale for a body of this overall scale (bodyShape().scale). */

@@ -16,10 +16,10 @@ function onField(heightM: number) {
 }
 
 describe('head size', () => {
-  it('gives the base body 5% more head: about 7 heads tall', () => {
+  it('gives the base body 6% more head: 7 heads tall', () => {
     expect(headScale(1)).toBeCloseTo(HEAD_BASE);
     expect(onField(BASE_HEIGHT).heads).toBeGreaterThan(6.95);
-    expect(onField(BASE_HEIGHT).heads).toBeLessThan(7.15);
+    expect(onField(BASE_HEIGHT).heads).toBeLessThan(7.1);
   });
 
   it('keeps helmets close to one real size across the roster (5\'9" to 6\'6")', () => {

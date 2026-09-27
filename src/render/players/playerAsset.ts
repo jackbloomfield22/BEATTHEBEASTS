@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { createPlayerMaterial, setPlayerLook, type PlayerLook } from './playerMaterial';
+import { urlFlags } from '@/app/platform';
 import { bodyShape, headScale, type BodyShape } from './bodyShape';
 import { loadGlyphAtlas } from './glyphAtlas';
 import type { Variety } from './variety';
@@ -181,7 +182,7 @@ export class Player {
     const v = this.variety;
     this.root.scale.setScalar(s.scale);
     // The head (helmet and mask) keeps closer to one real size than the body does (bodyShape.ts headScale).
-    this.bones.get('head')?.scale.setScalar(headScale(s.scale));
+    this.bones.get('head')?.scale.setScalar(urlFlags.oldHeads ? 1 : headScale(s.scale));
     const weights: Record<string, number> = { heavy: s.heavy, lean: s.lean, belly: s.belly, ...(v?.morph ?? {}) };
     for (const m of [...this.lods, this.shadowProxy]) {
       const dict = m.morphTargetDictionary;
