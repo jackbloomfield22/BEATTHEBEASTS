@@ -41,7 +41,9 @@ describe('throws (M6.5 #1): accuracy has reasons', () => {
     const pressured = throwsAt(15, 300, { pressure: 1 });
     const running = throwsAt(15, 300, { moving: 5 });
     const feet = throwsAt(15, 300, { offPlatform: true });
-    for (const g of [pressured, running, feet]) expect(mean(g)).toBeGreaterThan(mean(clean) * 1.2);
+    for (const g of [pressured, feet]) expect(mean(g)).toBeGreaterThan(mean(clean) * 1.2);
+    // On the run (Playtest 2): it still costs, but a good thrower on the move keeps it close.
+    expect(mean(running)).toBeGreaterThan(mean(clean) * 1.05);
     expect(pressured.filter((p) => p.err.off > 1).map((p) => throwWhy(p.err))).toContain('pressure');
     expect(running.filter((p) => p.err.off > 1).map((p) => throwWhy(p.err))).toContain('on the run');
     expect(feet.filter((p) => p.err.off > 1).map((p) => throwWhy(p.err))).toContain('feet not set');

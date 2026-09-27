@@ -130,6 +130,42 @@ const PLANT_COS = 0.9;
 /** Within this of a route's break point (yd) and moving away from it, he's made the break. */
 const BREAK_PASS = 2;
 
+/** The QB this far outside the ball's spot (yd) is out of the pocket for the scramble drill (the tackles line up ~3 yd out). */
+const DRILL_WIDE = 6;
+/** ...and must still be out this long (s) before the receivers break off. */
+const DRILL_HOLD = 0.5;
+/** A receiver on his last leg with no defender within this (yd) stays on his route: he's open. */
+const DRILL_OPEN = 2.5;
+
+/** When the scramble drill started (s), or −1: the tuck, or the QB out wide and staying out. */
+function drillStart(s: PlayState): number {
+  if (s.scrambleT >= 0) return s.scrambleT;
+  const qb = s.agents[s.qb]!;
+  const wide = Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) > DRILL_WIDE;
+  // Kept on the QB (scratch memory, not hashed), and only ever written on the tick's first read.
+  if (!wide) {
+    qb.mem.wideT = -1;
+    return -1;
+  }
+  const since = (qb.mem.wideT as number | undefined) ?? -1;
+  if (since < 0) {
+    qb.mem.wideT = s.t;
+    return -1;
+  }
+  return s.t - since >= DRILL_HOLD ? since + DRILL_HOLD : -1;
+}
+
+/** A man on the last leg of his route, open, keeps running it through a scramble. */
+function runsItOn(s: PlayState, a: Agent): boolean {
+  const rt = a.route;
+  if (!rt || rt.idx < rt.pts.length - 1 || rt.sit[rt.pts.length - 1]) return false;
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (!d.down && dist(d.pos, a.pos) < DRILL_OPEN) return false;
+  }
+  return true;
+}
+
 /** Run the route: stem at pace, sharp breaks for good route runners, settle on sits. */
 export function runRoute(s: PlayState, a: Agent): void {
   const rt = a.route;
@@ -146,8 +182,12 @@ export function runRoute(s: PlayState, a: Agent): void {
   // tucked it, a beat after (M6.5 #7: only a tuck started it, so a QB
   // rolling out to throw had his receivers run on away from him), and the
   // short men come back toward the ball.
-  const out = s.escapeT >= 0 ? s.escapeT : s.scrambleT;
-  if (out >= 0 && s.t - out > 0.25 && s.phase === 'pocket' && !a.mem.drill) {
+  // Playtest 1: a pocket slide started it (escapeT is any 4.5-yd drift, which
+  // is right for the rush), so an open out route turned round and came back.
+  // Now: a tuck, or the QB well outside the pocket and still out after
+  // DRILL_HOLD; and a man on his last leg with nobody near him runs it on.
+  const out = drillStart(s);
+  if (out >= 0 && s.t - out > 0.25 && s.phase === 'pocket' && !a.mem.drill && !runsItOn(s, a)) {
     a.mem.drill = true;
     const qb = s.agents[s.qb]!;
     const depth = a.pos.x - s.setup.los;

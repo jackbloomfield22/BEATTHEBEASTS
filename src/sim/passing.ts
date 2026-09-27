@@ -107,30 +107,33 @@ export function lead(r: Agent, T: number): V2 {
 }
 
 /**
- * Hang time of a driven ball, the default throw (round-two feedback: a
- * short throw must not float while the defense rallies), s from release to
- * the catch point. From a 90 arm: ~0.6 s at 10 yd and ~0.9 s at 20 (the
- * owner's targets; a quick-game ball is on a receiver in about the time
- * the NFL's fastest throws take, ~0.5–0.7 s), then steeper past 20 as a
- * deep ball needs arc to carry: a driven 40-yard rope in ~1.8 s, 50 in
- * ~2.25 s (a lofted deep shot, 2.4–2.8 s in the NFL, is the touch pass).
- * The slope past 20 also keeps the lead stable: a receiver running ~10 yd/s
- * moves the catch point ~10 yd for every second of hang, so a slope much
- * past 0.05 s/yd runs away (the lead chases him to the end line). A weaker
- * arm takes longer in proportion to its top speed; the throw is never
- * faster than the arm can make it (planThrow).
+ * Hang time of a driven ball, the default throw, s from release to the catch
+ * point. From a 90 arm: ~0.49 s at 10 yd, ~0.73 s at 20, ~1.13 s at 30,
+ * ~1.53 s at 40. Playtest 1 found the round-two times (0.6 s at 10, 0.9 at
+ * 20) slow and floaty: the ball hung so long that every throw had to be
+ * aimed 8–19 yd ahead of the man (tools/sim/lead.ts). An NFL bullet leaves
+ * the hand at ~25–29 yd/s, so 20 yd on a line with a little arc is
+ * ~0.7–0.75 s. Steeper past 20 as a deep ball needs arc to carry; the
+ * slope stays under ~0.05 s/yd so the lead doesn't run away (a receiver at
+ * ~10 yd/s moves the catch point ~10 yd for every second of hang). A
+ * weaker arm takes longer in proportion to its top speed; the throw is
+ * never faster than the arm can make it (planThrow).
  */
 export function driveTime(d: number, power: number): number {
-  const base = 0.3 + 0.03 * Math.min(d, 20) + 0.045 * Math.max(0, d - 20);
+  const base = 0.25 + 0.024 * Math.min(d, 20) + 0.04 * Math.max(0, d - 20);
   return base * (maxThrowSpeed(90) / maxThrowSpeed(power));
 }
 
 /**
- * A touch pass (the icon held briefly): the driven time stretched by 15%
- * for a quick hold up to 35% for a full one. Less loft than M5's touch pass,
- * which took ~0.9 s to go 10 yd from a 90 arm; this one takes 0.69–0.81 s.
+ * A touch pass (the icon held): the driven time stretched by 10% for a
+ * quick hold up to 30% for a full one (Playtest 1: less float than the
+ * 15–35% before), and it leads him (HOLD_LEAD).
  */
-export const touchStretch = (loft: number): number => 1.15 + 0.2 * Math.max(0, Math.min(1, loft));
+export const touchStretch = (loft: number): number => 1.1 + 0.2 * Math.max(0, Math.min(1, loft));
+/** How far a full hold leads him past the catch point along his run, yd (Playtest 1: a tap puts it on him, a hold throws him open). */
+const HOLD_LEAD = 1.5;
+/** A QB moving slower than this (yd/s) is setting his feet, not throwing on the run. */
+const ONRUN_FREE = 2;
 
 /**
  * Stretch a throw's hang time until it clears the defenders under its path:
@@ -252,7 +255,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   }
   // Placement input: lead / back shoulder along his path, high / low.
   const rv = len(rec.vel) > 0.5 ? { x: rec.vel.x / len(rec.vel), y: rec.vel.y / len(rec.vel) } : { x: 1, y: 0 };
-  const place = 1.6 * aim.x;
+  const place = 1.6 * aim.x + HOLD_LEAD * Math.max(0, Math.min(1, loft));
   let tx = spot.x + rv.x * place;
   let ty = spot.y + rv.y * place;
   let tz = CATCH_Z + 0.55 * aim.y;
@@ -262,12 +265,19 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const air = tx - s.setup.los;
   const acc = air < 12 ? qb.fx.r('shortAcc') : air < 25 ? qb.fx.r('midAcc') : qb.fx.r('deepAcc');
   const base = errorAt20(acc);
-  const moving = Math.min(1, len(qb.vel) / 4);
+  // Throwing on the run (Playtest 2: a core skill here, the QB is always
+  // moving). A drift in the pocket is free (under ONRUN_FREE yd/s); past it
+  // the cost grows with his speed and with how far outside the pocket he is
+  // (the tackles are ~3 yd out, a rollout's launch point ~8). A good passer
+  // on the move is accurate within that window; a poor one sprays it.
+  const speedOn = Math.min(1, Math.max(0, len(qb.vel) - ONRUN_FREE) / 4);
+  const wideOut = Math.min(1, Math.max(0, Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) - 4) / 6);
+  const moving = Math.min(1, 0.7 * speedOn + 0.3 * wideOut * (speedOn > 0 ? 1 : 0.5));
   // The cone grows only for a reason (M6.5 #1), and every reason costs even
   // the best something: throwing on the move, a rusher in his face, feet not
   // set. His rating decides how much (M6 scaled by 1 − rating alone, so a
   // Montana under a free rusher threw exactly as he did from a clean pocket).
-  const fMoving = 1 + moving * (0.35 + 0.8 * (1 - qb.fx.a('throwOnRun')));
+  const fMoving = 1 + moving * (0.15 + 0.9 * (1 - qb.fx.a('throwOnRun')));
   const fPressure = 1 + pressure * (1.0 + 1.2 * (1 - qb.fx.a('underPressure')));
   const fPlatform = offPlatform ? 1.25 : 1;
   // Chemistry with this receiver (M6.5 #6): a tighter cone, up to CHEM_CONE.
@@ -345,7 +355,14 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   }
   const air = x - s.setup.los;
   const acc = air < 12 ? qb.fx.r('shortAcc') : air < 25 ? qb.fx.r('midAcc') : qb.fx.r('deepAcc');
-  const moving = Math.min(1, len(qb.vel) / 4);
+  // Throwing on the run (Playtest 2: a core skill here, the QB is always
+  // moving). A drift in the pocket is free (under ONRUN_FREE yd/s); past it
+  // the cost grows with his speed and with how far outside the pocket he is
+  // (the tackles are ~3 yd out, a rollout's launch point ~8). A good passer
+  // on the move is accurate within that window; a poor one sprays it.
+  const speedOn = Math.min(1, Math.max(0, len(qb.vel) - ONRUN_FREE) / 4);
+  const wideOut = Math.min(1, Math.max(0, Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) - 4) / 6);
+  const moving = Math.min(1, 0.7 * speedOn + 0.3 * wideOut * (speedOn > 0 ? 1 : 0.5));
   const sigma = errorAt20(acc) * coneScale(d) * (1 + moving * 1.1 * (1 - qb.fx.a('throwOnRun')));
   return { x, y, sigma };
 }
@@ -386,7 +403,8 @@ export function throwWhy(e: ThrowError): 'pressure' | 'on the run' | 'feet not s
     ['long throw', e.distance],
   ];
   const [top, k] = f.reduce((a, b) => (b[1] > a[1] ? b : a));
-  return k > 1.15 && (e.miss || e.off > 1) ? top : 'clean';
+  // A throw off by a yard with a reason that widened his cone by 8%+ names it (Playtest 2: a good passer on the run widens it only ~10–20%, and that miss is still "on the run").
+  return k > 1.08 && (e.miss || e.off > 1) ? top : 'clean';
 }
 
 /** A throw's error sources, flat for its event (the result card and tools/sim/throws.ts read them). */

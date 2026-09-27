@@ -364,6 +364,10 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
   if (s.setup.play.run || since < 0.35 || qb.down) return;
   if (s.windup) {
     qb.anim = 'throw';
+    // The player's placement stays live through the windup, until the ball
+    // leaves his hand (Playtest 1: it was taken on the key's release and
+    // frozen for the ~0.3–0.5 s of the throwing motion).
+    if (s.setup.user && !s.windup.away) s.windup.aim = { x: inp.aim.x, y: inp.aim.y };
     if (s.t >= s.windup.at) {
       const w = s.windup;
       s.windup = null;
@@ -1137,7 +1141,10 @@ function ballStep(s: PlayState): void {
       if (out === 'drop' || out === 'deflect') {
         // The ball pops up off his hands: live, anyone can play a tip.
         b.target = -2;
-        b.vel = { x: b.vel.x * 0.25 + gauss(s.rng.bounce), y: b.vel.y * 0.25 + gauss(s.rng.bounce), z: 2.5 + 2 * s.rng.bounce() };
+        // It dies on contact (Playtest 1: it popped 2.5–4.5 yd/s up like a beach
+    // ball): a football off hands or pads loses most of its speed and pops
+    // a foot or two, enough for a tip drill in a crowd, no more.
+    b.vel = { x: b.vel.x * 0.2 + gauss(s.rng.bounce) * 0.6, y: b.vel.y * 0.2 + gauss(s.rng.bounce) * 0.6, z: 0.8 + 1.2 * s.rng.bounce() };
         // A contested ball knocked from a receiver's hands: credit the defender who got there.
         let by = who;
         if (out === 'deflect' && a.side === 'off') {
@@ -1163,7 +1170,8 @@ function ballStep(s: PlayState): void {
     stepFlight(b.pos, b.vel);
     if (b.pos.z <= 0.1) {
       b.pos.z = 0.1;
-      b.vel = { x: b.vel.x * 0.55 + gauss(s.rng.bounce) * 0.6, y: b.vel.y * 0.55 + gauss(s.rng.bounce) * 0.6, z: Math.abs(b.vel.z) * 0.4 };
+      // A football on turf: a low, skidding bounce that loses most of its pace (restitution ~0.25).
+      b.vel = { x: b.vel.x * 0.45 + gauss(s.rng.bounce) * 0.6, y: b.vel.y * 0.45 + gauss(s.rng.bounce) * 0.6, z: Math.abs(b.vel.z) * 0.25 };
     }
     if (Math.abs(b.pos.y) > FIELD_HALF_W) {
       whistle(s, 'fumbleOut', b.pos.x, true);
