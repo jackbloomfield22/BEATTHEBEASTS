@@ -542,10 +542,17 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
       case 'missedTackle':
         if (a && e.data?.dive) lyingClip(a, 'dive');
         break;
-      case 'hit': {
+      case 'hit':
+      case 'tackle':
+      case 'sack': {
         const t = a;
         const c = who[1] !== undefined ? bodies[who[1]] : undefined;
-        if (t && !t.fallen) lyingClip(t, 'tackle', TACKLE_CONTACT);
+        // Contact: the tackler's clip. On a wrap (Playtest 1/2) the carrier
+        // stays up and drives on; he falls when the sim puts him down (the
+        // tackle or sack event), where the ball is spotted.
+        if (e.type === 'hit' && t && !t.fallen) lyingClip(t, 'tackle', TACKLE_CONTACT);
+        if (e.type === 'hit' && e.data?.wrap) break;
+        if (c && c.fallen) break;
         if (c && who[1] !== undefined && who[0] !== undefined) {
           // The fall: the carrier's run plus the hit's push, along the tackler's line.
           const vel = worldVel(s, who[1]).clone();

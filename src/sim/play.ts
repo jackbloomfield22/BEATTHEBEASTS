@@ -28,7 +28,7 @@ import {
 } from './ai';
 import { stepFlight } from './ball';
 import { blockOf, stepBlocks } from './blocks';
-import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tickMoves } from './contact';
+import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tackleOdds, tickMoves } from './contact';
 import { releaseTime } from './effects';
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
@@ -362,6 +362,14 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
   const qb = s.agents[s.qb]!;
   const since = s.t - s.snapT;
   if (s.setup.play.run || since < 0.35 || qb.down) return;
+  // Wrapped up in the pocket: no new throw, and one in his motion is smothered
+  // unless the ball's about to leave his hand (the last WRAP_THROW s).
+  if (wrapped(qb)) {
+    if (!s.windup || s.windup.at - s.t > WRAP_THROW) {
+      s.windup = null;
+      return;
+    }
+  }
   if (s.windup) {
     qb.anim = 'throw';
     // The player's placement stays live through the windup, until the ball
@@ -908,8 +916,141 @@ function notePressures(s: PlayState): void {
   }
 }
 
+/** How far past the two bodies a pocket rusher gets a hand on the QB (yd, as in the open field: the wrap, not a smaller reach, is what makes a touch not a sack). */
+const POCKET_REACH = 0.6;
+/** A throw this close to leaving his hand (s) still gets away when he's wrapped. */
+const WRAP_THROW = 0.1;
+/** The longest a wrap lasts before he's down (s). */
+const WRAP_MAX = 0.8;
+/** A wrap ends when he's slowed to this (yd/s). */
+const WRAP_STOP = 0.5;
+/** A second tackler joining the wrap cuts what's left of the drive to this share. */
+const WRAP_JOIN = 0.4;
+/** A move of his own this early in a wrap (s) gets one try to break it... */
+const WRAP_BREAK_T = 0.25;
+/** ...at this share of the chance the tackle had of failing in the first place. */
+const WRAP_BREAK = 0.5;
+
+/** In a tackler's wrap (and not down yet). */
+function wrapped(c: Agent): boolean {
+  return ((c.mem.wrapBy as number | undefined) ?? -1) >= 0 && !c.down;
+}
+
+/**
+ * The wrap begins: the tackler has him. How far he drives on is the
+ * fall-forward distance the harness is calibrated on (M6.5 #8: his share of
+ * the pair's mass times his speed downhill, less the tackler's coming the
+ * other way), run out as a steady slowing along his run.
+ */
+function startWrap(s: PlayState, c: Agent, o: Agent, inPocket: boolean): void {
+  const attack = c.side === 'off' ? 1 : -1;
+  const mr = c.fx.mass / (c.fx.mass + o.fx.mass);
+  let drive = FALL_K * Math.max(0, c.vel.x * attack) * mr - FALL_STOP * Math.max(0, -o.vel.x * attack) * (1 - mr);
+  drive = Math.max(0, Math.min(FALL_MAX, drive));
+  const sp = len(c.vel);
+  // Along his run: the forward share of his heading sets how far he goes to make the drive downfield.
+  const hx = sp > 0.3 ? Math.abs(c.vel.x) / sp : 1;
+  const path = inPocket ? Math.min(1, sp * 0.25) : drive / Math.max(0.5, hx);
+  // Slowing from his speed to a stop over that path: v² = 2·a·path (capped so it's done inside WRAP_MAX).
+  const v0 = Math.max(sp, 0.01);
+  const T = Math.min(WRAP_MAX, path > 0.02 ? (2 * path) / v0 : 0.1);
+  c.mem.wrapBy = o.i;
+  c.mem.wrapT0 = s.t;
+  c.mem.wrapEnd = s.t + T;
+  c.mem.wrapDx = sp > 0.3 ? c.vel.x / sp : attack;
+  c.mem.wrapDy = sp > 0.3 ? c.vel.y / sp : 0;
+  c.mem.wrapV = path > 0.02 ? Math.min(v0, (2 * path) / Math.max(T, 1e-3)) : 0;
+  c.mem.wrapA = T > 0 ? (c.mem.wrapV as number) / T : 0;
+  // A move he was already in counted in the tackle roll: only one started inside the wrap gets the extra try.
+  c.mem.wrapTried = c.busy > 0 && !!c.move && c.move !== 'protect';
+  // Where the tackler rides: on the side he came from, bodies touching.
+  const ox = o.pos.x - c.pos.x;
+  const oy = o.pos.y - c.pos.y;
+  const ol = Math.max(1e-6, Math.sqrt(ox * ox + oy * oy));
+  c.mem.wrapOx = (ox / ol) * (o.fx.radius + c.fx.radius) * 0.8;
+  c.mem.wrapOy = (oy / ol) * (o.fx.radius + c.fx.radius) * 0.8;
+  o.busy = Math.max(o.busy, Math.round(T / TICK) + 6);
+  o.mem.tackleCd = s.t + T + 0.5;
+  o.anim = 'tackle';
+}
+
+/** Another man gets there during the wrap: the pile finishes it sooner. */
+function joinWrap(s: PlayState, c: Agent, o: Agent): void {
+  const left = Math.max(0, (c.mem.wrapEnd as number) - s.t);
+  c.mem.wrapEnd = s.t + left * WRAP_JOIN;
+  c.mem.wrapV = (c.mem.wrapV as number) * WRAP_JOIN;
+  o.busy = Math.max(o.busy, Math.round((left * WRAP_JOIN) / TICK) + 6);
+  o.mem.tackleCd = s.t + left + 0.5;
+  o.anim = 'tackle';
+  s.events.push({ t: s.t, type: 'hit', who: [o.i, c.i], at: { ...c.pos }, data: { force: 0, big: false, wrap: true, join: true } });
+}
+
+/**
+ * One tick of a wrap: he drives on, slowing, the tackler riding him; a move
+ * of his own early in it gets one try to break it; then he's down where the
+ * ball is. True when the play's over (he's down).
+ */
+function wrapStep(s: PlayState, c: Agent, inPocket: boolean): boolean {
+  const o = s.agents[c.mem.wrapBy as number]!;
+  const t0 = c.mem.wrapT0 as number;
+  // His own move early in the wrap (a spin off, a stiff arm, lowering the shoulder): one try.
+  if (!c.mem.wrapTried && s.t - t0 < WRAP_BREAK_T && c.busy > 0 && (c.move === 'spin' || c.move === 'stiffArm' || c.move === 'truck' || c.move === 'jukeL' || c.move === 'jukeR')) {
+    c.mem.wrapTried = true;
+    const odds = tackleOdds(s, o, c, c.move);
+    if (s.rng.contact() < WRAP_BREAK * (1 - odds.tackle)) {
+      c.mem.wrapBy = -1;
+      c.vel.x *= 0.6;
+      c.vel.y *= 0.6;
+      o.busy = 28;
+      o.mem.tackleCd = s.t + 0.9;
+      s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], at: { ...c.pos }, data: { force: 0, wrap: true } });
+      return false;
+    }
+  }
+  // The drive: along his run at the slowing speed (whatever his legs asked for this tick).
+  const v = Math.max(0, (c.mem.wrapV as number) - (c.mem.wrapA as number) * (s.t - t0));
+  const dx = c.mem.wrapDx as number;
+  const dy = c.mem.wrapDy as number;
+  const px = (c.mem.wrapPx as number | undefined) ?? c.pos.x;
+  const py = (c.mem.wrapPy as number | undefined) ?? c.pos.y;
+  c.pos.x = px + dx * v * TICK;
+  c.pos.y = py + dy * v * TICK;
+  c.vel.x = dx * v;
+  c.vel.y = dy * v;
+  c.mem.wrapPx = c.pos.x;
+  c.mem.wrapPy = c.pos.y;
+  o.pos.x = c.pos.x + (c.mem.wrapOx as number);
+  o.pos.y = c.pos.y + (c.mem.wrapOy as number);
+  o.vel.x = c.vel.x;
+  o.vel.y = c.vel.y;
+  if (s.t < (c.mem.wrapEnd as number) && v > WRAP_STOP) return false;
+  // Down: where the ball is as he lands.
+  c.down = true;
+  c.anim = 'tackled';
+  o.down = true;
+  c.mem.wrapBy = -1;
+  const attack = c.side === 'off' ? 1 : -1;
+  if (inPocket) {
+    s.sack = true;
+    s.events.push({ t: s.t, type: 'sack', who: [o.i, c.i], at: { ...c.pos } });
+    whistle(s, c.pos.x <= 0 ? 'safety' : 'sack', c.pos.x, true);
+  } else {
+    s.events.push({ t: s.t, type: 'tackle', who: [o.i, c.i], at: { ...c.pos }, data: { big: false, wrapT: Math.round((s.t - t0) * 100) / 100 } });
+    const at = attack > 0 ? Math.max(s.maxX, ballNose(c)) : c.pos.x;
+    whistle(s, 'tackle', attack > 0 ? Math.min(at, GOAL_X - 0.05) : Math.max(at, 0.05), c.side === 'off');
+  }
+  return true;
+}
+
 /** Tackles on the ball carrier (or the QB in the pocket). */
 function contactStep(s: PlayState): void {
+  // A QB wrapped up as the ball left his hand: he goes down with the throw away (no sack).
+  const qb = s.agents[s.qb]!;
+  if (wrapped(qb) && !(s.ball.mode === 'held' && s.ball.holder === s.qb)) {
+    qb.mem.wrapBy = -1;
+    qb.down = true;
+    qb.anim = 'tackled';
+  }
   const holder = s.ball.mode === 'held' ? s.ball.holder : -1;
   if (holder < 0) return;
   const c = s.agents[holder]!;
@@ -918,6 +1059,8 @@ function contactStep(s: PlayState): void {
   if (s.t - s.snapT < 0.4) return;
   // A sliding quarterback has given himself up: nobody may hit him.
   if (c.move === 'dive' && slides(c) && !inPocket) return;
+  // In a wrap: he drives on, the tackler rides him down (wrapStep).
+  if (wrapped(c) && wrapStep(s, c, inPocket)) return;
   for (const o of s.agents) {
     if (o.side === c.side || o.down || o.busy > 0 || o.mem.outOfPlay) continue;
     // Engaged defenders can come off a block for an arm tackle as he passes:
@@ -937,7 +1080,8 @@ function contactStep(s: PlayState): void {
     const k = sweptGap(o, c);
     // Arms reach ~0.45 yd past the bodies; a diving tackle ~1 yd more when he
     // can't close on a runner pulling away (lower odds, and he's on the ground after).
-    const armReach = o.fx.radius + c.fx.radius + 0.6;
+    // In the pocket it takes a hand on him, not a reach past him (Playtest 1: a sack with no contact).
+    const armReach = o.fx.radius + c.fx.radius + (inPocket ? POCKET_REACH : 0.6);
     let dive = false;
     let lunge = -1;
     if (k > armReach) {
@@ -963,6 +1107,12 @@ function contactStep(s: PlayState): void {
     }
     const { out: out0, force } = resolveTackle(s, o, c);
     let out = out0;
+    // Joining a wrap: only a man who gets him (or lays him out) counts; one who bounces off the pile does nothing.
+    if (wrapped(c) && out !== 'tackle' && out !== 'bigHit') {
+      o.mem.tackleCd = s.t + 0.5;
+      continue;
+    }
+    if (wrapped(c) && out === 'bigHit') c.mem.wrapBy = -1;
     if (engaged) {
       // Off the block it's only an arm, and only if he's winning the block:
       // a lineman his blocker has controlled (leverage toward −1) can't get
@@ -1004,7 +1154,7 @@ function contactStep(s: PlayState): void {
       continue;
     }
     // Down he goes (or the ball comes out).
-    s.events.push({ t: s.t, type: 'hit', who: [o.i, c.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10, big: out === 'bigHit' } });
+    s.events.push({ t: s.t, type: 'hit', who: [o.i, c.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10, big: out === 'bigHit', ...(out === 'bigHit' ? {} : { wrap: true }) } });
     if (out === 'bigHit') s.bigHit = { by: o.i, on: c.i, force: Math.round(force * 10) / 10 };
     o.anim = 'tackle';
     if (!inPocket && fumbles(s, o, c, out === 'bigHit')) {
@@ -1019,10 +1169,25 @@ function contactStep(s: PlayState): void {
       s.events.push({ t: s.t, type: 'fumble', who: [c.i, o.i], at: { ...c.pos } });
       return;
     }
+    const attack = c.side === 'off' ? 1 : -1;
+    if (out !== 'bigHit') {
+      // A tackle, not a big hit: the wrap. He drives on the yard or two his
+      // momentum carries against the tackler's (the fall-forward distance,
+      // FALL_K / FALL_STOP, now run out as motion), slowing to a stop with
+      // the tackler riding him; then down, spotted where the ball is when he
+      // lands (Playtest 1: he stopped dead where he was touched and the spot
+      // was put a yard or two on). A second man joining finishes it sooner;
+      // a move of his own early in the wrap can still break it.
+      if (wrapped(c)) {
+        joinWrap(s, c, o);
+        continue;
+      }
+      startWrap(s, c, o, inPocket);
+      return;
+    }
     c.down = true;
     c.anim = 'tackled';
-    o.down = out === 'bigHit' ? false : true;
-    const attack = c.side === 'off' ? 1 : -1;
+    o.down = false;
     if (inPocket) {
       s.sack = true;
       s.events.push({ t: s.t, type: 'sack', who: [o.i, c.i], at: { ...c.pos } });
