@@ -7,18 +7,21 @@
 // from the ideal spot, defenders in the catch window, and the catch type.
 
 import { flightTime, G, solveLaunch, speed3, stepFlight, type V3 } from './ball';
-import { errorAt20, maxRange, maxThrowSpeed } from './effects';
+import { errorAt20, maxRange, maxThrowSpeed, releaseTime } from './effects';
 import { breakCarry, continueDir } from './ai';
 import { gauss } from './rand';
 import { exp } from '@/engine/math/detmath';
 import type { PlayState } from './state';
-import { FIELD_HALF_W, TICK, type Agent, type CatchHard, type OffSlot } from './types';
+import { has, more } from './traits';
+import { FIELD_HALF_W, GOAL_X, TICK, type Agent, type CatchHard, type OffSlot } from './types';
 import { dist, len, type V2 } from './vec';
 
 /** Ball height at a comfortable catch (chest), yd. */
 export const CATCH_Z = 1.25;
 /** Release height above the QB's feet, yd (the ball leaves over the helmet). */
 const RELEASE_Z = 2.15;
+/** yd/s per mph. */
+const MPH = 1760 / 3600;
 
 /**
  * How far a receiver running flat out covers in `T` seconds from his speed
@@ -239,10 +242,20 @@ export interface ThrowError {
  * longer the hold. `aim` is the placement input. `pressure` 0..1 and
  * `offPlatform` scale the error.
  */
+/** His arm: the bullet's speed (yd/s) and the longest throw (yd). Cannon: +2 mph and 4 yd; Noodle Arm: 5 yd less (the trait catalog's lines). */
+export function arm(qb: Agent): { vmax: number; range: number } {
+  const power = qb.fx.r('throwPower');
+  return { vmax: maxThrowSpeed(power) + (has(qb, 'cannon') ? 2 * MPH : 0), range: maxRange(power) + (has(qb, 'cannon') ? 4 : 0) - (has(qb, 'noodle-arm') ? 5 : 0) };
+}
+
+/** Wind-up to release (s): his Release rating, 0.04 s quicker for a Quick Trigger (the trait catalog's line). */
+export function releaseOf(qb: Agent): number {
+  return releaseTime(qb.fx.r('release')) - (has(qb, 'quick-trigger') ? 0.04 : 0);
+}
+
 export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2, pressure: number, offPlatform: boolean): ThrowPlan {
   const power = qb.fx.r('throwPower');
-  const vmax = maxThrowSpeed(power);
-  const range = maxRange(power);
+  const { vmax, range } = arm(qb);
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
   const hang = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T);
@@ -277,12 +290,29 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   // the best something: throwing on the move, a rusher in his face, feet not
   // set. His rating decides how much (M6 scaled by 1 − rating alone, so a
   // Montana under a free rusher threw exactly as he did from a clean pocket).
-  const fMoving = 1 + moving * (0.15 + 0.9 * (1 - qb.fx.a('throwOnRun')));
-  const fPressure = 1 + pressure * (1.0 + 1.2 * (1 - qb.fx.a('underPressure')));
-  const fPlatform = offPlatform ? 1.25 : 1;
+  // Off Platform: on the run or off balance, half the usual cost. Ice in
+  // His Veins: pressure widens it half as much; Happy Feet: a rusher on him
+  // (pressure past ~0.6, inside 2 yd) 25% more (the trait catalog's lines).
+  const platformK = has(qb, 'off-platform') ? 0.5 : 1;
+  const pressK = (has(qb, 'ice-veins') ? 0.5 : 1) * (pressure > 0.6 && has(qb, 'happy-feet') ? 1.25 : 1);
+  const fMoving = 1 + platformK * moving * (0.15 + 0.9 * (1 - qb.fx.a('throwOnRun')));
+  const fPressure = 1 + pressK * pressure * (1.0 + 1.2 * (1 - qb.fx.a('underPressure')));
+  const fPlatform = offPlatform ? 1 + 0.25 * platformK : 1;
+  // The throw itself, by the catalog: a Deep Ball Artist's 30+ yd throws
+  // 20% tighter; a Red Zone Sniper's into the end zone inside the 20, 20%;
+  // a Laser's driven ball over the middle at 10–20 yd, 15% (his "no bullet
+  // penalty"); a placed ball (back shoulder, high or low, away from
+  // leverage) costs everyone 10% of cone except a Surgeon short and intermediate.
+  const inMiddle = Math.abs(ty) < 9;
+  const placed = Math.abs(aim.x) > 0.2 || Math.abs(aim.y) > 0.2;
+  const fTrait =
+    (air >= 30 && has(qb, 'deep-ball-artist') ? 0.8 : 1) *
+    (s.setup.los >= GOAL_X - 20 && tx > GOAL_X && has(qb, 'red-zone-sniper') ? 0.8 : 1) *
+    (!touch && inMiddle && air >= 10 && air <= 20 && has(qb, 'laser') ? 0.85 : 1) *
+    (placed && !(air < 25 && has(qb, 'surgeon')) ? 1.1 : 1);
   // Chemistry with this receiver (M6.5 #6): a tighter cone, up to CHEM_CONE.
   const fChem = 1 - CHEM_CONE * Math.max(0, Math.min(1, s.setup.chem?.[rec.slot as OffSlot] ?? 0));
-  const sigma = base * coneScale(d) * fMoving * fPressure * fPlatform * fChem;
+  const sigma = base * coneScale(d) * fMoving * fPressure * fPlatform * fChem * fTrait;
   // The mechanics miss: a ball that gets away from him, sailing or dying in
   // the dirt, 2–4 yd off. Only for a reason (M6.5 #1): M6 gave every throw a
   // 13% floor, so 79% of the misses came from a clean pocket and a quarter of
@@ -334,7 +364,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
  */
 export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2): { x: number; y: number; sigma: number } {
   const power = qb.fx.r('throwPower');
-  const vmax = maxThrowSpeed(power);
+  const { vmax, range } = arm(qb);
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
   let T = 0.8;
@@ -348,7 +378,6 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   let x = spot.x + rv.x * 1.6 * aim.x;
   let y = spot.y + rv.y * 1.6 * aim.x;
   const d = dist(from, { x, y });
-  const range = maxRange(power);
   if (d > range) {
     x = from.x + (x - from.x) * (range / d);
     y = from.y + (y - from.y) * (range / d);
@@ -363,7 +392,8 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   const speedOn = Math.min(1, Math.max(0, len(qb.vel) - ONRUN_FREE) / 4);
   const wideOut = Math.min(1, Math.max(0, Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) - 4) / 6);
   const moving = Math.min(1, 0.7 * speedOn + 0.3 * wideOut * (speedOn > 0 ? 1 : 0.5));
-  const sigma = errorAt20(acc) * coneScale(d) * (1 + moving * 1.1 * (1 - qb.fx.a('throwOnRun')));
+  // (The same moving cost as planThrow, Off Platform included, so the reticle tells the truth.)
+  const sigma = errorAt20(acc) * coneScale(d) * (1 + (has(qb, 'off-platform') ? 0.5 : 1) * moving * (0.15 + 0.9 * (1 - qb.fx.a('throwOnRun'))));
   return { x, y, sigma };
 }
 
@@ -502,8 +532,14 @@ export function catchLook(s: PlayState, r: Agent, at: { x: number; y: number; z:
 /** How far a player can reach for a ball: standing reach plus a jump. */
 export function reach(a: Agent): { r: number; top: number } {
   const jump = a.fx.a('jumping') * 0.35 + 0.15;
-  return { r: 0.75 + a.fx.height * 0.05, top: a.fx.height * 1.28 + jump };
+  // Skyscraper: +6 inches at the high point; Basketball Body: +4 inches on
+  // the jump ball (the trait catalog's lines).
+  const tall = (has(a, 'skyscraper') ? 6 / 36 : 0) + (has(a, 'basketball-body') ? 4 / 36 : 0);
+  return { r: 0.75 + a.fx.height * 0.05, top: a.fx.height * 1.28 + jump + tall };
 }
+
+/** The biggest single catch cost. */
+const worstOf = (costs: readonly [CatchHard, number][]): number => costs.reduce((m, c) => Math.max(m, c[1]), 0);
 
 /**
  * Resolve a ball arriving at an agent. Returns what happened; the caller
@@ -573,34 +609,83 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
     const thrower = s.agents[b.thrower]!;
     const range = dist(thrower.pos, a.pos);
     let hit = 0;
+    let hitBy: Agent | null = null;
     for (const o of s.agents) {
       if (o.side === a.side || o.down) continue;
       const k = dist(o.pos, a.pos);
       if (k > 1.1) continue;
       const closing = ((o.vel.x - a.vel.x) * (a.pos.x - o.pos.x) + (o.vel.y - a.vel.y) * (a.pos.y - o.pos.y)) / Math.max(1e-6, k);
-      hit = Math.max(hit, Math.min(1, (1.1 - k) / 0.6) * (closing > 2 ? 1 : 0.4));
+      const h = Math.min(1, (1.1 - k) / 0.6) * (closing > 2 ? 1 : 0.4);
+      if (h > hit) {
+        hit = h;
+        hitBy = o;
+      }
     }
     const costs: [CatchHard, number][] = [
-      // A hit as the ball arrives (Catch in Traffic holds on through it).
-      ['contact', hit * 0.1 * (1.1 - 0.6 * tough)],
+      // A hit as the ball arrives (Catch in Traffic holds on through it; a
+      // Missile's hit dislodges it 15% more often, Sure Hands never lets a hit
+      // cost him the ball: the trait catalog's lines).
+      ['contact', hit * 0.1 * (1.1 - 0.6 * tough) * (hitBy && has(hitBy, 'missile') ? 1.15 : 1) * (has(a, 'sure-hands') ? 0 : 1)],
       // Thrown behind him: he has to turn back into it at speed.
       ['behind', Math.min(0.15, Math.max(0, -along - 0.3) * 0.12)],
       // A fastball from close range: no time to get the hands right.
       ['bullet', range < 12 ? Math.min(0.08, Math.max(0, vs - 17) * 0.012) : 0],
       // Away from his body: a reach at full stretch (Spectacular Catch for the one-handers).
-      ['reach', Math.max(0, off - 0.45) * 0.5 * (1.1 - 0.5 * spect)],
+      // Highlight Reel: one-handed and diving catches 15% more often (about
+      // 0.6 of the cost at the reaches where it's a ~40% catch); a Body
+      // Catcher 10% less often away from his frame.
+      ['reach', Math.max(0, off - 0.45) * 0.5 * (1.1 - 0.5 * spect) * (has(a, 'highlight-reel') ? 0.6 : 1) + (off > 0.45 && has(a, 'body-catcher') ? 0.1 : 0)],
     ];
+    // Alligator Arms: a defender closing on a crossing route, −10%.
+    if (hit > 0.3 && Math.abs(a.vel.y) > Math.abs(a.vel.x) && has(a, 'alligator-arms')) costs.push(['contact', 0.1]);
     const worst = costs.reduce((m, c) => (c[1] > m[1] ? c : m));
-    const clean = 0.91 + 0.075 * hands - costs.reduce((t, c) => t + c[1], 0);
+    const routine = worstOf(costs) < 0.02;
+    // Drops: routine catches carry 4% on top of his Catching. Glue Hands:
+    // +5% on catchable balls in stride and never a routine drop. Sure Hands:
+    // +5% over the middle (between the numbers). Chain Mover: +5% on third
+    // down past the sticks. (The trait catalog's lines.)
+    const middle = Math.abs(a.pos.y) < 9;
+    const sticks = (s.setup.down ?? 1) >= 3 && a.pos.x - s.setup.los >= s.setup.toGo;
+    // (Checkdown Charlie: his back or tight end in the flat, +5%.)
+    const checkdown = (a.p.pos === 'RB' || a.p.pos === 'TE') && a.pos.x - s.setup.los < 5 && has(thrower, 'checkdown-charlie');
+    const bonus = (checkdown ? 0.05 : 0) + (has(a, 'glue-hands') ? 0.05 : 0) + (middle && has(a, 'sure-hands') ? 0.05 : 0) + (sticks && has(a, 'chain-mover') ? 0.05 : 0) - (routine && has(a, 'drops') ? 0.04 : 0);
+    const clean = 0.91 + 0.075 * hands + bonus - costs.reduce((t, c) => t + c[1], 0);
     if (s.pass && a.i === b.target && s.pass.hard === undefined) s.pass.hard = worst[1] > 0.02 ? worst[0] : 'hands';
     // In phase: the receiver's Catch in Traffic against the defender's Ball
     // Skills. Contested-catch rates (PFF, NGS) run ~40–50% for the best
     // hands-in-traffic receivers going up for it, ~20–30% for most: here an
     // elite receiver (0.9) against a good defender (0.85) is ~0.33, ~0.43
     // going up; an ordinary one (0.5) ~0.15.
+    //
+    // Playtest 2 (identity harness): the M6 line, 0.12 + 0.38·CIT, spread
+    // the whole 0–99 scale over 38 points, so across the band real receivers
+    // live in (Catch in Traffic ~70–99) Fitzgerald, Megatron and Boldin won
+    // the 50/50 ball no more often than DeSean Jackson or Keenan Allen. Now
+    // the slope is spent where the players are: ~0.49 for a 99 against a
+    // good defender, ~0.33 for an 84, ~0.22 for a 73 (the PFF range, elite
+    // hands in traffic to a speed receiver who isn't one).
     const defSkill = by ? by.fx.a('ballSkills') : 0.5;
-    const cont = 0.12 + 0.38 * tough + 0.1 * spect - 0.25 * defSkill + (type === 'aggressive' ? 0.1 : type === 'possession' ? 0.04 : -0.12);
+    let cont = 0.33 + 1.0 * (tough - 0.84) + 0.1 * (spect - 0.8) - 0.3 * (defSkill - 0.8) + (type === 'aggressive' ? 0.1 : type === 'possession' ? 0.04 : -0.12);
+    if (by) {
+      // The high point: the taller man who jumps higher gets his hands on it
+      // first (up to ±0.06 for a head's height of reach).
+      const high = cz > 0.35 ? 1 : 0.4;
+      cont += 0.06 * high * Math.max(-1, Math.min(1, (reach(a).top - reach(by).top) / 0.4));
+      // Mismatch: against a smaller man at the high point, +10%.
+      if (cz > 0.35 && by.fx.height < a.fx.height && has(a, 'mismatch')) cont *= 1.1;
+      // Big Body: boxing him out, the ball in front of the defender, +10%.
+      if (mine < dist(by.pos, ball) && has(a, 'big-body')) cont *= 1.1;
+      // Big Slot: against a nickel or dime back, +10%.
+      if (by.p.pos === 'CB' && by.slot !== 'LCB' && by.slot !== 'RCB' && has(a, 'big-slot')) cont *= 1.1;
+      // Breakup Machine: the ball is knocked away 10% more often.
+      if (has(by, 'pbu-machine')) cont = 1 - (1 - cont) * 1.1;
+    }
+    // Contested Catch King: wins the 50/50 ball 15% more often. Red Zone
+    // Threat: inside the 20, +10% on the fade and back shoulder.
+    cont *= more(a, 'contested-catch-king', 0.15) * (s.setup.los >= GOAL_X - 20 && has(a, 'red-zone-threat') ? 1.1 : 1);
     let p = clean + (Math.min(clean, cont) - clean) * Math.min(1, contest);
+    // Glue Hands: a routine ball is never dropped.
+    if (routine && contest < 0.3 && has(a, 'glue-hands')) p = Math.max(p, 0.985);
     if (a.fx.r('catching', -1) < 0) p -= 0.3; // linemen and QBs
     p = Math.max(0.02, Math.min(0.985, p));
     if (rng() < p) return 'catch';
@@ -610,14 +695,19 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
   // A defender at the ball: he has to be playing it, and close to its path.
   if (!a.mem.onBall && off > 0.45) return 'miss';
   const skill = a.fx.a('ballSkills');
-  const ballhawk = a.p.traits?.includes('ballhawk') ? 0.1 : 0;
+  const ballhawk = has(a, 'ballhawk') ? 0.1 : 0;
   // In front of the intended receiver (undercutting) he can catch it; from behind he mostly knocks it away.
   const r = b.target >= 0 ? s.agents[b.target]! : null;
   const front = r ? ((a.pos.x - r.pos.x) * (s.agents[b.thrower]!.pos.x - r.pos.x) + (a.pos.y - r.pos.y) * (s.agents[b.thrower]!.pos.y - r.pos.y)) > 0 : true;
   const close = Math.max(0, 1 - off / 0.9);
   // Breakups outnumber interceptions about 4 to 1 in the NFL (passes defensed
   // vs interceptions); a ballhawk undercutting a route gets his hands on more.
-  const pInt = (0.05 + 0.2 * skill + ballhawk) * close * (front ? 1 : 0.3) * (b.target === -2 ? 0.6 : 1);
+  // The thrower: a Turnover Machine's contested throws are picked 25% more
+  // often, a Game Manager's forced throws 25% less; a Gambler undercutting
+  // in front gets to more of them (the trait catalog's lines).
+  const qb = s.agents[b.thrower]!;
+  const lean = more(qb, 'turnover-machine', 0.25) * (has(qb, 'game-manager') ? 0.75 : 1) * (front && has(a, 'gambler') ? 1.2 : 1);
+  const pInt = (0.05 + 0.2 * skill + ballhawk) * close * (front ? 1 : 0.3) * (b.target === -2 ? 0.6 : 1) * lean;
   // A defender there first gets a hand on it about half the time when he's
   // right in its path; what he doesn't reach, the receiver still has to catch
   // through him (the in-phase roll above), so contested balls mostly fail

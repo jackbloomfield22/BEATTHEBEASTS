@@ -8,8 +8,8 @@ import { atan2, cos, exp, sin } from '@/engine/math/detmath';
 import { blockOf, engage } from './blocks';
 import { arrive, boundaryGovern, CRUISE, seen, steer } from './movement';
 export { boundaryGovern } from './movement';
-import { releaseTime } from './effects';
-import { driveTime, lead } from './passing';
+import { driveTime, lead, releaseOf } from './passing';
+import { has } from './traits';
 import { ROUTE_DELAY, ROUTES, ZONES, type OffPlay, type RouteName, type ZoneName } from './plays';
 import { DIFFICULTY, zoneSpot, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, type Agent, type OffSlot } from './types';
@@ -114,9 +114,15 @@ export function continueDir(at: V2, p0: V2, p1: V2): V2 {
  * thrown before the break meets him at speed coming out of it.
  */
 export function breakCarry(a: Agent, c: number): number {
-  const rr = Math.max(a.fx.a('shortRoute'), a.fx.a('deepRoute'), a.fx.a('routeRunning'));
-  const c90 = 0.3 + 0.15 * rr;
-  const c180 = 0.15 + 0.1 * rr;
+  // The trait catalog on the break: a Route Technician is sharper on every
+  // route; an Athlete tight end breaks on his Agility; Twitch is ~0.05 s
+  // sharper and One-Speed ~0.1 s slower out of a curl or comeback; Stone
+  // Feet loses ~0.1 s on every break (a 0.04–0.06 share of top speed carried
+  // is about 0.05–0.1 s out of a break at 8 yd/s).
+  const rr0 = Math.max(a.fx.a('shortRoute'), a.fx.a('deepRoute'), a.fx.a('routeRunning'));
+  const rr = Math.min(1, Math.max(rr0, a.p.pos === 'TE' && has(a, 'athlete-te') ? a.fx.a('agility') : 0) + (has(a, 'route-technician') ? 0.1 : 0));
+  const c90 = 0.3 + 0.15 * rr + (has(a, 'twitch') ? 0.03 : 0) - (has(a, 'stone-feet') ? 0.06 : 0);
+  const c180 = 0.15 + 0.1 * rr - (has(a, 'one-speed') ? 0.05 : 0) - (has(a, 'stone-feet') ? 0.04 : 0);
   return c >= 0 ? c90 + (1 - c90) * c : c180 + (c90 - c180) * (1 + c);
 }
 
@@ -302,6 +308,9 @@ export function runRoute(s: PlayState, a: Agent): void {
   steer(a, boundaryGovern(a, { x: dir.x * a.fx.vmax, y: dir.y * a.fx.vmax }, ROUTE_ROOM - 0.3));
 }
 
+/** A blitzer's pickup missed at the snap (share): see assignProtection. */
+const PICKUP_MISS = 0.08;
+
 /** Rushers the protection is responsible for (defenders coming), nearest-lateral assignment. */
 export function assignProtection(s: PlayState): void {
   const rushers = s.def.filter((i) => s.setup.def.assign[s.agents[i]!.slot as keyof typeof s.setup.def.assign].kind === 'rush');
@@ -328,8 +337,20 @@ export function assignProtection(s: PlayState): void {
       }
     }
     if (best >= 0) {
+      // A blitzer (not a lineman) is sometimes missed: ~8% of pickups (our
+      // number; a blitz that comes free is most of the NFL's quick sacks). A
+      // Smart Line picks it up 20% more often, a Sack-Prone one lets it
+      // through 10% more, a back who's a Liability in Protection 30% more
+      // (the trait catalog's lines).
+      const B = s.agents[best]!;
+      const blitz = R.p.pos !== 'DE' && R.p.pos !== 'DT';
+      if (blitz) {
+        const line = s.off.map((i) => s.agents[i]!).filter((a) => a.p.pos === 'OL');
+        const k = (line.some((a) => has(a, 'smart-line')) ? 0.8 : 1) * (line.some((a) => has(a, 'sack-prone')) ? 1.1 : 1) * (has(B, 'liability-protection') ? 1.3 : 1);
+        if (s.rng.ai() < PICKUP_MISS * k) continue;
+      }
       taken.add(best);
-      s.agents[best]!.mem.man = r;
+      B.mem.man = r;
     }
   }
   // The rest help: the rusher closest to them.
@@ -484,7 +505,7 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, 
 export function openness(s: PlayState, qb: Agent, r: Agent, peek = false, why?: string[]): { sep: number; at: V2; T: number } {
   const react = (d: Agent) => (peek ? reactionPeek(s, d) : reaction(s, d));
   const power = qb.fx.r('throwPower');
-  const rel = releaseTime(qb.fx.r('release'));
+  const rel = releaseOf(qb);
   // The throw he'd make: the driven ball (planThrow's hang time), after his release.
   let at = lead(r, 0.8);
   let T = 0.8;
@@ -610,7 +631,12 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
   // windows (NGS "aggressiveness"). Round two's driven ball (0.6 s to 10 yd,
   // slower than M5.5's bullet) reads every window a little tighter; the
   // bar came down from 0.7 to 0 to keep sacks at M5.5's ~9% of dropbacks.
-  const need = NEED - 1.1 * pressure - Math.min(LATE_MAX, Math.max(0, held - 1) * 0.6);
+  // A Gunslinger fits it a step tighter (~0.7 yd); a Checkdown Charlie
+  // likes his back or tight end in the flat (half a yard less window) and
+  // gets to his deep reads 0.2 s later (the trait catalog's lines).
+  const flat = (r.p.pos === 'RB' || r.p.pos === 'TE') && o.at.x - s.setup.los < 5;
+  const deepRead = o.at.x - s.setup.los > 15;
+  const need = NEED - 1.1 * pressure - Math.min(LATE_MAX, Math.max(0, held - 1) * 0.6) - (has(qb, 'gunslinger') ? 0.7 : 0) - (flat && has(qb, 'checkdown-charlie') ? 0.5 : 0);
   s.eyes = { x: r.pos.x, y: r.pos.y };
   // The progression runs once, in time with the routes: a deep read that
   // wasn't there on schedule isn't come back to late (a QB who's been through
@@ -631,12 +657,14 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
   // reads every man before he's open.
   const rt = r.route;
   const breaking = !!rt && rt.idx === 0 && (rt.pts.length > 1 ? true : r.pos.x - s.setup.los < 12);
-  if (since > readTime && !(breaking && since < readTime + BREAK_WAIT && !late)) {
+  const rtime = readTime + (deepRead && has(qb, 'checkdown-charlie') ? 0.2 : 0);
+  if (since > rtime && !(breaking && since < rtime + BREAK_WAIT && !late)) {
     s.read.idx++;
     s.read.since = s.t;
   }
   // Under heavy pressure or out of time: the best available, or nothing (throw it away / take it).
-  if (pressure > 0.85 || held > 2.2) {
+  // A Sack Magnet holds it 0.2 s longer before he takes what's there; a Game Manager takes the checkdown the moment it's on him (the trait catalog's lines).
+  if (pressure > 0.85 || held > 2.2 + (has(qb, 'sack-magnet') ? 0.2 : 0)) {
     let best = -1;
     let bs = -Infinity;
     icons.forEach((k, j) => {
@@ -647,7 +675,7 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
         best = j;
       }
     });
-    return bs > 0.3 ? best : -1;
+    return bs > (has(qb, 'game-manager') ? 0 : 0.3) ? best : -1;
   }
   return -1;
 }
@@ -806,7 +834,17 @@ export function pursue(s: PlayState, d: Agent, t: Agent): void {
   const attack = t.side === 'off' ? 1 : -1;
   const upNow = seenT.vel.x * attack;
   const upSoon = Math.max(upNow, 0.9 * t.fx.vmax);
-  const vt = { x: attack * (upNow + (upSoon - upNow) * 0.7), y: seenT.vel.y * 0.7 };
+  // The trait catalog: against a Home Run Hitter past the second level (or a
+  // Home Run Threat after a 20+ yd catch, a Pick Six after the pick) the
+  // angles are 10% (15%) worse: he's faster than they take him for. A
+  // Sideline to Sideline backer on an outside run or a screen takes the
+  // true one.
+  const past = (t.pos.x - s.setup.los) * attack > 7;
+  const deepCatch = s.pass?.complete && (s.pass.airYards ?? 0) >= 20;
+  const under = (past && has(t, 'home-run-hitter') ? 0.9 : 1) * (past && has(t, 'big-play-back') ? 0.93 : 1) * (deepCatch && has(t, 'home-run-threat') ? 0.9 : 1) * (t.side === 'def' && has(t, 'pick-six') ? 0.85 : 1);
+  const outside = Math.abs(t.pos.y - (s.setup.ballY ?? 0)) > 5;
+  const trueAngle = outside && has(d, 'sideline-to-sideline');
+  const vt = { x: attack * (upNow + (upSoon - upNow) * (trueAngle ? 1 : 0.7)) * under, y: seenT.vel.y * 0.7 * under };
   const cut = intercept(d.pos, d.fx.vmax * 0.95, seenT.pos, vt);
   const k = 0.35 + 0.65 * d.fx.a('pursuit');
   const naive = { x: seenT.pos.x + vt.x * 0.25, y: seenT.pos.y + vt.y * 0.25 };
@@ -941,7 +979,29 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
     spy(s, d);
     return;
   }
-  const delay = 0.08 + 0.3 * (1 - d.fx.a('manCov')) + latency(s) * 0.5;
+  // His read of the route: ~0.06 s for a 95 in Man Coverage, ~0.14 s for an
+  // 80, ~0.24 s for a 60. (Playtest 2, identity harness: M6's 0.08 + 0.3·(1 −
+  // Man) spread the whole scale over 0.3 s, so Revis (95) trailed only 0.05 s
+  // tighter than Ty Law (79) and gave up the same completions. Same average
+  // at 80, the slope spent where the corners are.)
+  // The trait catalog, on the trail: a Shutdown Corner 0.04 s tighter; a
+  // Liability in Space 0.1 s late on a back or tight end; a Coverage
+  // Linebacker 0.05 s tighter on one; Stiff Hips 0.08 s on an in-breaker;
+  // a Seam Stretcher gets 0.15 s on a linebacker up the seam; a Head Fake's
+  // double move (a second break) freezes him 0.1 s, a Gambler 20% more.
+  const back = r.p.pos === 'RB' || r.p.pos === 'TE';
+  const leg = r.route && r.route.idx < r.route.pts.length ? r.route.pts[r.route.idx]! : null;
+  const inBreak = !!leg && Math.abs(leg.y - (s.setup.ballY ?? 0)) < Math.abs(r.pos.y - (s.setup.ballY ?? 0)) - 0.5;
+  const seam = !!leg && leg.x - r.pos.x > 5 && d.p.pos === 'LB';
+  const second = !!r.route && r.route.idx >= 2;
+  const trait =
+    (has(d, 'shutdown-corner') ? -0.04 : 0) +
+    (back && has(d, 'liability-space') ? 0.1 : 0) +
+    (back && has(d, 'coverage-linebacker') ? -0.05 : 0) +
+    (inBreak && has(d, 'stiff-hips') ? 0.08 : 0) +
+    (seam && has(r, 'seam-stretcher') ? 0.15 : 0) +
+    (second && has(r, 'head-fake') ? 0.1 * (has(d, 'gambler') ? 1.2 : 1) : 0);
+  const delay = Math.max(0.04, 0.14 + 0.5 * (0.8 - d.fx.a('manCov')) + trait) + latency(s) * 0.5;
   const v = seen(r, delay);
   const by = s.setup.ballY ?? 0;
   const inside = r.pos.y > by ? -0.7 : 0.7;
@@ -949,14 +1009,17 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
   const off = as.kind === 'man' && !as.press && (d.slot === 'LCB' || d.slot === 'RCB');
   // Stay a step over the top on deep routes; off man keeps a cushion that closes by ~12 yd.
-  const over = Math.max(depth > 12 ? 1.2 : 0.4, off ? 5.5 - 0.42 * Math.max(0, depth) : 0);
+  // (Against a Burner, off coverage gives 2 yd more cushion: the trait catalog's line.)
+  const over = Math.max(depth > 12 ? 1.2 : 0.4, off ? 5.5 + (has(r, 'burner') ? 2 : 0) - 0.42 * Math.max(0, depth) : 0);
   // He mirrors what he saw `delay` ago, projected to now.
   const aim = v2(v.pos.x + v.vel.x * delay + over, v.pos.y + v.vel.y * delay + inside);
   const want = boundaryGovern(d, track(d, aim, v.vel, 2.2), 1);
   // Backpedal while he's in front, turn and run when he's even.
   const face = r.pos.x > d.pos.x - 0.5 ? atan2(v.vel.y, v.vel.x) : Math.PI;
   coverPlant(s, d, want);
-  steer(d, want, { face });
+  // Track Speed: trailing on a vertical, he closes 5% faster (the trait catalog's line).
+  const closeK = r.pos.x > d.pos.x && depth > 10 && has(d, 'track-speed') ? 1.05 : 1;
+  steer(d, { x: want.x * closeK, y: want.y * closeK }, { face, mult: closeK });
   d.anim = r.pos.x < d.pos.x - 1 && len(d.vel) < 5 ? 'backpedal' : 'run';
 }
 
@@ -999,7 +1062,8 @@ const SPY_DEPTH = 5;
 function spy(s: PlayState, d: Agent): void {
   const qb = s.agents[s.qb]!;
   const los = s.setup.los;
-  if ((s.scrambleT >= 0 && s.t >= s.scrambleT + reaction(s, d)) || qb.pos.x > los - 1) {
+  // A Dual Threat's spy reacts 0.1 s later (the trait catalog's line).
+  if ((s.scrambleT >= 0 && s.t >= s.scrambleT + reaction(s, d) + (has(qb, 'dual-threat') ? 0.1 : 0)) || qb.pos.x > los - 1) {
     pursue(s, d, qb);
     return;
   }
@@ -1122,6 +1186,8 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
   };
   // The shade (a bracket): the safety's landmark leans toward the man they're doubling.
   if (bk && bkR && bk.how === 'shade') spot = v2(spot.x, spot.y + (bkR.pos.y - spot.y) * 0.45);
+  // A Deep Threat on his side: the deep third over him starts 2 yd deeper (the trait catalog's line).
+  if (deep && receivers.some((r) => Math.sign(r.pos.y - by) === Math.sign(spot.y - by || 1) && has(r, 'deep-threat'))) spot = v2(spot.x + 2, spot.y);
 
   if (deep) {
     // The deepest threat in my area (for the Tampa runner: a vertical in the

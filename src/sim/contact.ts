@@ -11,9 +11,25 @@ import { blockOf } from './blocks';
 import type { PlayState } from './state';
 import { TICK, type Agent, type Move } from './types';
 import { dist, len } from './vec';
+import { has, more } from './traits';
 
-/** The tackle logistic's base: ~90% for an even matchup (NFL missed-tackle rate ~10–15% of attempts, PFF/SIS). M5.5 had 2.1 (~89% before the move and mass terms). */
-const TACKLE0 = 2.4;
+/**
+ * The tackle logistic's base: ~90% for an even matchup (NFL missed-tackle
+ * rate ~10–15% of attempts, PFF/SIS). M5.5 had 2.1 (~89% before the move and
+ * mass terms). With the steeper skill slope (TACKLE_K) the base comes down so
+ * an average tackler on an average back lands where 2.4 and 3.2 did.
+ */
+const TACKLE0 = 2.11;
+/**
+ * The skill slope (logit per unit of Tackle over Break Tackle). Playtest 2,
+ * identity harness: at 3.2, with Tackle 60% of the tackler's side, Ed Reed
+ * (Tackle 33) finished 88% of his tries and Kam Chancellor (95) 93%, a gap
+ * no fan would see. At 5 with Tackle 75%: ~75% and ~97%.
+ */
+const TACKLE_K = 5;
+/** The juke and spin's evade: the logit at an average move against a good tackler from the side, and its slope (see tackleOdds). */
+const EVADE0 = -0.83;
+const EVADE_K = 4.3;
 /** A QB behind the line is easier to bring down than a back (logit): the sack. */
 const QB_BACK_EDGE = 0.8;
 const logistic = (x: number): number => 1 / (1 + exp(-x));
@@ -67,14 +83,15 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
   const closing = Math.max(0, (rvx * dx + rvy * dy) / dd);
   const cs = len(c.vel);
   const headOn = cs > 0.5 ? -(c.vel.x * dx + c.vel.y * dy) / (cs * dd) : 0; // +1 meeting him, −1 from behind
-  const pMom = c.fx.mass * cs;
+  // Freight Train: at full speed his momentum counts 15% more (the trait catalog's line).
+  const pMom = c.fx.mass * cs * (cs > 0.85 * c.fx.vmax && has(c, 'freight-train') ? 1.15 : 1);
   const dMom = d.fx.mass * Math.max(closing, len(d.vel) * 0.5);
   const massEdge = (pMom - dMom) / Math.max(1, pMom + dMom); // + carrier heavier/faster
   const gang = s.def.concat(s.off).filter((k) => {
     const o = s.agents[k]!;
     return o.side === d.side && o.i !== d.i && !o.down && dist(o.pos, c.pos) < 1.6;
   }).length;
-  const tackle = d.fx.a('tackle') * 0.6 + d.fx.a('hitPower') * 0.2 + d.fx.a('pursuit') * 0.2;
+  const tackle = d.fx.a('tackle') * 0.75 + d.fx.a('hitPower') * 0.15 + d.fx.a('pursuit') * 0.1;
   // A quarterback behind the line isn't a back running through a tackle
   // (Playtest 1/2: a scrambling QB shrugged off the end chasing him on every
   // long scramble; the tackle was broken as an arm tackle from behind by a
@@ -89,15 +106,41 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
   let evade = 0;
   if (mv === 'jukeL' || mv === 'jukeR' || mv === 'spin') {
     const squared = headOn > 0.7 && closing < 3;
-    evade = logistic(4 * (counter - d.fx.a('tackle') * 0.5 - d.fx.a('pursuit') * 0.3) + (squared ? -1.2 : 0.6));
+    // Centred on the band backs occupy (Playtest 2, identity harness: at
+    // 4·(Elusiveness − ½ Tackle − 0.3 Pursuit) + 0.6 a 48-Elusiveness back
+    // beat a good tackler from the side 41% of the time, so Brandon Jacobs
+    // juked, and tacklers were missed 0.3–0.5 a carry). Now from the side
+    // against a good tackler (Tackle and Pursuit 90): ~55% for a 99, ~30%
+    // for a 75, ~12% for a 48; squared up, about half that.
+    const skill = counter - 0.75 - (d.fx.a('tackle') * 0.5 + d.fx.a('pursuit') * 0.3 - 0.72);
+    evade = logistic(EVADE0 + EVADE_K * skill + (squared ? -1.2 : 0));
   }
   // Baseline ~85% per attempt for an even matchup (NFL missed-tackle rate
   // runs 10–15% of attempts: PFF / Sports Info Solutions charting).
-  let x = TACKLE0 + 3.2 * (tackle - counter * 0.85) - (qbBack ? 0.9 : 1.8) * massEdge + 0.7 * gang + (qbBack ? QB_BACK_EDGE : 0);
+  let x = TACKLE0 + TACKLE_K * (tackle - counter * 0.85) - (qbBack ? 0.9 : 1.8) * massEdge + 0.7 * gang + (qbBack ? QB_BACK_EDGE : 0);
   if (mv === 'stiffArm') x -= 0.5 * c.fx.a('stiffArm');
   if (mv === 'truck') x -= 0.8 * c.fx.a('trucking') * (c.fx.mass / (c.fx.mass + d.fx.mass)) * 2 - 0.4;
   if (headOn < -0.3 && !qbBack) x -= 0.4; // arm tackles from behind get broken more (not on a QB still behind the line)
-  return { evade, tackle: logistic(x), closing, headOn };
+  // The traits, as the catalog words them: a factor on the chance he gets
+  // away (the miss), so "20% more often" is 1.2.
+  const first = ((c.mem.tries as number | undefined) ?? 0) === 0;
+  const caught = c.mem.caughtAt !== undefined;
+  const db = d.p.pos === 'CB' || d.p.pos === 'S';
+  const alone = gang === 0;
+  let miss = 1;
+  if (caught && first) miss *= more(c, 'yac-monster', 0.2) * more(c, 'big-play', 0.1); // the first missed tackle after the catch
+  if (caught && db && alone) miss *= more(c, 'bruiser-te', 0.2); // DBs tackling him alone lose the collision
+  if (headOn > 0.3) miss *= more(c, 'battering-ram', 0.2); // runs through arm tackles head on
+  if (first && headOn < 0.5) miss *= more(c, 'tackle-breaker', 0.3); // the first attempt needs a clean wrap; glancing hits shrugged off
+  if (first && alone) miss *= more(c, 'scatback', 0.1); // the first defender in space
+  if (mv === 'stiffArm' && Math.abs(headOn) < 0.5) miss *= more(c, 'stiff-arm-king', 0.2); // a stiff arm on a man from the side
+  if (alone && counter > d.fx.a('tackle')) miss *= more(d, 'arm-tackler', 0.2); // in space, against a carrier stronger than his tackling
+  if (qbBack && has(d, 'sack-artist')) miss *= 1 / 1.2; // when he wins he finishes: the sack 20% more often
+  if (qbBack && first && cs > 2) miss *= more(c, 'escape-artist', 0.2); // the first free rusher on a QB on the move
+  if (!alone && has(d, 'tackling-machine')) miss *= 0.5; // in on every pile: no broken tackles against it
+  const p = logistic(x);
+  if (evade > 0) evade = Math.min(0.95, evade * more(c, 'ankle-breaker', 0.1)); // juke ceiling +10%
+  return { evade, tackle: Math.max(0, 1 - (1 - p) * miss), closing, headOn };
 }
 
 /**
@@ -108,6 +151,7 @@ export function resolveTackle(s: PlayState, d: Agent, c: Agent): { out: TackleOu
   const rng = s.rng.contact;
   const mv = c.move && c.busy > 0 ? c.move : null;
   const o = tackleOdds(s, d, c, mv);
+  c.mem.tries = ((c.mem.tries as number | undefined) ?? 0) + 1;
   if (o.evade > 0 && rng() < o.evade) return { out: 'missed', force: 0 };
   const force = (d.fx.mass * o.closing) / 60;
   if (rng() < o.tackle) return { out: isBigHit(s, d, c, o.closing, o.headOn) ? 'bigHit' : 'tackle', force };
@@ -116,18 +160,21 @@ export function resolveTackle(s: PlayState, d: Agent, c: Agent): { out: TackleOu
 
 /** Fumble on contact: Ball Security against Hit Power; protecting halves it. */
 export function fumbles(s: PlayState, d: Agent, c: Agent, big: boolean): boolean {
-  // Playtest 2: the ball comes out on a true big hit only, not on every tackle.
-  if (!big) return false;
+  // Playtest 2: the ball comes out on a true big hit only, not on every
+  // tackle; the exception is a Ball Punch, whose every tackle carries a
+  // punch-out attempt (the trait catalog: +30% on the tackle's fumble
+  // chance, here 1.3× the ~1.2% a sure-handed back loses per carry).
+  if (!big) return has(d, 'ball-punch') && s.rng.contact() < 0.016 * (1.4 - 0.9 * c.fx.a('ballSecurity'));
   // NFL backs fumble on ~1–1.5% of carries (about half lost); M6 trimmed this from 0.008 + 0.03·(…), which ran ~2.8% against the Beasts' hitters.
   const base = 0.004 + 0.02 * Math.max(0, d.fx.a('hitPower') - c.fx.a('ballSecurity') * 0.8);
   // A big hit jars it loose far more often (~5–8% for a sure-handed back,
   // double for a loose one), more again from a Bone Crusher; Ball Security resists.
-  const jar = big ? 0.07 * (1.4 - 0.9 * c.fx.a('ballSecurity')) * (has(d, 'bone-crusher') ? 1.1 : 1) : 0;
+  // Fumble Risk: +40% on big hits (the trait catalog's line).
+  const jar = big ? 0.07 * (1.4 - 0.9 * c.fx.a('ballSecurity')) * (has(d, 'bone-crusher') ? 1.1 : 1) * more(c, 'fumble-risk', 0.4) : 0;
   const p = (base + jar) * (c.move === 'protect' ? 0.4 : 1);
   return s.rng.contact() < p;
 }
 
-const has = (a: Agent, trait: string): boolean => a.p.traits?.includes(trait) ?? false;
 
 /**
  * A big hit, by design (feedback item 5): the hit's energy against what the
@@ -166,7 +213,8 @@ export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>
   const frames: Record<string, number> = { jukeL: 16, jukeR: 16, spin: 24, stiffArm: 20, truck: 18, dive: 30, protect: 1 };
   c.move = mv;
   c.busy = frames[mv] ?? 12;
-  c.moveCooldown = c.busy + 24;
+  // Spin Cycle: spins chain (two in a run); Human Joystick: any move chains with no recovery (the trait catalog's lines).
+  c.moveCooldown = c.busy + (has(c, 'human-joystick') ? 0 : mv === 'spin' && has(c, 'spin-cycle') ? 8 : 24);
   c.moveFatigue = Math.min(3, c.moveFatigue + 1);
   c.anim = mv === 'jukeL' || mv === 'jukeR' ? 'juke' : mv === 'protect' ? c.anim : mv;
   // The move's footwork: a juke steps sideways, a spin costs speed, a dive lunges.
@@ -178,11 +226,15 @@ export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>
   if (mv === 'jukeL' || mv === 'jukeR') {
     const side = mv === 'jukeL' ? 1 : -1;
     const k = 1.6 + 1.4 * c.fx.a('elusiveness');
-    tx = hx * sp * 0.75 - hy * side * k;
-    ty = hy * sp * 0.75 + hx * side * k;
+    // Jump Cut: the lateral jump cut costs no speed (the trait catalog's line).
+    const keep = has(c, 'jump-cut') ? 1 : 0.75;
+    tx = hx * sp * keep - hy * side * k;
+    ty = hy * sp * keep + hx * side * k;
   } else if (mv === 'spin') {
-    tx *= 0.7;
-    ty *= 0.7;
+    // Spin Cycle: keeps 90% of his speed.
+    const keep = has(c, 'spin-cycle') ? 0.9 : 0.7;
+    tx *= keep;
+    ty *= keep;
   } else if (mv === 'dive' && slides(c)) {
     // A QB's slide: feet first, giving himself up. He's down where it began
     // (forward progress), and he slows along the turf (~60% of his speed).

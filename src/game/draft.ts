@@ -465,6 +465,6 @@ export function draftedTeam(cat: Catalog, r: Roster): DraftedTeam {
     WR3: one('WR3'),
     TE: one('TE'),
     TE2: one('TE2'),
-    OL: ol.linemen!.map((l) => simPlayer(cat.entry.get(l.id)!, l.num)) as DraftedTeam['OL'],
+    OL: ol.linemen!.map((l) => simPlayer(cat.entry.get(l.id)!, l.num, (cat.unit.get(ol.id)?.traits ?? []).map((t) => t.id))) as DraftedTeam['OL'],
   };
 }

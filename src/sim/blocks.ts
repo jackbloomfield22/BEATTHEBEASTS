@@ -10,6 +10,7 @@ import { gauss } from './rand';
 import type { Block, PlayState } from './state';
 import { TICK, type Agent } from './types';
 import { dist, norm, sub, type V2 } from './vec';
+import { has } from './traits';
 
 /** Start of an engagement: the blocker is set, a small edge. */
 const LEV0 = -0.35;
@@ -71,7 +72,6 @@ const n = (a: Agent, k: string) => a.fx.r(k) / 99;
 /** Pass-rush moves (GDD §10.4): the rusher's opening move and his counters. */
 export type RushMove = 'bull' | 'speed' | 'swim' | 'spin' | 'club' | 'rip' | 'longArm';
 
-const has = (a: Agent, t: string) => a.p.traits?.includes(t) ?? false;
 
 /**
  * A rusher's move set, from his traits and his tools: what he opens with
@@ -118,7 +118,8 @@ function counterMove(s: PlayState, b: Agent, d: Agent, blk: Block): void {
   const set = rushPlan(d).counters;
   const mv = set[Math.floor(s.rng.block() * set.length)]!;
   const e = edge(b, d, { ...blk, move: mv });
-  const p = 1 / (1 + exp(-(4.5 * e - 0.7 + (has(d, 'sack-artist') ? 0.4 : 0))));
+  // A Relentless Motor gets a second effort late in the down (past 2 s: the trait catalog's line).
+  const p = 1 / (1 + exp(-(4.5 * e - 0.7 + (has(d, 'sack-artist') ? 0.4 : 0) + (blk.t > 2 && has(d, 'motor') ? 0.6 : 0))));
   blk.tries++;
   if (s.rng.block() < p) {
     blk.move = mv;
@@ -142,7 +143,19 @@ function edge(b: Agent, d: Agent, blk: Block): number {
         n(b, rb) * 0.55 + n(b, 'impactBlock') * 0.15 + n(b, 'strength') * 0.3 - 0.25;
     const hold = shed * 0.5 + n(d, 'strength') * 0.3 + n(d, 'powerMoves') * 0.2;
     const mass = (d.fx.mass - b.fx.mass) / 250;
-    return hold - push + mass;
+    // A Run Stuffer holds the point of attack; Road Graders move him off the
+    // ball (the trait catalog's lines; ~a sixth of the gap between an
+    // average and a Pro Bowl run blocker each).
+    // The blockers' own: a Blocking WR's stalk holds ~0.4 s longer, a Sixth
+    // Lineman seals the edge ~0.3 s longer, a Lead Blocker (H-back, wing,
+    // fullback) wins his lead block more often; a Liability Blocker is shed
+    // 30% faster. (Each an edge of ~0.08–0.12, the trait catalog's lines.)
+    const own =
+      (b.p.pos === 'WR' && has(b, 'blocking-wr') ? 0.12 : 0) +
+      (b.p.pos === 'TE' && has(b, 'sixth-lineman') ? 0.1 : 0) +
+      (!lineman && has(b, 'lead-blocker') ? 0.08 : 0) -
+      (has(b, 'liability-blocker') ? 0.1 : 0);
+    return hold - push + mass + (has(d, 'run-stuffer') ? 0.08 : 0) - (lineman && has(b, 'road-graders') ? 0.08 : 0) - own;
   }
   let rush: number;
   let pro: number;
@@ -167,6 +180,25 @@ function edge(b: Agent, d: Agent, blk: Block): number {
   }
   return rush - pro;
 }
+/**
+ * The trait catalog's pass-rush timings, as a head start (or a deficit) in
+ * leverage: the leverage he'd gain in that many seconds at this matchup's
+ * rate, so "wins 0.3 s earlier" is 0.3 s earlier. A Speed Rusher on a speed
+ * or rip move against a tackle whose Pass Block Finesse is below his Finesse
+ * Moves: −0.3 s. An Interior Wrecker on a guard or center: −0.25 s. Pass Pro
+ * Wall: the pocket holds 0.2 s longer; Turnstile: 0.2 s less.
+ */
+function rushHeadStart(b: Agent, d: Agent, blk: Block): number {
+  let dt = 0;
+  if ((blk.move === 'speed' || blk.move === 'rip') && n(d, 'finesseMoves') > n(b, 'pbFinesse') && has(d, 'speed-rusher')) dt += 0.3;
+  if ((b.slot === 'LG' || b.slot === 'C' || b.slot === 'RG') && has(d, 'interior-wrecker')) dt += 0.25;
+  if (has(b, 'pass-pro-wall')) dt -= 0.2;
+  if (b.p.pos === 'TE' && has(b, 'pass-pro-te')) dt -= 0.3; // a tight end who protects: the edge rush delayed 0.3 s
+  if (has(b, 'turnstile')) dt += 0.2;
+  if (dt === 0) return 0;
+  return dt * (PASS_BASE + DRIFT * 2 * Math.max(0, edge(b, d, blk) + blk.bias));
+}
+
 export function engage(s: PlayState, b: Agent, d: Agent, kind: Block['kind']): Block {
   // A lineman's block starts with him set; a stalk block in space starts even.
   // A rusher picked up again right after beating his man (help, the back) comes in with his momentum: half a step ahead.
@@ -177,6 +209,7 @@ export function engage(s: PlayState, b: Agent, d: Agent, kind: Block['kind']): B
   // first. Pass sets keep their calibrated spread (sacktime.ts), so none there.
   const bias = kind === 'run' ? gauss(s.rng.block) * RUN_BIAS : gauss(s.rng.block) * PASS_BIAS;
   const blk: Block = { b: b.i, d: d.i, lev: lev0, kind, move: kind === 'run' ? 'drive' : pickMove(s, d), t: 0, bias, next: 0.9 + 0.4 * s.rng.block(), tries: 0 };
+  if (kind === 'pass') blk.lev += rushHeadStart(b, d, blk);
   s.blocks.push(blk);
   b.anim = 'block';
   d.anim = 'engaged';
@@ -242,14 +275,16 @@ export function stepBlocks(s: PlayState, goal: V2): void {
       if (k !== undefined) vy += k * (0.3 + 1.4 * win);
     } else if (POWER.includes(blk.move)) {
       // Bull rush and long arm: straight back into the pocket.
-      const push = Math.max(0, win - 0.25) * 2.8;
+      // A Power Rusher on a weaker anchor collapses it a yard sooner (the trait catalog's line; ~30% faster back).
+      const push = Math.max(0, win - 0.25) * 2.8 * (n(d, 'powerMoves') > n(b, 'anchor') && has(d, 'power-rusher') ? 1.3 : 1);
       vx = toGoal.x * push;
       vy = toGoal.y * push;
     } else {
       // Speed and finesse: around the edge, then down toward the QB.
       const side = Math.sign(d.pos.y - b.pos.y) || 1;
       const around = win * 2.2;
-      vx = toGoal.x * win * 1.4 - 0.3;
+      // (An Edge Bender dips under the punch: turning the corner costs 30% less.)
+      vx = toGoal.x * win * 1.4 - 0.3 * (has(d, 'edge-bender') ? 0.7 : 1);
       vy = side * around * 0.6 + toGoal.y * win;
     }
     // Move both, keeping them in contact on the line from blocker to defender.

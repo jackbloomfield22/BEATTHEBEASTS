@@ -81,7 +81,13 @@ export interface Effects {
 
 export function effects(p: SimPlayer): Effects {
   const r = (k: string, fallback = 50) => p.attrs[k] ?? fallback;
-  const { vmax, tau } = solveSprint(speedToForty(r('speed')), accelToSplit(r('acceleration')));
+  const sprint = solveSprint(speedToForty(r('speed')), accelToSplit(r('acceleration')));
+  const vmax = sprint.vmax;
+  // Burst: top speed ~0.15 s sooner (tau −15%); Long Strider: a step later
+  // (+15%) (the trait catalog's lines). Traits read directly: effects is
+  // built before the agent (traits.ts works on agents).
+  const tr = p.traits ?? [];
+  const tau = sprint.tau * (tr.includes('burst') || tr.includes('lightning') ? 0.85 : 1) * (tr.includes('long-strider') ? 1.15 : 1);
   const agility = r('agility');
   const weight = p.weightEq ?? p.weightLb;
   return {
@@ -90,15 +96,44 @@ export function effects(p: SimPlayer): Effects {
     // A planted cut: ~9 yd/s² at 60 Agility to ~15 at 99 (elite change of
     // direction decelerates at ~12–14 m/s²: Harper et al. 2019 on
     // deceleration in field sports).
-    cutAccel: 9 + (agility - 60) * (6 / 39),
+    // One Cut plants and goes (cuts cost less speed: ~25% more cutting
+    // grip); Straight Line pays 20% more for his (the trait catalog's lines).
+    cutAccel: (9 + (agility - 60) * (6 / 39)) * (tr.includes('one-cut') ? 1.25 : 1) * (tr.includes('straight-line') ? 0.8 : 1),
     turnRate: 5 + (agility - 60) * (4 / 39),
     mass: weight * LB_TO_KG,
     // Shoulder half-width ~0.23 m for 200 lb to ~0.3 m at 330 lb, plus pads.
     radius: 0.36 + (weight - 200) * 0.0008,
     height: p.heightIn / 36,
-    a: (k: string) => (p.attrs[k] ?? 50) / 99,
+    a: (k: string) => (p.attrs[k] ?? carryStandIn(p, k) ?? 50) / 99,
     r,
   };
+}
+
+/**
+ * A pass catcher with the ball after the catch. Break Tackle, Elusiveness,
+ * Trucking and Stiff Arm are rated for backs only, so every receiver and
+ * tight end ran after the catch as a 50 (Playtest 2, identity harness: Gronk
+ * broke tackles no more often than Tony Gonzalez). Stand-ins from what his
+ * position does rate: Run After Catch (built from his yards after the catch)
+ * with Strength for the power moves and Agility for the elusive ones. Weights
+ * are ours; mass already counts on its own in the collision.
+ */
+function carryStandIn(p: SimPlayer, k: string): number | undefined {
+  const rac = p.attrs.rac;
+  if (rac === undefined) return undefined;
+  const str = p.attrs.strength ?? 50;
+  const agi = p.attrs.agility ?? 50;
+  switch (k) {
+    case 'breakTackle':
+      return 0.7 * rac + 0.3 * str;
+    case 'elusiveness':
+      return 0.6 * rac + 0.4 * agi;
+    case 'trucking':
+    case 'stiffArm':
+      return 0.5 * rac + 0.5 * str;
+    default:
+      return undefined;
+  }
 }
 
 // ---- Passing (GDD §9.1) --------------------------------------------------

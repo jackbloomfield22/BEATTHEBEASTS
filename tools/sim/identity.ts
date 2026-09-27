@@ -17,12 +17,16 @@ import type { SimPlayer } from '../../src/sim/index.ts';
 
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const base = practiceRosters(snap);
-const REPS = Number(process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 6);
+let REPS = Number(process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 6);
+/** Reps per play and coverage (the test runs a couple; the harness 4–6). */
+export const setReps = (n: number): void => {
+  REPS = n;
+};
 const ONLY = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
 const YDS_TO_MPH = 3600 / 1760;
 
 type Side = 'off' | 'def';
-type Metric = 'topSpeed' | 'sepBreak' | 'yac' | 'trafficCatch' | 'yacContact' | 'broken' | 'missed' | 'truckShare' | 'ttt' | 'offTarget' | 'scramble' | 'cmpAllowed' | 'sepAllowed' | 'tackleRate' | 'pressure' | 'rushWin';
+type Metric = 'topSpeed' | 'sepBreak' | 'yac' | 'trafficCatch' | 'yacContact' | 'broken' | 'missed' | 'powerShare' | 'ttt' | 'offTarget' | 'scramble' | 'cmpAllowed' | 'sepAllowed' | 'tackleRate' | 'pressure' | 'rushWin';
 const LABEL: Record<Metric, [string, string, number]> = {
   // [what a fan calls it, unit, the smallest difference that shows]
   topSpeed: ['top speed', 'mph', 0.8],
@@ -32,7 +36,7 @@ const LABEL: Record<Metric, [string, string, number]> = {
   yacContact: ['yards after contact', 'yd', 0.4],
   broken: ['tackles broken a carry', '', 0.04],
   missed: ['tacklers made to miss a carry', '', 0.04],
-  truckShare: ['broken tackles that are trucks', '%', 10],
+  powerShare: ['tacklers beaten through contact', '%', 10],
   ttt: ['time to throw', 's', 0.08],
   offTarget: ['throws off target (1+ yd)', '%', 4],
   scramble: ['scramble yards', 'yd', 1],
@@ -62,17 +66,19 @@ export const PAIRS: Pair[] = [
   { a: ['Barry Sanders', 'RB'], b: ['Jerome Bettis', 'RB'], side: 'off', slot: 'RB', expect: { topSpeed: 1, missed: 1 }, why: 'Barry makes a man miss in a phone booth; the Bus runs through him' },
   { a: ['Chris Johnson', 'RB'], b: ['Christian Okoye', 'RB'], side: 'off', slot: 'RB', expect: { topSpeed: 1, missed: 1 }, why: 'CJ2K is the fastest back there is; the Nigerian Nightmare runs people over' },
   { a: ['Marshall Faulk', 'RB'], b: ['Larry Csonka', 'RB'], side: 'off', slot: 'RB', expect: { topSpeed: 1, missed: 1 }, why: 'Faulk cuts and catches; Csonka pounds it' },
-  { a: ['Jamaal Charles', 'RB'], b: ['Brandon Jacobs', 'RB'], side: 'off', slot: 'RB', expect: { missed: 1, truckShare: -1 }, why: 'Charles slips tackles; Jacobs trucks them' },
+  { a: ['Jamaal Charles', 'RB'], b: ['Brandon Jacobs', 'RB'], side: 'off', slot: 'RB', expect: { missed: 1, powerShare: -1 }, why: 'Charles slips tackles; Jacobs runs through them' },
   { a: ['Dan Marino', 'QB'], b: ['Michael Vick', 'QB'], side: 'off', slot: 'QB', expect: { ttt: -1, scramble: -1, offTarget: -1 }, why: 'Marino gets it out before the rush arrives; Vick runs' },
   { a: ['Peyton Manning', 'QB'], b: ['Lamar Jackson', 'QB'], side: 'off', slot: 'QB', expect: { scramble: -1 }, why: 'Manning from the pocket; Lamar with his legs (their releases rate 98 and 92: the legs are the contrast)' },
   { a: ['Tom Brady', 'QB'], b: ['Steve Young', 'QB'], side: 'off', slot: 'QB', expect: { scramble: -1 }, why: 'Brady stands in; Young takes off' },
   { a: ['Joe Montana', 'QB'], b: ['Joe Namath', 'QB'], side: 'off', slot: 'QB', expect: { offTarget: -1 }, why: 'Montana puts it on the hands; Namath sprays it' },
   { a: ['Rob Gronkowski', 'TE'], b: ['Tony Gonzalez', 'TE'], side: 'off', slot: 'TE', expect: { topSpeed: 1, yac: 1 }, why: 'Gronk runs and breaks tackles after the catch; Gonzalez is the route runner' },
-  { a: ['Antonio Gates', 'TE'], b: ['Dave Casper', 'TE'], side: 'off', slot: 'TE', expect: { topSpeed: 1 }, why: 'Gates moves like a big receiver; Casper is the 70s in-line tight end' },
+  // (Dave Casper was the first pick, but he rates as the receiver he was: routes 96, Catch in Traffic 99, Speed 75 to Gates' 81. Marcedes Lewis, the 2010s Packers' blocker, is the in-line contrast.)
+  { a: ['Antonio Gates', 'TE'], b: ['Marcedes Lewis', 'TE'], side: 'off', slot: 'TE', expect: { topSpeed: 1, yac: 1, sepBreak: 1 }, why: 'Gates moves like a big receiver; Marcedes Lewis is the in-line blocker' },
   { a: ['Deion Sanders', 'CB'], b: ['Kam Chancellor', 'S'], side: 'def', slot: 'LCB', expect: { cmpAllowed: -1, sepAllowed: -1 }, why: 'Prime Time shuts down half the field; Kam is a box hitter out of place at corner' },
   { a: ['Darrelle Revis', 'CB'], b: ['Ty Law', 'CB'], side: 'def', slot: 'LCB', expect: { cmpAllowed: -1, sepAllowed: -1 }, why: 'Revis Island' },
   { a: ['Ed Reed', 'S'], b: ['Kam Chancellor', 'S'], side: 'def', slot: 'SS', expect: { tackleRate: -1 }, why: 'Reed is the ballhawk who misses tackles; Kam finishes' },
-  { a: ['Reggie White', 'DE'], b: ['Howie Long', 'DE'], side: 'def', slot: 'LE', expect: { rushWin: 1 }, why: 'The Minister of Defense runs through the tackle' },
+  // (Howie Long was the first pick: 91 to White's 97 with pass-rush ratings 4–12 apart, two Hall of Famers. Aaron Smith, the 2000s Steelers' two-gap end, is the real contrast.)
+  { a: ['Reggie White', 'DE'], b: ['Aaron Smith', 'DE'], side: 'def', slot: 'LE', expect: { rushWin: 1, pressure: 1 }, why: 'The Minister of Defense runs through the tackle; Aaron Smith holds the point in a 3-4' },
   { a: ['Lawrence Taylor', 'LB'], b: ['Mike Singletary', 'LB'], side: 'def', slot: 'WLB', expect: { rushWin: 1 }, why: 'LT on the edge; Singletary in the middle (both rushing on the fire zone)' },
 ];
 
@@ -135,7 +141,8 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
       const p = s.result?.pass;
       if (!p?.attempted || p.target !== slotAgent(s, slot).i || p.sep === undefined) continue;
       sep.push(p.sep);
-      if (p.sep < 1.5) traffic.push(p.complete ? 1 : 0);
+      // In traffic: a defender in phase at the catch point (contest ≥ 0.5: within ~a yard and playing the ball), not just nearby.
+      if ((p.contest ?? 0) >= 0.5) traffic.push(p.complete ? 1 : 0);
       if (p.complete) yac.push(s.result!.yards - p.airYards);
     }
     out.trafficCatch = 100 * mean(traffic);
@@ -157,13 +164,14 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
       const hits = s.events.filter((ev) => (ev.type === 'hit' || ev.type === 'brokenTackle' || ev.type === 'missedTackle') && ev.who?.includes(rb.i));
       const br = s.events.filter((ev) => ev.type === 'brokenTackle' && ev.who?.[0] === rb.i);
       broken += br.length;
-      trucks += br.filter((ev) => ev.data?.move === 'truck').length;
+      // Through contact: a tackle broken by power (a truck, a stiff arm, or no move at all: Break Tackle); around it: a miss, or one broken in a juke or spin.
+      trucks += br.filter((ev) => ev.data?.move !== 'jukeL' && ev.data?.move !== 'jukeR' && ev.data?.move !== 'spin').length;
       missed += s.events.filter((ev) => ev.type === 'missedTackle' && ev.who?.[1] === rb.i).length;
       if (hits[0]?.at && s.result) after.push(s.result.spot - hits[0].at.x);
     }
     out.broken = broken / Math.max(1, carries);
     out.missed = missed / Math.max(1, carries);
-    out.truckShare = (100 * trucks) / Math.max(1, broken);
+    out.powerShare = (100 * trucks) / Math.max(1, broken + missed);
     out.yacContact = mean(after);
   }
   if (slot === 'QB') {

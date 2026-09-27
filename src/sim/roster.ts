@@ -8,10 +8,11 @@ import type { DefSlot, OffSlot, SimPlayer } from './types';
 
 export interface SnapshotLike {
   entries: SnapshotEntry[];
-  units: { id: string; linemen: string[] }[];
+  units: { id: string; linemen: string[]; traits?: { id: string }[] }[];
 }
 
-export function simPlayer(e: SnapshotEntry, num: number): SimPlayer {
+/** A player for the sim. A lineman carries his unit's traits too (Pass Pro Wall, Road Graders: the unit is how the line is rated). */
+export function simPlayer(e: SnapshotEntry, num: number, unitTraits: readonly string[] = []): SimPlayer {
   return {
     id: e.id,
     name: e.name,
@@ -21,7 +22,7 @@ export function simPlayer(e: SnapshotEntry, num: number): SimPlayer {
     heightIn: e.heightIn,
     weightLb: e.weightLb,
     weightEq: e.weightEq,
-    traits: e.traits.map((t) => t.id),
+    traits: [...e.traits.map((t) => t.id), ...unitTraits],
   };
 }
 
@@ -50,7 +51,8 @@ export function practiceRosters(snap: SnapshotLike): { offense: Record<OffSlot, 
   const unit = snap.units.find((u) => u.id.includes(':SF:1980s')) ?? snap.units[0]!;
   const ol = unit.linemen.map((id) => snap.entries.find((e) => e.id === id)!);
   const nums = [71, 68, 56, 51, 77];
-  const line = OL_SLOTS.map((_, j) => simPlayer(ol[j]!, nums[j]!)) as ContendersRoster['OL'];
+  const unitTraits = (unit.traits ?? []).map((t) => t.id);
+  const line = OL_SLOTS.map((_, j) => simPlayer(ol[j]!, nums[j]!, unitTraits)) as ContendersRoster['OL'];
   const team: ContendersRoster = {
     QB: need('Joe Montana', 'QB', 16),
     RB: need('Roger Craig', 'RB', 33),

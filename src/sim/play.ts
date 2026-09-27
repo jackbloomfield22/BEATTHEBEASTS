@@ -29,12 +29,12 @@ import {
 import { stepFlight } from './ball';
 import { blockOf, stepBlocks } from './blocks';
 import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tackleOdds, tickMoves } from './contact';
-import { releaseTime } from './effects';
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
-import { carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
-import { catchLook, findsBallAt, planThrow, reach, release, resolveCatch, stepAir } from './passing';
+import { aiMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
+import { catchLook, findsBallAt, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
+import { has } from './traits';
 import { manOf, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
 import { HOT_ROUTES } from './plays';
@@ -135,9 +135,12 @@ function doSnap(s: PlayState): void {
     const r = manOf(s, d);
     if (as.kind !== 'man' || !as.press || !r) continue;
     if (dist(r.pos, d.pos) > 2.5) continue;
-    const edge = d.fx.a('press') - r.fx.a('beatPress') + 0.05 * gauss(s.rng.ai);
-    if (edge > 0) r.busy = Math.round(60 * (0.12 + 0.9 * edge));
-    else d.busy = Math.round(60 * (0.1 + 0.8 * -edge));
+    // A Release Artist beats the jam 25% more often (a quarter of the
+    // spread's worth of edge) and is never knocked off his stem; a Jam
+    // Artist's jam holds 0.15 s longer (the trait catalog's lines).
+    const edge = d.fx.a('press') - r.fx.a('beatPress') + 0.05 * gauss(s.rng.ai) - (has(r, 'release-artist') ? 0.05 : 0);
+    if (edge > 0 && !has(r, 'release-artist')) r.busy = Math.round(60 * (0.12 + 0.9 * edge + (has(d, 'jam-artist') ? 0.15 : 0)));
+    else if (edge <= 0) d.busy = Math.round(60 * (0.1 + 0.8 * -edge));
   }
 }
 
@@ -168,7 +171,10 @@ function aiScrambles(s: PlayState, qb: Agent): boolean {
   // Checked every tenth of a second while it's there: a mobile QB takes it
   // within about a second (half the time), a statue almost never; pressure
   // makes it likelier.
-  const mobile = qb.fx.a('speed') * 0.5 + qb.fx.a('elusiveness') * 0.5;
+  // (His Scramble rating, the QB's own: Elusiveness is a back's rating, so
+  // every QB read as a 50 there and Manning left the pocket nearly as often as
+  // Lamar Jackson. A Statue only steps up or drifts: a third as often.)
+  const mobile = (qb.fx.a('speed') * 0.5 + qb.fx.a('scramble') * 0.5) * (has(qb, 'statue') ? 0.33 : 1);
   if (!(s.tick % 6 === 0 && s.rng.ai() < (0.01 + 0.045 * mobile) * (1 + 2 * pressure))) return false;
   qb.mem.laneX = lane.x;
   qb.mem.laneY = lane.y;
@@ -288,6 +294,7 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
       if (s.runShow < 0) s.runShow = s.t;
       rb.anim = 'carry';
       s.events.push({ t: s.t, type: 'handoff', who: [qb.i, rb.i] });
+      rb.mem.handoffAt = s.t;
     }
     return;
   }
@@ -304,7 +311,8 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
   if (s.scrambleT < 0 && since > 0.35 && (s.setup.user ? inp.scramble : aiScrambles(s, qb))) startScramble(s, qb);
   if (s.scrambleT >= 0) {
     // Tucked: he runs like a ball carrier (context speed, cuts), eyes still downfield until the line.
-    const pace = carrierPace(s, qb, 1);
+    // A Statue outside the tackle box (~4 yd off the ball) runs 15% slower (the trait catalog's line).
+    const pace = carrierPace(s, qb, 1) * (Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) > 4 && has(qb, 'statue') ? 0.85 : 1);
     const dir = stickDir(inp.move);
     const want = s.setup.user ? { x: dir.x * qb.fx.vmax * pace, y: dir.y * qb.fx.vmax * pace } : scrambleLane(s, qb, pace);
     autoBurst(s, qb, pace, want);
@@ -340,6 +348,9 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
       }
     }
     const pp = qb.fx.a('pocketPresence');
+    // A Climber steps up into the pocket instead of bailing when the edge
+    // collapses (the trait catalog's line): up, not out.
+    if (has(qb, 'climber') && (push.x !== 0 || push.y !== 0)) push = { x: Math.abs(push.x) + 0.5 * Math.abs(push.y), y: push.y * 0.4 };
     const esc = (qb.mem.escape as number | undefined) ?? 0;
     steer(qb, { x: push.x * (0.6 + pp), y: push.y * (0.6 + pp) * 0.8 + esc * 5 }, { face: 0, pace: esc ? 0.9 : 0.6 });
   } else {
@@ -399,7 +410,7 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     return;
   }
   const start = (icon: number, charge: number, aim: V2, away = false) => {
-    s.windup = { at: s.t + releaseTime(qb.fx.r('release')), from: s.t, icon, charge, aim, away };
+    s.windup = { at: s.t + releaseOf(qb), from: s.t, icon, charge, aim, away };
     qb.anim = 'throw';
     s.eyes = away ? s.eyes : { ...s.agents[s.icons[icon]!]!.pos };
   };
@@ -654,7 +665,11 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     if (!inp.protect && c.move === 'protect' && !c.mem.optProtect) c.move = null;
   } else {
     want = carrierAI(s, c, attack);
-    want = { x: want.x * pace, y: want.y * pace };
+    // A Dancer hesitates in the backfield: a 0.15 s stutter before the hole
+    // unless the lane's clean (nobody free within 3 yd) (the trait catalog's line).
+    const since = s.t - ((c.mem.handoffAt as number | undefined) ?? -9);
+    const stutter = since < 0.15 && has(c, 'dancer') && (attack > 0 ? s.def : s.off).some((i) => !blockOf(s, i) && dist(s.agents[i]!.pos, c.pos) < 3);
+    want = { x: want.x * pace * (stutter ? 0.4 : 1), y: want.y * pace * (stutter ? 0.4 : 1) };
     // A quarterback past the line protects himself: he slides a couple of
     // strides before a tackler gets there (as QBs are taught) rather than take the hit.
     if (slides(c) && c.moveCooldown === 0 && c.busy === 0 && (c.pos.x - s.setup.los) * attack > 1) {
@@ -687,10 +702,7 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
           c.mem[`mv${d.i}`] = true;
           const r = s.rng.ai() * (0.12 / (0.25 + 0.2 * Math.max(c.fx.a('elusiveness'), c.fx.a('stiffArm'))));
           if (r < 0.08) {
-            const elu = c.fx.a('elusiveness');
-            const pow = c.fx.a('trucking') * (c.fx.mass / 110);
-            const mv = pow > elu && r < 0.04 ? 'truck' : c.fx.a('stiffArm') > elu ? 'stiffArm' : rel.y > 0 ? 'jukeR' : 'jukeL';
-            startMove(s, c, mv);
+            startMove(s, c, aiMove(s, c, d));
           }
           break;
         }
@@ -947,7 +959,24 @@ function startWrap(s: PlayState, c: Agent, o: Agent, inPocket: boolean): void {
   const mr = c.fx.mass / (c.fx.mass + o.fx.mass);
   let drive = FALL_K * Math.max(0, c.vel.x * attack) * mr - FALL_STOP * Math.max(0, -o.vel.x * attack) * (1 - mr);
   drive = Math.max(0, Math.min(FALL_MAX, drive));
+  // After contact, as the trait catalog words it: a Battering Ram meeting
+  // him head on +0.8 yd; a Goal-Line Hammer inside the 5 falls forward
+  // +1 yd; a Thumper in the hole takes 0.5 yd back between the tackles; an
+  // Undersized tackler gives up 0.5 yd.
   const sp = len(c.vel);
+  const ohx = o.pos.x - c.pos.x;
+  const ohy = o.pos.y - c.pos.y;
+  const headOn = sp > 0.5 ? (c.vel.x * ohx + c.vel.y * ohy) / (sp * Math.max(1e-6, Math.sqrt(ohx * ohx + ohy * ohy))) : 0;
+  const inside = Math.abs(c.pos.y - (s.setup.ballY ?? 0)) < 4;
+  let extra = (headOn > 0.3 && has(c, 'battering-ram') ? 0.8 : 0) + (c.pos.x * attack > (attack > 0 ? GOAL_X - 5 : -5) && has(c, 'goal-line-hammer') ? 1 : 0) - (inside && has(o, 'thumper') ? 0.5 : 0) + (has(o, 'undersized') ? 0.5 : 0);
+  // A Grinder never loses yards inside: a stuffed run falls forward a yard.
+  const stuffed = (c.pos.x - s.setup.los) * attack < 0.5 && inside && !!s.setup.play.run && has(c, 'grinder');
+  if (stuffed) {
+    c.vel.x = attack * Math.max(sp, 2);
+    c.vel.y = 0;
+    extra = Math.max(extra, 1);
+  }
+  if (!inPocket) drive = Math.max(0, drive + extra);
   // Along his run: the forward share of his heading sets how far he goes to make the drive downfield.
   const hx = sp > 0.3 ? Math.abs(c.vel.x) / sp : 1;
   const path = inPocket ? Math.min(1, sp * 0.25) : drive / Math.max(0.5, hx);
@@ -997,7 +1026,8 @@ function wrapStep(s: PlayState, c: Agent, inPocket: boolean): boolean {
   if (!c.mem.wrapTried && s.t - t0 < WRAP_BREAK_T && c.busy > 0 && (c.move === 'spin' || c.move === 'stiffArm' || c.move === 'truck' || c.move === 'jukeL' || c.move === 'jukeR')) {
     c.mem.wrapTried = true;
     const odds = tackleOdds(s, o, c, c.move);
-    if (s.rng.contact() < WRAP_BREAK * (1 - odds.tackle)) {
+    // Low Center: balance back 30% faster after contact (the trait catalog's line).
+    if (s.rng.contact() < WRAP_BREAK * (1 - odds.tackle) * (has(c, 'low-center') ? 1.3 : 1)) {
       c.mem.wrapBy = -1;
       c.vel.x *= 0.6;
       c.vel.y *= 0.6;
@@ -1033,6 +1063,21 @@ function wrapStep(s: PlayState, c: Agent, inPocket: boolean): boolean {
   if (inPocket) {
     s.sack = true;
     s.events.push({ t: s.t, type: 'sack', who: [o.i, c.i], at: { ...c.pos } });
+    // The strip sack: roughly one sack in ten jars the ball loose (NFL
+    // 2010s: ~1 fumble per 9–10 sacks), a Strip Sack from his blind side
+    // (behind him) 25% more often, a sack artist's Strip Sack trait being the
+    // catalog's line. A QB who protects it (Ball Security, where rated) less.
+    const blind = (o.pos.x - c.pos.x) * attack < 0;
+    if (s.rng.contact() < 0.1 * (1.3 - 0.6 * c.fx.a('ballSecurity')) * (blind && has(o, 'strip-sack') ? 1.25 : 1)) {
+      s.ball.mode = 'loose';
+      s.ball.holder = -1;
+      s.ball.pos = { x: c.pos.x, y: c.pos.y, z: 0.8 };
+      s.ball.vel = { x: gauss(s.rng.bounce) * 2, y: gauss(s.rng.bounce) * 2, z: 2 };
+      s.phase = 'loose';
+      s.carrier = -1;
+      s.events.push({ t: s.t, type: 'fumble', who: [c.i, o.i], at: { ...c.pos }, data: { sack: true } });
+      return true;
+    }
     whistle(s, c.pos.x <= 0 ? 'safety' : 'sack', c.pos.x, true);
   } else {
     s.events.push({ t: s.t, type: 'tackle', who: [o.i, c.i], at: { ...c.pos }, data: { big: false, wrapT: Math.round((s.t - t0) * 100) / 100 } });
@@ -1291,7 +1336,8 @@ function ballStep(s: PlayState): void {
         // A catch out of bounds is an incompletion (no toe-tap unless
         // possession: GDD §9.2), and so is one behind an end line.
         const wide = Math.abs(a.pos.y) > FIELD_HALF_W - OOB_FOOT;
-        const toe = wide && out === 'catch' && s.catchType === 'possession' && Math.abs(a.pos.y) < FIELD_HALF_W + 0.4;
+        // Sideline Toe-Tap: he always gets both feet in on a catchable ball (the trait catalog's line).
+        const toe = wide && out === 'catch' && (s.catchType === 'possession' || has(a, 'sideline-toe-tap')) && Math.abs(a.pos.y) < FIELD_HALF_W + 0.4;
         const deep = a.pos.x > END_X - OOB_FOOT || a.pos.x < BACK_X + OOB_FOOT;
         if ((wide && !toe) || deep) {
           if (s.pass) {
@@ -1596,10 +1642,13 @@ function jumpThrow(s: PlayState, d: Agent): boolean {
   if (w.away) return false;
   const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
   if (as.kind !== 'zone') return false;
-  const hawk = d.p.traits?.includes('ballhawk') ? 0.67 : 1;
-  if (s.t - w.from < reaction(s, d) * hawk) return false;
+  const hawk = has(d, 'ballhawk') ? 0.67 : 1;
+  // A Zone Reader breaks on the QB's eyes: 0.08 s sooner (the trait catalog's line).
+  if (s.t - w.from < reaction(s, d) * hawk - (has(d, 'zone-reader') ? 0.08 : 0)) return false;
   const r = s.agents[s.icons[w.icon]!]!;
-  if (dist(d.pos, r.pos) > JUMP_R) return false;
+  // A Center Fielder in a deep zone covers 3 yd more (the trait catalog's line).
+  const deepZone = as.zone === 'deepM' || as.zone === 'deepL' || as.zone === 'deepR';
+  if (dist(d.pos, r.pos) > JUMP_R + (deepZone && has(d, 'center-fielder') ? 3 : 0)) return false;
   const ahead = Math.max(0, w.at - s.t) + 0.5;
   steer(d, arrive(d, { x: r.pos.x + r.vel.x * ahead, y: r.pos.y + r.vel.y * ahead }, 1, 0.8));
   d.mem.onBall = true;

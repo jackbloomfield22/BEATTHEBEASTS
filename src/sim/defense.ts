@@ -237,14 +237,19 @@ function pick(w: Record<string, number>, u: number): string {
  * receiver as the staff learns him (at the difficulty's rate); and at the
  * higher difficulties a disguise, the other shell shown until the snap.
  */
-export function callDefense(sit: DefSituation, difficulty: Difficulty, tendencies: Tendencies | undefined, rng: Rng): DefCall {
+export function callDefense(sit: DefSituation, difficulty: Difficulty, tendencies: Tendencies | undefined, rng: Rng, alphaId?: string): DefCall {
   const id = pick(weights(sit, difficulty, tendencies), rng());
   const base = defById(id);
   const call: DefCall = { ...base, package: packageFor(sit) };
   // Tendency learning: bracket the man they keep throwing to.
-  const fav = tendencies ? favouriteTarget(tendencies, difficulty) : null;
+  // An Alpha is rolled to from the first snap (the trait catalog: a safety
+  // shades his side, everyone else sees softer coverage); otherwise the man
+  // they keep throwing to, as they learn it.
+  const learned = tendencies ? favouriteTarget(tendencies, difficulty) : null;
   const u = rng();
-  if (fav && u < LEARNING[difficulty].rate * Math.min(1, Math.max(0, (fav.share - 0.25) / 0.25))) {
+  const learnedHit = !!learned && u < LEARNING[difficulty].rate * Math.min(1, Math.max(0, (learned.share - 0.25) / 0.25));
+  const fav = learnedHit ? learned : alphaId ? { id: alphaId } : null;
+  if (fav) {
     const single = SINGLE_HIGH.includes(id) && base.assign.FS.kind === 'zone';
     // Single-high: the free safety shades his deep middle to him. Two-high,
     // or with the free safety in man: the middle linebacker sits on his area (a robber).

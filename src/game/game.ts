@@ -124,8 +124,15 @@ class GameSession {
   /** The Beasts' call: package, coverage and pressure from the situation, the difficulty and what they've charted (sim/defense.ts). */
   defCall = (sit: Situation): DefCall => {
     const m = this.m!;
-    return callDefense({ down: sit.down, toGo: sit.toGo, los: sit.los, secondsLeft: m.clock.live ? m.clock.secs : undefined, scoreDiff: m.score.user - m.score.beasts }, this.difficulty, this.tendencies, this.dcRng);
+    return callDefense({ down: sit.down, toGo: sit.toGo, los: sit.los, secondsLeft: m.clock.live ? m.clock.secs : undefined, scoreDiff: m.score.user - m.score.beasts }, this.difficulty, this.tendencies, this.dcRng, this.alphaId());
   };
+
+  /** The Contenders' Alpha receiver, if they have one (the Beasts roll coverage to him). */
+  private alphaId(): string | undefined {
+    const t = this.team;
+    if (!t) return undefined;
+    return [t.WR1, t.WR2, t.WR3, t.TE].find((p) => p.traits?.includes('alpha') || p.traits?.includes('go-to-guy'))?.id;
+  }
 
   get match(): Match | null {
     return this.m;

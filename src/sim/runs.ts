@@ -16,6 +16,7 @@ import { fullbackSlot, inLine, ZONES, type OffPlay } from './plays';
 import { manOf, type PlayState } from './state';
 import { FIELD_HALF_W, type Agent, type OffSlot } from './types';
 import { dist, v2, type V2 } from './vec';
+import { has } from './traits';
 
 /** Defensive backs read their receivers first: a beat longer to believe run (s; M5.5 0.15). */
 const DB_READ = 0.05;
@@ -170,8 +171,18 @@ export function assignRunBlocks(s: PlayState): void {
       tgt = nearestFree(s, front, v2(b.pos.x + 1.2, b.pos.y + side * reach), taken, 2.2);
       b.mem.drive = side * (wide ? 0.9 : 0.3);
     }
-    // Uncovered: climb to the linebacker on my play side (on the iso, leave the one over the hole to the fullback).
-    if (tgt < 0) tgt = nearestFree(s, second, v2(b.pos.x + 5, b.pos.y + side * 1.5), taken);
+    // Uncovered: climb to the linebacker on my play side (on the iso, leave
+    // the one over the hole to the fullback). Next to a Space Eater he stays
+    // on him instead: the double team every run draws, and a linebacker
+    // left free (the trait catalog's line).
+    if (tgt < 0) {
+      const eater = front.find((i) => Math.abs(s.agents[i]!.pos.y - b.pos.y) < 2.5 && has(s.agents[i]!, 'space-eater'));
+      if (eater !== undefined) {
+        b.mem.target = eater;
+        continue;
+      }
+      tgt = nearestFree(s, second, v2(b.pos.x + 5, b.pos.y + side * 1.5), taken);
+    }
     if (tgt >= 0) {
       taken.add(tgt);
       b.mem.target = tgt;
@@ -259,7 +270,10 @@ export function schemeBlock(s: PlayState, b: Agent): void {
     // Flat down the line a yard deep until level with the hole, then up into it.
     const lateral = Math.abs(b.pos.y - pull.y);
     if (lateral > 1.0) {
-      steer(b, arrive(b, v2(los - 1.1, pull.y), 1), {});
+      // An Athletic Line's pullers get there ~0.15 s sooner (the trait catalog's line).
+      const quick = has(b, 'athletic-line') ? 1.2 : 1;
+      const w = arrive(b, v2(los - 1.1, pull.y), 1);
+      steer(b, { x: w.x * quick, y: w.y * quick }, { mult: quick });
       b.anim = 'run';
       return;
     }
@@ -425,7 +439,9 @@ export function belief(s: PlayState, d: Agent): 'run' | 'pass' {
   // Seeing the ball come out of a fake takes a sharper eye than seeing the
   // fake (Play Recognition: the best read it almost at once, the worst a
   // quarter-second late).
-  const tPass = s.passShow >= 0 ? s.passShow + rt + (s.setup.play.pa ? 0.25 * (1 - d.fx.a('playRec')) : 0) : Infinity;
+  // (A Complete TE on the field: the play action fools them 0.1 s longer, the trait catalog's line.)
+  const completeTe = s.off.some((i) => s.agents[i]!.p.pos === 'TE' && has(s.agents[i]!, 'complete-te'));
+  const tPass = s.passShow >= 0 ? s.passShow + rt + (s.setup.play.pa ? 0.25 * (1 - d.fx.a('playRec')) + (completeTe ? 0.1 : 0) : 0) : Infinity;
   const seenRun = s.t >= tRun;
   const seenPass = s.t >= tPass;
   if (seenRun && seenPass) return s.runShow > s.passShow ? 'run' : 'pass';

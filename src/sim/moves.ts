@@ -77,3 +77,17 @@ function angleSet(c: Agent, d: Agent): MoveOption[] {
   const off = Math.abs(atan2(sin(to - heading), cos(to - heading)));
   return off < (SQUARE_DEG * Math.PI) / 180 ? ['truck', 'spin', 'juke'] : ['juke', 'stiffArm', 'spin'];
 }
+
+/**
+ * The AI carrier's move against this man: the likeliest to work of the three
+ * that suit his angle, by the same odds the HUD ranks (Playtest 2, identity
+ * harness: the AI picked by comparing two ratings, so Brandon Jacobs, Trucking
+ * 97, stiff-armed as often as he trucked, and his broken tackles were 7%
+ * trucks). A juke goes away from him.
+ */
+export function aiMove(s: PlayState, c: Agent, d: Agent): Move {
+  const best = [...angleSet(c, d)].sort((a, b) => moveOdds(s, c, d, b) - moveOdds(s, c, d, a))[0]!;
+  if (best !== 'juke') return best as Move;
+  const attack = c.side === 'off' ? 1 : -1;
+  return (d.pos.y - c.pos.y) * attack > 0 ? 'jukeR' : 'jukeL';
+}

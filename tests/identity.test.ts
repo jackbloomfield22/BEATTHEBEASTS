@@ -1,0 +1,19 @@
+// The identity harness in the unit tests (Playtest 2, "every player is
+// himself"): the pairs with the widest gaps, at two reps, so a change that
+// flattens a rating's effect fails `npm run check` instead of waiting for the
+// milestone run (tools/sim/identity.ts, all twenty at four to six reps).
+import { describe, expect, it } from 'vitest';
+import { PAIRS, runPair, setReps } from '../tools/sim/identity';
+
+setReps(2);
+const pair = (a: string) => PAIRS.find((p) => p.a[0] === a)!;
+
+describe('identity: the same plays, different men', () => {
+  for (const name of ['Tyreek Hill', 'Barry Sanders', 'Joe Montana']) {
+    it(`${name}: ${pair(name).why}`, () => {
+      const r = runPair(pair(name));
+      const failed = r.checks.filter((c) => !c.ok).map((c) => `${c.m} ${c.diff.toFixed(2)}`);
+      expect(failed).toEqual([]);
+    }, 240_000);
+  }
+});
