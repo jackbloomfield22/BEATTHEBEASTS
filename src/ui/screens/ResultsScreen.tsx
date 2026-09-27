@@ -7,7 +7,7 @@ import { Audio } from '@/audio/audio';
 import { game } from '@/game/game';
 import { useMenuNav } from '../nav';
 import { Hints, MenuItem } from '../components/controls';
-import { dateLabel, GameReport, modeLabel, ReportTabs, resultWord } from '../results/GameReport';
+import { dateLabel, GameReport, lengthLabel, LineScore, modeLabel, ReportTabs, resultWord } from '../results/GameReport';
 import { useReportNav } from '../results/useReportNav';
 import '../styles/results.css';
 
@@ -110,10 +110,11 @@ export function ResultsScreen() {
         <div className="res-meta">
           <span>{rec.clock}</span>
           <span>
-            {modeLabel(rec.mode)} · {rec.drives} rounds
+            {modeLabel(rec.mode)} · {lengthLabel(rec)}
           </span>
           {from !== 'game' ? <span>{dateLabel(rec.finishedAt)}</span> : null}
         </div>
+        <LineScore rec={rec} />
         <div className={`res-grade ${res.tone}`}>
           {rec.grade ? (
             <>

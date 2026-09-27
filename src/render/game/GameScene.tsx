@@ -13,7 +13,8 @@ import { measure, resetPops } from './popMeter';
 import { lerpAngle, type AgentSnap } from '@/game/snapshot';
 import { latency } from '@/game/latency';
 import { view } from '@/game/view';
-import { worldX, worldY, worldZ, yawOf } from '@/game/coords';
+import { fieldX, fieldY, worldX, worldY, worldZ, yawOf } from '@/game/coords';
+import { PUNT_DEPTH } from '@/game/kick';
 import { LOFT_CHARGE, DEF_SLOTS, HOT_ROUTES, OFF_SLOTS, TAP_MAX, TICK, type PlayState, type SimPlayer } from '@/sim';
 import { openness } from '@/sim/ai';
 import { previewThrow } from '@/sim/passing';
@@ -105,6 +106,44 @@ const FG_SET: Record<string, { at: [number, number]; stance: string } | null> = 
   MLB: { at: [2.6, 0], stance: 'stance_lb_ready' },
 };
 
+/**
+ * A punt (M6.6): the spread punt look, relative to the line of scrimmage
+ * (x downfield, y left, yd). The snapper and the punter are KickBall's; the
+ * guards and tackles in two-point sets a foot apart, wings off the ends, the
+ * personal protector 5 yd deep, and gunners split wide near the numbers.
+ * The Beasts: six on the line, a vise of two on each gunner (a corner in
+ * press and a second man a yard off), a middle man, and the returner ~42 yd
+ * deep. The gunners and the vise release at the snap and the returner
+ * settles under the ball (puntMotion).
+ */
+const PUNT_SET: Record<string, { at: [number, number]; stance: string } | null> = {
+  QB: null,
+  C: null,
+  LG: { at: [-0.3, 1.1], stance: 'stance_ol_ready' },
+  RG: { at: [-0.3, -1.1], stance: 'stance_ol_ready' },
+  LT: { at: [-0.3, 2.2], stance: 'stance_ol_ready' },
+  RT: { at: [-0.3, -2.2], stance: 'stance_ol_ready' },
+  TE: { at: [-1, 3.3], stance: 'stance_ol_ready' },
+  SLOT: { at: [-1, -3.3], stance: 'stance_ol_ready' },
+  RB: { at: [-5.5, 0.8], stance: 'stance_rb_2pt' },
+  X: { at: [-0.3, 21], stance: 'stance_wr_2pt' },
+  Z: { at: [-0.3, -21], stance: 'stance_wr_2pt' },
+  LDT: { at: [1, 0.6], stance: 'stance_dl_3pt' },
+  RDT: { at: [1, -0.6], stance: 'stance_dl_3pt' },
+  LE: { at: [1, 1.9], stance: 'stance_dl_3pt' },
+  RE: { at: [1, -1.9], stance: 'stance_dl_3pt' },
+  WLB: { at: [1.1, 3.4], stance: 'stance_dl_3pt' },
+  SLB: { at: [1.1, -3.4], stance: 'stance_dl_3pt' },
+  LCB: { at: [1, 20.4], stance: 'stance_db_press' },
+  RCB: { at: [1, -20.4], stance: 'stance_db_press' },
+  MLB: { at: [2, 22], stance: 'stance_db_ready' },
+  SS: { at: [2, -22], stance: 'stance_db_ready' },
+  FS: { at: [42, 0], stance: 'stance_db_ready' },
+};
+
+/** Who runs on a punt once it's snapped: the gunners and their vise downfield, the returner under the ball. */
+const PUNT_RUNNERS: Record<string, 'gunner' | 'vise' | 'returner'> = { X: 'gunner', Z: 'gunner', LCB: 'vise', RCB: 'vise', MLB: 'vise', SS: 'vise', FS: 'returner' };
+
 const RENDER_POS: Record<SimPlayer['pos'], Position> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', OL: 'OL', DE: 'DL', DT: 'DL', LB: 'LB', CB: 'CB', S: 'S' };
 
 function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: PlayerAsset, lib: AnimLibrary): Body[] {
@@ -135,6 +174,40 @@ function relook(b: Body, p: SimPlayer): void {
   b.player.setBody(body.heightM, body.weightKg);
 }
 
+/**
+ * A punt's coverage and return, drawn (no sim: the result is the punt
+ * model's): after the snap the gunners sprint at the landing spot (~8.5 m/s,
+ * a gunner's top end), the vise runs with them a step behind, and the
+ * returner drifts under the ball and waits. Returns his ground speed (m/s)
+ * for the gait. Moves the body's root.
+ */
+function puntMotion(b: Body, los: number, dt: number): number {
+  const role = PUNT_RUNNERS[b.slot];
+  const p = kickView.path;
+  if (!role || !p || kickView.t < 0.35) return 0;
+  const land = p[p.length - 1]!;
+  const lx = kickView.spotX + land[0];
+  const ly = land[1];
+  const root = b.player.root;
+  const x = fieldX(root.position.z);
+  const y = fieldY(root.position.x);
+  // The returner stops ~1 yd short of the spot; the coverage converges on it, the vise a step behind.
+  const tx = role === 'returner' ? lx + 1 : role === 'gunner' ? lx - 4 : lx - 6;
+  const ty = role === 'returner' ? ly : y + (ly - y) * Math.min(1, (x - los) / Math.max(1, lx - los));
+  const dx = tx - x;
+  const dy = ty - y;
+  const d = Math.hypot(dx, dy);
+  const top = role === 'returner' ? 4.5 : role === 'gunner' ? 8.5 : 8;
+  // Up to speed over ~1 s after the release.
+  const v = Math.min(top, top * Math.min(1, (kickView.t - 0.35) / 1.0)) * Math.min(1, d / 1.5);
+  if (d < 0.2 || v < 0.05) return 0;
+  const yd = (v / YARD) * dt;
+  root.position.x = worldX(y + (dy / d) * yd);
+  root.position.z = worldZ(x + (dx / d) * yd);
+  root.rotation.y = yawOf(Math.atan2(dy, dx));
+  return v;
+}
+
 const _p = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
@@ -158,7 +231,7 @@ export function GameScene() {
   const [routeArt] = useState(createRouteArt);
   const shownPlay = useRef(-1);
   const officials = useRef<Officials | null>(null);
-  const kickSet = useRef<number | null>(null);
+  const kickSet = useRef<string | null>(null);
   const lastSimT = useRef(0);
   const snapped = useRef(false);
 
@@ -211,17 +284,20 @@ export function GameScene() {
     ball.visible = show;
     frameEvents.length = 0;
     if (officials.current) officials.current.group.visible = show;
-    if (show && kickView.active) {
-      // The kick: everyone set in the field goal look, the sim's marks and ball away.
+    if (bodies && kickView.active) {
+      // The kick: everyone set in the field goal (or punt) look, the sim's marks and ball away.
+      if (officials.current) officials.current.group.visible = true;
       marks.group.visible = false;
       ball.visible = false;
       for (const el of hudDom.icons) if (el) el.style.visibility = 'hidden';
-      routeArt.update(r!.state, false, step, null);
-      if (kickSet.current !== kickView.spotX) {
-        kickSet.current = kickView.spotX;
-        const los = kickView.spotX + 7;
-        for (const b of bodies!) {
-          const set = FG_SET[b.slot];
+      if (r) routeArt.update(r.state, false, step, null);
+      const punt = kickView.kind === 'PUNT';
+      const los = kickView.spotX + (punt ? PUNT_DEPTH : 7);
+      const key = `${kickView.kind}:${kickView.spotX}`;
+      if (kickSet.current !== key) {
+        kickSet.current = key;
+        for (const b of bodies) {
+          const set = (punt ? PUNT_SET : FG_SET)[b.slot];
           b.player.root.visible = !!set;
           if (!set) continue;
           const off = (OFF_SLOTS as string[]).includes(b.slot);
@@ -234,12 +310,13 @@ export function GameScene() {
         }
         officials.current?.place(los, 0);
       }
-      for (const b of bodies!) {
+      for (const b of bodies) {
         if (!b.player.root.visible) continue;
-        b.animator.update(step, { speed: 0 });
+        const speed = punt ? puntMotion(b, los, step) : 0;
+        b.animator.update(step, { speed });
         b.player.updateLod(camera, gl.domElement.height);
       }
-      officials.current?.update(step, { x: kickView.spotX, y: 0 }, null, 0, 10, camera, gl.domElement.height);
+      officials.current?.update(step, { x: los, y: 0 }, null, 0, 10, camera, gl.domElement.height);
       // Back from the kick, the next snapshot sets everyone again.
       shownPlay.current = -1;
       return;

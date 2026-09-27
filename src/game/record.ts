@@ -14,7 +14,7 @@ import type { Roster as LegacyRoster, RosterEntry } from '@/engine/legacy/types'
 import type { DefCall, Difficulty, InputFrame } from '@/sim';
 import type { RatedBeasts } from './beasts';
 import type { Catalog, DraftMode, Roster } from './draft';
-import { clockLabel, matchGrade, type BeastsDrive, type GameLength, type Grade, type Match, type UserDrive } from './match';
+import { clockLabel, gradeRounds, isTimed, matchGrade, regulationRounds, type BeastsDrive, type Grade, type Match, type UserDrive } from './match';
 import type { GameBox, PlayLog } from './stats';
 
 /** Bump when a stored record's shape changes (History drops records it can't read). */
@@ -59,7 +59,11 @@ export interface GameRecord {
   mode: DraftMode;
   dailyKey: string | null;
   seed: number;
-  drives: GameLength;
+  /** Regulation rounds: Quick Play's setting, or the Beasts' possessions a timed game played before overtime. */
+  drives: number;
+  /** A timed game (M6.6): seconds in a quarter, and the points by quarter (index 4: overtime). Absent on Quick Play's drive count and older records. */
+  quarterSecs?: number | null;
+  byQuarter?: { user: number[]; beasts: number[] };
   difficulty: Difficulty;
   /** Played to the final whistle, or left from the pause menu before it. */
   end: 'final' | 'left';
@@ -111,13 +115,15 @@ export function buildRecord(m: Match, box: GameBox, meta: RecordMeta, plays: Pla
     mode: meta.mode,
     dailyKey: meta.dailyKey,
     seed: m.cfg.seed,
-    drives: m.cfg.drives,
+    drives: regulationRounds(m),
+    quarterSecs: isTimed(m) ? m.cfg.quarterSecs : null,
+    byQuarter: isTimed(m) ? { user: [...m.byQuarter.user], beasts: [...m.byQuarter.beasts] } : undefined,
     difficulty: meta.difficulty,
     end: final ? 'final' : 'left',
     ot: m.ot,
     clock: final ? clockLabel(m) : clockLabel({ ...m, phase: m.phase === 'final' ? 'drive' : m.phase }),
     score: { ...m.score },
-    grade: final ? matchGrade(margin, m.cfg.drives) : null,
+    grade: final ? matchGrade(margin, gradeRounds(m)) : null,
     offense: meta.offense,
     beasts: meta.beasts,
     bestReceiver: meta.matchups[0]?.rec ?? meta.offense.find((o) => o.slot === 'X')?.name ?? null,

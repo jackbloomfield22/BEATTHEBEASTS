@@ -355,8 +355,11 @@ export interface PlayLog {
   pickSix: boolean;
   /** Score before the snap. */
   score: { user: number; beasts: number };
-  /** The game's last round or overtime. */
+  /** The game's last round (a timed game: the 4th quarter) or overtime. */
   late: boolean;
+  /** A timed game (M6.6): the quarter and the clock at the snap ("Q3 4:12"). */
+  q?: number;
+  clock?: string;
 }
 
 /**
