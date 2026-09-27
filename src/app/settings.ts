@@ -21,7 +21,7 @@ export interface GraphicsSettings {
 }
 
 export interface Settings {
-  version: 7;
+  version: 8;
   display: {
     fullscreen: boolean;
     resolutionScale: number; // 0.5 .. 1.0
@@ -46,7 +46,10 @@ export interface Settings {
   audio: { master: number; music: number; sfx: number; crowd: number; ui: number; muteUnfocused: boolean };
   gameplay: {
     difficulty: Difficulty;
+    /** Quick Play's drives (the drive-count format stays as Quick Play only: Playtest 1, decision 1). */
     gameLength: 4 | 6 | 10;
+    /** Minutes in a quarter for a timed game (Classic, Film Room; the Daily is fixed at 5 so scores compare). */
+    quarterMinutes: 3 | 5 | 8 | 10 | 15;
     camera: 'broadcast' | 'all22' | 'field';
     lighting: LightingPreset;
     skipIntros: boolean;
@@ -114,17 +117,20 @@ export function renderDpr(cssW: number, cssH: number, deviceDpr: number, preset:
 
 export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings {
   return {
-    version: 7,
+    version: 8,
     display: { fullscreen: false, resolutionScale: 1, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 180, ballInAir: 'assist', keyboard, gamepad },
     audio: { master: 0.8, music: 0.6, sfx: 0.8, crowd: 0.8, ui: 0.7, muteUnfocused: true },
-    gameplay: { difficulty: 'pro', gameLength: 6, camera: 'broadcast', lighting: 'golden', skipIntros: false, fastReveal: false, autoReplay: 'big', bigHitSlowmo: true, firstCatchSlowmo: false },
+    gameplay: { difficulty: 'pro', gameLength: 6, quarterMinutes: 5, camera: 'broadcast', lighting: 'golden', skipIntros: false, fastReveal: false, autoReplay: 'big', bigHitSlowmo: true, firstCatchSlowmo: false },
     accessibility: { colorblind: 'off', captionSize: 'medium', reduceShake: false, reduceFlashing: false, holdToToggle: false, uiScale: 1 },
   };
 }
 
 const STORAGE_KEY = 'settings.v1';
+
+/** The quarter lengths offered (minutes). */
+export const QUARTER_MINUTES: readonly Settings['gameplay']['quarterMinutes'][] = [3, 5, 8, 10, 15];
 
 interface SettingsStore {
   settings: Settings;
@@ -239,6 +245,15 @@ export function migrate(stored: Settings): Settings {
     const pad = s.controls?.gamepad;
     if (pad) for (const [id, old] of Object.entries(PAD_DEFAULTS_V6)) if (same(pad[id], old)) delete pad[id];
     (s as { version: number }).version = 7;
+  }
+  if ((s.version as number) === 7) {
+    // v8 (M6.6): a real game clock. Quarter length (default 5 minutes) for
+    // Classic and Film Room; gameLength stays as Quick Play's drive count.
+    // The kick's drag binding is gone (aim, then hold and release: kick.aimLeft/aimRight/charge).
+    if (s.gameplay && !QUARTER_MINUTES.includes(s.gameplay.quarterMinutes)) s.gameplay.quarterMinutes = 5;
+    delete s.controls?.keyboard?.['kick.aim'];
+    delete s.controls?.gamepad?.['kick.aim'];
+    (s as { version: number }).version = 8;
   }
   return s;
 }

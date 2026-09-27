@@ -8,6 +8,8 @@ import { ACTIONS, type Bindings, type InputContext } from './actions';
 export type Device = 'keyboard' | 'mouse' | 'gamepad';
 /** `time`: the input's timestamp (performance.now() timebase), for latency measurement. */
 type Listener = (actionId: string, info: { repeat: boolean; device: Device; time: number }) => void;
+/** An action's input came up. `time`: the release event's timestamp (performance.now() timebase; a pad's is its poll). */
+type ReleaseListener = (actionId: string, info: { device: Device; time: number }) => void;
 
 const PAD_BUTTONS = ['Pad:A', 'Pad:B', 'Pad:X', 'Pad:Y', 'Pad:LB', 'Pad:RB', 'Pad:LT', 'Pad:RT', 'Pad:View', 'Pad:Menu', 'Pad:LS', 'Pad:RS', 'Pad:Up', 'Pad:Down', 'Pad:Left', 'Pad:Right'];
 const STICK_THRESHOLD = 0.55;
@@ -22,6 +24,7 @@ const CAPTURED_CODES = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'A
 class InputManagerImpl {
   private contexts: InputContext[] = ['menu'];
   private listeners = new Set<Listener>();
+  private releaseListeners = new Set<ReleaseListener>();
   private held = new Set<string>();
   /** Last release time per input code. */
   private upAt = new Map<string, number>();
@@ -68,6 +71,16 @@ class InputManagerImpl {
   onAction(cb: Listener): () => void {
     this.listeners.add(cb);
     return () => this.listeners.delete(cb);
+  }
+
+  /**
+   * Releases, timed from the release event itself (a key's keyup, the mouse
+   * button's mouseup, the pad poll that saw the button up), so a hold is
+   * measured press event to release event and never rounded to frames.
+   */
+  onRelease(cb: ReleaseListener): () => void {
+    this.releaseListeners.add(cb);
+    return () => this.releaseListeners.delete(cb);
   }
 
   onDevice(cb: (d: Device) => void): () => void {
@@ -119,6 +132,17 @@ class InputManagerImpl {
     return handled;
   }
 
+  private fireUp(code: string, device: Device, time: number): void {
+    const ids = this.reverse.get(code);
+    if (!ids || !this.releaseListeners.size) return;
+    const ctx = this.activeContext;
+    for (const id of ids) {
+      const def = ACTIONS.find((d) => d.id === id);
+      if (!def || (def.context !== ctx && def.context !== 'global')) continue;
+      this.releaseListeners.forEach((l) => l(id, { device, time }));
+    }
+  }
+
   private handleCapture(code: string): boolean {
     if (!this.captureCb) return false;
     const cb = this.captureCb;
@@ -147,6 +171,7 @@ class InputManagerImpl {
     window.addEventListener('keyup', (e) => {
       this.held.delete(e.code);
       this.upAt.set(e.code, e.timeStamp);
+      this.fireUp(e.code, 'keyboard', e.timeStamp);
     });
     window.addEventListener('blur', () => this.held.clear());
 
@@ -161,6 +186,7 @@ class InputManagerImpl {
     window.addEventListener('mouseup', (e) => {
       this.held.delete(`Mouse${e.button}`);
       this.upAt.set(`Mouse${e.button}`, e.timeStamp);
+      if (this.activeContext !== 'menu') this.fireUp(`Mouse${e.button}`, 'mouse', e.timeStamp);
     });
     window.addEventListener(
       'mousemove',
@@ -199,9 +225,13 @@ class InputManagerImpl {
     };
     stick(this.sticks.left, 0, 0);
     stick(this.sticks.right, 0, 0);
+    // The pad's own timestamp for its last change (same timebase as performance.now()) is closer to
+    // the button event than this poll's frame time; used when it's sane (at most one poll old).
+    let stamp = 0;
     for (const gp of pads) {
       if (!gp || gp.mapping !== 'standard') continue;
       this.padConnected = true;
+      if (gp.timestamp > stamp) stamp = gp.timestamp;
       gp.buttons.forEach((b, i) => {
         const name = PAD_BUTTONS[i];
         if (name && (b.pressed || b.value > 0.5)) pressed.add(name);
@@ -218,13 +248,14 @@ class InputManagerImpl {
       if (rx < -STICK_THRESHOLD) pressed.add('Pad:RSLeft');
       if (rx > STICK_THRESHOLD) pressed.add('Pad:RSRight');
     }
+    const at = stamp > now - 50 && stamp <= now ? stamp : now;
     for (const code of pressed) {
       if (!this.padPrev.has(code)) {
         this.setDevice('gamepad');
         this.held.add(code);
         if (this.captureCb) {
           if (code.startsWith('Pad:')) this.handleCapture(code);
-        } else this.fire(code, false, 'gamepad', now);
+        } else this.fire(code, false, 'gamepad', at);
         this.padRepeatAt.set(code, now + REPEAT_DELAY_MS);
       } else {
         const at = this.padRepeatAt.get(code) ?? Infinity;
@@ -237,8 +268,9 @@ class InputManagerImpl {
     for (const code of this.padPrev) {
       if (!pressed.has(code)) {
         this.held.delete(code);
-        this.upAt.set(code, now);
+        this.upAt.set(code, at);
         this.padRepeatAt.delete(code);
+        this.fireUp(code, 'gamepad', at);
       }
     }
     this.padPrev = pressed;
