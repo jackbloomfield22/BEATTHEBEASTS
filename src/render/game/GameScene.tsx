@@ -17,6 +17,7 @@ import { worldX, worldY, worldZ, yawOf } from '@/game/coords';
 import { LOFT_CHARGE, DEF_SLOTS, HOT_ROUTES, OFF_SLOTS, TAP_MAX, TICK, type PlayState, type SimPlayer } from '@/sim';
 import { openness } from '@/sim/ai';
 import { previewThrow } from '@/sim/passing';
+import { carrierOptions } from '@/sim/moves';
 import { openState } from '@/game/view';
 import { YARD } from '../world/constants';
 import { hudDom, RING_LEN } from '@/ui/game/hudDom';
@@ -503,8 +504,17 @@ export function GameScene() {
         ch.style.transform = `translate(${Math.max(120, Math.min(rect.width - 120, x)).toFixed(1)}px, ${Math.min(rect.height - 90, y).toFixed(1)}px)`;
         if (hudDom.staminaFill) hudDom.staminaFill.style.transform = `scaleX(${c.stamina.toFixed(3)})`;
         // The three options the sim holds on him now (moves.ts), the move he's in lit.
+        // M6.6 (Playtest 1: "the move prompts show up late"): the sim only
+        // sets them once carrierStep runs him, which on a designed run is
+        // after he has pressed the aiming point (to the line on a gap scheme,
+        // a beat on zone), so the words were blank for up to a second after
+        // the handoff. Until the sim holds a set, the HUD reads the same
+        // pure ranking itself (read-only) and shows it dimmed: on screen the
+        // moment he has the ball, lit fully once a press will do it.
         const live = s.agents[cur.carrier]!;
-        const opts = typeof live.mem.opts === 'string' ? live.mem.opts.split(',') : [];
+        const held = typeof live.mem.opts === 'string';
+        const opts = held ? (live.mem.opts as string).split(',') : carrierOptions(s, live);
+        if (ch.dataset.pending !== String(!held)) ch.dataset.pending = String(!held);
         const inMove = live.busy > 0 && live.move ? (live.move === 'jukeL' || live.move === 'jukeR' ? 'juke' : live.move) : live.move === 'protect' ? 'protect' : null;
         for (let k = 0; k < 3; k++) {
           const el = hudDom.opts[k];

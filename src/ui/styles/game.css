@@ -143,3 +143,5 @@
 .catch-opt .glyph { height: 2.7rem; }
 .hot-item .glyph { height: 1.4rem; }
 .carrier-keys .glyph { padding: 0; background: none; border-radius: 0; }
+/* The options before the sim holds them (a designed run's press): shown at once, dimmed until a press will make the move (GameScene placeHud). */
+.carrier-hud[data-pending='true'] .carrier-opts { opacity: .55; }
