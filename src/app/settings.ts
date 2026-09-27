@@ -43,7 +43,7 @@ export interface Settings {
     keyboard: Bindings;
     gamepad: Bindings;
   };
-  audio: { master: number; music: number; sfx: number; crowd: number; ui: number; muteUnfocused: boolean };
+  audio: { master: number; music: number; sfx: number; crowd: number; ui: number; ambience: number; muteUnfocused: boolean };
   gameplay: {
     difficulty: Difficulty;
     gameLength: 4 | 6 | 10;
@@ -118,7 +118,7 @@ export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings
     display: { fullscreen: false, resolutionScale: 1, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 180, ballInAir: 'assist', keyboard, gamepad },
-    audio: { master: 0.8, music: 0.6, sfx: 0.8, crowd: 0.8, ui: 0.7, muteUnfocused: true },
+    audio: { master: 0.8, music: 0.6, sfx: 0.8, crowd: 0.8, ui: 0.7, ambience: 0.6, muteUnfocused: true },
     gameplay: { difficulty: 'pro', gameLength: 6, camera: 'broadcast', lighting: 'golden', skipIntros: false, fastReveal: false, autoReplay: 'big', bigHitSlowmo: true, firstCatchSlowmo: false },
     accessibility: { colorblind: 'off', captionSize: 'medium', reduceShake: false, reduceFlashing: false, holdToToggle: false, uiScale: 1 },
   };

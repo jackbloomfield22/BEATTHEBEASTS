@@ -1,15 +1,33 @@
-// Web Audio graph: master -> {music, sfx, crowd, ui} buses, with the volumes
+// Web Audio graph: master -> {music, sfx, crowd, ui, ambience} buses, with the volumes
 // from settings. Milestone 1 synthesizes the UI sounds and a coastal ambient
 // bed (surf, wind, distant crowd murmur) in-house. Recorded crowd, pads and
 // music arrive with licensed sources in later milestones (see CREDITS.md).
 
-type Bus = 'music' | 'sfx' | 'crowd' | 'ui';
+type Bus = 'music' | 'sfx' | 'crowd' | 'ui' | 'ambience';
+const BUSES: Bus[] = ['music', 'sfx', 'crowd', 'ui', 'ambience'];
+
+/**
+ * The coastal bed's levels (gain on its bus before the bus volume), M6.6.
+ * Playtest 1: "ocean ambience is too loud in the menus". The surf ran at
+ * 0.22 swelling ±0.14 (0.08 to 0.36) on the SFX bus: in the menus, where
+ * nothing else plays, the loudest thing in the room, and the SFX slider
+ * (not the Crowd slider, whose description claimed the ambience) was the
+ * only way to turn it down. Now 12 dB down at the default volumes (0.1 on
+ * an Ambience bus at 60% against 0.22 on SFX at 80%: 0.036 against 0.14),
+ * with a gentler swell, on its own bus with its own slider: a bed you
+ * notice when you listen for it.
+ */
+export const AMBIENT_LEVELS = {
+  surf: { gain: 0.1, swell: 0.05 },
+  wind: { gain: 0.025, swell: 0.014 },
+  murmur: { gain: 0.05, swell: 0.015 },
+} as const;
 
 class AudioEngine {
   ctx: AudioContext | null = null;
   private master!: GainNode;
   private buses = {} as Record<Bus, GainNode>;
-  private volumes = { master: 0.8, music: 0.6, sfx: 0.8, crowd: 0.8, ui: 0.7 };
+  private volumes = { master: 0.8, music: 0.6, sfx: 0.8, crowd: 0.8, ui: 0.7, ambience: 0.6 };
   private noise!: AudioBuffer;
   private ambient: { stop: () => void } | null = null;
   private lastHover = 0;
@@ -24,7 +42,7 @@ class AudioEngine {
       comp.threshold.value = -14;
       comp.ratio.value = 3;
       this.master.connect(comp).connect(ctx.destination);
-      for (const b of ['music', 'sfx', 'crowd', 'ui'] as Bus[]) {
+      for (const b of BUSES) {
         const g = ctx.createGain();
         g.connect(this.master);
         this.buses[b] = g;
@@ -35,8 +53,8 @@ class AudioEngine {
     void this.ctx.resume();
   }
 
-  setVolumes(v: { master: number; music: number; sfx: number; crowd: number; ui: number }): void {
-    this.volumes = { ...v };
+  setVolumes(v: { master: number; music: number; sfx: number; crowd: number; ui: number; ambience: number }): void {
+    this.volumes = { master: v.master, music: v.music, sfx: v.sfx, crowd: v.crowd, ui: v.ui, ambience: v.ambience };
     this.applyVolumes();
   }
 
@@ -50,7 +68,7 @@ class AudioEngine {
     const t = this.ctx.currentTime;
     // Perceptual (squared) curve so sliders feel linear.
     this.master.gain.setTargetAtTime(this.volumes.master ** 2, t, 0.05);
-    for (const b of ['music', 'sfx', 'crowd', 'ui'] as Bus[]) this.buses[b].gain.setTargetAtTime(this.volumes[b] ** 2, t, 0.05);
+    for (const b of BUSES) this.buses[b].gain.setTargetAtTime(this.volumes[b] ** 2, t, 0.05);
   }
 
   private makeNoise(seconds: number): AudioBuffer {
@@ -185,12 +203,12 @@ class AudioEngine {
       g.gain.setValueAtTime(0, ctx.currentTime);
       g.gain.linearRampToValueAtTime(to, ctx.currentTime + 3);
     };
-    // Surf: low-passed noise with slow swell.
-    fadeIn(mk(420, 0.4, 0.22, 'lowpass', 'sfx', 0.09, 0.14), 0.22);
-    // Wind: band-passed, gusting.
-    fadeIn(mk(900, 0.6, 0.05, 'bandpass', 'sfx', 0.23, 0.035), 0.05);
-    // Distant crowd murmur inside the bowl.
-    fadeIn(mk(520, 1.1, 0.07, 'bandpass', 'crowd', 0.05, 0.02), 0.07);
+    // Surf: low-passed noise with slow swell. Wind: band-passed, gusting. Both on the ambience bus (Settings, Audio, Ambience).
+    const L = AMBIENT_LEVELS;
+    fadeIn(mk(420, 0.4, L.surf.gain, 'lowpass', 'ambience', 0.09, L.surf.swell), L.surf.gain);
+    fadeIn(mk(900, 0.6, L.wind.gain, 'bandpass', 'ambience', 0.23, L.wind.swell), L.wind.gain);
+    // Distant crowd murmur inside the bowl (the crowd's bus).
+    fadeIn(mk(520, 1.1, L.murmur.gain, 'bandpass', 'crowd', 0.05, L.murmur.swell), L.murmur.gain);
     this.ambient = {
       stop: () => {
         nodes.forEach((n) => {
