@@ -47,19 +47,21 @@ export interface KickResult {
   hang: number;
 }
 
-/** Flight of a ball struck at `v` yd/s along elevation ELEV and lateral angle `aim`, until it lands or passes `stopX`. */
-function fly(v: number, aim: number, wind: { mph: number; dir: number }, slice: number, stopX: number, path?: [number, number, number][]) {
+/** Flight of a ball struck at `v` yd/s along elevation `elev` and lateral angle `aim` from height `z0`, until it lands or passes `stopX`. */
+function fly(v: number, aim: number, wind: { mph: number; dir: number }, slice: number, stopX: number, path?: [number, number, number][], elev = ELEV, z0 = 0, side?: { y0: number; half: number }) {
   let x = 0;
   let y = 0;
-  let z = 0;
-  let vx = v * cos(ELEV) * cos(aim);
-  let vy = v * cos(ELEV) * sin(aim);
-  let vz = v * sin(ELEV);
+  let z = z0;
+  let vx = v * cos(elev) * cos(aim);
+  let vy = v * cos(elev) * sin(aim);
+  let vz = v * sin(elev);
   // Wind: dir 0 blows toward the posts (+x), π/2 toward +y (the kicker's left).
   const wx = WIND_ACCEL * wind.mph * cos(wind.dir);
   const wy = WIND_ACCEL * wind.mph * sin(wind.dir);
   let t = 0;
   let crossed: { y: number; z: number } | null = null;
+  /** Where it first crossed a sideline (a punt), in the kick frame. */
+  let out: { x: number; y: number; t: number } | null = null;
   let k = 0;
   while (t < 8) {
     const sp = sqrt(vx * vx + vy * vy + vz * vz);
@@ -73,15 +75,28 @@ function fly(v: number, aim: number, wind: { mph: number; dir: number }, slice: 
     y += vy * DT;
     z += vz * DT;
     t += DT;
-    if (path && k++ % 4 === 0) path.push([x, y, z]);
+    if (path && k++ % 4 === 0) path.push([x, y, Math.max(0, z)]);
     if (!crossed && px < stopX && x >= stopX) {
       const f = (stopX - px) / (x - px);
       crossed = { y: py + (y - py) * f, z: pz + (z - pz) * f };
     }
-    if (z <= 0 && vz < 0) break;
+    if (side && !out && Math.abs(side.y0 + y) > side.half) {
+      const edge = Math.sign(side.y0 + y) * side.half - side.y0;
+      const f = (edge - py) / (y - py || 1e-9);
+      out = { x: px + (x - px) * f, y: edge, t: t - DT + DT * f };
+    }
+    if (z <= 0 && vz < 0) {
+      // Back to the ground: the landing spot, interpolated to z = 0.
+      const f = pz / Math.max(1e-9, pz - z);
+      x = px + (x - px) * f;
+      y = py + (y - py) * f;
+      t = t - DT + DT * f;
+      if (path) path.push([x, y, 0]);
+      break;
+    }
     if (x > stopX + 15) break;
   }
-  return { crossed, t, x };
+  return { crossed, t, x, y, out };
 }
 
 /** Launch speed at full power so a straight kick with no wind just clears the bar at `range` (bisection; cached). */
@@ -131,4 +146,92 @@ export function aimFor(k: Omit<KickInput, 'aim'>): number {
     else lo = mid;
   }
   return (lo + hi) / 2;
+}
+
+/** The least power that clears the bar straight down the middle (the meter's "enough leg" mark); above 1 when he can't get there clean. */
+export function powerNeeded(k: Omit<KickInput, 'aim' | 'power'>): number {
+  const at = (power: number) => kickFlight({ ...k, power, aim: aimFor({ ...k, power }) });
+  let lo = 0.3;
+  let hi = 1.12;
+  if (at(hi).why === 'short') return hi;
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    if (at(mid).why === 'short') lo = mid;
+    else hi = mid;
+  }
+  return hi;
+}
+
+// ---- Punts ------------------------------------------------------------------------------
+
+/**
+ * A punt leaves the foot steep, from about knee height (contact ~0.4 m,
+ * ks_punt frame 42). 60° is set by the hang: with the sim's spiral drag a
+ * full 52-yard punt hangs 4.2 s, the NFL's average hang (~4.3 s); a flatter
+ * launch carried as far but came down in 3.5 s, a line drive.
+ */
+const PUNT_ELEV = (60 * Math.PI) / 180;
+const PUNT_Z0 = 0.45;
+/**
+ * The Contenders punter's leg: a full, clean strike carries 52 yd in the air
+ * in still air. NFL gross average 2015–2023 ≈ 46–47 yd with ~4.4 s of hang;
+ * a good punter's best ~55–60 (the overcooked strike, past 1, gets there
+ * with a slice).
+ */
+export const PUNT_CARRY = 52;
+/**
+ * Where the punter meets the ball, behind the line of scrimmage: he lines up
+ * 15 yd deep (NFL spread punt: 14–15) and his two steps (ks_punt's root
+ * travel, 1.35 m to contact) bring him to 13.5.
+ */
+export const PUNT_DEPTH = 13.5;
+
+let puntV = 0;
+/** Launch speed at full power so a straight punt in still air carries PUNT_CARRY yards (bisection; cached). */
+export function puntLeg(): number {
+  if (puntV) return puntV;
+  let lo = 10;
+  let hi = 60;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    const f = fly(mid, 0, { mph: 0, dir: 0 }, 0, 1000, undefined, PUNT_ELEV, PUNT_Z0);
+    if (f.x >= PUNT_CARRY) hi = mid;
+    else lo = mid;
+  }
+  puntV = hi;
+  return hi;
+}
+
+export interface PuntInput {
+  /** 0..1 of the punter's leg; past 1 overcooks it (a little more carry, and a slice). */
+  power: number;
+  /** Aim, radians, + = left (toward the left sideline, looking downfield). */
+  aim: number;
+  wind: { mph: number; dir: number };
+  /** The ball's lateral spot on the field (+ = left of the middle), yd; the sidelines are ±halfWidth from the middle. */
+  y0: number;
+  halfWidth: number;
+}
+
+export interface PuntFlight {
+  /** Carry in the air from the punter, yd (to the landing, or to where it crossed a sideline). */
+  carry: number;
+  /** Lateral landing (or crossing) offset in the kick frame, yd. */
+  y: number;
+  /** Seconds in the air (to the landing, or to the sideline). */
+  hang: number;
+  /** It went out of bounds in the air. */
+  out: boolean;
+  /** The flight, sampled every 1/30 s: [x, y, z] in the kick frame. */
+  path: [number, number, number][];
+}
+
+export function puntFlight(k: PuntInput): PuntFlight {
+  const over = Math.max(0, k.power - 1);
+  const p = Math.min(k.power, 1.08);
+  const path: [number, number, number][] = [[0, 0, PUNT_Z0]];
+  const f = fly(puntLeg() * p, k.aim, k.wind, -over * 9, 1000, path, PUNT_ELEV, PUNT_Z0, { y0: k.y0, half: k.halfWidth });
+  // Out of bounds in the air: the spot is where it crossed (the drawn flight carries on out of the picture).
+  if (f.out) return { carry: f.out.x, y: f.out.y, hang: f.out.t, out: true, path };
+  return { carry: f.x, y: f.y, hang: f.t, out: false, path };
 }
