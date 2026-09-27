@@ -1150,7 +1150,7 @@ function contactStep(s: PlayState): void {
       c.vel.y *= keep;
       o.busy = 28;
       o.mem.tackleCd = s.t + 0.9;
-      s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10 } });
+      s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10, move: c.move ?? '' } });
       continue;
     }
     // Down he goes (or the ball comes out).

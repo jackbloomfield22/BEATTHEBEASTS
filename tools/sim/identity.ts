@@ -22,7 +22,7 @@ const ONLY = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
 const YDS_TO_MPH = 3600 / 1760;
 
 type Side = 'off' | 'def';
-type Metric = 'topSpeed' | 'sepBreak' | 'yac' | 'trafficCatch' | 'yacContact' | 'broken' | 'missed' | 'ttt' | 'offTarget' | 'scramble' | 'cmpAllowed' | 'sepAllowed' | 'tackleRate' | 'pressure';
+type Metric = 'topSpeed' | 'sepBreak' | 'yac' | 'trafficCatch' | 'yacContact' | 'broken' | 'missed' | 'truckShare' | 'ttt' | 'offTarget' | 'scramble' | 'cmpAllowed' | 'sepAllowed' | 'tackleRate' | 'pressure' | 'rushWin';
 const LABEL: Record<Metric, [string, string, number]> = {
   // [what a fan calls it, unit, the smallest difference that shows]
   topSpeed: ['top speed', 'mph', 0.8],
@@ -32,6 +32,7 @@ const LABEL: Record<Metric, [string, string, number]> = {
   yacContact: ['yards after contact', 'yd', 0.4],
   broken: ['tackles broken a carry', '', 0.04],
   missed: ['tacklers made to miss a carry', '', 0.04],
+  truckShare: ['broken tackles that are trucks', '%', 10],
   ttt: ['time to throw', 's', 0.08],
   offTarget: ['throws off target (1+ yd)', '%', 4],
   scramble: ['scramble yards', 'yd', 1],
@@ -39,6 +40,7 @@ const LABEL: Record<Metric, [string, string, number]> = {
   sepAllowed: ['separation allowed', 'yd', 0.2],
   tackleRate: ['tackles finished', '%', 8],
   pressure: ['pressure rate', '%', 3],
+  rushWin: ['beats his blocker', '%', 5],
 };
 
 interface Pair {
@@ -60,9 +62,9 @@ export const PAIRS: Pair[] = [
   { a: ['Barry Sanders', 'RB'], b: ['Jerome Bettis', 'RB'], side: 'off', slot: 'RB', expect: { topSpeed: 1, missed: 1 }, why: 'Barry makes a man miss in a phone booth; the Bus runs through him' },
   { a: ['Chris Johnson', 'RB'], b: ['Christian Okoye', 'RB'], side: 'off', slot: 'RB', expect: { topSpeed: 1, missed: 1 }, why: 'CJ2K is the fastest back there is; the Nigerian Nightmare runs people over' },
   { a: ['Marshall Faulk', 'RB'], b: ['Larry Csonka', 'RB'], side: 'off', slot: 'RB', expect: { topSpeed: 1, missed: 1 }, why: 'Faulk cuts and catches; Csonka pounds it' },
-  { a: ['Jamaal Charles', 'RB'], b: ['Brandon Jacobs', 'RB'], side: 'off', slot: 'RB', expect: { missed: 1, broken: -1 }, why: 'Charles slips tackles; Jacobs trucks them' },
+  { a: ['Jamaal Charles', 'RB'], b: ['Brandon Jacobs', 'RB'], side: 'off', slot: 'RB', expect: { missed: 1, truckShare: -1 }, why: 'Charles slips tackles; Jacobs trucks them' },
   { a: ['Dan Marino', 'QB'], b: ['Michael Vick', 'QB'], side: 'off', slot: 'QB', expect: { ttt: -1, scramble: -1, offTarget: -1 }, why: 'Marino gets it out before the rush arrives; Vick runs' },
-  { a: ['Peyton Manning', 'QB'], b: ['Lamar Jackson', 'QB'], side: 'off', slot: 'QB', expect: { ttt: -1, scramble: -1 }, why: 'Manning from the pocket; Lamar with his legs' },
+  { a: ['Peyton Manning', 'QB'], b: ['Lamar Jackson', 'QB'], side: 'off', slot: 'QB', expect: { scramble: -1 }, why: 'Manning from the pocket; Lamar with his legs (their releases rate 98 and 92: the legs are the contrast)' },
   { a: ['Tom Brady', 'QB'], b: ['Steve Young', 'QB'], side: 'off', slot: 'QB', expect: { scramble: -1 }, why: 'Brady stands in; Young takes off' },
   { a: ['Joe Montana', 'QB'], b: ['Joe Namath', 'QB'], side: 'off', slot: 'QB', expect: { offTarget: -1 }, why: 'Montana puts it on the hands; Namath sprays it' },
   { a: ['Rob Gronkowski', 'TE'], b: ['Tony Gonzalez', 'TE'], side: 'off', slot: 'TE', expect: { topSpeed: 1, yac: 1 }, why: 'Gronk runs and breaks tackles after the catch; Gonzalez is the route runner' },
@@ -70,8 +72,8 @@ export const PAIRS: Pair[] = [
   { a: ['Deion Sanders', 'CB'], b: ['Kam Chancellor', 'S'], side: 'def', slot: 'LCB', expect: { cmpAllowed: -1, sepAllowed: -1 }, why: 'Prime Time shuts down half the field; Kam is a box hitter out of place at corner' },
   { a: ['Darrelle Revis', 'CB'], b: ['Ty Law', 'CB'], side: 'def', slot: 'LCB', expect: { cmpAllowed: -1, sepAllowed: -1 }, why: 'Revis Island' },
   { a: ['Ed Reed', 'S'], b: ['Kam Chancellor', 'S'], side: 'def', slot: 'SS', expect: { tackleRate: -1 }, why: 'Reed is the ballhawk who misses tackles; Kam finishes' },
-  { a: ['Reggie White', 'DE'], b: ['Howie Long', 'DE'], side: 'def', slot: 'LE', expect: { pressure: 1 }, why: 'The Minister of Defense runs through the tackle' },
-  { a: ['Lawrence Taylor', 'LB'], b: ['Mike Singletary', 'LB'], side: 'def', slot: 'WLB', expect: { pressure: 1 }, why: 'LT on the edge; Singletary in the middle' },
+  { a: ['Reggie White', 'DE'], b: ['Howie Long', 'DE'], side: 'def', slot: 'LE', expect: { rushWin: 1 }, why: 'The Minister of Defense runs through the tackle' },
+  { a: ['Lawrence Taylor', 'LB'], b: ['Mike Singletary', 'LB'], side: 'def', slot: 'WLB', expect: { rushWin: 1 }, why: 'LT on the edge; Singletary in the middle (both rushing on the fire zone)' },
 ];
 
 function with_(side: Side, slot: OffSlot | DefSlot, p: SimPlayer) {
@@ -143,6 +145,7 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
   if (slot === 'RB') {
     // Carries: yards after first contact, tackles broken and missed a carry.
     let carries = 0;
+    let trucks = 0;
     let broken = 0;
     let missed = 0;
     const after: number[] = [];
@@ -152,12 +155,15 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
       if (!s.events.some((ev) => ev.type === 'handoff' && ev.who?.includes(rb.i)) && s.carrier !== rb.i) continue;
       carries++;
       const hits = s.events.filter((ev) => (ev.type === 'hit' || ev.type === 'brokenTackle' || ev.type === 'missedTackle') && ev.who?.includes(rb.i));
-      broken += s.events.filter((ev) => ev.type === 'brokenTackle' && ev.who?.[0] === rb.i).length;
+      const br = s.events.filter((ev) => ev.type === 'brokenTackle' && ev.who?.[0] === rb.i);
+      broken += br.length;
+      trucks += br.filter((ev) => ev.data?.move === 'truck').length;
       missed += s.events.filter((ev) => ev.type === 'missedTackle' && ev.who?.[1] === rb.i).length;
       if (hits[0]?.at && s.result) after.push(s.result.spot - hits[0].at.x);
     }
     out.broken = broken / Math.max(1, carries);
     out.missed = missed / Math.max(1, carries);
+    out.truckShare = (100 * trucks) / Math.max(1, broken);
     out.yacContact = mean(after);
   }
   if (slot === 'QB') {
@@ -198,10 +204,14 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
       const me = slotAgent(s, slot);
       const man = manOf(s, me);
       runToWhistle(s, () => NEUTRAL);
+      // His tackle rolls: won (a hit that isn't him joining a pile), missed, or broken.
       for (const ev of s.events) {
-        if (ev.type === 'hit' && ev.who?.[0] === me.i) tries++;
-        if (ev.type === 'tackle' && ev.who?.[0] === me.i) made++;
-        if ((ev.type === 'missedTackle' || ev.type === 'brokenTackle') && ev.who?.includes(me.i)) tries++;
+        if (ev.type === 'hit' && ev.who?.[0] === me.i && !ev.data?.join) {
+          tries++;
+          made++;
+        }
+        if (ev.type === 'missedTackle' && ev.who?.[0] === me.i) tries++;
+        if (ev.type === 'brokenTackle' && ev.who?.[1] === me.i) tries++;
       }
       const p = s.result?.pass;
       if (!man || !p?.attempted || p.target !== man.i) continue;
@@ -216,14 +226,19 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
   if (side === 'def' && (slot === 'LE' || slot === 'WLB')) {
     let drops = 0;
     let press = 0;
-    for (const play of passPlays) for (const def of (slot === 'WLB' ? ['cover1blitz', 'firezone', 'simpressure'] : ['cover1', 'cover3', 'cover2']).map(defById)) for (let k = 0; k < REPS; k++) {
+    let wins = 0;
+    for (const play of passPlays) for (const def of (slot === 'WLB' ? ['firezone'] : ['cover1', 'cover3', 'cover2']).map(defById)) for (let k = 0; k < REPS; k++) {
       const s = mk(play, def, k, false);
       const me = slotAgent(s, slot);
       runToWhistle(s, () => NEUTRAL);
       drops++;
       if (s.pressures.some((p) => p.by === me.i)) press++;
+      // Beat his man: shed a block, or never blocked, before the ball's out (or the whistle).
+      const out = s.events.find((ev) => ev.type === 'throw')?.t ?? Infinity;
+      if (s.events.some((ev) => ev.type === 'shed' && ev.who?.[0] === me.i && ev.t < out) || s.pressures.some((p) => p.by === me.i && p.beat < 0)) wins++;
     }
     out.pressure = (100 * press) / Math.max(1, drops);
+    out.rushWin = (100 * wins) / Math.max(1, drops);
   }
   return out;
 }

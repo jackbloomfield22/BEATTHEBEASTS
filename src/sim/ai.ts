@@ -244,8 +244,12 @@ export function runRoute(s: PlayState, a: Agent): void {
     // couple of yards: a sharp route runner gives up less speed there (~85%
     // of his stem), a poor one more (~65%). The break is where the time goes:
     // an NFL 10-yard out comes out of its break ~1.8 s after the snap.
-    let pace = rt.idx === 0 ? 0.92 : 1;
     const nx = rt.pts[rt.idx + 1];
+    // (A vertical with no break, a go, seam or fade, is flat out from the
+    // line: the identity harness found every go route capped at the stem's
+    // 92%, so Moss ran 0.8 mph faster than Hines Ward and Gates 0.4 faster
+    // than Casper.)
+    let pace = rt.idx === 0 && nx ? 0.92 : 1;
     if (nx && !sit) {
       // Into the break at the speed he can carry through it, braking in
       // time: full speed through a bend, ~60% of top speed round a right
