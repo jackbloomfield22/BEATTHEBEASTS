@@ -9,6 +9,7 @@ import { worldDir } from '@/game/coords';
 import { latency } from '@/game/latency';
 import { catchLook, type CatchLook } from '@/sim/passing';
 import { threatOf } from '@/sim/moves';
+import type { BodyExtent } from './contact';
 
 // The choreographer: which clip each player plays, from the sim's state and
 // events (TECH_PLAN §9.2). The sim decides everything; this only picks and
@@ -52,6 +53,10 @@ export interface Body {
   head: number;
   headT: number;
   cutAt: number;
+  /** His trunk's measured extent (contact.ts), from his position, height and weight. */
+  ext: BodyExtent;
+  /** M6.5 #12: the man he's contesting a catch with (body index) until this sim time, or null. */
+  contest: { with: number; until: number } | null;
 }
 
 /** Upper body, for a throw on the run (the legs keep running). */
@@ -81,7 +86,91 @@ export function resetBody(b: Body): void {
   b.hurdled.clear();
   b.headT = -1;
   b.cutAt = -9;
+  b.contest = null;
   b.animator.onTurn = null;
+}
+
+// --- Contested catches (M6.5 #12) ---------------------------------------------------
+// A defender at the catch point plays through the receiver: his contest
+// overlay (tools/blender/lib/actions_m65_contact.py) puts the near hand on
+// the receiver's hip and the far arm across to the ball, timed so its
+// contact frame lands on the arrival, and the two lean into each other
+// (contact.ts) instead of being drawn through each other.
+
+/** A defender this close to the receiver at the ball's arrival (yd, predicted) contests it. */
+export const CONTEST_R = 1.2;
+/** How far ahead of the arrival (s) the contest is read: the overlay's lead to its contact frame and a little. */
+const CONTEST_LOOKAHEAD = 0.45;
+/** The pair stays in contact this long after the arrival (s): the rake and the fight for the ball. */
+const CONTEST_HOLD = 0.45;
+
+/**
+ * The defender contesting the ball to target `i` at its arrival: the
+ * nearest standing defender whose predicted spot at the arrival is within
+ * CONTEST_R of the receiver's, or -1. `side` is where the receiver is from
+ * the defender's run (+1 his left, -1 his right).
+ */
+export function contestFor(s: PlayState, i: number): { d: number; side: 1 | -1 } | null {
+  const a = s.agents[i]!;
+  const T = Math.max(0, s.ball.arrive - s.t);
+  const ax = a.pos.x + a.vel.x * T;
+  const ay = a.pos.y + a.vel.y * T;
+  let best = -1;
+  let bd = CONTEST_R;
+  for (const j of s.def) {
+    const o = s.agents[j]!;
+    if (o.down || o.side === a.side) continue;
+    const k = Math.hypot(o.pos.x + o.vel.x * T - ax, o.pos.y + o.vel.y * T - ay);
+    if (k < bd) {
+      bd = k;
+      best = j;
+    }
+  }
+  if (best < 0) return null;
+  const o = s.agents[best]!;
+  const sp = Math.hypot(o.vel.x, o.vel.y);
+  const hx = sp > 1 ? o.vel.x / sp : Math.cos(o.face);
+  const hy = sp > 1 ? o.vel.y / sp : Math.sin(o.face);
+  // The sim's y is to the left of its x: positive cross is on his left.
+  const rx = ax - (o.pos.x + o.vel.x * T);
+  const ry = ay - (o.pos.y + o.vel.y * T);
+  return { d: best, side: hx * ry - hy * rx >= 0 ? 1 : -1 };
+}
+
+/**
+ * Per frame, before the bodies are driven: start the contest at a catch
+ * point and return the pairs in contact now (body indices).
+ */
+export function contests(bodies: Body[], s: PlayState, simT: number, out: [number, number][]): [number, number][] {
+  out.length = 0;
+  const ball = s.ball;
+  const i = ball.target;
+  if (ball.mode === 'air' && i >= 0 && s.agents[i]!.side === 'off') {
+    const b = bodies[i];
+    const left = ball.arrive - simT;
+    if (b && !b.contest && left <= CONTEST_LOOKAHEAD && left > 0) {
+      const c = contestFor(s, i);
+      const d = c ? bodies[c.d] : undefined;
+      if (c && d && !d.fallen && !d.contest) {
+        const until = ball.arrive + CONTEST_HOLD;
+        b.contest = { with: c.d, until };
+        d.contest = { with: i, until };
+        const clip = c.side > 0 ? 'def_contest_l' : 'def_contest_r';
+        const lead = eventAt(d, clip, 'contact');
+        if (lead !== null) d.animator.playOverlay(clip, { t0: Math.max(0, lead - left) });
+      }
+    }
+  }
+  for (let k = 0; k < bodies.length; k++) {
+    const c = bodies[k]!.contest;
+    if (!c) continue;
+    if (simT > c.until || s.phase === 'dead') {
+      bodies[k]!.contest = null;
+      continue;
+    }
+    if (c.with > k) out.push([k, c.with]);
+  }
+  return out;
 }
 
 function lyingClip(b: Body, name: string, t0 = 0): void {

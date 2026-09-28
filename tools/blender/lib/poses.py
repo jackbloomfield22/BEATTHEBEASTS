@@ -246,6 +246,61 @@ def apply_pose(rig, c: Controls, p: Pose) -> None:
         aim_arms(rig, p.arms)
         if p.gaze:
             hold_gaze(rig, *p.gaze)
+    bpy.context.view_layer.update()
+    shoulder_rhythm(rig)
+
+
+# Scapulohumeral rhythm (Inman, Saunders & Abbott 1944; McClure et al. 2001):
+# raising the arm past about 70° brings the shoulder girdle up and round
+# with it, roughly one degree for every two of the humerus, so no joint is
+# asked for the whole range. The rig has no scapula; the clavicle stands in
+# for the girdle. Without it an arm overhead (the high point, a dive, a
+# one-hand catch) put all 160° in the shoulder joint and the upper arm's
+# skin came up through the pad cap (M6.5 #12, docs/m65/BODIES.md).
+RHYTHM_FROM = 70.0  # deg of arm elevation (from hanging down, thorax frame)
+RHYTHM_RATE = 0.35  # girdle degrees per degree past it
+RHYTHM_MAX = 28.0  # deg (clavicle elevation tops out near 30° in McClure's data)
+RHYTHM_ON = True  # the skinning tools switch it off for before/after sheets
+
+
+def rhythm_angle(elevation: float) -> float:
+    """Clavicle elevation (deg) for an arm elevated this far (deg)."""
+    return min(RHYTHM_MAX, max(0.0, elevation - RHYTHM_FROM) * RHYTHM_RATE)
+
+
+def shoulder_rhythm(rig) -> dict:
+    """Raise each clavicle for its arm's elevation, keeping the arm's
+    orientation in the world (an FK arm keeps its direction; an IK hand its
+    target). Returns the degrees added per side."""
+    if not RHYTHM_ON:
+        return {}
+    down = -rig.pose.bones["spine_04"].matrix.to_3x3().col[1].normalized()
+    todo = {}
+    for s in SIDES:
+        ua = rig.pose.bones[f"upperarm_{s}"]
+        d = ua.tail - ua.head
+        if d.length > 1e-6:
+            a = rhythm_angle(math.degrees(d.normalized().angle(down)))
+            if a > 0.0:
+                todo[s] = a
+    if not todo:
+        return {}
+    keep = {s: {b: rig.pose.bones[f"{b}_{s}"].matrix.to_3x3().copy() for b in ("upperarm", "forearm", "hand")} for s in todo}
+    for s, a in todo.items():
+        pb = rig.pose.bones[f"clavicle_{s}"]
+        pb.rotation_mode = "XYZ"
+        e = pb.rotation_euler
+        # +Z raises the left clavicle's outer end; the right side mirrors (anim_rig.set_joint).
+        pb.rotation_euler = (e.x, e.y, e.z + math.radians(a) * (1.0 if s == "l" else -1.0))
+    bpy.context.view_layer.update()
+    for b in ("upperarm", "forearm", "hand"):
+        for s in todo:
+            pb = rig.pose.bones[f"{b}_{s}"]
+            m = keep[s][b].to_4x4()
+            m.translation = pb.matrix.translation
+            pb.matrix = m
+        bpy.context.view_layer.update()
+    return todo
 
 
 def mirror(p: Pose) -> Pose:

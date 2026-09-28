@@ -26,13 +26,15 @@ import { Audio } from '@/audio/audio';
 import { KITS } from '../players/kits';
 import { bodyFromImperial } from '../players/bodyShape';
 import { jerseyName } from '../players/glyphs';
-import { playerVariety, type Position } from '../players/variety';
+import { playerVariety } from '../players/variety';
+import { RENDER_POS } from '../players/renderPos';
+import { bodyExtent, ContactSmoother, type ContactBody } from './contact';
 import { loadPlayerAsset, Player, type PlayerAsset } from '../players/playerAsset';
 import { prepareLate, shadowAttach } from '../lighting/shadows';
 import { createFootball } from './football';
 import { createFieldMarks } from './fieldMarks';
 import { frameEvents } from './frameEvents';
-import { ballInHands, catchMagnet, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
+import { ballInHands, catchMagnet, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
 import { Officials } from './officials';
 import { kickView } from './kickView';
 
@@ -105,7 +107,6 @@ const FG_SET: Record<string, { at: [number, number]; stance: string } | null> = 
   MLB: { at: [2.6, 0], stance: 'stance_lb_ready' },
 };
 
-const RENDER_POS: Record<SimPlayer['pos'], Position> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', OL: 'OL', DE: 'DL', DT: 'DL', LB: 'LB', CB: 'CB', S: 'S' };
 
 function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: PlayerAsset, lib: AnimLibrary): Body[] {
   return players.map((p, k) => {
@@ -118,7 +119,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: Pl
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9 };
+    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null };
   });
 }
 
@@ -133,6 +134,7 @@ function relook(b: Body, p: SimPlayer): void {
   const body = bodyFromImperial(p.heightIn, p.weightLb);
   b.player.setLook({ kit: KITS[b.kit]!, skin: skinHexFor(p.name), number: p.num, name: jerseyName(p.name), variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name) });
   b.player.setBody(body.heightM, body.weightKg);
+  b.ext = bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg);
 }
 
 const _p = new THREE.Vector3();
@@ -144,6 +146,10 @@ const _hands = new THREE.Vector3();
 /** Fastest the drawn facing turns (rad/s): a sharp pivot, ~180° in a quarter second. */
 const YAW_MAX = 12;
 const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move: null, down: false, stamina: 1 };
+/** Contact between drawn bodies (M6.5 #12, contact.ts): per body, and the contested pairs this frame. */
+const contactBodies: ContactBody[] = [];
+const contactPairs: [number, number][] = [];
+const _lean = { x: 0, z: 0 };
 
 /** The carrier's move options as the HUD says them (one word each). */
 const OPTION_WORD: Record<string, string> = { juke: 'Juke', stiffArm: 'Stiff arm', spin: 'Spin', truck: 'Truck', dive: 'Dive', protect: 'Protect' };
@@ -161,6 +167,7 @@ export function GameScene() {
   const kickSet = useRef<number | null>(null);
   const lastSimT = useRef(0);
   const snapped = useRef(false);
+  const [contact] = useState(() => new ContactSmoother());
 
   useEffect(() => {
     let alive = true;
@@ -277,6 +284,7 @@ export function GameScene() {
         b.gaitSpeed = 0;
       });
       if (urlFlags.pops) resetPops();
+      contact.reset();
       lastSimT.current = cur.t;
       officials.current?.place(s.setup.los, s.setup.ballY ?? 0);
     }
@@ -292,6 +300,7 @@ export function GameScene() {
     const simT = cur.t + alpha * TICK;
     const animDt = Math.max(0, Math.min(0.5, simT - lastSimT.current));
     lastSimT.current = simT;
+    contests(bodies, s, simT, contactPairs);
     const viewportPx = gl.domElement.height;
     // The player the user moves now: the QB until the ball leaves him, then his carrier.
     const ph = cur.phase;
@@ -326,6 +335,15 @@ export function GameScene() {
       const root = b.player.root;
       root.position.set(worldX(tmp.y), 0, worldZ(tmp.x));
       root.rotation.y = yaw;
+      // Bodies in contact: drawn a little off the sim's spot, leaning in (contact.ts; render only).
+      const cc = contact.cur[i];
+      _lean.x = _lean.z = 0;
+      if (cc && !b.lie) {
+        root.position.x += cc.ox;
+        root.position.z += cc.oz;
+        _lean.x = cc.lx;
+        _lean.z = cc.lz;
+      }
       if (b.lie) {
         // Lying where the fall left him (the lying clip's root is at his hips, his head along +Z).
         root.position.set(b.lie.x, 0, b.lie.z);
@@ -336,7 +354,7 @@ export function GameScene() {
       const accel = animDt > 0 ? (d.speed - b.lastSpeed) / Math.max(animDt, 1 / 120) : 0;
       b.lastYaw = yaw;
       b.lastSpeed = d.speed;
-      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, carry: d.carry, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip });
+      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, carry: d.carry, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean });
       b.ragdoll.update(animDt);
       // A body hitting the turf hard kicks up dust (a big hit's landing).
       const land = b.ragdoll.landing;
@@ -347,6 +365,21 @@ export function GameScene() {
       b.player.updateLod(camera, viewportPx);
       if (urlFlags.pops) measure(b, animDt, latency.frame, s.agents[i]!.anim, cur.phase);
     });
+    // Where the trunks are drawn (less the contact offset: it must not feed back), then the contact response for next frame.
+    bodies.forEach((b, i) => {
+      const cb = (contactBodies[i] ??= { x: 0, z: 0, fx: 0, fz: 1, ext: b.ext, scale: 1, free: false });
+      const cc = contact.cur[i];
+      const yaw = b.player.root.rotation.y;
+      cb.x = b.animator.trunk.x - (cc?.ox ?? 0);
+      cb.z = b.animator.trunk.z - (cc?.oz ?? 0);
+      cb.fx = Math.sin(yaw);
+      cb.fz = Math.cos(yaw);
+      cb.ext = b.ext;
+      cb.scale = b.player.shape.scale;
+      cb.free = !b.fallen && !b.lie && !b.ragdoll.active && !s.agents[i]!.down;
+    });
+    contactBodies.length = bodies.length;
+    contact.update(contactBodies, contactPairs, animDt);
 
     officials.current?.update(animDt, cur.ball, s.result, s.result ? s.result.spot - s.setup.los : 0, s.setup.toGo, camera, viewportPx);
     placeBall(s.snapT, s.t);

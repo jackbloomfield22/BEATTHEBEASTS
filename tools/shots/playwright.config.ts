@@ -11,12 +11,13 @@ import { chromiumLaunch } from '../../playwright.config';
 // BTB_CATCH=1 the catch clips in the Animation Lab (catch.spec.ts), BTB_CATCHGAME=1
 // the catch call in a scripted play (catchgame.spec.ts), BTB_HUD=1 the carrier's
 // move options in a scripted run (carrierhud.spec.ts); BTB_CARRIER=1 the carrier
-// clips in the Lab (carrier.spec.ts), BTB_CARRIERGAME=1 scripted carries (carriergame.spec.ts). BTB_PORT
+// clips in the Lab (carrier.spec.ts), BTB_CARRIERGAME=1 scripted carries (carriergame.spec.ts),
+// BTB_BODIES=1 the skinning and contact stills (bodies.spec.ts, M6.5 #12). BTB_PORT
 // moves the dev server off 5174 (another checkout's server can hold it).
 const PORT = Number(process.env.BTB_PORT ?? 5174);
 export default defineConfig({
   testDir: '.',
-  testMatch: process.env.BTB_HUD ? 'carrierhud.spec.ts' : process.env.BTB_CARRIERGAME ? 'carriergame.spec.ts' : process.env.BTB_CARRIER ? 'carrier.spec.ts' : process.env.BTB_CATCHGAME ? 'catchgame.spec.ts' : process.env.BTB_CATCH ? 'catch.spec.ts' : process.env.BTB_GAME ? 'game.spec.ts' : process.env.BTB_M6VIDEO ? 'm6video.spec.ts' : process.env.BTB_LOCKER ? 'locker.spec.ts' : process.env.BTB_CONTACT ? 'contact.spec.ts' : process.env.BTB_PRACTICE ? 'practice.spec.ts' : process.env.BTB_VIDEO ? 'video.spec.ts' : 'matrix.spec.ts',
+  testMatch: process.env.BTB_BODIES ? 'bodies.spec.ts' : process.env.BTB_HUD ? 'carrierhud.spec.ts' : process.env.BTB_CARRIERGAME ? 'carriergame.spec.ts' : process.env.BTB_CARRIER ? 'carrier.spec.ts' : process.env.BTB_CATCHGAME ? 'catchgame.spec.ts' : process.env.BTB_CATCH ? 'catch.spec.ts' : process.env.BTB_GAME ? 'game.spec.ts' : process.env.BTB_M6VIDEO ? 'm6video.spec.ts' : process.env.BTB_LOCKER ? 'locker.spec.ts' : process.env.BTB_CONTACT ? 'contact.spec.ts' : process.env.BTB_PRACTICE ? 'practice.spec.ts' : process.env.BTB_VIDEO ? 'video.spec.ts' : 'matrix.spec.ts',
   timeout: process.env.BTB_VIDEO || process.env.BTB_M6VIDEO ? 14_400_000 : 600_000,
   workers: 1,
   reporter: [['list']],

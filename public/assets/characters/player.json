@@ -102,5 +102,138 @@
     "calves",
     "arms"
   ],
-  "bytes": 3462724
+  "bytes": 3462724,
+  "skinGate": {
+    "groups": {
+      "speed": {
+        "clips": [
+          "run",
+          "sprint",
+          "carry_sprint",
+          "cut_plant_sharp_l"
+        ],
+        "regions": {
+          "shoulder": {
+            "collapsed": 0.0183,
+            "flips": 0.0952,
+            "at": {
+              "collapsed": "run:0 lod1",
+              "flips": "sprint:0 lod1"
+            },
+            "max": {
+              "collapsed": 0.022,
+              "flips": 0.11
+            },
+            "pass": true
+          },
+          "elbow": {
+            "collapsed": 0.0468,
+            "flips": 0.0845,
+            "at": {
+              "collapsed": "sprint:8 lod1",
+              "flips": "carry_sprint:4 lod2"
+            },
+            "max": {
+              "collapsed": 0.055,
+              "flips": 0.1
+            },
+            "pass": true
+          },
+          "hip": {
+            "collapsed": 0.0149,
+            "flips": 0.0321,
+            "at": {
+              "collapsed": "cut_plant_sharp_l:8 lod1",
+              "flips": "sprint:11 lod1"
+            },
+            "max": {
+              "collapsed": 0.018,
+              "flips": 0.04
+            },
+            "pass": true
+          },
+          "knee": {
+            "collapsed": 0.0422,
+            "flips": 0.1557,
+            "at": {
+              "collapsed": "carry_sprint:7 lod1",
+              "flips": "cut_plant_sharp_l:5 lod0"
+            },
+            "max": {
+              "collapsed": 0.05,
+              "flips": 0.18
+            },
+            "pass": true
+          }
+        },
+        "capLift": {
+          "m": 0.0229,
+          "at": "sprint:7 lod0",
+          "max": 0.04,
+          "pass": true
+        }
+      },
+      "reach": {
+        "clips": [
+          "catch_high_point",
+          "dive"
+        ],
+        "regions": {
+          "shoulder": {
+            "collapsed": 0.0256,
+            "flips": 0.1832,
+            "at": {
+              "collapsed": "catch_high_point:25 lod1",
+              "flips": "dive:5 lod1"
+            },
+            "max": {
+              "collapsed": 0.03,
+              "flips": 0.21
+            },
+            "pass": true
+          },
+          "elbow": {
+            "collapsed": 0.0426,
+            "flips": 0.1268,
+            "at": {
+              "collapsed": "catch_high_point:0 lod1",
+              "flips": "catch_high_point:11 lod2"
+            },
+            "max": {
+              "collapsed": 0.05,
+              "flips": 0.15
+            },
+            "pass": true
+          },
+          "hip": {
+            "collapsed": 0.0126,
+            "flips": 0.0241,
+            "at": {
+              "collapsed": "dive:4 lod1",
+              "flips": "catch_high_point:8 lod1"
+            },
+            "max": {
+              "collapsed": 0.016,
+              "flips": 0.03
+            },
+            "pass": true
+          },
+          "knee": {
+            "collapsed": 0.0542,
+            "flips": 0.1393,
+            "at": {
+              "collapsed": "dive:9 lod1",
+              "flips": "catch_high_point:41 lod0"
+            },
+            "max": {
+              "collapsed": 0.065,
+              "flips": 0.17
+            },
+            "pass": true
+          }
+        }
+      }
+    },
+    "pass": true
+  }
 }

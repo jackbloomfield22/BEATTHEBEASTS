@@ -45,6 +45,12 @@ export interface AnimInput {
   press?: number;
   /** The dip before contact: + a tackler closing on his left, − on his right; the size is the weight (0..1). */
   dip?: number;
+  /**
+   * Leaning into another body (M6.5 #12, render/game/contact.ts): the world
+   * horizontal direction to lean toward, its length the angle (rad). The
+   * body pivots at the feet, which stay planted.
+   */
+  contactLean?: { x: number; z: number };
 }
 
 const FEET = ['l', 'r'] as const;
@@ -113,7 +119,11 @@ const DIP_IN = 0.12;
 const DIP_OUT = 0.2;
 /** The press of a designed run: the trunk pitched this much further forward (rad, ~7°). */
 const PRESS_PITCH = 0.12;
+/** The run's lean pivots this high (m, base body: the hips, near the centre of mass; skeleton.py pelvis at 1.00). */
+const LEAN_PIVOT = 0.95;
 const _oq = new THREE.Quaternion();
+const _oq2 = new THREE.Quaternion();
+const _oq3 = new THREE.Quaternion();
 
 export class PlayerAnimator {
   readonly mixer: THREE.AnimationMixer;
@@ -141,6 +151,8 @@ export class PlayerAnimator {
    * compound. Each update puts this pose back before the mixer runs.
    */
   private animPose: [THREE.Bone, THREE.Quaternion][] = [];
+  /** The root bone's position as the clips left it (the lean moves it about the hips; it must not compound either). */
+  private animRootPos = new THREE.Vector3();
   private trans: TransitionState | null = null;
   /** A stop waiting for the left foot's touch-down (the clip starts there). */
   private queued: string | null = null;
@@ -165,6 +177,8 @@ export class PlayerAnimator {
   rootMotion = 0;
   rootSpeed = 0;
   footLock = true;
+  /** The chest (spine_04) in the world after the clips and the run's lean, before any contact lean (M6.5 #12). */
+  readonly trunk = new THREE.Vector3();
   /** Last frame's foot-lock correction per foot (m): how much slide the lock removed. */
   readonly correction = { l: 0, r: 0 };
 
@@ -182,6 +196,7 @@ export class PlayerAnimator {
     }
     this.stanceWeights.set(this.stance, 1);
     for (const bone of player.bones.values()) this.animPose.push([bone, bone.quaternion.clone()]);
+    this.animRootPos.copy(this.bone('root').position);
     for (const f of lib.families) {
       for (const g of f) if (!this.locos.includes(g)) this.locos.push(g);
       this.samples.push({ a: f[0]!, b: f[0]!, w: 0, stride: 0 });
@@ -501,9 +516,12 @@ export class PlayerAnimator {
       if (on) a.time = Math.min(this.trans!.t, a.getClip().duration - 1e-4);
     }
     // Everything else (the backpedal, future clips) stays silent unless driven.
+    const rootBone = this.bone('root');
     for (const [bone, q] of this.animPose) bone.quaternion.copy(q);
+    rootBone.position.copy(this.animRootPos);
     this.mixer.update(0);
     for (const [bone, q] of this.animPose) q.copy(bone.quaternion);
+    this.animRootPos.copy(rootBone.position);
     // Overlays over the clips (the snapshot above is what the next frame
     // restores, so they never compound).
     this.holdLayer = this.stepOverlay(this.holdLayer, dt);
@@ -515,6 +533,10 @@ export class PlayerAnimator {
 
     // 3. Lean (before the feet are locked, so the lock sees the leaned body).
     this.lean(speed, input.yawRate ?? 0, input.accel ?? 0, this.pressW * PRESS_PITCH);
+    // Where the trunk is before any contact lean (contact.ts reads it: leaning must not feed back into the lean).
+    this.bone('spine_04').getWorldPosition(this.trunk);
+    const cl = input.contactLean;
+    if (cl && (cl.x !== 0 || cl.z !== 0)) this.leanToward(cl.x, cl.z);
     // 2. Foot lock.
     // A foot is planted when every clip with weight has it planted (when the
     // warp can't align them, e.g. walk against jog, the stricter of the two).
@@ -556,6 +578,34 @@ export class PlayerAnimator {
     _q.setFromAxisAngle(_fwd, -bank).multiply(new THREE.Quaternion().setFromAxisAngle(right, pitch));
     const wq = root.getWorldQuaternion(new THREE.Quaternion());
     const pq = root.parent ? root.parent.getWorldQuaternion(new THREE.Quaternion()) : new THREE.Quaternion();
+    root.quaternion.copy(pq.invert().multiply(_q).multiply(wq));
+    // About the hips, not the feet (M6.5 #12): the sim's spot is where his
+    // mass goes, so the body tilts about it and the feet swing out under a
+    // turn. Pivoting at the feet swung the chest up to half a metre off the
+    // sim's spot at the bank's limit, into whoever was beside him (a
+    // receiver adjusting to the ball banks at the limit on one catch in
+    // five; tools/sim/catchcontact.ts).
+    if (root.parent) {
+      const h = LEAN_PIVOT * this.player.shape.scale;
+      root.getWorldPosition(_v);
+      _pole.set(0, h, 0).applyQuaternion(_q);
+      _v.y += h;
+      _v.sub(_pole);
+      root.parent.worldToLocal(_v);
+      root.position.copy(_v);
+    }
+    root.updateMatrixWorld(true);
+  }
+
+  /** Tilt the whole body about the feet toward a world direction by its length (rad). */
+  private leanToward(x: number, z: number): void {
+    const ang = Math.hypot(x, z);
+    if (ang < 1e-5) return;
+    const root = this.bone('root');
+    // Up turns toward (x, z): about the axis up × dir.
+    _q.setFromAxisAngle(_w.set(z / ang, 0, -x / ang), ang);
+    const wq = root.getWorldQuaternion(_oq2);
+    const pq = root.parent ? root.parent.getWorldQuaternion(_oq3) : _oq3.identity();
     root.quaternion.copy(pq.invert().multiply(_q).multiply(wq));
     root.updateMatrixWorld(true);
   }
