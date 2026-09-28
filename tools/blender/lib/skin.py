@@ -31,6 +31,10 @@ FLIP_DEG = 120.0
 COLLAPSED = 0.2
 MIN_AREA = 4e-6  # m² (2 x 4 mm); LOD0's median face is ~6e-5
 
+# The pad caps (lib/gear.py: the cap over each shoulder, above its lip).
+CAP_Z = 1.47
+CAP_X = (0.12, 0.30)
+
 TRUNK = ("spine_03", "spine_04", "clavicle", "pad")
 REGIONS = {
     "shoulder": (TRUNK, ("upperarm",)),
@@ -85,6 +89,34 @@ class SkinProbe:
         big = self.rest_area > MIN_AREA
         self.faces = {r: np.where(blends[r][self.tris].any(axis=1) & big)[0] for r in REGIONS}
 
+    def parts(self) -> np.ndarray:
+        """Each vertex's part id (gear.PARTS): the build's point attribute, or TEXCOORD_0.x in an imported file."""
+        me = self.mesh.data
+        n = len(me.vertices)
+        if "part" in me.attributes:
+            out = np.empty(n, dtype=np.int64)
+            me.attributes["part"].data.foreach_get("value", out)
+            return out
+        out = np.zeros(n, dtype=np.int64)
+        uv = me.uv_layers[0].data
+        for loop in me.loops:
+            out[loop.vertex_index] = int(uv[loop.index].uv.x * 16)
+        return out
+
+    def cap_lift(self, co: np.ndarray | None = None) -> float:
+        """How far the pad caps stand off the chest (m, 95th percentile over
+        the caps' vertices): where they are against where the chest alone
+        would carry them. The fin at the sprint's arm swing (M6.5 #12)."""
+        if not hasattr(self, "_cap"):
+            p = self.parts()
+            r = self.rest
+            self._cap = (p == 4) & (r[:, 2] > CAP_Z) & (np.abs(r[:, 0]) > CAP_X[0]) & (np.abs(r[:, 0]) < CAP_X[1])
+        co = self.deformed() if co is None else co
+        m = self.rig.pose.bones["spine_04"].matrix @ self.rig.data.bones["spine_04"].matrix_local.inverted()
+        a = np.array(m)
+        rigid = self.rest[self._cap] @ a[:3, :3].T + a[:3, 3]
+        return float(np.percentile(np.linalg.norm(co[self._cap] - rigid, axis=1), 95))
+
     def deformed(self) -> np.ndarray:
         dg = bpy.context.evaluated_depsgraph_get()
         ev = self.mesh.evaluated_get(dg)
@@ -136,6 +168,11 @@ GATE_GROUPS = {
     "reach": ["catch_high_point", "dive"],
 }
 GATE_CLIPS = [c for g in GATE_GROUPS.values() for c in g]
+# At speed the pad caps ride the chest: the 95th percentile of their
+# vertices stands at most this far off it (m). The shipped M6.5 build
+# stood them 12 cm off at the sprint's arm swing (the fin); the pad shell
+# holds them to ~2 cm. (Overhead, the cap is meant to rise with the girdle.)
+CAP_LIFT_MAX = 0.04
 # Per group and region, the worst frame of any of its clips at any LOD: the
 # share of the region's faces collapsed below COLLAPSED of their area, and
 # the share folded through themselves. Set from the M6.5 #12 build
@@ -191,12 +228,18 @@ def gate_lods(rig, meshes: list) -> dict:
     ok = True
     for group, names in GATE_GROUPS.items():
         worst = {r: {"collapsed": 0.0, "flips": 0.0, "at": {}} for r in REGIONS}
+        lift, lift_at = 0.0, ""
         for name in names:
             for f, pose in enumerate(clip_poses(name)):
                 apply_pose(rig, c, pose)
                 bpy.context.view_layer.update()
                 for lod, p in enumerate(probes):
-                    for r, m in p.measure().items():
+                    co = p.deformed()
+                    if group == "speed":
+                        cl = p.cap_lift(co)
+                        if cl > lift:
+                            lift, lift_at = cl, f"{name}:{f} lod{lod}"
+                    for r, m in p.measure(co).items():
                         w = worst[r]
                         fl = m["flips"] / max(1, m["faces"])
                         if m["collapsed"] > w["collapsed"]:
@@ -210,4 +253,7 @@ def gate_lods(rig, meshes: list) -> dict:
             ok &= passed
             res[r] = {"collapsed": round(w["collapsed"], 4), "flips": round(w["flips"], 4), "at": w["at"], "max": lim, "pass": passed}
         out[group] = {"clips": names, "regions": res}
+        if group == "speed":
+            ok &= lift <= CAP_LIFT_MAX
+            out[group]["capLift"] = {"m": round(lift, 4), "at": lift_at, "max": CAP_LIFT_MAX, "pass": lift <= CAP_LIFT_MAX}
     return {"groups": out, "pass": ok}

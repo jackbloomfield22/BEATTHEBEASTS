@@ -537,6 +537,8 @@ def main() -> None:
     for group, g in skin_gate["groups"].items():
         for r, w in g["regions"].items():
             print(f"skin gate {group:5s} {r:9s} collapsed {w['collapsed'] * 100:5.2f}% folded {w['flips'] * 100:5.2f}% {'pass' if w['pass'] else 'FAIL'} {w['at']}")
+        if "capLift" in g:
+            print(f"skin gate {group:5s} cap lift {g['capLift']['m'] * 100:.1f} cm {'pass' if g['capLift']['pass'] else 'FAIL'} {g['capLift']['at']}")
     assert skin_gate["pass"], "skinning gate failed (player.json skinGate)"
 
 

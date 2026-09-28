@@ -30,10 +30,12 @@ ARMS = arm_mask("l") + arm_mask("r")
 # Where the receiver is, in the defender's frame at the catch (x left, -y
 # forward, z up; the defender stands at the origin facing -Y): beside and a
 # little ahead, pads to pads (sim distance ~0.7-1.1 yd). His near hip is
-# ~0.45 m to the left; his hands (the catch point) ~0.45 m in front of his
-# chest, so ~0.5 m left and ~0.5 m ahead of the defender.
+# ~0.4 m to the left. The far (right) hand goes across the front of the
+# receiver's body toward his hands: across the defender's own midline and
+# out in front at chest height, as far as a right arm reaches that way
+# (0.6 m from the right shoulder; the trunk's turn brings it forward).
 NEAR_HIP = (0.40, -0.18, 1.02)
-CATCH_POINT = (0.34, -0.52, 1.28)
+CATCH_POINT = (0.12, -0.44, 1.30)
 
 
 def contest_left() -> Clip:
@@ -42,9 +44,9 @@ def contest_left() -> Clip:
     T = 0.8
     tc = 9 / FPS  # contact: the far hand at the ball
     # Turned and leaning in toward him: the left shoulder into his.
-    lean = {"spine_02": (4, 4, 6), "spine_03": (6, 6, 8), "spine_04": (4, 4, 6)}
+    lean = {"spine_02": (4, 2, 6), "spine_03": (6, 2, 8), "spine_04": (4, 1, 6)}
     reach = upper(
-        {"l": (0.36, -0.22, 1.06), "r": (0.18, -0.46, 1.34)},
+        {"l": (0.36, -0.22, 1.06), "r": (0.02, -0.40, 1.36)},
         {**hands_of(SPREAD, "l"), **hands_of(SPREAD, "r"), "hand_l": (10, 0, 20), "hand_r": (-10, 0, 10)},
         {"l": (0.75, 0.25, 0.95), "r": (-0.35, -0.10, 0.95)},
     )
@@ -57,7 +59,7 @@ def contest_left() -> Clip:
     contact.joints.update({k: (f * 1.3, a * 1.3, t * 1.3) for k, (f, a, t) in lean.items()})
     # The rake: the far hand swipes down through his hands, the near arm pushes off.
     rake = upper(
-        {"l": (0.42, -0.10, 1.08), "r": (0.30, -0.44, 0.98)},
+        {"l": (0.42, -0.10, 1.08), "r": (0.16, -0.42, 1.04)},
         {**hands_of(RELAXED, "l"), **hands_of(GRIP, "r"), "hand_l": (0, 0, 10), "hand_r": (35, 0, 10)},
         {"l": (0.80, 0.30, 0.95), "r": (-0.25, -0.05, 0.80)},
     )

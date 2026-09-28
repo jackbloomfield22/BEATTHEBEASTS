@@ -104,7 +104,11 @@ def poses_of(name, clips):
 
 
 def main() -> None:
+    global PLAYER
     args = sys.argv[1:]
+    if "--file" in args:
+        # Another player.glb (an older build, for a before and after).
+        PLAYER = args[args.index("--file") + 1]
     lods = [int(x) for x in args[args.index("--lods") + 1].split(",")] if "--lods" in args else [0, 1, 2]
     names = args[args.index("--clips") + 1].split(",") if "--clips" in args else DEFAULT_CLIPS
     out = args[args.index("--json") + 1] if "--json" in args else None
@@ -127,6 +131,8 @@ def main() -> None:
         for group, gg in g["groups"].items():
             for r, w in gg["regions"].items():
                 print(f"gate {group:5s} {r:9s} collapsed {w['collapsed'] * 100:5.2f}% ({w['at'].get('collapsed', '-')})  folded {w['flips'] * 100:5.2f}% ({w['at'].get('flips', '-')})  {'pass' if w['pass'] else 'FAIL'}")
+            if "capLift" in gg:
+                print(f"gate {group:5s} cap lift {gg['capLift']['m'] * 100:.1f} cm ({gg['capLift']['at']})  {'pass' if gg['capLift']['pass'] else 'FAIL'}")
         if out:
             with open(out, "w") as fh:
                 json.dump(g, fh, indent=1)

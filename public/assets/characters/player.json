@@ -165,6 +165,12 @@
             },
             "pass": true
           }
+        },
+        "capLift": {
+          "m": 0.0229,
+          "at": "sprint:7 lod0",
+          "max": 0.04,
+          "pass": true
         }
       },
       "reach": {
