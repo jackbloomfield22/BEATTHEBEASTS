@@ -18,13 +18,14 @@ import { PUNT_DEPTH } from '@/game/kick';
 import { LOFT_CHARGE, DEF_SLOTS, HOT_ROUTES, OFF_SLOTS, TAP_MAX, TICK, type PlayState, type SimPlayer } from '@/sim';
 import { openness } from '@/sim/ai';
 import { previewThrow } from '@/sim/passing';
+import { carrierOptions } from '@/sim/moves';
 import { openState } from '@/game/view';
 import { YARD } from '../world/constants';
 import { hudDom, RING_LEN } from '@/ui/game/hudDom';
 import { crowdEnergy } from '../crowd/reactions';
 import { activeVfx } from '../vfx/active';
 import { Audio } from '@/audio/audio';
-import { KITS } from '../players/kits';
+import { KITS, kitAgainst } from '../players/kits';
 import { bodyFromImperial } from '../players/bodyShape';
 import { jerseyName } from '../players/glyphs';
 import { playerVariety } from '../players/variety';
@@ -146,7 +147,6 @@ const PUNT_SET: Record<string, { at: [number, number]; stance: string } | null> 
 /** Who runs on a punt once it's snapped: the gunners and their vise downfield, the returner under the ball. */
 const PUNT_RUNNERS: Record<string, 'gunner' | 'vise' | 'returner'> = { X: 'gunner', Z: 'gunner', LCB: 'vise', RCB: 'vise', MLB: 'vise', SS: 'vise', FS: 'returner' };
 
-const RENDER_POS: Record<SimPlayer['pos'], Position> = { QB: 'QB', RB: 'RB', WR: 'WR', TE: 'TE', OL: 'OL', DE: 'DL', DT: 'DL', LB: 'LB', CB: 'CB', S: 'S' };
 
 function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: PlayerAsset, lib: AnimLibrary): Body[] {
   return players.map((p, k) => {
@@ -253,7 +253,9 @@ export function GameScene() {
       if (!alive || !practice.rosters) return;
       const R = practice.rosters;
       // Agent order in the sim: OFF_SLOTS then DEF_SLOTS (sim/plays.ts).
-      const all = [...buildTeam(OFF_SLOTS.map((k) => R.offense[k]), OFF_SLOTS, practice.offenseKit, asset, lib), ...buildTeam(DEF_SLOTS.map((k) => R.defense[k]), DEF_SLOTS, 'beasts', asset, lib)];
+      // Never two dark kits on the field (Playtest 1 decision 5): the offense changes to white if its kit is as dark as the Beasts'.
+      const offKit = kitAgainst(practice.offenseKit, 'beasts').id;
+      const all = [...buildTeam(OFF_SLOTS.map((k) => R.offense[k]), OFF_SLOTS, offKit, asset, lib), ...buildTeam(DEF_SLOTS.map((k) => R.defense[k]), DEF_SLOTS, 'beasts', asset, lib)];
       const g = new THREE.Group();
       g.name = 'players';
       for (const b of all) {
@@ -614,8 +616,17 @@ export function GameScene() {
         ch.style.transform = `translate(${Math.max(120, Math.min(rect.width - 120, x)).toFixed(1)}px, ${Math.min(rect.height - 90, y).toFixed(1)}px)`;
         if (hudDom.staminaFill) hudDom.staminaFill.style.transform = `scaleX(${c.stamina.toFixed(3)})`;
         // The three options the sim holds on him now (moves.ts), the move he's in lit.
+        // M6.6 (Playtest 1: "the move prompts show up late"): the sim only
+        // sets them once carrierStep runs him, which on a designed run is
+        // after he has pressed the aiming point (to the line on a gap scheme,
+        // a beat on zone), so the words were blank for up to a second after
+        // the handoff. Until the sim holds a set, the HUD reads the same
+        // pure ranking itself (read-only) and shows it dimmed: on screen the
+        // moment he has the ball, lit fully once a press will do it.
         const live = s.agents[cur.carrier]!;
-        const opts = typeof live.mem.opts === 'string' ? live.mem.opts.split(',') : [];
+        const held = typeof live.mem.opts === 'string';
+        const opts = held ? (live.mem.opts as string).split(',') : carrierOptions(s, live);
+        if (ch.dataset.pending !== String(!held)) ch.dataset.pending = String(!held);
         const inMove = live.busy > 0 && live.move ? (live.move === 'jukeL' || live.move === 'jukeR' ? 'juke' : live.move) : live.move === 'protect' ? 'protect' : null;
         for (let k = 0; k < 3; k++) {
           const el = hudDom.opts[k];

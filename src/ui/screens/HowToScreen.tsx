@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useApp } from '@/app/appStore';
 import { useSettings } from '@/app/settings';
-import { ACTIONS, CONTEXT_LABELS, inputLabel, type InputContext } from '@/input/actions';
+import { ACTIONS, CONTEXT_LABELS, type InputContext } from '@/input/actions';
+import { Input } from '@/input/InputManager';
 import { Audio } from '@/audio/audio';
 import { useMenuNav } from '../nav';
 import { Hints, useDevice } from '../components/controls';
+import { InputGlyph, TabKey, useActionGlyph } from '../components/Glyph';
 
 // Reference pages. The interactive tutorial arrives with core play; these
 // pages already reflect the live keybinds, including rebinds.
@@ -31,14 +33,12 @@ export function HowToScreen() {
     onLeft: () => { Audio.uiTick(); setPage((p) => (p + PAGES.length - 1) % PAGES.length); },
     onRight: () => { Audio.uiTick(); setPage((p) => (p + 1) % PAGES.length); },
   });
-  // Up/down scroll the page.
+  // Up/down scroll the page: the arrows, W/S, the D-pad and the stick (menu.up/down; they repeat while held).
   useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (e.code === 'ArrowDown' || e.code === 'KeyS') scroll(1);
-      if (e.code === 'ArrowUp' || e.code === 'KeyW') scroll(-1);
-    };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
+    return Input.onAction((id) => {
+      if (id === 'menu.down') scroll(1);
+      else if (id === 'menu.up') scroll(-1);
+    });
   }, []);
   useEffect(() => {
     // Braces matter: scrollTo returns a Promise in current Chrome, and an
@@ -53,13 +53,13 @@ export function HowToScreen() {
       <header className="screen-head">
         <h1 className="screen-title">How to Play</h1>
         <div className="tabs">
-          <span className="tab-key">Q</span>
+          <TabKey dir="prev" />
           {PAGES.map((p, i) => (
             <button key={p} className={`tab ${i === page ? 'is-active' : ''}`} onClick={() => setPage(i)} tabIndex={-1}>
               {p}
             </button>
           ))}
-          <span className="tab-key">E</span>
+          <TabKey dir="next" />
         </div>
       </header>
       <div className="howto-body" ref={scroller}>
@@ -108,26 +108,41 @@ function DraftPage() {
  * as they're bound now.
  */
 function FieldPage() {
-  const kb = useSettings((s) => s.settings.controls.keyboard);
-  const pad = useSettings((s) => s.settings.controls.gamepad);
-  const device = useDevice();
-  const k = (a: string) => <kbd>{((device === 'gamepad' ? pad[a] : kb[a]) ?? []).map(inputLabel)[0] ?? '—'}</kbd>;
+  const k = useActionGlyph();
+  const pad = useDevice() === 'gamepad';
+  // On a pad the receivers are buttons, not numbers, and the left stick moves and places the ball.
+  const receivers = pad ? (
+    <span className="glyph-row">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Fragment key={n}>{k(`pocket.throw${n}`)}</Fragment>
+      ))}
+    </span>
+  ) : (
+    <>
+      {k('pocket.throw1')}–{k('pocket.throw5')}
+    </>
+  );
+  const his = pad ? 'button' : 'number';
   return (
     <div className="prose">
-      <p className="lead">The number row does the work. What the numbers mean changes with the phase of the play, and the prompts on the field always say which.</p>
+      <p className="lead">
+        {pad
+          ? 'The face buttons do the work. What each button means changes with the phase of the play, and the prompts on the field always say which.'
+          : 'The number row does the work. What the numbers mean changes with the phase of the play, and the prompts on the field always say which.'}
+      </p>
       <h3>The play call</h3>
       <p>
-        The book is in six groups: quick game, dropback, shots, play action, screens and runs ({k('menu.tabPrev')} {k('menu.tabNext')} to switch). The art shows every route with its read number, the back's path on a run, and every block: a line ending in a bar.
+        The book is in six groups: quick game, dropback, shots, play action, screens and runs ({k('menu.tabPrev')} {k('menu.tabNext')} to switch). The art shows every route with its read {his}, the back's path on a run, and every block: a line ending in a bar.
       </p>
       <h3>Before the snap</h3>
       <p>
-        {k('pocket.throw1')}–{k('pocket.throw5')} are your receivers, in read order (1 is the first read). Hold {k('preSnap.routes')} to see every route drawn on the field. {k('preSnap.hotRoute')} calls a hot route: press it, then the receiver's number, then his new route
+        {receivers} are your receivers, in read order ({k('pocket.throw1')} is the first read). Hold {k('preSnap.routes')} to see every route drawn on the field. {k('preSnap.hotRoute')} calls a hot route: press it, then the receiver's {his}, then his new route
         (go, out, in, slant, curl, comeback, flat, hitch). {k('preSnap.snap')} snaps the ball.
       </p>
       <h3>In the pocket</h3>
       <p>
-        Move with {k('pocket.moveUp')}{k('pocket.moveLeft')}{k('pocket.moveDown')}{k('pocket.moveRight')}. A receiver's number throws to him: tap it and the ball is driven in on a line; hold it for touch, more air the longer you hold (the ring fills). He puts air under a driven ball on his own when a defender is in the way. Move the mouse off his icon while you hold it to place the
-        ball: along his path leads him or throws back shoulder, up the screen is high. The ring on the field shows where it will come down, sized to the error you can expect. A glowing icon is an open man; a dim one is covered. {k('pocket.pumpFake')} pump-fakes, {k('pocket.throwAway')} throws
+        Move with {pad ? <InputGlyph code="Pad:LStick" /> : <>{k('pocket.moveUp')}{k('pocket.moveLeft')}{k('pocket.moveDown')}{k('pocket.moveRight')}</>}. A receiver's {his} throws to him: tap it and the ball is driven in on a line; hold it for touch, more air the longer you hold (the ring fills). He puts air under a driven ball on his own when a defender is in the way.{' '}
+        {pad ? <>Push {<InputGlyph code="Pad:LStick" />} while you hold it to place the ball</> : 'Move the mouse off his icon while you hold it to place the ball'}: along his path leads him or throws back shoulder, up the screen is high. The ring on the field shows where it will come down, sized to the error you can expect. A glowing icon is an open man; a dim one is covered. {k('pocket.pumpFake')} pump-fakes, {k('pocket.throwAway')} throws
         it away.
       </p>
       <h3>Scrambling</h3>
@@ -144,7 +159,17 @@ function FieldPage() {
       </p>
       <h3>With the ball</h3>
       <p>
-        You steer; he sets the pace: flat out in space, a controlled run when a tackler is close (so cuts and moves land), a jog only when he's protecting the ball. There's no sprint key. He finds an extra gear on his own coming out of a cut or when he clears the last man near him, longer for a quicker back and not when he's tired. Under him are three moves, on {k('carrier.option1')} {k('carrier.option2')} {k('carrier.option3')}, picked for the picture in front of him and changing as it changes: a tackler from the side offers <b>Juke</b>, <b>Stiff arm</b> and <b>Spin</b>; one square in front offers <b>Truck</b>, <b>Spin</b> and <b>Juke</b>; in the open field it's the best move for the nearest man, <b>Dive</b> (a quarterback slides to give himself up) and <b>Protect</b> (two hands on the ball, a little slower, far harder to strip). The first is always the one most likely to work, and the one he's making lights up. Every move also has its own key: {k('carrier.juke')} Juke (toward the side you steer, else away from the tackler), {k('carrier.stiffArm')} Stiff arm, {k('carrier.spin')} Spin, {k('carrier.truck')} Truck, {k('carrier.dive')} Dive, {k('carrier.protect')} Protect (hold). A move pressed a beat early still fires when he can make it.
+        You steer; he sets the pace: flat out in space, a controlled run when a tackler is close (so cuts and moves land), a jog only when he's protecting the ball. There's no sprint key. He finds an extra gear on his own coming out of a cut or when he clears the last man near him, longer for a quicker back and not when he's tired. Under him are three moves, on {k('carrier.option1')} {k('carrier.option2')} {k('carrier.option3')}, picked for the picture in front of him and changing as it changes: a tackler from the side offers <b>Juke</b>, <b>Stiff arm</b> and <b>Spin</b>; one square in front offers <b>Truck</b>, <b>Spin</b> and <b>Juke</b>; in the open field it's the best move for the nearest man, <b>Dive</b> (a quarterback slides to give himself up) and <b>Protect</b> (two hands on the ball, a little slower, far harder to strip). The first is always the one most likely to work, and the one he's making lights up.{' '}
+        {pad ? (
+          <>
+            The right stick makes moves directly: {k('carrier.jukeLeft')} {k('carrier.jukeRight')} jukes that way, {k('carrier.truck')} trucks; {k('carrier.dive')} dives, and holding {k('carrier.protect')} protects the ball.
+          </>
+        ) : (
+          <>
+            Every move also has its own key: {k('carrier.juke')} Juke (toward the side you steer, else away from the tackler), {k('carrier.stiffArm')} Stiff arm, {k('carrier.spin')} Spin, {k('carrier.truck')} Truck, {k('carrier.dive')} Dive, {k('carrier.protect')} Protect (hold).
+          </>
+        )}{' '}
+        A move pressed a beat early still fires when he can make it.
       </p>
       <h3>Big hits</h3>
       <p>
@@ -159,6 +184,19 @@ function ControlsPage() {
   const kb = useSettings((s) => s.settings.controls.keyboard);
   const pad = useSettings((s) => s.settings.controls.gamepad);
   const device = useDevice();
+  const kbd = (codes: string[]) =>
+    codes.length ? (
+      <span className="glyph-row">
+        {codes.map((c, i) => (
+          <Fragment key={c}>
+            {i ? ' / ' : ''}
+            <InputGlyph code={c} />
+          </Fragment>
+        ))}
+      </span>
+    ) : (
+      <kbd>—</kbd>
+    );
   const contexts: InputContext[] = ['preSnap', 'hotRoute', 'pocket', 'ballInAir', 'carrier', 'kick', 'replay', 'global'];
   return (
     <div className="controls-ref">
@@ -174,7 +212,7 @@ function ControlsPage() {
                 <div key={a.id} className="ref-row">
                   <dt>{a.label}</dt>
                   <dd>
-                    <kbd>{codes.map(inputLabel).join(' / ') || '—'}</kbd>
+                    {kbd(codes)}
                   </dd>
                 </div>
               ))}

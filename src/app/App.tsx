@@ -137,6 +137,8 @@ function Game() {
 
   useEffect(() => {
     Input.start();
+    // ?pad: the prompts as on a controller whatever is pressed (screenshots and dev).
+    if (urlFlags.pad) Input.lockDevice('gamepad');
     return Input.onAction((id, info) => {
       if (id === 'global.perf') togglePerf();
       if (id === 'global.fullscreen' && !info.repeat) toggleFullscreen();

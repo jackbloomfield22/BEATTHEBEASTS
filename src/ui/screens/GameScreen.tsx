@@ -14,9 +14,10 @@ import { PLAY_TYPE_LABEL, PLAYS, playById, suggestPlays, type PlayType } from '@
 import { Input } from '@/input/InputManager';
 import { contactFor, kickView } from '@/render/game/kickView';
 import { useMenuNav } from '../nav';
-import { Hints, MenuItem } from '../components/controls';
+import { Hints, MenuItem, useDevice } from '../components/controls';
+import { TabKey } from '../components/Glyph';
 import { PlayArt } from '../game/PlayArt';
-import { PlayHud } from './PracticeScreen';
+import { PlayHud, readsNote } from './PracticeScreen';
 import '../styles/game.css';
 import '../styles/match.css';
 import '../styles/results.css';
@@ -387,6 +388,16 @@ function GamePlayCall() {
     setFocus(0);
   };
   useMenuNav({ count: plays.length, focus, setFocus, onConfirm: call, onTabPrev: () => switchGroup(-1), onTabNext: () => switchGroup(1) });
+  // On a pad the clock calls are on the play call's free buttons (T, K and J on the keyboard are global).
+  useEffect(() => {
+    return Input.onAction((id, info) => {
+      if (info.device !== 'gamepad' || info.repeat) return;
+      if (id === 'menu.alt') game.timeout();
+      else if (id === 'menu.alt2') game.spike();
+      else if (id === 'menu.alt3') game.kneel();
+    });
+  }, []);
+  const pad = useDevice() === 'gamepad';
   const live = m.clock.live;
   const victory = canVictoryFormation(m);
   return (
@@ -395,13 +406,13 @@ function GamePlayCall() {
       <header className="screen-head">
         <h1 className="screen-title">{twoPoint ? 'Two-point try' : downLabel(sit)}</h1>
         <div className="tabs">
-          <span className="tab-key">Q</span>
+          <TabKey dir="prev" />
           {GROUPS.map((x, i) => (
             <button key={x} className={`tab ${i === group ? 'is-active' : ''}`} onClick={() => switchGroup(i - group)} tabIndex={-1}>
               {x === 'suggested' ? 'Suggested' : PLAY_TYPE_LABEL[x]}
             </button>
           ))}
-          <span className="tab-key">E</span>
+          <TabKey dir="next" />
         </div>
         <div className="call-sit">
           <span className="call-down">Ball on the {spotLabel(sit.los)}</span>
@@ -422,7 +433,7 @@ function GamePlayCall() {
           <div className="detail-kicker">{cur.formation.name}</div>
           <h2 className="detail-title">{cur.name}</h2>
           <PlayArt play={cur} />
-          <p className="call-note">{why ?? (cur.run ? 'A designed run: the back takes the handoff; you run it from there.' : 'Numbers are the reads in order: the key you press to throw to each receiver.')}</p>
+          <p className="call-note">{why ?? (cur.run ? 'A designed run: the back takes the handoff; you run it from there.' : readsNote(pad))}</p>
         </aside>
       </div>
       {note ? <div className="clock-note">{note}</div> : null}
@@ -431,8 +442,8 @@ function GamePlayCall() {
           { kb: 'Q / E', pad: 'LB / RB', label: 'Play type' },
           { kb: '↑↓', pad: 'D-Pad', label: 'Choose' },
           { kb: 'Enter', pad: 'A', label: 'Call play' },
-          ...(live ? [{ kb: 'T', pad: '—', label: 'Timeout' }, { kb: 'K', pad: '—', label: 'Spike' }] : []),
-          ...(live || victory ? [{ kb: 'J', pad: '—', label: victory ? 'Victory formation' : 'Kneel' }] : []),
+          ...(live ? [{ kb: 'T', pad: 'Y', label: 'Timeout' }, { kb: 'K', pad: 'X', label: 'Spike' }] : []),
+          ...(live || victory ? [{ kb: 'J', pad: 'LT', label: victory ? 'Victory formation' : 'Kneel' }] : []),
         ]}
       />
     </div>

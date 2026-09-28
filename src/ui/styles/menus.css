@@ -60,6 +60,15 @@ kbd { font-family: var(--font-ui); font-size: .78rem; font-weight: 700; min-widt
   border: 1px solid rgba(244,240,255,.35); border-bottom-width: 2px; border-radius: .3rem; color: var(--ink); background: rgba(8,7,15,.55); }
 kbd.pad { border-radius: 999px; min-width: 1.7rem; }
 kbd.pad-A { border-color: #5bd66b; } kbd.pad-B { border-color: #ff5a5f; } kbd.pad-X { border-color: #4da3ff; } kbd.pad-Y { border-color: #ffd23f; }
+/* Pad glyphs (ui/components/Glyph.tsx): inline SVG sized in em, so a glyph is as large as the prompt it sits in. */
+.glyph { display: inline-flex; align-items: center; justify-content: center; height: 1.75em; flex: none; vertical-align: middle; line-height: 0; }
+.glyph svg { height: 100%; width: auto; overflow: visible; filter: drop-shadow(0 .06em .18em rgba(0,0,0,.55)); }
+.glyph text { font-family: var(--font-ui); letter-spacing: 0; }
+.glyph-bumper, .glyph-trigger { height: 1.85em; }
+.glyph-row { display: inline-flex; align-items: center; gap: .3em; }
+.glyph-word { font-weight: 700; }
+.keycap-pad { display: inline-flex; align-items: center; }
+.tab-key.is-pad { border: none; padding: 0; font-size: .95rem; }
 
 /* Studio intro */
 .studio-intro { position: absolute; inset: 0; background: #020104; display: grid; place-items: center; animation: intro-fade 5.4s ease both; }

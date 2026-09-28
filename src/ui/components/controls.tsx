@@ -1,6 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { Input, type Device } from '@/input/InputManager';
+import { type ReactNode } from 'react';
 import { Audio } from '@/audio/audio';
+import { PadHint, useDevice } from './Glyph';
+
+export { useDevice };
 
 // Custom game controls: no browser-default widgets anywhere. Every control is
 // a focusable row driven by the shared nav (left/right changes values).
@@ -165,17 +167,30 @@ export function Slider({
 export const stepValue = (v: number, dir: number, min: number, max: number, step: number, repeat: boolean): number =>
   Number(Math.min(max, Math.max(min, v + dir * step * (repeat ? 2 : 1))).toFixed(4));
 
-/** One button prompt that follows the last-used device (keyboard or gamepad). */
+/**
+ * One button prompt that follows the last-used device: the key's cap, or on
+ * a pad the button's glyph (the pad side is written as the pad names it:
+ * "A", "LB / RB", "Hold A", "D-Pad"; see input/prompts.ts parsePadHint).
+ */
 export function KeyCap({ kb, pad, className = '' }: { kb: string; pad: string; className?: string }) {
   const device = useDevice();
-  return <kbd className={`${device === 'gamepad' ? `pad pad-${pad}` : ''} ${className}`.trim() || undefined}>{device === 'gamepad' ? pad : kb}</kbd>;
+  if (device === 'gamepad') {
+    return (
+      <span className={`keycap-pad ${className}`.trim()}>
+        <PadHint pad={pad} kb={kb} />
+      </span>
+    );
+  }
+  return <kbd className={className || undefined}>{kb}</kbd>;
 }
 
-/** Button prompts that follow the last-used device (keyboard or gamepad). */
+/** Button prompts that follow the last-used device; on a pad, a hint with no button there is left off (never a dash). */
 export function Hints({ items }: { items: { kb: string; pad: string; label: string }[] }) {
+  const device = useDevice();
+  const shown = device === 'gamepad' ? items.filter((h) => h.pad.trim() !== '—' && h.pad.trim() !== '') : items;
   return (
     <div className="hints">
-      {items.map((h) => (
+      {shown.map((h) => (
         <span key={h.label} className="hint">
           <KeyCap kb={h.kb} pad={h.pad} />
           {h.label}
@@ -183,12 +198,4 @@ export function Hints({ items }: { items: { kb: string; pad: string; label: stri
       ))}
     </div>
   );
-}
-
-export function useDevice(): Device {
-  const [d, setD] = useState<Device>(Input.lastDevice);
-  useEffect(() => {
-    return Input.onDevice(setD);
-  }, []);
-  return d;
 }

@@ -5,7 +5,7 @@ import { loadAnimLibrary, type AnimLibrary } from '@/anim/library';
 import { PlayerAnimator } from '@/anim/animator';
 import { skinHexFor } from '@/app/characterization';
 import { urlFlags } from '@/app/platform';
-import { KITS, type Kit } from './kits';
+import { CONTENDERS_DEFAULT_KIT, KITS, kitAgainst, type Kit } from './kits';
 import { bodyFromImperial } from './bodyShape';
 import { jerseyName } from './glyphs';
 import { playerVariety, type Position } from './variety';
@@ -125,7 +125,7 @@ export function Lineup() {
     let group: THREE.Group | null = null;
     Promise.all([loadPlayerAsset(), loadAnimLibrary()]).then(async ([asset, lib]) => {
       if (!alive) return;
-      const all = [...place(OFFENSE, KITS.royal!, 1, asset, lib), ...place(DEFENSE, KITS.beasts!, -1, asset, lib)];
+      const all = [...place(OFFENSE, kitAgainst(CONTENDERS_DEFAULT_KIT, 'beasts'), 1, asset, lib), ...place(DEFENSE, KITS.beasts!, -1, asset, lib)];
       const g = new THREE.Group();
       g.name = 'lineup';
       for (const p of all) g.add(p.player.root);

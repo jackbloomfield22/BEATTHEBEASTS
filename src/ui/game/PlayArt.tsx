@@ -1,4 +1,6 @@
 import { blockRoles, ROUTES, type BlockRole, type OffPlay, type OffSlot } from '@/sim';
+import { padGlyph, promptCode } from '@/input/prompts';
+import { useBindings, usePromptDevice } from '../components/Glyph';
 
 // A play's art on a mini field (GDD §10.1): the formation, every route with
 // its read number, the back's path on runs and fakes, and every block (a
@@ -174,14 +176,49 @@ export function PlayArt({ play }: { play: OffPlay }) {
                 </text>
               </g>
             ) : null}
-            {as.kind === 'route' ? (
-              <text x={x} y={y + 20} className="art-read" fill={color}>
-                {as.read}
-              </text>
-            ) : null}
+            {as.kind === 'route' ? <ReadMark x={x} y={y + 20} read={as.read} color={color} /> : null}
           </g>
         );
       })}
     </svg>
+  );
+}
+
+/**
+ * A route's read mark under the man: his read number on a keyboard (the key
+ * that throws to him), the button's glyph on a pad (M6.6: never a number on
+ * a controller), a small face button or bumper drawn into the art.
+ */
+function ReadMark({ x, y, read, color }: { x: number; y: number; read: number; color: string }) {
+  const device = usePromptDevice();
+  const { kb, pad } = useBindings();
+  const code = device === 'pad' ? promptCode(`pocket.throw${read}`, 'pad', kb, pad) : null;
+  const spec = code ? padGlyph(code) : null;
+  if (!spec) {
+    return (
+      <text x={x} y={y} className="art-read" fill={color}>
+        {read}
+      </text>
+    );
+  }
+  const cy = y - 5;
+  if (spec.kind === 'face') {
+    return (
+      <g className="art-read-pad">
+        <circle cx={x} cy={cy} r={8.2} fill="#15131f" stroke={spec.color} strokeWidth={1.6} />
+        <text x={x} y={cy + 3.6} textAnchor="middle" fontSize={10} fontWeight={800} fill={spec.color}>
+          {spec.letter}
+        </text>
+      </g>
+    );
+  }
+  const label = spec.kind === 'bumper' || spec.kind === 'trigger' ? spec.label : code!.slice(4);
+  return (
+    <g className="art-read-pad">
+      <rect x={x - 11} y={cy - 7} width={22} height={14} rx={5} fill="#15131f" stroke="rgba(244,240,255,.72)" strokeWidth={1.4} />
+      <text x={x} y={cy + 3.4} textAnchor="middle" fontSize={8.6} fontWeight={800} fill="#f4f0ff">
+        {label}
+      </text>
+    </g>
   );
 }

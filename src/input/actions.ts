@@ -41,6 +41,8 @@ export const ACTIONS: ActionDef[] = [
   a('menu.tabNext', 'menu', 'Next tab', ['KeyE', 'PageDown'], ['Pad:RB']),
   a('menu.alt', 'menu', 'Secondary action', ['KeyR'], ['Pad:Y']),
   a('menu.alt2', 'menu', 'Third action', ['KeyF'], ['Pad:X']),
+  // A pad-only fourth (the play call's kneel; the keyboard has J).
+  a('menu.alt3', 'menu', 'Fourth action (pad)', [], ['Pad:LT']),
 
   // Play call
   a('playCall.suggested', 'playCall', 'Suggested plays', ['KeyG'], ['Pad:Y']),

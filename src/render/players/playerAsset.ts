@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { createPlayerMaterial, setPlayerLook, type PlayerLook } from './playerMaterial';
-import { bodyShape, type BodyShape } from './bodyShape';
+import { urlFlags } from '@/app/platform';
+import { bodyShape, headScale, type BodyShape } from './bodyShape';
 import { loadGlyphAtlas } from './glyphAtlas';
 import type { Variety } from './variety';
 import { OFFICIAL_KIT, REFEREE_KIT } from './kits';
@@ -182,6 +183,8 @@ export class Player {
     const s = this.shape;
     const v = this.variety;
     this.root.scale.setScalar(s.scale);
+    // The head (helmet and mask) keeps closer to one real size than the body does (bodyShape.ts headScale).
+    this.bones.get('head')?.scale.setScalar(urlFlags.oldHeads ? 1 : headScale(s.scale));
     // Every key the file carries is set: its default weight is 1 (the
     // exporter's), so a body without variety (an official) kept the
     // pads, neck, waist, calves and arms shapes all the way on.

@@ -31,6 +31,29 @@ export function bodyShape(heightM: number, weightKg: number): BodyShape {
   };
 }
 
+/**
+ * The head's scale on the head bone (the helmet, facemask and visor ride on
+ * it), M6.6. Playtest 1: "player heads are too small on the models".
+ * Measured on the built player (tools/reports/head-size.mjs): the base body
+ * stands 1.914 m to the helmet's crown with a 0.260 m head (crown to the
+ * facemask's chin), 7.37 heads tall, at the small-head end of a real
+ * player in pads and helmet (about 7 to 7.5), and the whole body, helmet
+ * included, scaled with stature, so a 5'9" corner's helmet was 7% smaller
+ * than a 6'2" receiver's (real adult helmets span a few percent), while the
+ * heavy and pads shapes spread a lineman's shoulders to 2.9 helmet widths
+ * (about 2.5 on a real lineman). So: 6% more head on the base body (7.0
+ * heads; 5% was hard to see side by side at field level), and the head
+ * scales with only the square root of stature (a 5'9" back is 6.8 heads,
+ * a 6'5" tackle 7.1; helmets 0.265 to 0.28 m tall across the roster).
+ */
+export const HEAD_BASE = 1.06;
+export const HEAD_STATURE_EXP = 0.5;
+
+/** The head bone's scale for a body of this overall scale (bodyShape().scale). */
+export function headScale(scale: number): number {
+  return HEAD_BASE * Math.pow(scale, -HEAD_STATURE_EXP);
+}
+
 /** Inches and pounds (the ratings data) → meters and kilograms. */
 export function bodyFromImperial(heightIn: number, weightLb: number): { heightM: number; weightKg: number } {
   return { heightM: heightIn * 0.0254, weightKg: weightLb * 0.45359237 };

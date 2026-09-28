@@ -5,12 +5,71 @@
 // are read live.
 
 import { Input } from '@/input/InputManager';
-import { NEUTRAL, type CatchType, type InputFrame, type RouteName } from '@/sim';
+import { NEUTRAL, TICK, type CatchType, type InputFrame, type RouteName } from '@/sim';
 import type { V2 } from '@/sim/vec';
 import { latency, type LatKind } from './latency';
 import { AIM_RADIUS, view } from './view';
 
 type HoldSource = { kind: 'key'; action: string } | { kind: 'mouse' } | { kind: 'pad'; action: string };
+
+/** The receiver hold as the sim has counted it (PlayState.hold): the icon and the ticks it has seen. */
+export interface SimHold {
+  icon: number;
+  ticks: number;
+}
+
+/**
+ * After the button is up, the hold may run on this many ticks at most to
+ * bring the sim's count up to the time the button was really down (a long
+ * frame, or a press before he could throw, counts fewer ticks than the hold).
+ * 0.1 s: enough to recover a frame hitch, short enough not to delay a throw.
+ */
+const CATCH_UP_TICKS = 6;
+
+/** A receiver hold being made: the icon, the button's event times, and the ticks it ran on after the button came up. */
+export interface ThrowHold {
+  icon: number;
+  /** True until the hold has gone to the sim once. */
+  fresh?: boolean;
+  downAt: number;
+  upAt: number | null;
+  extra: number;
+}
+
+/**
+ * One tick of a receiver hold: true while the sim should see it held.
+ * Timed from the button's own events (Playtest 2: "a tap to throw sometimes
+ * didn't fire on a controller"; the same fix as the kick, which times its
+ * press and release from the input events).
+ *
+ * The cause: a hold was let go on the first tick the button read up, whether
+ * or not the sim had counted it, and the sim ignores the receiver buttons for
+ * the first 0.35 s after the snap (the ball is still coming back) and while a
+ * throw winds up (sim/play.ts qbThrow). A quick tap in that window went to
+ * the sim for one tick it ignored, then came up: nothing thrown. A pad shows
+ * it far more than a keyboard because its buttons are polled once a frame,
+ * so a pad tap is one to three ticks long, all of them inside the window
+ * when the QB is tapped to on the drop (and a long frame could hide it).
+ *
+ * Now a hold is kept for the sim until it has counted it: a tap always
+ * throws, as soon as he can, and a hold's length is the button's, not the
+ * frames' (up to CATCH_UP_TICKS of catching up).
+ */
+export function holdStep(h: ThrowHold, still: boolean, sim: SimHold | null): boolean {
+  if (still || h.fresh) {
+    h.fresh = false;
+    return true;
+  }
+  // Not counted by the sim yet: keep it held until it is (a tap never vanishes).
+  if (sim && (sim.icon !== h.icon || sim.ticks < 1)) return true;
+  // Counted, but for fewer ticks than the button was down: catch up, a little.
+  const wanted = Math.max(1, Math.round(((h.upAt ?? h.downAt) - h.downAt) / (TICK * 1000)));
+  if (sim && sim.ticks < wanted && h.extra < CATCH_UP_TICKS) {
+    h.extra++;
+    return true;
+  }
+  return false;
+}
 
 const THROW_ACTIONS = ['pocket.throw1', 'pocket.throw2', 'pocket.throw3', 'pocket.throw4', 'pocket.throw5'];
 /** Clicks this close to an icon (CSS px) pick it. */
@@ -79,8 +138,14 @@ function notePress(id: string, time: number): void {
 export class Controls {
   private edges = new Set<string>();
   private edgeDevice = new Map<string, string>();
-  /** The icon held; `fresh` on the tick it started (a tap shorter than a tick still throws: it's held for that tick). */
-  private hold: { icon: number; src: HoldSource; fresh?: boolean } | null = null;
+  /** When each latched press happened (its event's time, performance.now() timebase). */
+  private edgeTime = new Map<string, number>();
+  /**
+   * The icon held; `fresh` on the tick it started (a tap shorter than a tick
+   * still throws: it's held for that tick). holdStep keeps it held until the
+   * sim has counted it.
+   */
+  private hold: (ThrowHold & { src: HoldSource }) | null = null;
   /** The placement being chosen for the held icon (lead/back shoulder, high/low). */
   aim: V2 = { x: 0, y: 0 };
   private off: () => void;
@@ -94,6 +159,7 @@ export class Controls {
       if (info.repeat) return;
       this.edges.add(id);
       this.edgeDevice.set(id, info.device);
+      this.edgeTime.set(id, info.time);
       notePress(id, info.time);
     });
   }
@@ -171,7 +237,8 @@ export class Controls {
     return best;
   }
 
-  sample(): InputFrame {
+  /** One tick's input. `sim`: the hold as the sim has counted it so far (a tap is held until the sim has seen it). */
+  sample(sim: SimHold | null = null): InputFrame {
     const ctx = Input.activeContext;
     const e = this.edges;
     const f: InputFrame = { ...NEUTRAL, move: { x: 0, y: 0 }, aim: { x: 0, y: 0 } };
@@ -187,11 +254,19 @@ export class Controls {
       // Start a hold: a receiver key or button, or a click near an icon.
       if (!this.hold) {
         THROW_ACTIONS.forEach((a, k) => {
-          if (!this.hold && e.has(a)) this.hold = { icon: k + 1, fresh: true, src: this.edgeDevice.get(a) === 'gamepad' ? { kind: 'pad', action: a } : { kind: 'key', action: a } };
+          if (!this.hold && e.has(a))
+            this.hold = {
+              icon: k + 1,
+              fresh: true,
+              src: this.edgeDevice.get(a) === 'gamepad' ? { kind: 'pad', action: a } : { kind: 'key', action: a },
+              downAt: this.edgeTime.get(a) ?? performance.now(),
+              upAt: null,
+              extra: 0,
+            };
         });
         if (!this.hold && e.has('pocket.throwClick')) {
           const icon = this.nearestIcon(Input.mouse.x, Input.mouse.y);
-          if (icon) this.hold = { icon, fresh: true, src: { kind: 'mouse' } };
+          if (icon) this.hold = { icon, fresh: true, src: { kind: 'mouse' }, downAt: this.edgeTime.get('pocket.throwClick') ?? performance.now(), upAt: null, extra: 0 };
         }
       }
       const h = this.hold;
@@ -209,12 +284,14 @@ export class Controls {
           this.aim = Math.hypot(ox, oy) < AIM_RADIUS * 2.5 ? this.placement(ox, oy, h.icon) : this.placement(0, 0, h.icon);
         }
         f.aim = { ...this.aim };
-        const fresh = !!h.fresh;
-        h.fresh = false;
-        if (still || fresh) f.throwHeld = h.icon;
+        if (!still && h.upAt === null) {
+          // The button's release, from its event (a tap inside one poll reads as released at its press).
+          h.upAt = Math.max(h.downAt, h.src.kind === 'mouse' ? Input.releasedAt('pocket.throwClick') : Input.releasedAt(h.src.action));
+          latency.press('throwRelease', h.upAt);
+        }
+        if (holdStep(h, still, sim)) f.throwHeld = h.icon;
         else {
-          // Released this tick: the sim throws with this frame's placement.
-          latency.press('throwRelease', h.src.kind === 'mouse' ? Input.releasedAt('pocket.throwClick') : Input.releasedAt(h.src.action));
+          // Up, and counted by the sim: it throws on this tick with this frame's placement.
           this.hold = null;
           this.reticle.icon = 0;
         }

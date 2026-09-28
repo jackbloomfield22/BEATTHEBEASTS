@@ -1,4 +1,5 @@
 import { ACTIONS, type Bindings, type InputContext } from './actions';
+import { MOUSE_SWITCH_PX } from './prompts';
 
 // Keyboard, mouse and gamepad -> actions. One instance for the whole app.
 // UI code subscribes with `onAction`; gameplay (later milestones) samples
@@ -17,6 +18,8 @@ const STICK_THRESHOLD = 0.55;
 const STICK_DEAD = 0.2;
 const REPEAT_DELAY_MS = 380;
 const REPEAT_RATE_MS = 90;
+/** Gamepad poll between frames (ms): 125 Hz, the rate of a wired Xbox pad's reports. */
+const PAD_POLL_MS = 8;
 
 /** Keys the browser would otherwise act on (scroll, back, focus change, help). */
 const CAPTURED_CODES = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Backspace', 'PageUp', 'PageDown', 'F1', 'F2', 'F3', 'Home', 'End']);
@@ -111,7 +114,23 @@ class InputManagerImpl {
     return Number.isFinite(t) ? t : performance.now();
   }
 
+  /** Mouse travel (CSS px) since the last key, click or pad input: the prompts only go to the mouse past MOUSE_SWITCH_PX. */
+  private mouseTravel = 0;
+  /** Prompts held on one device (the `?pad` flag for screenshots and dev; null: follow the last input). */
+  private lockedDevice: Device | null = null;
+
+  /** Hold the prompts on one device whatever is used (null: follow the last input again). */
+  lockDevice(d: Device | null): void {
+    this.lockedDevice = d;
+    if (d) {
+      this.lastDevice = d;
+      this.deviceListeners.forEach((l) => l(d));
+    }
+  }
+
   private setDevice(d: Device): void {
+    if (d !== 'mouse') this.mouseTravel = 0;
+    if (this.lockedDevice) return;
     if (d !== this.lastDevice) {
       this.lastDevice = d;
       this.deviceListeners.forEach((l) => l(d));
@@ -191,9 +210,11 @@ class InputManagerImpl {
     window.addEventListener(
       'mousemove',
       (e) => {
+        this.mouseTravel += Math.hypot(e.clientX - this.mouse.x, e.clientY - this.mouse.y);
         this.mouse.x = e.clientX;
         this.mouse.y = e.clientY;
-        this.setDevice('mouse');
+        // A nudge of the mouse (or the cursor settling) doesn't take the prompts off the pad.
+        if (this.lastDevice !== 'gamepad' || this.mouseTravel > MOUSE_SWITCH_PX) this.setDevice('mouse');
       },
       { passive: true },
     );
@@ -211,6 +232,10 @@ class InputManagerImpl {
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+    // The Gamepad API has no button events, only snapshots: between frames
+    // the pad is polled again, so a quick tap is seen (and timed) even when a
+    // frame runs long. Cheap: one getGamepads() read every 8 ms.
+    setInterval(() => this.pollGamepads(performance.now()), PAD_POLL_MS);
   }
 
   private pollGamepads(now: number): void {
@@ -239,6 +264,8 @@ class InputManagerImpl {
       const [lx = 0, ly = 0, rx = 0, ry = 0] = gp.axes;
       if (Math.hypot(lx, ly) > STICK_DEAD) stick(this.sticks.left, lx, ly);
       if (Math.hypot(rx, ry) > STICK_DEAD) stick(this.sticks.right, rx, ry);
+      // Steering with the stick is using the pad (the prompts follow it, not only a button press).
+      if (Math.hypot(lx, ly) > STICK_THRESHOLD || Math.hypot(rx, ry) > STICK_THRESHOLD) this.setDevice('gamepad');
       if (ly < -STICK_THRESHOLD) pressed.add('Pad:LSUp');
       if (ly > STICK_THRESHOLD) pressed.add('Pad:LSDown');
       if (lx < -STICK_THRESHOLD) pressed.add('Pad:LSLeft');
