@@ -47,7 +47,8 @@
 /* The choices stack (↑↓ picks one), so a long option never runs off the card. */
 .decision-card .result-actions { flex-direction: column; align-items: stretch; margin-top: .8rem; }
 .decision-card .result-actions .menu-item { white-space: normal; }
-.clock-flag { position: absolute; left: 50%; top: 6.4rem; transform: translateX(-50%); padding: .45rem 1.4rem; z-index: 29; pointer-events: none; font-family: var(--font-display); font-size: 1.15rem; letter-spacing: .12em; text-transform: uppercase; color: #0b0b0d; background: #ffd400; animation: lt-in 380ms cubic-bezier(.2,.7,.2,1) both; box-shadow: 0 .3rem 1.4rem rgba(0,0,0,.5); }
+/* A strip hung under the score bug (it clears the play call's header below it). */
+.clock-flag { position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; top: 6.05rem; padding: .22rem 1.4rem; z-index: 29; pointer-events: none; font-family: var(--font-display); font-size: .92rem; letter-spacing: .12em; text-transform: uppercase; color: #0b0b0d; background: #ffd400; animation: lt-in 380ms cubic-bezier(.2,.7,.2,1) both; box-shadow: 0 .3rem 1.4rem rgba(0,0,0,.5); }
 .clock-flag.ev-endOfQuarter { background: var(--lime); }
 .meanwhile.final .linescore { margin: .8rem auto .2rem; }
 .penalty-card { border-top-color: #ffd400; }
@@ -66,8 +67,8 @@
 .kick-aim { display: block; margin-top: .3rem; color: var(--lime); font-weight: 800; font-variant-numeric: tabular-nums; }
 
 /* The meter: power fills from the bottom; the green window slides up and down it; the red band past full is overcooked. */
-.kick-meter2 { position: absolute; right: 5rem; top: 50%; transform: translateY(-50%); display: grid; grid-template-columns: auto auto; grid-template-rows: auto 1fr auto; column-gap: 1rem; align-items: end; }
-.km2-label { grid-column: 1; font-size: .72rem; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-3); margin-bottom: .4rem; }
+.kick-meter2 { position: absolute; right: 4rem; top: 50%; transform: translateY(-50%); padding: 1rem 1.2rem 1.1rem; background: rgba(6,6,8,.78); border-left: 3px solid var(--lime); display: grid; grid-template-columns: auto auto; grid-template-rows: auto 1fr auto; column-gap: 1rem; align-items: end; }
+.km2-label { grid-column: 1; font-size: .72rem; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-2); margin-bottom: .4rem; }
 .km2-bar { grid-column: 1; grid-row: 2; position: relative; width: 2.2rem; height: 20rem; background: rgba(6,6,8,.72); border: 1px solid rgba(255,255,255,.25); overflow: hidden; }
 .km2-over { position: absolute; left: 0; right: 0; top: 0; background: repeating-linear-gradient(135deg, rgba(255,42,77,.35) 0 6px, rgba(255,42,77,.15) 6px 12px); }
 .km2-need { position: absolute; left: -.2rem; right: -.2rem; height: 2px; background: #fff; box-shadow: 0 0 .4rem rgba(255,255,255,.8); z-index: 3; }
@@ -75,7 +76,7 @@
 .km2-window { position: absolute; left: 0; right: 0; background: rgba(170,255,0,.28); border-top: 2px solid var(--lime); border-bottom: 2px solid var(--lime); z-index: 2; }
 .km2-fill { position: absolute; left: 22%; right: 22%; bottom: 0; height: 0; background: linear-gradient(0deg, #f4f4f4, #fff); box-shadow: 0 0 .6rem rgba(255,255,255,.6); z-index: 1; }
 .kick-meter2.struck .km2-fill { background: #ffd400; }
-.km2-steps { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: .5rem; align-self: center; font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.km2-steps { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: .7rem; align-self: center; font-size: .8rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); padding-left: 1.4rem; }
 .km2-steps .on { color: var(--lime); }
 .km2-steps .done { color: var(--ink-2); text-decoration: line-through; text-decoration-color: rgba(255,255,255,.3); }
 .km2-word { grid-column: 1 / span 2; grid-row: 3; margin-top: .6rem; font-family: var(--font-display); font-size: 1.4rem; animation: lt-in 300ms both; }

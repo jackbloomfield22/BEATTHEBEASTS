@@ -493,7 +493,7 @@ function FourthCard() {
   const pct = fgMakePct(m, dist);
   const items = [
     { id: 'go', label: `Go for it (4th & ${Math.max(1, Math.round(m.sit.toGo))})`, sub: '' },
-    { id: 'punt', label: 'Punt', sub: 'About 41 yards net' },
+    { id: 'punt', label: 'Punt', sub: 'Your punter: aim it, then hold and release' },
     ...(pct > 0 ? [{ id: 'fg', label: `Field goal: ${Math.round(dist)} yd`, sub: `${Math.round(pct * 100)}% with this leg and wind` }] : []),
   ] as { id: 'go' | 'punt' | 'fg'; label: string; sub: string }[];
   const [focus, setFocus] = useState(items.length > 2 && m.sit.los >= 60 ? 2 : m.sit.toGo <= 1 && m.sit.los >= 45 ? 0 : 1);
@@ -590,16 +590,24 @@ function KickPanel() {
   const doStrike = (st: Strike) => {
     const c = ctl.current!;
     kickView.aiming = false;
-    Audio.uiSelect();
     const fl = game.strike(st.power, c.aim + st.error);
+    Audio.kickThump(contactFor(kind), st.clean);
     kickView.path = fl.path;
     kickView.t = 0;
     setStrikeInfo(st);
     setPhase('struck');
     const contact = contactFor(kind);
     // The snap and the hold (or the punter's catch and steps), then the flight; the call comes as it lands.
-    setTimeout(() => setReveal(true), urlFlags.shot ? 100 : (contact + fl.hang * (kind === 'PUNT' ? 1 : 0.75)) * 1000);
-    setTimeout(() => game.endKick(), urlFlags.shot ? 60_000 : (contact + fl.hang + (kind === 'PUNT' ? 2.6 : 1.6)) * 1000);
+    setTimeout(
+      () => {
+        setReveal(true);
+        const kk = useGame.getState().kick;
+        Audio.kickCrowd(kk?.punt ? kk.punt.net >= 38 || kk.punt.how === 'outOfBounds' : !!kk?.result?.good);
+      },
+      urlFlags.shot ? 100 : (contact + fl.hang * (kind === 'PUNT' ? 1 : 0.75)) * 1000,
+    );
+    // (The capture harness ends it itself: its frames are too slow for a timer.)
+    if (!urlFlags.shot) setTimeout(() => game.endKick(), (contact + fl.hang + (kind === 'PUNT' ? 2.6 : 1.6)) * 1000);
   };
   useEffect(() => {
     if (!k) return;
@@ -614,6 +622,15 @@ function KickPanel() {
     kickView.t = 0;
     const c = new KickControl(k.kind, tuning, performance.now());
     ctl.current = c;
+    // The capture specs (tools/shots/clockkick.spec.ts) set the aim, freeze the meter at a moment (__btbKickNow) and strike at a time.
+    if (import.meta.env.DEV)
+      Object.assign(globalThis, {
+        __btbKick: c,
+        __btbKickStrike: (t: number) => {
+          const st = c.release(t);
+          if (st) doStrike(st);
+        },
+      });
     const pop = Input.pushContext('kick');
     const offDown = Input.onAction((id, info) => {
       if (id !== 'kick.charge' || info.repeat || useGame.getState().paused) return;
@@ -631,7 +648,10 @@ function KickPanel() {
     const frame = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
-      if (!useGame.getState().paused) {
+      // Dev: a frozen meter for a still (the capture harness's frames are seconds long).
+      const frozen = import.meta.env.DEV ? (globalThis as { __btbKickNow?: number }).__btbKickNow : undefined;
+      if (frozen !== undefined) now = frozen;
+      else if (!useGame.getState().paused) {
         // Aim: the keys and D-pad (+ = left), and the left stick's analog x.
         const dir = (Input.isHeld('kick.aimLeft') ? 1 : 0) - (Input.isHeld('kick.aimRight') ? 1 : 0) - Input.sticks.left.x;
         c.steer(Math.max(-1, Math.min(1, dir)), dt);

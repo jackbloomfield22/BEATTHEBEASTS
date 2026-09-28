@@ -379,4 +379,42 @@ describe('game clock (M6.6)', () => {
     expect(pts / n).toBeGreaterThan(legacyPer - 0.45);
     expect(pts / n).toBeLessThan(legacyPer + 0.45);
   });
+
+  it('every yardage the game shows is whole: the Beasts’ drives, punts, the spot after a delay of game', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const m = createMatch(cfg({ seed }));
+      m.clock.quarter = 1 + (seed % 4);
+      m.clock.secs = 20 + (seed % 7) * 40;
+      const d = beastsPossession(m);
+      expect(Number.isInteger(d.yards)).toBe(true);
+      expect(Number.isInteger(d.nextStart)).toBe(true);
+      expect(d.top).toMatch(/^\d+:\d\d$/);
+    }
+    const m = onOffense();
+    m.sit = { los: 37.46, ballY: 0, down: 4, toGo: 6.2 }; // a sim spot is fractional
+    for (const power of [0.6, 0.85, 1]) {
+      for (const aim of [0, 0.3, -0.55]) {
+        const p = resolvePunt(m, puntFlight({ power, aim, wind: { mph: 9, dir: 1 }, y0: 0, halfWidth: SIDELINE }));
+        for (const v of [p.gross, p.net, p.ret, p.beastsStart]) expect(Number.isInteger(v)).toBe(true);
+      }
+    }
+  });
+
+  it('the record of a timed game: the line score, the quarter length, graded on the rounds it played', async () => {
+    const { buildRecord } = await import('@/game/record');
+    const { emptyGameBox } = await import('@/game/stats');
+    const m = onOffense();
+    m.clock.quarter = 4;
+    m.clock.secs = 2;
+    m.sit = { los: 90, ballY: 0, down: 1, toGo: 10 };
+    play(m, { spot: 100, touchdown: true, reason: 'touchdown' }, 4);
+    chooseTry(m, false);
+    applyKick(m, true);
+    expect(m.phase).toBe('final');
+    const rec = buildRecord(m, emptyGameBox('QB'), { id: 'g', finishedAt: 0, mode: 'classic', dailyKey: null, difficulty: 'pro', end: 'final', offense: [], beasts: [], matchups: [], perfect: null }, [], null);
+    expect(rec.quarterSecs).toBe(Q);
+    expect(rec.byQuarter!.user[3]).toBe(7);
+    expect(rec.drives).toBe(1);
+    expect(rec.grade?.grade).toBe('A'); // 7 on the 4-round table
+  });
 });

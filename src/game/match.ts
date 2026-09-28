@@ -553,8 +553,10 @@ function consume(m: Match, secs: number): void {
     s -= take;
     if (m.clock.secs > 0) break;
     const q = m.clock.quarter;
-    if (q === 1 || q === 3) setQuarter(m, q + 1);
-    else break;
+    if (q === 1 || q === 3) {
+      setQuarter(m, q + 1);
+      m.event = 'endOfQuarter';
+    } else break;
   }
 }
 

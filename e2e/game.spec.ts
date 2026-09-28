@@ -52,7 +52,7 @@ test('Quick Play: locker room, walk-out and a full six-round game to the results
     seen.add(st);
     if (st === 'final') break;
     if (st === 'loading') await page.waitForTimeout(500);
-    else if (st === 'meanwhile' || st === 'fourth' || st === 'try') {
+    else if (st === 'meanwhile' || st === 'fourth' || st === 'try' || st === 'penalty' || st === 'break') {
       await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
     } else if (st === 'call') {

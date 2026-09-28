@@ -49,7 +49,8 @@ function chevronGeometry(): THREE.BufferGeometry {
   s.lineTo(0.6, -0.05);
   s.closePath();
   const geo = new THREE.ShapeGeometry(s);
-  geo.scale(YARD, YARD, 1);
+  // Two yards across: they sit ~20 yd out from a camera 4 m up, so they have to be big to read.
+  geo.scale(2 * YARD, 2 * YARD, 1);
   geo.rotateX(-Math.PI / 2);
   return geo;
 }
@@ -126,18 +127,18 @@ export function KickAim() {
       // In the goal mouth, a couple of yards over the bar: where a good kick passes.
       aim.ring.position.set(worldX(lat), worldY(CROSSBAR + 2), worldZ(sx + len));
     } else aim.land.position.set(worldX(lat), 0.08, worldZ(sx + len));
-    // The wind: chevrons drifting downwind over the far half of the line, by its strength.
+    // The wind: chevrons drifting downwind about 40% of the way out (nearer reads better from behind the ball), by its strength.
     const w = kickView.wind;
     const n = w.mph <= 4 ? 1 : w.mph <= 8 ? 2 : 3;
     aim.wind.visible = w.mph > 0;
-    aim.wind.position.set(worldX(lat * 0.65), 0.09, worldZ(sx + len * 0.65));
+    aim.wind.position.set(worldX(lat * 0.4), 0.09, worldZ(sx + len * 0.4));
     aim.wind.rotation.y = w.dir;
     const drift = urlFlags.shot !== null ? 0.5 : (clock.elapsedTime * (0.25 + w.mph * 0.05)) % 1;
     aim.chevrons.forEach((c, i) => {
       c.visible = i < n;
-      // Spaced 1.6 yd along the wind, gliding one space per cycle, fading in and out at the ends.
+      // Spaced 3 yd along the wind, gliding one space per cycle, fading in and out at the ends.
       const u = (i + drift) / n;
-      c.position.set(0, 0, -(u - 0.5) * 1.6 * n * YARD);
+      c.position.set(0, 0, -(u - 0.5) * 3 * n * YARD);
       (c.material as THREE.MeshBasicMaterial).opacity = 0.9 * Math.sin(Math.PI * u);
     });
   });

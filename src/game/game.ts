@@ -19,6 +19,7 @@
 import { create } from 'zustand';
 import type { Slot } from '@data/legacy/types';
 import { Input } from '@/input/InputManager';
+import { Audio } from '@/audio/audio';
 import { saveRecord } from '@/app/history';
 import { callDefense, emptyTendencies, recordPlay, type BeastsDefense, type ContendersRoster, type DefCall, type DefSlot, type OffSlot, type PlayResult, type PlayState, type SimPlayer, simPlayer, type Difficulty, type Tendencies } from '@/sim';
 import { deriveStream, type Rng } from '@/engine/rng';
@@ -243,6 +244,7 @@ class GameSession {
     const los = m.sit.los;
     const ev = tickClock(m);
     if (!ev) {
+      if (m.playClock !== null && m.playClock <= 5) Audio.playClockTick();
       set({});
       return;
     }
@@ -256,6 +258,7 @@ class GameSession {
     if (ev === 'delayOfGame') {
       // The flag: the play at the line is dead, five yards, the down again.
       if (atLine) practice.abandon();
+      Audio.whistle();
       const n = ['1st', '2nd', '3rd', '4th'][m.sit.down - 1];
       this.acc = 0;
       set({ stage: 'penalty', penalty: `${Math.round(yards)} yards, offense. Repeat ${n} down.`, flag: null, note: null });
@@ -281,11 +284,12 @@ class GameSession {
     set({ flag: { event: ev, line: bannerLine(ev, this.m!), at: performance.now() } });
   }
 
-  /** After the delay-of-game card: back to the call, the play clock at 25. */
+  /** After the delay-of-game card: back to the huddle, the play clock at 25. */
   afterPenalty(): void {
     if (get().stage !== 'penalty' || get().paused) return;
     set({ penalty: null });
-    this.toCall();
+    // Back to the call (or the 4th-down card, if it was 4th down), the play clock at 25.
+    this.toPhase();
   }
 
   /** After the halftime card. */
