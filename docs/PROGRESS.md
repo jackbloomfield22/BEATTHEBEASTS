@@ -38,6 +38,10 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 
 ## Milestone log
 
+### M6.6 Controls, prompts, kits, audio, camera and heads (branch `m66-controls-kits`)
+
+The full write-up and the critique of the stills are in `docs/m66/CONTROLS_KITS.md` (stills in `docs/screenshots/m6.6/`). In short: a pad tap to a receiver always throws now (the hold is kept until the sim has counted it; it used to vanish inside the 0.35 s after the snap); every prompt draws the pad's button as an in-house glyph when a pad is in use, and a mouse nudge no longer takes the prompts off the pad; the carrier's three options are on screen the moment he has the ball (dimmed until the sim holds them: on a designed run that was 0.35 to 1.2 s late, a sim change is described there); the Contenders default to white with lime trim and black numbers, and a dark Contenders kit changes to white against the Beasts; the ocean bed is 12 dB down on its own Ambience slider; the breakaway camera eases out to a wider three-quarter angle instead of swinging to the sideline, and the normal follow sits a little closer; heads are 6% larger (7.0 heads tall at 6'2", measured on the built player) and closer to one helmet size across statures.
+
 ### M6.5 Gameplay pass (in progress)
 
 The owner's 11-point brief is in `docs/M6_5_BRIEF.md`. Each item is diagnosed in the sim first, then fixed. Order: the run game's explosive plays (#8), the passing game (#1–7), then carrier controls, steering and carrier animation (#9–11).
