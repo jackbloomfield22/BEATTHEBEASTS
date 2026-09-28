@@ -133,7 +133,7 @@ export function MainMenu() {
         ) : null}
         {item.id === 'daily' && dailyOpen ? <DailyPreview /> : null}
       </aside>
-      <Hints items={[{ kb: '↑↓', pad: 'D-Pad', label: 'Navigate' }, { kb: 'Enter', pad: 'A', label: 'Select' }]} />
+      <Hints items={[{ kb: '↑↓', pad: 'D-Pad', label: 'Navigate' }, ...(item.id === 'play' ? [{ kb: '← →', pad: 'D-Pad', label: film ? 'Classic' : 'Film Room' }] : []), { kb: 'Enter', pad: 'A', label: 'Select' }]} />
     </div>
   );
 }

@@ -28,7 +28,9 @@ type W = {
 };
 const ev = <T,>(page: Page, f: (w: W) => T) => page.evaluate(`(${f.toString()})(window)`) as Promise<T>;
 
-async function shot(page: Page, name: string, settle = 3000) {
+/** A still, if its part is wanted (the steps between always run: later parts need them). */
+async function shot(page: Page, name: string, settle = 3000, part = '') {
+  if (part && !want(part)) return;
   await page.waitForTimeout(settle);
   await page.screenshot({ path: `${OUT}/${name}.png`, timeout: 240_000 });
 }
@@ -51,7 +53,7 @@ test('m6.6 draft, locker, post-game', async ({ page }) => {
   // CSS entrances end at once (they stall between software-rendered frames).
   await page.addStyleTag({ content: '*, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition-duration: 0s !important; }' });
 
-  if (want('draft')) {
+  {
     // A pair with a line on the wall: the Dallas 1990s (Aikman, Smith, Irvin, Novacek and the line).
     await ev(page, (w) => {
       const st = w.__btbDraft.getState();
@@ -60,11 +62,11 @@ test('m6.6 draft, locker, post-game', async ({ page }) => {
     });
     await page.waitForSelector('.pick-list li');
     await page.hover('.pick-list li:has(.pl-pos:text-is("OL"))');
-    await shot(page, 'draft-pick-ol', 5000);
+    await shot(page, 'draft-pick-ol', 5000, 'draft');
     const full = await page.$('.pick-list li.is-full');
     if (full) {
       await full.hover();
-      await shot(page, 'draft-pick-full', 1500);
+      await shot(page, 'draft-pick-full', 1500, 'draft');
     }
     // The rest of the draft (best available), then the full row with the depth chart.
     await ev(page, (w) => {
@@ -78,15 +80,15 @@ test('m6.6 draft, locker, post-game', async ({ page }) => {
       }
       w.__btbDraft.setState({ phase: 'complete', focus: null, wallBeasts: null, lastPick: null, instantSeq: (w.__btbDraft.getState().instantSeq as number) + 1 });
     });
-    await shot(page, 'draft-complete-depth', 9000);
+    await shot(page, 'draft-complete-depth', 9000, 'draft');
     await ev(page, (w) => w.__btbDraft.setState({ phase: 'ready', focus: 'WR1' }));
-    await shot(page, 'stall-wr-stickers', 6000);
+    await shot(page, 'stall-wr-stickers', 6000, 'draft');
     await ev(page, (w) => w.__btbDraft.setState({ phase: 'ready', focus: 'QB' }));
-    await shot(page, 'stall-qb-stickers', 6000);
+    await shot(page, 'stall-qb-stickers', 6000, 'draft');
     await ev(page, (w) => w.__btbDraft.setState({ phase: 'ready', focus: 'OL' }));
-    await shot(page, 'stall-ol-stickers', 6000);
+    await shot(page, 'stall-ol-stickers', 6000, 'draft');
     await ev(page, (w) => w.__btbDraft.setState({ phase: 'ready', focus: null, wallBeasts: 0 }));
-    await shot(page, 'wall-beasts', 7000);
+    await shot(page, 'wall-beasts', 7000, 'draft');
   }
 
   if (want('menu')) {
@@ -129,21 +131,22 @@ test('m6.6 draft, locker, post-game', async ({ page }) => {
     await page.waitForTimeout(800);
   }
 
-  if (want('draft')) {
-    // A new draft: the rules card while the Beasts are on the wall.
+  if (want('rules') || want('pregame')) {
+    // A new draft: the rules card while the Beasts are on the wall. (Drop ?fill first, or the harness fills four rounds of it.)
+    await page.evaluate(() => history.replaceState(null, '', location.pathname + location.search.replace(/&fill=\d+/, '')));
     await ev(page, (w) => {
       void w.__btbDraft.getState().begin('classic');
       w.__btbApp.getState().go('draft');
     });
     await page.waitForSelector('.rules-card');
-    await shot(page, 'draft-rules-card', 8000);
+    await shot(page, 'draft-rules-card', 8000, 'rules');
     // The reels on the wall, held (the harness would otherwise go straight to the pick panel).
     await ev(page, (w) => {
       w.__btbDraft.setState({ setPhase: () => undefined });
       w.__btbDraft.getState().spin();
       w.__btbDraft.setState({ phase: 'spinning' });
     });
-    await shot(page, 'draft-reels', 7000);
+    await shot(page, 'draft-reels', 7000, 'rules');
   }
 
   if (want('pregame')) {
