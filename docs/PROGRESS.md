@@ -38,6 +38,15 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 
 ## Milestone log
 
+### M6.6 data audit and the 2020s trait diagnosis (branch `m66-data`, not pushed)
+
+Report: `docs/m66/DATA_AUDIT.md`. Decision 6 of Playtest 1 and the data items of Playtest 2.
+- **Why the stints were missing:** never in the legacy list (no rule, threshold or correction dropped them). **Added** through the sourced added-stints path (Wikipedia tables, revisions pinned, checked against nflverse): Diggs NE 2020s, A.J. Brown TEN 2020s, Davante Adams GB 2020s, Derrick Henry TEN 2010s, and the audit's QB/RB/WR/TE stints with a first-team All-Pro season (Fouts LAC 1980s, Barry Sanders DET 1980s, Jefferson LAC 1980s, Montana SF 1990s, Warner LAR 1990s, Tyreek Hill KC 2020s). `tools/augment/added-stints.ts` reads rushing and passing tables now.
+- **Audit:** `tools/augment/stint-audit.ts`, 392 remaining gaps listed for your call (defense, Pro Bowl-level offense, 1960s offense). 2024 and 2025 data are complete.
+- **Source fix:** nflverse credited the Jaguars' 2001–02 home-game rows to the visitor; 512 rows re-assigned (`SWAPPED_HOME_ROWS`). Three games are missing from nflverse's weekly stats (1999 BAL@STL, 2000 SD@KC, 2000 BUF@MIA): need another source.
+- **Traits:** not the 2020s pool, not the gates. Production gates ranked the attributes' sample-shrunk values, so short stints landed mid-table (Adams NYJ: 95th percentile on his numbers, 83rd shrunk). Fixed: at QB/RB/WR/TE a stint with at least k games is placed as if it had the position's median sample; tables, attributes and OVR unchanged. Adams NYJ gains Alpha; traits shown +1.0%, 85 stints change. Wilson (near misses, Jets QB play) and Rodgers (league-average at 40) read correctly; Lazard's traits are body traits.
+- **For you:** added stints (these and the M2/M4.5 ones) aren't in the draft or the Beasts pool, which read only the legacy lists; wiring them in raises a Daily perfect-team question. Anchors 38 → 36 (Payton, Revis a tenth under the rounding, flagged). Golden sim hashes regenerated for the pool shift.
+
 ### M6.5 Gameplay pass (in progress)
 
 The owner's 11-point brief is in `docs/M6_5_BRIEF.md`. Each item is diagnosed in the sim first, then fixed. Order: the run game's explosive plays (#8), the passing game (#1–7), then carrier controls, steering and carrier animation (#9–11).

@@ -146,7 +146,7 @@ function main(): void {
       for (const [f, v] of Object.entries(marks.stint) as [keyof StatLine, number][]) if (total[f] >= v) why.push(`${fmt(total[f])} ${f.replace(/_/g, ' ')} in the stint`);
       if (honors.length) why.push('honors');
       if (!why.length) continue;
-      const line =
+      const statsLine =
         total.games === 0
           ? seasons[0]! < FIRST_STATS_SEASON
             ? 'no stats before 1999'
@@ -158,6 +158,8 @@ function main(): void {
               : pos === 'WR' || pos === 'TE'
                 ? `${total.games} G, ${total.receptions} rec, ${fmt(total.receiving_yards)} yds, ${total.receiving_tds} TD`
                 : `${total.games} G, ${fmt(total.def_sacks)} sk, ${total.def_interceptions} INT`;
+      // A stint that starts before 1999 has stats for its 1999+ seasons only.
+      const line = seasons[0]! < FIRST_STATS_SEASON && total.games > 0 ? `${FIRST_STATS_SEASON}+ only: ${statsLine}` : statsLine;
       const score = honors.filter((x) => x.startsWith('All-Pro')).length * 3 + honors.filter((x) => x.startsWith('2nd')).length * 1.5 + honors.filter((x) => x.startsWith('Pro Bowl')).length + why.filter((w) => w !== 'honors').length;
       gaps.push({ name: nameOf.get(pid) ?? st.person.id, pos, team, decade, seasons, honors, line, why, rated: have.map((k) => k.replace('|', ' ')), score });
     }
