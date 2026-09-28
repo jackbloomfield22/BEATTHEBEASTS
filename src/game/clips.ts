@@ -154,7 +154,8 @@ export const CONCEPTS: Clip[] = [
   // PA crossers against Cover 3: the X's deep cross under the safety, caught running (15 yd).
   { id: 'crosser', title: 'Crosser', seed: 7, play: 'ace-pa-crossers', def: 'cover3', los: 30, script: concept({ icon: 1, at: 80 }) },
   // RB screen against man: the back slips out behind the rush, the linemen release in front of him (11 yd).
-  { id: 'screen', title: 'Screen', seed: 4, play: 'doubles-rb-screen', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 76 }) },
+  // Seed 4 → 60 in M6.6: the added stints (docs/m66/DATA_AUDIT.md) move the practice roster's ratings a point here and there, and seed 4 became a 2.9-yd loss. Seed 60 is the same play, coverage and throw time: 11.6 yd, 2.9 yd of separation.
+  { id: 'screen', title: 'Screen', seed: 60, play: 'doubles-rb-screen', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 76 }) },
   // Back shoulder against man: the corner on top of the Z's go, the ball thrown away from him, GO UP (19 yd).
   { id: 'back-shoulder', title: 'Back shoulder', seed: 2, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 3, at: 48, aim: { x: -1, y: -0.2 }, call: 'aggressive' }) },
   // The scramble drill: the QB escapes right, the X breaks off his route and works back across to him (12 yd).
