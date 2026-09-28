@@ -158,7 +158,11 @@ describe('the skinning gate', () => {
       expect(Object.keys(grp.regions).sort()).toEqual(['elbow', 'hip', 'knee', 'shoulder']);
       for (const r of Object.values(grp.regions)) expect(r.pass).toBe(true);
     }
-    // At speed the shoulder holds its shape: under 2.2% of its faces collapsed (4-5% before the pad shell).
+    // At speed the shoulder holds its shape: under 2.2% of its faces collapsed (4-5% before the pad shell),
+    // and the pad caps ride the chest (they stood 12 cm off it at the sprint's arm swing: the fin).
     expect(g.groups.speed!.regions.shoulder!.collapsed).toBeLessThan(0.022);
+    const lift = (g.groups.speed as unknown as { capLift: { m: number; pass: boolean } }).capLift;
+    expect(lift.pass).toBe(true);
+    expect(lift.m).toBeLessThan(0.04);
   });
 });

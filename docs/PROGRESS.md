@@ -234,6 +234,13 @@ Needs the sim (not changed here):
 3. AI cuts: the AI keeps its arcs (#10 found real plants cost too many yards), so its cuts are only the render's heading-rate guess. A sim-side `cut` event for AI changes of direction over ~45° (even without the plant's speed cost) would let the render time them properly.
 4. The truck: the sim's truck is a 0.3 s move with no contact moment, so the clip's contact frame lands on its own schedule. A `contact` time on the move event would let the forearm land on the hit.
 
+**#12 the body side (collision volumes, contact, skinning at speed).** Full write-up with pictures in `docs/m65/BODIES.md`. In short:
+- *Measured* the shipped model per body type (`tools/blender/measure_bodies.py`): the sim's circle is ~5 cm per side generous across the pads for skill players, about right for the big men, 4 cm tight for a defensive end, and far too generous front to back. A per-position radius fitted to the pad half-width is proposed there for the sim session (not applied: `src/sim` untouched).
+- *The clip-through at the catch* wasn't the sim: its trunks overlap at 0.2% of arrivals. The animator's lean into a turn pivoted at the feet, and a receiver adjusting to the ball banks at the limit on one arrival in five, swinging his chest ~0.5 m off his spot (drawn trunks overlapped at 3.8% of arrivals, by up to 46 cm; `tools/sim/catchcontact.ts`). The lean now pivots at the hips (1.8%, 19 cm), and `src/render/game/contact.ts` pushes overlapping standing trunks apart by a render-only offset (≤ 20 cm, eased).
+- *Contested catches*: a defender within 1.2 yd of the receiver at the arrival plays `def_contest_l/_r` (keyed in `tools/blender/lib/actions_m65_contact.py`: near hand at the hip, far arm across to the catch point on the arrival, then the rake), and the pair lean into each other until the pads meet. Not yet watched in a live broadcast capture.
+- *Skinning at speed*: the pad cap's outer third was skinned to the upper arm and stood up like a fin every stride (cap lift 12.2 cm at the sprint, Medium LOD). The cap is now a shell on the pad bone and clavicle (`tools/blender/lib/skinfix.py`): 2.3 cm. The clavicle now rises with an arm overhead (scapulohumeral rhythm, `lib/poses.py`), overhead collapse halves, but the high point and the dive still bunch at the shoulder. LODs hold near a switch point (12% hysteresis: the broadcast sat players on the Medium/Low switch). A skinning gate in the character build (`player.json skinGate`). 166 of 166 clip gates pass.
+- *Also*: every body-shape key is now set (the officials had five shapes stuck at 1), and the Blender previews start from the base body.
+
 
 ### M6 Full game (built, PR open)
 
