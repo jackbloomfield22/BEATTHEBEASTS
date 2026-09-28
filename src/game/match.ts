@@ -693,7 +693,7 @@ export function applyPlay(m: Match, r: PlayResult, endY: number, playSecs: numbe
     if (good) addPoints(m, 'user', 2);
     if (r.touchdown && !r.offenseBall) addPoints(m, 'beasts', 2); // a defensive two-point return
     m.log.push(`Two-point try ${good ? 'good' : 'no good'}`);
-    endDrive(m, d.result === 'TwoPoint' ? 'TwoPoint' : 'TD', 0);
+    endDrive(m, d.result === 'TwoPoint' ? 'TwoPoint' : 'TD', good ? 2 : 0);
     return { kind: good ? 'twoPointGood' : 'twoPointFailed' };
   }
   if (r.touchdown && !r.offenseBall) {
@@ -801,7 +801,8 @@ export function applyKick(m: Match, good: boolean, hang = 2.5): void {
   if (k.kind === 'PAT') {
     if (good) addPoints(m, 'user', 1);
     m.log.push(`PAT ${good ? 'good' : 'no good'}`);
-    endDrive(m, 'TD', 0);
+    // The drive's points include the try (the drive chart's "Touchdown +7").
+    endDrive(m, 'TD', good ? 1 : 0);
   } else {
     // A field goal try is a play: the clock runs through it (and stops on the change of possession).
     if (isTimed(m) && m.clock.live) playClockRun(m, Math.max(FG_PLAY_SECS, 1.3 + hang), true);

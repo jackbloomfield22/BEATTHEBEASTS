@@ -16,6 +16,7 @@ export function MenuItem({
   onHover,
   onClick,
   size = 'lg',
+  className = '',
 }: {
   label: string;
   focused: boolean;
@@ -24,11 +25,12 @@ export function MenuItem({
   sub?: string;
   onHover: () => void;
   onClick: () => void;
-  size?: 'lg' | 'md';
+  size?: 'hero' | 'lg' | 'md';
+  className?: string;
 }) {
   return (
     <button
-      className={`menu-item ${size} ${focused ? 'is-focused' : ''} ${disabled ? 'is-disabled' : ''}`}
+      className={`menu-item ${size} ${focused ? 'is-focused' : ''} ${disabled ? 'is-disabled' : ''} ${className}`}
       onMouseEnter={() => {
         if (!focused) Audio.uiHover();
         onHover();

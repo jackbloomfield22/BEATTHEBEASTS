@@ -1,5 +1,6 @@
-// First-team All-Pro counts per rated entry (M6: the "All-Pro" sticker on a
-// drafted player's locker), from the cited accolades.
+// First-team All-Pro and Pro Bowl counts per rated entry (M6: the "All-Pro"
+// sticker on a drafted player's locker; M6.6: the linemen's All-Pro and Pro
+// Bowl stickers in the draft), from the cited accolades.
 //
 //   node --experimental-strip-types tools/augment/honors.ts
 //
@@ -7,8 +8,10 @@
 // build_accolades.py) is keyed by person and lists the legacy entries it
 // covers; linemen are matched by name and decade. The count is the person's
 // career first-team All-Pro seasons (AP or consensus as Wikipedia lists
-// them) plus first-team All-AFL, the AFL's equivalent. Only nonzero counts are
-// written. A person with no matched page has no count (unknown, not zero).
+// them) plus first-team All-AFL, the AFL's equivalent. The Pro Bowl count is
+// his seasons with a Pro Bowl selection plus AFL All-Star seasons (the AFL's
+// Pro Bowl). Only nonzero counts are written. A person with no matched page
+// has no count (unknown, not zero).
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -19,6 +22,8 @@ interface Person {
   entries?: string[];
   allPro1?: number[];
   allAFL1?: number[];
+  proBowl?: number[];
+  aflAllStar?: number[];
   url?: string;
 }
 const acc = (JSON.parse(readFileSync(join(ROOT, 'data/augment/accolades.json'), 'utf8')) as { people: Record<string, Person> }).people;
@@ -32,10 +37,13 @@ for (const [key, p] of Object.entries(acc)) {
 }
 
 const allPro: Record<string, number> = {};
+const proBowl: Record<string, number> = {};
 for (const e of [...snap.entries].sort((a, b) => a.id.localeCompare(b.id))) {
   const p = byEntry.get(e.id) ?? (e.id.includes('#') ? byOl.get(`${e.name}|${e.decade}`) : undefined);
   const n = new Set([...(p?.allPro1 ?? []), ...(p?.allAFL1 ?? [])]).size;
   if (n > 0) allPro[e.id] = n;
+  const pb = new Set([...(p?.proBowl ?? []), ...(p?.aflAllStar ?? [])]).size;
+  if (pb > 0) proBowl[e.id] = pb;
 }
 
 writeFileSync(
@@ -45,12 +53,13 @@ writeFileSync(
       _meta: {
         generatedBy: 'tools/augment/honors.ts',
         license: 'facts from Wikipedia (CC BY-SA 4.0), attributed by page URL in accolades.json',
-        doc: 'Rated entry id → career first-team All-Pro seasons (plus first-team All-AFL), from data/augment/accolades.json. Missing = none or unknown.',
+        doc: 'Rated entry id → career first-team All-Pro seasons (plus first-team All-AFL), and career Pro Bowl seasons (plus AFL All-Star), from data/augment/accolades.json. Missing = none or unknown.',
       },
       allPro,
+      proBowl,
     },
     null,
     0,
   ) + '\n',
 );
-console.log(`honors: ${Object.keys(allPro).length} entries with a first-team All-Pro`);
+console.log(`honors: ${Object.keys(allPro).length} entries with a first-team All-Pro, ${Object.keys(proBowl).length} with a Pro Bowl`);

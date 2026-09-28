@@ -1,30 +1,34 @@
-/* The results screen, the box score's tabs, History and the Locker Room's
-   Last Game board (GDD §14). Broadcast lower-thirds over the live scene:
-   dark glass, one lime accent, Bungee for the numbers that matter. */
+/* The results screen, the one-screen box score, History and My Team's Last
+   Game board (GDD §14). Broadcast lower-thirds over the live scene: dark
+   glass, one lime accent. Bungee for the headline words; Barlow Semi
+   Condensed (--font-num) for every number and table. */
 
 .results { overflow: hidden; }
-.res-head { position: absolute; top: 2.6rem; left: 5rem; right: 5rem; display: flex; align-items: center; gap: 2rem; }
+.res-head { position: absolute; top: 2.2rem; left: 4rem; right: 4rem; display: flex; align-items: center; gap: 2rem; }
 .res-banner { font-family: var(--font-display); font-size: 1.1rem; padding: .35rem .9rem; letter-spacing: .1em; white-space: nowrap; }
 .res-banner.win { background: var(--lime); color: #0a0a0a; }
 .res-banner.loss { background: #ff2a4d; color: #fff; }
 .res-banner.even { background: rgba(255,255,255,.18); color: #fff; }
-.res-score { font-family: var(--font-display); font-size: 2.6rem; display: flex; gap: 1rem; white-space: nowrap; }
+.res-score { font-family: var(--font-num); font-weight: 700; font-size: 2.4rem; letter-spacing: .02em; text-transform: uppercase; display: flex; align-items: baseline; gap: 1rem; white-space: nowrap; }
+.res-score b { font-weight: 800; font-size: 3.2rem; font-variant-numeric: tabular-nums; }
 .res-score .us { color: #fff; }
 .res-score .them { color: #ff2a4d; }
 .res-score .dash { color: var(--ink-3); }
-.res-meta { display: flex; flex-direction: column; gap: .1rem; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.res-meta { display: flex; flex-direction: column; gap: .1rem; font-family: var(--font-num); font-size: .9rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
 .res-meta span:first-child { color: var(--ink-2); }
 .res-grade { margin-left: auto; display: flex; align-items: baseline; gap: .8rem; }
 .res-grade .grade { font-family: var(--font-display); font-size: 3rem; color: var(--lime); text-shadow: 0 0 1.6rem rgba(170,255,0,.35); }
-.res-grade .label { font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.res-grade .label { font-family: var(--font-num); font-size: 1.1rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .res-grade .ot { color: var(--ink-3); font-weight: 700; }
 
 /* The reveal: the score counts up, then the result and the grade land, then the box score opens. */
 .results.beat-0 .res-banner, .results.beat-0 .res-grade, .results.beat-0 .res-meta { opacity: 0; }
 .results.beat-0 .res-head { top: 40%; }
 .results.beat-1 .res-head { top: 40%; }
+.results.beat-0 .res-head, .results.beat-1 .res-head { transform: scale(1.12); transform-origin: center; }
 .results.beat-2.fresh .res-head { animation: head-up 520ms cubic-bezier(.2,.7,.2,1) both; }
-@keyframes head-up { from { transform: translateY(calc(40vh - 2.6rem)); } to { transform: none; } }
+@keyframes head-up { from { transform: translateY(calc(40vh - 2.2rem)) scale(1.12); } to { transform: none; } }
+.results.beat-2.fresh .bx, .results.beat-2.fresh .bx-pog { animation: rep-in 420ms 240ms cubic-bezier(.2,.7,.2,1) both; }
 .results.beat-1 .res-banner { animation: stamp 420ms cubic-bezier(.2,.9,.3,1.2) both; }
 .results.beat-1 .res-grade .grade { animation: stamp 520ms 160ms cubic-bezier(.2,.9,.3,1.3) both; }
 .results.beat-1 .res-grade .label, .results.beat-1 .res-meta { animation: fade-in 400ms 300ms both; }
@@ -32,49 +36,72 @@
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .results.beat-0 .hints, .results.beat-1 .hints { right: 50%; transform: translateX(50%); }
 
-/* Tabs and the scrolling panel. */
-.rep-tabs { position: absolute; top: 8.2rem; left: 5rem; animation: fade-in 300ms both; }
-.rep-body { position: absolute; top: 11.6rem; left: 5rem; right: 5rem; bottom: 7.6rem; overflow-y: auto; scrollbar-width: none; padding: .4rem .2rem 1.2rem;
-  mask-image: linear-gradient(180deg, transparent 0, #000 .8rem, #000 calc(100% - 1.6rem), transparent); animation: rep-in 360ms cubic-bezier(.2,.7,.2,1) both; }
-.rep-body::-webkit-scrollbar { display: none; }
+/* The one-screen box score (Playtest 1: no tabs, no scrolling). Two
+   columns under the header: the offense and the grades left; the Beasts,
+   the drive chart and the big hits right. Sized in rem, which scales with
+   the window height, so it fits 16:9 at any size. */
 @keyframes rep-in { from { opacity: 0; transform: translateY(.6rem); } to { opacity: 1; transform: none; } }
-.rep-body h3, .last-game h3, .hist-detail h3 { margin: 1.1rem 0 .45rem; font-size: .78rem; letter-spacing: .18em; text-transform: uppercase; color: var(--lime); }
-.rep-body h3:first-child, .rep-body section > h3:first-child { margin-top: 0; }
-.rep-cols { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 3rem; }
-.rep-cols.wide-left { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); }
+.bx-pog { position: absolute; top: 7.2rem; left: 4rem; right: 4rem; display: flex; gap: 2.4rem; align-items: baseline; font-size: .95rem; color: var(--ink-2); white-space: nowrap; overflow: hidden; }
+.pog-line { overflow: hidden; text-overflow: ellipsis; }
+.pog-k { font-family: var(--font-num); font-size: .78rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lime); margin-right: .7rem; }
+.pog-line b { color: #fff; }
+.pog-line.bad .pog-k { color: #ff5a6e; }
+.pog-w { color: var(--ink-3); font-family: var(--font-num); font-weight: 600; margin-left: .4rem; }
+.pog-perfect { color: #fff; font-family: var(--font-num); font-weight: 700; }
+.bx { position: absolute; top: 9.3rem; left: 4rem; right: 4rem; bottom: 6.6rem; display: grid; grid-template-columns: minmax(0, 1.28fr) minmax(0, 1fr); gap: 2.6rem; overflow: hidden; }
+.bx-left, .bx-right { display: flex; flex-direction: column; gap: .75rem; min-height: 0; }
+.bx-sec { min-height: 0; }
+.bx h3, .last-game h3, .hist-detail h3 { display: flex; align-items: baseline; gap: 1rem; margin: 0 0 .2rem; font-family: var(--font-num); font-size: .9rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lime); }
+.h3-note { font-size: .78rem; font-weight: 600; letter-spacing: .04em; text-transform: none; color: var(--ink-3); }
+.bx h3 .rep-team { margin-left: auto; font-size: .78rem; letter-spacing: .02em; text-transform: none; gap: .2rem .9rem; }
 .rep-stack { max-width: 60rem; }
 
-.rep-table { width: 100%; border-collapse: collapse; font-size: .92rem; font-variant-numeric: tabular-nums; }
-.rep-table th { text-align: right; font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); padding: .45rem .5rem .3rem; white-space: nowrap; font-weight: 700; }
-.rep-table td { text-align: right; padding: .34rem .5rem; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap; }
-.rep-table th:first-child, .rep-table td:first-child, .rep-table th:nth-child(2), .rep-table td:nth-child(2) { text-align: left; }
+.rep-table { width: 100%; border-collapse: collapse; font-family: var(--font-num); font-size: .98rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.rep-table th { text-align: right; font-size: .76rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: .3rem .45rem .2rem; white-space: nowrap; font-weight: 600; }
+.rep-table td { text-align: right; padding: .2rem .45rem; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap; }
+.rep-table th:first-child, .rep-table td:first-child { text-align: left; padding-left: 0; }
+.rep-table td:first-child { font-family: var(--font-ui); font-weight: 600; }
 .rep-table tbody tr:hover { background: rgba(170,255,0,.05); }
 .rep-table td .sub { margin-left: .35rem; font-size: .72rem; color: var(--ink-3); }
 .rep-table td.dim { color: var(--ink-3); font-weight: 700; font-size: .8rem; }
 .rep-table td.bad { color: #ff5a6e; font-weight: 800; }
 .rep-table td.hit { color: #ffd400; font-weight: 800; }
 .rep-table .rep-empty td { text-align: left; color: var(--ink-3); font-style: italic; }
-.rep-table td:first-child { font-weight: 700; }
-.grade-cell { font-family: var(--font-display); }
+.grade-cell { font-family: var(--font-num); font-weight: 800; font-size: 1.1rem; }
 .rep-note { color: var(--ink-3); font-size: .8rem; line-height: 1.5; margin: .6rem 0 0; max-width: 60rem; }
 
-.rep-team { display: flex; flex-wrap: wrap; gap: .4rem 1.3rem; color: var(--ink-2); font-weight: 700; font-size: .88rem; }
+.rep-team { display: flex; flex-wrap: wrap; gap: .4rem 1.3rem; color: var(--ink-2); font-family: var(--font-num); font-weight: 600; font-size: .9rem; }
 .rep-team .hits { color: #ffd400; }
 
-/* The drive chart. */
-/* The numbers hug their headings; the result takes what's left. */
-.drive-chart th:not(:last-child), .drive-chart td:not(:last-child) { width: 1%; padding-right: 1.2rem; }
-.drive-chart td:nth-child(2) { font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: .74rem; }
-.drive-chart td.dc-rd { color: var(--ink-3); font-weight: 800; width: 2.6rem; }
-.drive-chart .dc-beasts td { color: var(--ink-2); }
-.drive-chart .dc-beasts .dc-team { color: #ff5a6e; }
-.drive-chart .dc-beasts.scored .dc-res { color: #ff5a6e; font-weight: 800; }
-.drive-chart .dc-you .dc-team { color: var(--lime); }
-.drive-chart .dc-you td { border-bottom-color: rgba(255,255,255,.12); }
-.drive-chart .dc-you.r-TD .dc-res, .drive-chart .dc-you.r-FG .dc-res { color: var(--lime); font-weight: 800; }
-.drive-chart .dc-you.r-Turnover .dc-res, .drive-chart .dc-you.r-Safety .dc-res { color: #ff5a6e; }
-.drive-chart.compact { font-size: .8rem; }
-.drive-chart.compact td { padding: .2rem .4rem; }
+/* The drive chart: a row a round, the Beasts' result then your drive. */
+.drive-chart th:not(:last-child), .drive-chart td:not(:last-child) { width: 1%; padding-right: 1rem; }
+.drive-chart th:nth-child(2), .drive-chart td:nth-child(2) { text-align: left; }
+.drive-chart th:last-child, .drive-chart td:last-child { text-align: left; }
+.drive-chart td.dc-rd { color: var(--ink-3); font-weight: 700; width: 2.4rem; }
+.drive-chart td.dc-beasts { color: var(--ink-3); font-family: var(--font-num); font-weight: 500; }
+.drive-chart td.dc-beasts.scored { color: #ff5a6e; font-weight: 700; }
+.drive-chart td.dc-start { color: var(--ink-2); }
+.drive-chart .r-TD .dc-res, .drive-chart .r-FG .dc-res { color: var(--lime); font-weight: 700; }
+.drive-chart .r-Turnover .dc-res, .drive-chart .r-Safety .dc-res { color: #ff5a6e; }
+.drive-chart.compact { font-size: .86rem; }
+.drive-chart.compact td { padding: .16rem .4rem; }
+
+/* The report card: grade, player, snaps, the reason in one line. */
+.rep-table.grades td.why { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; width: 100%; font-family: var(--font-ui); color: var(--ink-2); font-size: .92rem; }
+.rep-table.grades th:nth-child(4) { text-align: left; }
+.rep-table.grades td:first-child { font-family: var(--font-num); width: 3rem; }
+.rep-table.grades td:nth-child(2) { text-align: left; font-family: var(--font-ui); font-weight: 600; }
+.rep-table.grades th:nth-child(2) { text-align: left; }
+.rep-table.grades .role { display: inline-block; min-width: 2.4rem; font-family: var(--font-num); font-weight: 700; color: var(--ink-3); }
+.rep-table.grades tr.ungraded td { color: var(--ink-3); }
+
+/* Big hits. */
+.bx-hits ul { list-style: none; margin: .2rem 0 0; padding: 0; display: grid; gap: .15rem; }
+.bx-hits li { display: grid; grid-template-columns: 3.2rem 1fr; gap: .6rem; font-size: .95rem; padding: .16rem 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.bh-when { font-family: var(--font-num); font-weight: 700; color: var(--ink-3); }
+.bh-who b { color: #ffd400; font-weight: 700; }
+.bh-who .sub { font-family: var(--font-num); font-size: .78rem; color: var(--ink-3); margin-right: .2rem; }
+.rep-table .sub { margin-left: .35rem; font-size: .76rem; color: var(--ink-3); }
 
 /* The play of the game. */
 .pog { position: relative; padding: .9rem 1.1rem 1rem; background: linear-gradient(90deg, rgba(255,255,255,.07), rgba(255,255,255,.02)); border-left: 4px solid rgba(255,255,255,.4); margin-bottom: .6rem; }
@@ -115,7 +142,8 @@
 .sh-pct { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
 .sh-line { color: var(--ink-3); font-size: .76rem; white-space: nowrap; }
 
-.res-actions { position: absolute; left: 5rem; bottom: 3.4rem; display: flex; gap: .5rem; }
+.res-actions { position: absolute; left: 4rem; bottom: 2.2rem; display: flex; gap: .5rem; }
+.results .hints { bottom: 2.6rem; }
 
 /* History */
 .hist-body { position: absolute; top: 9rem; bottom: 6.5rem; left: 5.5rem; right: 5.5rem; display: grid; grid-template-columns: minmax(0, 40rem) minmax(0, 1fr); gap: 3.5rem; }

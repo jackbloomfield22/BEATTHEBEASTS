@@ -4,8 +4,9 @@ import { DECADE_HEX } from '@data/legacy/palette';
 // Canvas-drawn textures for the locker room: nameplates, jerseys, the
 // sticker strip on each stall, the carpet and the wall paneling. Everything
 // is drawn here in code (no image assets), in the Contenders' black and lime.
-// Type is Bungee (the game's display face, bundled with @fontsource, OFL);
-// canvases redraw once it has loaded.
+// Type is Bungee (the game's display face, bundled with @fontsource, OFL)
+// for names and numbers on plates and jerseys, and Barlow Semi Condensed
+// (OFL, M6.6) for the stickers; canvases redraw once they have loaded.
 
 export const LIME = '#aaff00';
 const INK = '#f2f2f2';
@@ -13,7 +14,7 @@ const INK = '#f2f2f2';
 let fontReady: Promise<void> | null = null;
 export function whenFontReady(): Promise<void> {
   fontReady ??= (typeof document !== 'undefined' && document.fonts
-    ? Promise.all([document.fonts.load('64px Bungee'), document.fonts.load('600 32px "Inter Variable"')]).then(() => undefined)
+    ? Promise.all([document.fonts.load('64px Bungee'), document.fonts.load('600 32px "Inter Variable"'), document.fonts.load('700 32px "Barlow Semi Condensed"'), document.fonts.load('700 32px "Barlow"')]).then(() => undefined)
     : Promise.resolve()
   ).catch(() => undefined);
   return fontReady;
@@ -228,16 +229,75 @@ export function drawJersey(c: HTMLCanvasElement, name: string, num: number): voi
 export interface StickerSpec {
   /** "SF · 1980s": team + decade tag. */
   tag: { team: string; decade: string } | null;
-  traits: string[];
+  /** Every trait he has (M6.6: all of them, not the first two); a negative one wears a warning red. */
+  traits: { label: string; negative?: boolean }[];
   allPro: number;
+  /** Career Pro Bowls (the OL stall: the five linemen's total). */
+  proBowl?: number;
+  /** An OL unit's one word (Elite, Strong, Solid, Weak). */
+  word?: string | null;
   pos: string;
   posColor: string;
 }
 
+/** The sticker face (the second typeface: condensed, so a full set fits the cabinet). */
+export const STICKER_FONT = '"Barlow Semi Condensed", "Barlow", "Arial Narrow", sans-serif';
+
+type Sticker = { text: string; bg: string; fg: string; border: string; star?: boolean };
+
+/** The stickers a stall wears, in the order they go on. */
+export function stickerList(spec: StickerSpec): Sticker[] {
+  const list: Sticker[] = [];
+  if (spec.tag) {
+    const dh = DECADE_HEX[spec.tag.decade];
+    list.push({ text: `${spec.tag.team} · ${spec.tag.decade}`, bg: '#f4f1e8', fg: '#111', border: dh?.text ?? LIME });
+  }
+  if (spec.word) list.push({ text: spec.word.toUpperCase(), bg: LIME, fg: '#0a0a0a', border: '#e8ffc0' });
+  for (const t of spec.traits) list.push(t.negative ? { text: t.label, bg: '#1a0f10', fg: '#ff8a8a', border: '#ff5a5f' } : { text: t.label, bg: '#101112', fg: LIME, border: LIME });
+  if (spec.allPro > 0) list.push({ text: `${spec.allPro}× All-Pro`, bg: '#ffd400', fg: '#111', border: '#fff2a0', star: true });
+  if ((spec.proBowl ?? 0) > 0) list.push({ text: `${spec.proBowl}× Pro Bowl`, bg: '#e9eef7', fg: '#10233f', border: '#6d8fd1' });
+  return list;
+}
+
+/**
+ * Lay the stickers out in rows at the largest size where all of them fit
+ * the cabinet face (M6.6: a player with four traits and an All-Pro count
+ * wears six stickers; only the first two traits used to go on). Returns
+ * each sticker's box in canvas pixels at scale 1 (h = 180), and the font
+ * size in the same units.
+ */
+export function layoutStickers(widths: (font: number) => number[], w: number, h: number): { font: number; boxes: { x: number; y: number; w: number; h: number }[] } {
+  const scale = h / 180;
+  const pad = 17 * scale;
+  let best: { font: number; boxes: { x: number; y: number; w: number; h: number }[] } | null = null;
+  for (const font of [32, 28, 25, 22, 19, 17, 15]) {
+    const f = font * scale;
+    const sh = f * 1.72;
+    const pitch = sh + 12 * scale;
+    const top = 20 * scale;
+    const boxes: { x: number; y: number; w: number; h: number }[] = [];
+    let x = 22 * scale;
+    let row = 0;
+    for (const tw of widths(f)) {
+      const sw = tw + pad * 2;
+      if (x + sw > w - 14 * scale && x > 30 * scale) {
+        row++;
+        x = (row % 2 ? 34 : 22) * scale;
+      }
+      boxes.push({ x, y: top + row * pitch, w: sw, h: sh });
+      x += sw + 14 * scale;
+    }
+    best = { font: f, boxes };
+    if (top + row * pitch + sh <= h - 8 * scale) break;
+  }
+  return best!;
+}
+
 /**
  * The seat cabinet's front: black lacquer, and once he's drafted, stickers
- * slapped on at slight angles (team+decade tag, a trait badge or two, the
- * All-Pro count). `shown` (0..n) reveals them one by one as the locker dresses.
+ * slapped on at slight angles (team+decade tag, the OL's unit word, every
+ * trait, the All-Pro and Pro Bowl counts). `shown` (0..n) reveals them one
+ * by one as the locker dresses.
  */
 export function drawStickers(c: HTMLCanvasElement, spec: StickerSpec | null, shown = 99): void {
   const ctx = c.getContext('2d')!;
@@ -251,37 +311,26 @@ export function drawStickers(c: HTMLCanvasElement, spec: StickerSpec | null, sho
   ctx.fillStyle = 'rgba(255,255,255,0.06)';
   ctx.fillRect(0, 0, w, 3);
   if (!spec) return;
-  type Sticker = { text: string; bg: string; fg: string; border: string; star?: boolean };
-  const list: Sticker[] = [];
-  if (spec.tag) {
-    const dh = DECADE_HEX[spec.tag.decade];
-    list.push({ text: `${spec.tag.team} · ${spec.tag.decade}`, bg: '#f4f1e8', fg: '#111', border: dh?.text ?? LIME });
-  }
-  for (const t of spec.traits.slice(0, 2)) list.push({ text: t, bg: '#101112', fg: LIME, border: LIME });
-  if (spec.allPro > 0) list.push({ text: `${spec.allPro}× All-Pro`, bg: '#ffd400', fg: '#111', border: '#fff2a0', star: true });
+  const list = stickerList(spec);
   const scale = h / 180;
-  let x = 22 * scale;
-  let row = 0;
+  const measure = (f: number) =>
+    list.map((s) => {
+      ctx.font = `700 ${Math.round(f)}px ${STICKER_FONT}`;
+      return ctx.measureText(s.text).width + (s.star ? f * 1.25 : 0);
+    });
+  const { font, boxes } = layoutStickers(measure, w, h);
   list.slice(0, shown).forEach((s, i) => {
+    const b = boxes[i]!;
     ctx.save();
-    ctx.font = `${Math.round(30 * scale)}px Bungee`;
-    const tw = ctx.measureText(s.text).width + (s.star ? 40 * scale : 0);
-    const sw = tw + 34 * scale;
-    const sh = 56 * scale;
-    if (x + sw > w - 16 * scale) {
-      row++;
-      x = 30 * scale;
-    }
-    const y = (26 + row * 72) * scale;
     const rot = [-0.05, 0.035, -0.02, 0.05][i % 4]!;
-    ctx.translate(x + sw / 2, y + sh / 2);
+    ctx.translate(b.x + b.w / 2, b.y + b.h / 2);
     ctx.rotate(rot);
     ctx.shadowColor = 'rgba(0,0,0,0.6)';
     ctx.shadowBlur = 8 * scale;
     ctx.shadowOffsetY = 3 * scale;
     ctx.fillStyle = s.bg;
     ctx.beginPath();
-    ctx.roundRect(-sw / 2, -sh / 2, sw, sh, 12 * scale);
+    ctx.roundRect(-b.w / 2, -b.h / 2, b.w, b.h, b.h * 0.22);
     ctx.fill();
     ctx.shadowColor = 'transparent';
     ctx.strokeStyle = s.border;
@@ -290,10 +339,10 @@ export function drawStickers(c: HTMLCanvasElement, spec: StickerSpec | null, sho
     ctx.fillStyle = s.fg;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(s.text, s.star ? 18 * scale : 0, 3 * scale);
-    if (s.star) star(ctx, -sw / 2 + 30 * scale, 0, 15 * scale, s.fg);
+    ctx.font = `700 ${Math.round(font)}px ${STICKER_FONT}`;
+    ctx.fillText(s.text, s.star ? font * 0.6 : 0, font * 0.06);
+    if (s.star) star(ctx, -b.w / 2 + font * 1.05, 0, font * 0.48, s.fg);
     ctx.restore();
-    x += sw + 16 * scale;
   });
 }
 

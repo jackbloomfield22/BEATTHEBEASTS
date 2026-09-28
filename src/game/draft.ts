@@ -24,6 +24,7 @@ import { getDailyChallenge, posOfSlot, type DailyChallenge } from '@/engine/lega
 import { makeRng, seedFromDate, type Rng } from '@/engine/rng';
 import type { SnapshotEntry, SnapshotTrait } from '@/engine/ratings/snapshot';
 import { simPlayer, type SimPlayer } from '@/sim';
+import { depthChart } from './depth';
 
 export type DraftMode = 'classic' | 'film' | 'daily' | 'quick';
 
@@ -450,7 +451,9 @@ export interface DraftedTeam {
   OL: [SimPlayer, SimPlayer, SimPlayer, SimPlayer, SimPlayer];
 }
 
-export function draftedTeam(cat: Catalog, r: Roster): DraftedTeam {
+/** The drafted team on the depth chart (the best back, receivers and tight end start: src/game/depth.ts). */
+export function draftedTeam(cat: Catalog, drafted: Roster): DraftedTeam {
+  const r = depthChart(drafted);
   const one = (k: Exclude<Slot, 'OL'>) => {
     const p = r[k]!;
     return simPlayer(cat.entry.get(p.id)!, p.num);

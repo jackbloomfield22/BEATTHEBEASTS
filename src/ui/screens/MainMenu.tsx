@@ -4,7 +4,9 @@ import { useMenuNav } from '../nav';
 import { Hints, MenuItem } from '../components/controls';
 import { Audio } from '@/audio/audio';
 import { useDraft } from '@/app/draftStore';
+import { useHistory, viewRecord } from '@/app/history';
 import { getDailyChallenge, rateBeasts, threatTier, todayKey } from '@/engine';
+import { modeLabel, resultWord } from '../results/GameReport';
 
 interface Item {
   id: string;
@@ -14,17 +16,20 @@ interface Item {
   screen?: Screen;
   /** Milestone that brings it online; the item stays visible but locked until then. */
   arrives?: string;
+  /** How big it sits in the list (Playtest 2: New Draft is the big one; Last Game and History are smaller). */
+  size: 'hero' | 'lg' | 'md';
 }
 
 const ALL_ITEMS: Item[] = [
-  { id: 'play', label: 'Play', blurb: 'Draft an all-time offense in the Contenders\' locker room through the slot machine, then take the field against the Beasts. Classic shows every number; Film Room hides them (← → to switch).', shot: 'menu' },
-  { id: 'daily', label: 'Daily Challenge', blurb: 'Same Beasts, same draft sequence for everyone today. Film Room rules, no skips, no Auto-Draft. Your final margin is your score.', shot: 'daily' },
-  { id: 'quick', label: 'Quick Play', blurb: 'Auto-draft, a look at the lockers, and straight out of the tunnel to kickoff.', shot: 'menu' },
-  { id: 'locker', label: 'Locker Room', blurb: 'Your last roster, dressed and waiting, with your last game on the board: the score, the grade, the box score and the drive chart. Walk the row, or walk out and play them again.', shot: 'menu' },
-  { id: 'practice', label: 'Practice Field', blurb: 'Free play against the Beasts: pick a play, a spot and a coverage, and run it as often as you like. Drills with medals arrive with the full game build.', shot: 'practice', screen: 'practice' },
-  { id: 'howto', label: 'How to Play', blurb: 'Controls and the rules of the game.', shot: 'history', screen: 'howto' },
-  { id: 'settings', label: 'Settings', blurb: 'Display, graphics, controls, audio, gameplay and accessibility.', shot: 'settings', screen: 'settings' },
-  { id: 'history', label: 'History', blurb: 'Every game you have played against the Beasts: the final score, the grade, the full box score and the drive chart. Share cards arrive with the full game build.', shot: 'history', screen: 'history' },
+  { id: 'play', size: 'hero', label: 'New Draft', blurb: 'Draft an all-time offense in the Contenders\' locker room through the slot machine, then take the field against the Beasts. Classic names every strength; Film Room hides them (← → to switch).', shot: 'menu' },
+  { id: 'daily', size: 'lg', label: 'Daily Challenge', blurb: 'Same Beasts, same draft sequence for everyone today. Film Room rules, no skips, no Auto-Draft. Your final margin is your score.', shot: 'daily' },
+  { id: 'quick', size: 'lg', label: 'Quick Play', blurb: 'Auto-draft, a look at the lockers, and straight out of the tunnel to kickoff.', shot: 'menu' },
+  { id: 'myteam', size: 'lg', label: 'My Team', blurb: 'Your last roster, dressed and waiting in the locker room, with its depth chart and your last game on the board. To play again, draft a new team.', shot: 'menu' },
+  { id: 'practice', size: 'lg', label: 'Practice Field', blurb: 'Free play against the Beasts: pick a play, a spot and a coverage, and run it as often as you like.', shot: 'practice', screen: 'practice' },
+  { id: 'last', size: 'md', label: 'Last Game', blurb: 'The box score of your last game: the passing, rushing and receiving lines, every player\'s grade and why, the Beasts\' defense, the drive chart and the big hits.', shot: 'history' },
+  { id: 'history', size: 'md', label: 'History', blurb: 'Every game you have played against the Beasts: the final score, the grade, the box score and the drive chart.', shot: 'history', screen: 'history' },
+  { id: 'howto', size: 'md', label: 'How to Play', blurb: 'Controls and the rules of the game.', shot: 'history', screen: 'howto' },
+  { id: 'settings', size: 'md', label: 'Settings', blurb: 'Display, graphics, controls, audio, gameplay and accessibility.', shot: 'settings', screen: 'settings' },
 ];
 
 function useDailyPreview() {
@@ -40,8 +45,9 @@ function useDailyPreview() {
 export function MainMenu() {
   const go = useApp((s) => s.go);
   const hasDraft = useDraft((s) => !!s.saved);
+  const last = useHistory((s) => s.records[0] ?? null);
   const [film, setFilm] = useState(false);
-  const ITEMS = ALL_ITEMS.filter((it) => it.id !== 'locker' || hasDraft);
+  const ITEMS = ALL_ITEMS.filter((it) => (it.id !== 'myteam' || hasDraft) && (it.id !== 'last' || last));
   const setShot = useApp((s) => s.setShot);
   const showToast = useApp((s) => s.showToast);
   const [focus, setFocus] = useState(0);
@@ -62,9 +68,15 @@ export function MainMenu() {
       go('draft');
       return;
     }
-    if (it.id === 'locker') {
+    if (it.id === 'myteam') {
       Audio.uiSelect();
       void draft.view().then((ok) => ok && go('draft'));
+      return;
+    }
+    if (it.id === 'last') {
+      Audio.uiSelect();
+      viewRecord(null, 'menu');
+      go('results');
       return;
     }
     if (it.screen) {
@@ -92,16 +104,36 @@ export function MainMenu() {
       </header>
       <nav className="menu-list">
         {ITEMS.map((it, i) => (
-          <MenuItem key={it.id} label={it.label} focused={i === focus} tag={it.arrives ? 'Locked' : it.id === 'play' ? (film ? 'Film Room' : 'Classic') : undefined} onHover={() => focusItem(i)} onClick={() => activate(i)} />
+          <MenuItem
+            key={it.id}
+            size={it.size}
+            label={it.label}
+            focused={i === focus}
+            tag={it.arrives ? 'Locked' : it.id === 'play' ? (film ? 'Film Room' : 'Classic') : undefined}
+            className={i > 0 && ITEMS[i - 1]!.size !== it.size ? 'group-start' : ''}
+            onHover={() => focusItem(i)}
+            onClick={() => activate(i)}
+          />
         ))}
       </nav>
       <aside className="menu-detail" key={item.id}>
         <div className="detail-kicker">{item.arrives ? 'In development' : 'Available'}</div>
         <h2 className="detail-title">{item.label}</h2>
         <p className="detail-blurb">{item.blurb}</p>
+        {item.id === 'last' && last ? (
+          <div className="menu-last">
+            <span className={`res-banner ${resultWord(last).tone}`}>{resultWord(last).word}</span>
+            <span className="ml-score">
+              Contenders {last.score.user} – {last.score.beasts} Beasts
+            </span>
+            <span className="ml-meta">
+              {last.grade ? `${last.grade.grade} · ${last.grade.label}` : 'Not graded'} · {modeLabel(last.mode)}
+            </span>
+          </div>
+        ) : null}
         {item.id === 'daily' && dailyOpen ? <DailyPreview /> : null}
       </aside>
-      <Hints items={[{ kb: '↑↓', pad: 'D-Pad', label: 'Navigate' }, { kb: 'Enter', pad: 'A', label: 'Select' }]} />
+      <Hints items={[{ kb: '↑↓', pad: 'D-Pad', label: 'Navigate' }, ...(item.id === 'play' ? [{ kb: '← →', pad: 'D-Pad', label: film ? 'Classic' : 'Film Room' }] : []), { kb: 'Enter', pad: 'A', label: 'Select' }]} />
     </div>
   );
 }

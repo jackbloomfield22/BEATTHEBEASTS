@@ -10,11 +10,11 @@ import { practice, usePractice } from '@/game/practice';
 import { downLabel, spotLabel } from '@/game/situation';
 import { aimFor, powerNeeded, PUNT_DEPTH } from '@/game/kick';
 import { KickControl, METER, METER_MAX, strikeWord, type Strike } from '@/game/kickMeter';
-import { PLAY_TYPE_LABEL, PLAYS, playById, suggestPlays, type PlayType } from '@/sim';
+import { PLAY_TYPE_LABEL, PLAYS, playById, suggestPlays, type DefSlot, type PlayType } from '@/sim';
 import { Input } from '@/input/InputManager';
 import { contactFor, kickView } from '@/render/game/kickView';
 import { useMenuNav } from '../nav';
-import { Hints, MenuItem, useDevice } from '../components/controls';
+import { Hints, KeyCap, MenuItem, useDevice } from '../components/controls';
 import { TabKey } from '../components/Glyph';
 import { PlayArt } from '../game/PlayArt';
 import { PlayHud, readsNote } from './PracticeScreen';
@@ -78,6 +78,7 @@ export function GameScreen() {
       {stage !== 'loading' ? <ScoreBug /> : null}
       {!paused ? (
         <>
+          {stage === 'pregame' ? <PreGame /> : null}
           {stage === 'meanwhile' ? <Meanwhile /> : null}
           {stage === 'call' ? <GamePlayCall /> : null}
           {stage === 'play' ? <GamePlay /> : null}
@@ -303,6 +304,63 @@ function Wind({ m }: { m: Match }) {
         ↑
       </span>
       {m.wind.mph} mph
+    </div>
+  );
+}
+
+// ---- Pre-game -----------------------------------------------------------------------
+
+/** How long the pre-game holds before a press can kick off (a press from the walk-out never carries over). */
+const KICKOFF_ARM_MS = 900;
+const BEAST_ORDER: DefSlot[] = ['LE', 'LDT', 'RDT', 'RE', 'WLB', 'MLB', 'SLB', 'LCB', 'FS', 'SS', 'RCB'];
+
+/**
+ * The pre-game moment (Playtest 1): after the walk-out, the field with both
+ * teams set, the Beasts' eleven, the scoreboard, and nothing happens until an
+ * explicit press to kick off. The press only counts once the card has been
+ * up for KICKOFF_ARM_MS, and a held key's repeats never count, so a button
+ * mashed through the walk-out can't run anything.
+ */
+function PreGame() {
+  const m = game.match;
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setArmed(true), urlFlags.shot ? 0 : KICKOFF_ARM_MS);
+    return () => clearTimeout(t);
+  }, []);
+  const kick = () => {
+    if (!armed) return;
+    Audio.uiSelect();
+    game.kickoff();
+  };
+  useMenuNav({ count: 1, focus: 0, setFocus: () => undefined, enabled: armed, onConfirm: kick });
+  const beasts = practice.teams?.beasts.base;
+  if (!m) return null;
+  return (
+    <div className="pregame">
+      <div className="pg-card">
+        <div className="pg-kicker">
+          Pre-game · {m.cfg.drives} rounds · Wind {m.wind.mph} mph
+        </div>
+        <h2 className="pg-head">
+          Contenders <span className="pg-vs">vs</span> <span className="pg-beasts">The Beasts</span>
+        </h2>
+        <p className="pg-sub">The Beasts get the ball first. Your drive starts after their possession.</p>
+        {beasts ? (
+          <ul className="pg-lineup">
+            {BEAST_ORDER.map((k) => (
+              <li key={k}>
+                <span className="pg-pos">{beasts[k].pos}</span>
+                <span className="pg-name">{beasts[k].name}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+      <button className={`pg-kick ${armed ? 'is-armed' : ''}`} tabIndex={-1} onClick={kick}>
+        <KeyCap kb="Enter" pad="A" className="pg-key" />
+        <span>Kick off</span>
+      </button>
     </div>
   );
 }

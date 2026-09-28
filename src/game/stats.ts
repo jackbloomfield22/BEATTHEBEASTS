@@ -69,6 +69,25 @@ export interface DefLine {
   bigHits: number;
 }
 
+/** One big hit your side took (the box score's Big Hits list). */
+export interface BigHit {
+  /** The Beast who delivered it, his position, and the man he hit. */
+  by: string;
+  pos: string;
+  on: string;
+  /** The hit's force (the sim's number; big hits start at the ragdoll threshold). */
+  force: number;
+  /** Round (1-based) and overtime period of the snap, for the label. */
+  round: number;
+  ot: number;
+}
+
+/** Where a snap sits in the game (the Big Hits list's labels). */
+export interface SnapAt {
+  round: number;
+  ot: number;
+}
+
 /** The box score: legacy's categories, the per-player lines, and the team totals. */
 export interface GameBox {
   pass: PassLine;
@@ -85,6 +104,10 @@ export interface GameBox {
   /** Pressures and sacks by a Beast nobody blocked. */
   freeRushers: { pressures: number; sacks: number };
   bigHits: number;
+  /** Every big hit your side took, in order (M6.6; absent on older records). */
+  hits?: BigHit[];
+  /** Snaps each of your players was on the field for, by name (M6.6; absent on older records). */
+  snaps?: Record<string, number>;
   firstDowns: number;
   plays: number;
   yards: number;
@@ -103,6 +126,8 @@ export function emptyGameBox(qb = ''): GameBox {
     shadow: {},
     freeRushers: { pressures: 0, sacks: 0 },
     bigHits: 0,
+    hits: [],
+    snaps: {},
     firstDowns: 0,
     plays: 0,
     yards: 0,
@@ -173,8 +198,11 @@ function beatenBy(s: PlayState, d: number): number {
  * in; `qb` your quarterback's name (a scramble with nobody else on the
  * ball is his carry).
  */
-export function tallySnap(b: GameBox, s: PlayState, r: PlayResult, before: Situation, qb: string): void {
+export function tallySnap(b: GameBox, s: PlayState, r: PlayResult, before: Situation, qb: string, at: SnapAt = { round: 0, ot: 0 }): void {
   b.plays++;
+  // Snap counts: everyone who lined up for your side.
+  const snaps = (b.snaps ??= {});
+  for (const a of s.agents) if (a.side === 'off') snaps[a.p.name] = (snaps[a.p.name] ?? 0) + 1;
   const y = r.offenseBall ? r.spot - before.los : 0;
   const td = r.touchdown && r.offenseBall ? 1 : 0;
   const name = (i: number | undefined) => (i !== undefined && i >= 0 ? (s.agents[i]?.p.name ?? '') : '');
@@ -196,7 +224,10 @@ export function tallySnap(b: GameBox, s: PlayState, r: PlayResult, before: Situa
     if (by === undefined) continue;
     if (e.type === 'hit' && e.data?.big) {
       if (side(by) === 'def') defLine(by).bigHits++;
-      if (side(e.who?.[1]) === 'off') b.bigHits++;
+      if (side(e.who?.[1]) === 'off') {
+        b.bigHits++;
+        if (side(by) === 'def') (b.hits ??= []).push({ by: name(by), pos: s.agents[by]!.p.pos, on: name(e.who?.[1]), force: Number(e.data?.force ?? 0), round: at.round, ot: at.ot });
+      }
     } else if ((e.type === 'tackle' || e.type === 'sack') && side(by) === 'def' && side(e.who?.[1]) === 'off') {
       defLine(by).tackles++; // a sack is a tackle too (NFL scoring)
       if (e.type === 'sack') defLine(by).sacks++;
@@ -257,7 +288,9 @@ export function tallySnap(b: GameBox, s: PlayState, r: PlayResult, before: Situa
     b.pass.att++;
     const tgt = s.agents[r.pass.target];
     const rn = tgt?.p.name ?? '';
-    const line = (b.rec[rn] ??= { name: rn, tgt: 0, rec: 0, yds: 0, td: 0, long: 0, yac: 0, drops: 0, contested: 0, contestedWon: 0 });
+    // A ball thrown to nobody (away, out of bounds) is an attempt but no receiver's target (it used to make a nameless receiving line).
+    const blank = (): RecLine => ({ name: rn, tgt: 0, rec: 0, yds: 0, td: 0, long: 0, yac: 0, drops: 0, contested: 0, contestedWon: 0 });
+    const line = tgt ? (b.rec[rn] ??= blank()) : blank();
     line.tgt++;
     const contested = r.pass.sep !== undefined && r.pass.sep < IN_PHASE;
     if (contested) line.contested++;

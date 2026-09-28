@@ -19,7 +19,7 @@ interface HistoryStore {
   /** The record the results screen shows (null: the newest). */
   viewing: string | null;
   /** How the results screen was opened: straight from the game, or to look back at one. */
-  from: 'game' | 'history' | 'locker';
+  from: 'game' | 'history' | 'locker' | 'menu';
 }
 
 function load(): GameRecord[] {

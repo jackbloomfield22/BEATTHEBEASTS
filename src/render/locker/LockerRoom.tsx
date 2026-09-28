@@ -9,7 +9,8 @@ import { threatTier } from '@/engine';
 import { loadAnimLibrary } from '@/anim/library';
 import { urlFlags } from '@/app/platform';
 import { REVEAL_LEAD, REVEAL_STAGGER, useDraft } from '@/app/draftStore';
-import type { DraftPick } from '@/game/draft';
+import type { Catalog, DraftPick } from '@/game/draft';
+import { unitPool, unitWord } from '@/game/draftView';
 import { jerseyName } from '../players/glyphs';
 import { loadPlayerAsset } from '../players/playerAsset';
 import type { LightingPreset } from '../lighting/presets';
@@ -41,15 +42,24 @@ export function moodFor(preset: LightingPreset): RoomMood {
   return preset.moon ? 'lightsdown' : 'pregame';
 }
 
-export function occupantOf(p: DraftPick, allPro: Record<string, number>): LockerOccupant {
+/** What the room needs to dress a stall: the honors and, for the OL's word, the catalog's units. */
+export interface DressInfo {
+  allPro: Record<string, number>;
+  proBowl: Record<string, number>;
+  cat: Catalog | null;
+}
+
+export function occupantOf(p: DraftPick, info: DressInfo): LockerOccupant {
   const men = p.linemen ? p.linemen.map((l) => ({ name: l.name, jerseyName: jerseyName(l.name), num: l.num })) : [{ name: p.name, jerseyName: jerseyName(p.name), num: p.num }];
-  const ap = p.linemen ? p.linemen.reduce((s, l) => s + (allPro[l.id] ?? 0), 0) : (allPro[p.id] ?? 0);
+  const sum = (m: Record<string, number>) => (p.linemen ? p.linemen.reduce((s, l) => s + (m[l.id] ?? 0), 0) : (m[p.id] ?? 0));
+  // Every trait (M6.6: only the first two used to go on); a negative one wears red.
   const traits = p.traits
     .map((t) => traitInfo(t.id))
-    .filter((t) => t && t.polarity !== 'negative')
-    .slice(0, 2)
-    .map((t) => t!.label);
-  return { men, stickers: { tag: { team: p.team, decade: p.decade }, traits, allPro: ap, pos: POS_OF_SLOT[p.slot], posColor: '' } };
+    .filter((t): t is NonNullable<typeof t> => !!t)
+    .map((t) => ({ label: t.label, negative: t.polarity === 'negative' }));
+  // The line: its one word, and the five men's Pro Bowls (the draft shows the same).
+  const word = p.linemen && info.cat ? unitWord(p.ovr, unitPool(info.cat.unit.values())).word : null;
+  return { men, stickers: { tag: { team: p.team, decade: p.decade }, traits, allPro: sum(info.allPro), proBowl: p.linemen ? sum(info.proBowl) : 0, word, pos: POS_OF_SLOT[p.slot], posColor: '' } };
 }
 
 export function LockerRoom({ active, mainScene, preset }: { active: boolean; mainScene: THREE.Scene; preset: LightingPreset }) {
@@ -160,7 +170,7 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
         l.clear();
         revealQueue.current.push({ slot, pick: p, at: clock.current + REVEAL_LEAD + order.indexOf(slot) * REVEAL_STAGGER });
       } else if (fresh && fresh.pick.slot === slot && !instant) pending.current = { slot, pick: p, at: clock.current + DRESS_DELAY };
-      else l.dress(occupantOf(p, st.allPro), true);
+      else l.dress(occupantOf(p, st), true);
     }
     syncWall();
   };
@@ -221,7 +231,7 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
       pending.current = null;
       const st = useDraft.getState();
       const l = room.lockers.find((x) => x.place.slot === pd.slot)!;
-      l.dress(occupantOf(pd.pick, st.allPro));
+      l.dress(occupantOf(pd.pick, st));
       const h = holo.current;
       const cat = st.cat;
       if (h && cat) {
@@ -243,7 +253,7 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
       const r = q.shift()!;
       // Still his stall (the draft could have been restarted meanwhile).
       if (useDraft.getState().draft?.roster[r.slot]?.id !== r.pick.id) continue;
-      room.lockers.find((x) => x.place.slot === r.slot)!.dress(occupantOf(r.pick, useDraft.getState().allPro));
+      room.lockers.find((x) => x.place.slot === r.slot)!.dress(occupantOf(r.pick, useDraft.getState()));
     }
     for (const l of room.lockers) l.update(dt);
     // Quick Play walks out once its reveal is over, timed in the room's own

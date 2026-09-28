@@ -65,6 +65,8 @@ export interface SavedDraft {
 interface DraftStore {
   cat: Catalog | null;
   allPro: Record<string, number>;
+  /** Career Pro Bowl seasons by rated entry id (data/augment/honors.json). */
+  proBowl: Record<string, number>;
   mode: DraftMode;
   draft: DraftState | null;
   /** Bumped on every change to `draft` (it's mutated in place by the pure helpers). */
@@ -109,6 +111,7 @@ let beginToken = 0;
 export const useDraft = create<DraftStore>((set, get) => ({
   cat: null,
   allPro: {},
+  proBowl: {},
   mode: 'classic',
   draft: null,
   version: 0,
@@ -126,7 +129,7 @@ export const useDraft = create<DraftStore>((set, get) => ({
   load() {
     loading ??= Promise.all([fetch(ratingsUrl).then((r) => r.json()), fetch(jerseysUrl).then((r) => r.json()), fetch(honorsUrl).then((r) => r.json())]).then(([snap, jer, hon]) => {
       const cat = makeCatalog(snap, jer.numbers);
-      set({ cat, allPro: hon.allPro });
+      set({ cat, allPro: hon.allPro, proBowl: hon.proBowl ?? {} });
       return cat;
     });
     return loading;
@@ -205,7 +208,7 @@ export const useDraft = create<DraftStore>((set, get) => ({
     draft.sequence = saved.sequence;
     const daily = saved.dailyKey ? newDaily(saved.dailyKey, cat) : null;
     const beasts = daily ? daily.beasts : assembleRatedBeasts(makeRng(saved.seed ^ 0x9e3779b9), (id) => cat.entry.get(id)?.ovr);
-    set((s) => ({ draft, daily, beasts, mode: saved.mode, phase: 'viewing', focus: null, version: s.version + 1, instantSeq: s.instantSeq + 1, wallBeasts: 0 }));
+    set((s) => ({ draft, daily, beasts, mode: saved.mode, phase: 'viewing', focus: null, version: s.version + 1, instantSeq: s.instantSeq + 1, wallBeasts: null }));
     return true;
   },
   next: 'game',

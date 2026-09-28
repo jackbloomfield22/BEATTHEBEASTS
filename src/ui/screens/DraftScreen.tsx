@@ -9,7 +9,8 @@ import { useHistory } from '@/app/history';
 import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
 import { autoAllowed, skipsAllowed, type Candidate, type Pair, type Roster } from '@/game/draft';
-import { compareForList, highlights, plainTraits } from '@/game/draftView';
+import { compareForList, highlights, honorStickers, plainTraits, unitPool, unitWord } from '@/game/draftView';
+import { DEPTH_LABEL, depthChart } from '@/game/depth';
 import { DRESS_DELAY } from '@/render/locker/LockerRoom';
 import { DRESS_END } from '@/render/locker/locker';
 import { useMenuNav } from '../nav';
@@ -37,8 +38,19 @@ import '../styles/draft.css';
 const POS_TABS = ['All', 'QB', 'RB', 'WR', 'TE', 'OL'] as const;
 type PosTab = (typeof POS_TABS)[number];
 
-const SLOT_LABEL: Record<Slot, string> = { QB: 'QB', RB: 'RB', RB2: 'RB2', WR1: 'WR1', WR2: 'WR2', WR3: 'WR3', TE: 'TE', TE2: 'TE2', OL: 'OL' };
 const POS_OF: Record<Slot, string> = { QB: 'QB', RB: 'RB', RB2: 'RB', WR1: 'WR', WR2: 'WR', WR3: 'WR', TE: 'TE', TE2: 'TE', OL: 'OL' };
+/** Which of his position's spots a slot is (the 2nd WR spot), and how many there are. */
+const SLOT_NTH: Record<Slot, [number, number]> = { QB: [1, 1], RB: [1, 2], RB2: [2, 2], WR1: [1, 3], WR2: [2, 3], WR3: [3, 3], TE: [1, 2], TE2: [2, 2], OL: [1, 1] };
+const ORD = ['', '1st', '2nd', '3rd'];
+/**
+ * A slot in plain words (Playtest 1: "WR2" read like a ranking; it only
+ * means the first WR spot is filled). "QB", "Offensive line", "2nd RB".
+ */
+export function slotWords(k: Slot): string {
+  const [n, of] = SLOT_NTH[k];
+  if (k === 'OL') return 'Offensive line';
+  return of === 1 ? POS_OF[k] : `${ORD[n]} ${POS_OF[k]}`;
+}
 
 /**
  * What each decade's game looked like, for the Scouting card's era line.
@@ -67,7 +79,7 @@ export function DraftScreen() {
   const [focus, setFocus] = useState(0);
   const [roomFocus, setRoomFocus] = useState(0);
   const search = useRef<HTMLInputElement>(null);
-  // The Locker Room entry: the last game on the board, its full box score a key away.
+  // My Team (the main menu): the last game on the board, its full box score a key away.
   const lastGame = useHistory((s) => s.records[0] ?? null);
   const [boxOpen, setBoxOpen] = useState(false);
   const showLast = d.phase === 'viewing' && !!lastGame;
@@ -173,6 +185,11 @@ export function DraftScreen() {
     Audio.uiSelect();
     useDraft.getState().auto();
   };
+  // My Team (the saved roster, from the main menu): no rematch with the same roster (Playtest 2); Enter starts a new draft.
+  const newDraft = () => {
+    Audio.uiSelect();
+    void useDraft.getState().begin(d.mode === 'daily' || d.mode === 'quick' ? 'classic' : d.mode);
+  };
   const walkOut = () => {
     Audio.uiSelect();
     useDraft.setState({ phase: 'walkout', focus: null, wallBeasts: null });
@@ -203,7 +220,8 @@ export function DraftScreen() {
     onConfirm: () => {
       if (choosing) doPick(cur);
       else if (phase === 'intro' || phase === 'ready') doSpin();
-      else if (phase === 'complete' || phase === 'viewing') walkOut();
+      else if (phase === 'complete') walkOut();
+      else if (phase === 'viewing') newDraft();
     },
     onBack: () => {
       if (choosing && query) setQuery('');
@@ -259,24 +277,14 @@ export function DraftScreen() {
           <span className="brand-mark">B</span>
           <span>
             <span className="draft-mode">{{ classic: 'Classic', film: 'Film Room', daily: 'Daily Challenge', quick: 'Quick Play' }[d.mode]}</span>
-            <span className="draft-round">{complete ? 'The roster is set' : phase === 'viewing' ? 'Locker Room' : `Round ${round} of 9`}</span>
+            <span className="draft-round">{phase === 'viewing' ? 'My Team' : complete ? 'The roster is set' : `Round ${round} of 9`}</span>
           </span>
         </div>
-        <ol className="draft-slots">
-          {SLOT_ORDER.map((k) => {
-            const p = draft?.roster[k];
-            const col = POS_HEX[POS_OF[k]]!.solid;
-            return (
-              <li key={k} className={`${p ? 'filled' : ''} ${d.focus === k ? 'focused' : ''}`} style={{ ['--pc' as string]: col }} onClick={() => p && useDraft.getState().setFocus(k)}>
-                <span className="slot-key">{SLOT_LABEL[k]}</span>
-                <span className="slot-name">{p ? (p.linemen ? `${p.team} ${p.decade}` : p.name.split(' ').slice(-1)[0]) : '—'}</span>
-              </li>
-            );
-          })}
-        </ol>
+        <DraftSlots roster={draft?.roster ?? {}} depth={complete || phase === 'viewing' || phase === 'walkout'} focus={d.focus} />
       </header>
 
       {phase === 'loading' ? <div className="draft-center">Opening the locker room…</div> : null}
+      {phase === 'intro' && d.mode !== 'quick' ? <RulesCard mode={d.mode} /> : null}
 
       {draft && (phase === 'intro' || phase === 'ready' || phase === 'spinning' || (choosing && draft.pair) || phase === 'complete' || phase === 'viewing') ? (
         <div className={`draft-stage stage-${phase}`}>
@@ -286,7 +294,7 @@ export function DraftScreen() {
                 Tonight: <b>The Beasts</b>, an all-time defense
               </div>
             ) : null}
-            <div className="stage-round">{phase === 'viewing' ? 'Your last roster' : complete ? 'Nine lockers, full' : `Round ${round} of 9`}</div>
+            <div className="stage-round">{phase === 'viewing' ? 'My Team' : complete ? 'Nine lockers, full' : `Round ${round} of 9`}</div>
           </div>
           {phase === 'spinning' && draft.pair ? (
             <div className="stage-btn is-reels">
@@ -295,12 +303,20 @@ export function DraftScreen() {
           ) : choosing ? (
             <button className={`stage-btn is-draft ${cur?.slot ? '' : 'is-off'}`} tabIndex={-1} onClick={() => doPick(cur)} style={cur ? { ['--pc' as string]: POS_HEX[cur.pos]!.solid } : undefined}>
               <span className="stage-text">
-                <span className="stage-verb">{cur ? (cur.slot ? `Draft → ${SLOT_LABEL[cur.slot]}` : `${cur.pos} is full`) : 'Choose a player'}</span>
+                <span className="stage-verb">{cur ? (cur.slot ? `Draft as your ${slotWords(cur.slot)}` : `Your ${cur.pos === 'OL' ? 'line is set' : `${cur.pos}s are full`}`) : 'Choose a player'}</span>
                 <span className={`stage-label ${cur && stageName(cur).length > 18 ? 'is-xlong' : cur && stageName(cur).length > 12 ? 'is-long' : ''}`}>{cur ? stageName(cur) : '—'}</span>
               </span>
               <KeyCap kb="Enter" pad="A" className="stage-key" />
             </button>
-          ) : phase === 'complete' || phase === 'viewing' ? (
+          ) : phase === 'viewing' ? (
+            <button className="stage-btn" tabIndex={-1} onClick={newDraft}>
+              <span className="stage-text">
+                <span className="stage-verb">Done looking?</span>
+                <span className="stage-label">New draft</span>
+              </span>
+              <KeyCap kb="Enter" pad="A" className="stage-key" />
+            </button>
+          ) : phase === 'complete' ? (
             <button className="stage-btn" tabIndex={-1} onClick={walkOut}>
               <span className="stage-text">
                 <span className="stage-label">Walk out</span>
@@ -332,7 +348,7 @@ export function DraftScreen() {
 
       {phase === 'dressing' && lastPick ? (
         <div className="lower-third" style={{ ['--pc' as string]: POS_HEX[POS_OF[lastPick.slot]]!.solid }}>
-          <span className="lt-pos">{SLOT_LABEL[lastPick.slot]}</span>
+          <span className="lt-pos">{POS_OF[lastPick.slot]}</span>
           <span className="lt-name">{lastPick.name}</span>
           <span className="lt-meta">
             {lastPick.linemen ? lastPick.linemen.map((l) => l.name.split(' ').slice(-1)[0]).join(' · ') : `#${lastPick.num}`} · {lastPick.team} {lastPick.decade}
@@ -379,7 +395,7 @@ export function DraftScreen() {
                   {c.pos}
                 </span>
                 <span className="pl-name">{c.kind === 'unit' ? `${c.team} ${c.decade} line` : c.name}</span>
-                <span className="pl-slot">{c.slot ? `→ ${SLOT_LABEL[c.slot]}` : 'Full'}</span>
+                <span className="pl-slot">{c.slot ? `→ ${slotWords(c.slot)}` : c.pos === 'OL' ? 'Line set' : `${c.pos}s full`}</span>
               </li>
             ))}
             {!list.length ? <li className="pl-empty">No one matches.</li> : null}
@@ -485,8 +501,6 @@ function Reels({ pair, roster }: { pair: Pair; roster: Roster }) {
  * keeps its five names; the names are who you're drafting).
  */
 function DraftScout({ c, film }: { c: Candidate; film: boolean }) {
-  const cat = useDraft((s) => s.cat);
-  const linemen = useMemo(() => (c.kind === 'unit' && cat ? (cat.unit.get(c.id)?.linemen ?? []).map((id) => cat.entry.get(id)).filter(Boolean) : []), [c, cat]);
   const best = useMemo(() => (film ? [] : highlights(c)), [c, film]);
   const traits = useMemo(() => (film ? [] : plainTraits(c)), [c, film]);
   return (
@@ -499,16 +513,7 @@ function DraftScout({ c, film }: { c: Candidate; film: boolean }) {
           <div className="ds-name">{c.kind === 'unit' ? `${c.team} ${c.decade} offensive line` : c.name}</div>
         </div>
       </div>
-      {c.kind === 'unit' ? (
-        <ul className="ds-line">
-          {linemen.map((l) => (
-            <li key={l!.id}>
-              <span>{l!.id.split('#')[1]}</span>
-              <span>{l!.name}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {c.kind === 'unit' ? <LineCard c={c} film={film} /> : null}
       {!film ? (
         <>
           {best.length ? (
@@ -529,6 +534,126 @@ function DraftScout({ c, film }: { c: Candidate; film: boolean }) {
           </div>
         </>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The strip of nine along the top. During the draft: each spot by position
+ * and which of that position's spots it is ("WR" "2 of 3"), filled in pick
+ * order. Once the roster is full it becomes the depth chart (Playtest 2: the
+ * best player at each position starts, whatever the order he was drafted
+ * in): RB1, WR1 and TE1 are the better men, and the order says so.
+ */
+/** The backups' jobs on the depth chart (RB2's rotation: src/game/rotation.ts; TE2 in the two-tight-end groupings). */
+const DEPTH_ROLE: Partial<Record<Slot, string>> = { RB2: '3rd down', TE2: '2-TE sets' };
+
+function DraftSlots({ roster, depth, focus }: { roster: Roster; depth: boolean; focus: Slot | null }) {
+  const shown = depth ? depthChart(roster) : roster;
+  // A click focuses his stall (the stall is where he was drafted, which the depth chart may have moved him from).
+  const stallOf = (id: string | undefined) => SLOT_ORDER.find((k) => roster[k]?.id === id) ?? null;
+  return (
+    <div className={`draft-slots-wrap ${depth ? 'is-depth' : ''}`}>
+      {depth ? <span className="depth-kicker">Depth chart</span> : null}
+      <ol className="draft-slots">
+        {SLOT_ORDER.map((k) => {
+          const p = shown[k];
+          const col = POS_HEX[POS_OF[k]]!.solid;
+          const [n, of] = SLOT_NTH[k];
+          const stall = stallOf(p?.id);
+          return (
+            <li key={k} className={`${p ? 'filled' : ''} ${stall && focus === stall ? 'focused' : ''}`} style={{ ['--pc' as string]: col }} onClick={() => stall && useDraft.getState().setFocus(stall)}>
+              <span className="slot-key">
+                {depth ? DEPTH_LABEL[k] : POS_OF[k]}
+                {!depth && of > 1 ? <span className="slot-nth">{`${n} of ${of}`}</span> : null}
+                {depth && DEPTH_ROLE[k] ? <span className="slot-nth">{DEPTH_ROLE[k]}</span> : null}
+              </span>
+              <span className="slot-name">{p ? (p.linemen ? `${p.team} ${p.decade}` : p.name.split(' ').slice(-1)[0]) : '—'}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/**
+ * The rules card at the start of every draft (Playtest 1): how the spin
+ * works, the two skips, and why a spot reads "2nd WR". Up while the Beasts
+ * are on the wall; the first spin puts it away.
+ */
+function RulesCard({ mode }: { mode: string }) {
+  const daily = mode === 'daily';
+  return (
+    <aside className="rules-card">
+      <div className="rules-kicker">How the draft works</div>
+      <ol className="rules-list">
+        <li>
+          <b>Spin.</b> The reels land on a team and a decade: draft anyone from that team in that decade. Nine rounds, one pick a round.
+        </li>
+        <li>
+          <b>Fill nine lockers.</b> A QB, two running backs, three receivers, two tight ends and an offensive line (the line is one pick).
+        </li>
+        {daily ? (
+          <li>
+            <b>No skips today.</b> The Daily gives everyone the same nine spins.
+          </li>
+        ) : (
+          <li>
+            <b>Two skips, once each.</b> <span className="rk">Team Skip</span> keeps the decade and spins a new team. <span className="rk">Era Skip</span> keeps the team and spins a new decade.
+          </li>
+        )}
+        <li>
+          <b>Spots fill in order.</b> A receiver goes to your <i>1st WR</i> spot, the next one to your <i>2nd WR</i> spot: the list says &ldquo;2nd WR&rdquo; because the 1st is filled, not because he&rsquo;s a backup.
+        </li>
+        <li>
+          <b>The best man starts.</b> Draft order doesn&rsquo;t set the depth chart: when the roster is full, your best back, receiver and tight end start.
+        </li>
+      </ol>
+    </aside>
+  );
+}
+
+/**
+ * An OL unit on the Scouting card (Playtest 1, decision 3): no numbers.
+ * The five linemen by name with their All-Pro and Pro Bowl counts as
+ * stickers, and one word for the unit (src/game/draftView.ts unitWord).
+ */
+function LineCard({ c, film }: { c: Candidate; film: boolean }) {
+  const cat = useDraft((s) => s.cat);
+  const allPro = useDraft((s) => s.allPro);
+  const proBowl = useDraft((s) => s.proBowl);
+  const snap = cat?.unit.get(c.id);
+  // Film Room keeps the names and the honors (public record) but not the word (it's read off the ratings).
+  const word = useMemo(() => (cat && snap && !film ? unitWord(snap.ovr, unitPool(cat.unit.values())).word : null), [cat, snap, film]);
+  if (!cat || !snap) return null;
+  return (
+    <div className="ds-unit">
+      {word ? (
+        <div className={`unit-word w-${word.toLowerCase()}`}>
+          <span className="uw-label">The line</span>
+          <span className="uw-word">{word}</span>
+        </div>
+      ) : null}
+      <ul className="ds-line">
+        {snap.linemen.map((id) => {
+          const e = cat.entry.get(id);
+          const honors = honorStickers(id, allPro, proBowl);
+          return (
+            <li key={id}>
+              <span className="ln-spot">{id.split('#')[1]}</span>
+              <span className="ln-name">{e?.name ?? '—'}</span>
+              <span className="ln-honors">
+                {honors.map((h) => (
+                  <span key={h} className={`honor ${h.includes('All-Pro') ? 'ap' : 'pb'}`}>
+                    {h}
+                  </span>
+                ))}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

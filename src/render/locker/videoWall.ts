@@ -24,6 +24,43 @@ export type WallContent =
 const W = 1280;
 const H = 720;
 const BEASTS_RED = '#ff2a4d';
+/** The wall's body face (the second typeface, M6.6): team and decade lines. */
+const WALL_BODY = '"Barlow Semi Condensed", "Barlow", sans-serif';
+
+/**
+ * The wall's material multiplies the canvas by `brightness` (2.2) so the
+ * screen is the room's brightest surface; full-white type then read 2.2 in
+ * linear light, far over the room's bloom threshold (0.85 pregame, 0.75
+ * lights down), and the team and year on the reels haloed into mush
+ * (Playtest 1). Type is capped instead: every text color is scaled (in
+ * linear light) so its brightest channel lands at TEXT_PEAK after the
+ * multiply, under both thresholds. The lit field behind it keeps its level.
+ */
+export const TEXT_PEAK = 0.62;
+
+const toLin = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+const toSrgb = (c: number) => (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+
+/** A text color for the wall: the same hue, no brighter than TEXT_PEAK (linear) once the wall's brightness is applied. */
+export function wallInk(color: string, brightness: number): string {
+  let rgb: number[];
+  let a = 1;
+  const hex = /^#([0-9a-f]{6})$/i.exec(color);
+  const fn = /^rgba?[(]([^)]+)[)]$/i.exec(color);
+  if (hex) {
+    const n = parseInt(hex[1]!, 16);
+    rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  } else if (fn) {
+    const p = fn[1]!.split(',').map((x) => Number(x.trim()));
+    rgb = [p[0]!, p[1]!, p[2]!];
+    a = p[3] ?? 1;
+  } else return color;
+  const lin = rgb.map((c) => toLin(c / 255));
+  const peak = Math.max(...lin) * brightness;
+  const k = peak > TEXT_PEAK ? TEXT_PEAK / peak : 1;
+  const [R, G, B] = lin.map((c) => Math.round(toSrgb(c * k) * 255));
+  return a < 1 ? `rgba(${R},${G},${B},${a})` : `rgb(${R},${G},${B})`;
+}
 
 export class VideoWall {
   readonly canvas: HTMLCanvasElement;
@@ -99,10 +136,10 @@ export class VideoWall {
     else this.drawPick(c);
   }
 
-  private text(s: string, x: number, y: number, size: number, color: string, align: CanvasTextAlign = 'center', font = 'Bungee'): void {
+  private text(s: string, x: number, y: number, size: number, color: string, align: CanvasTextAlign = 'center', font = 'Bungee', weight = ''): void {
     const ctx = this.ctx;
-    ctx.font = `${size}px ${font}`;
-    ctx.fillStyle = color;
+    ctx.font = `${weight} ${size}px ${font}`.trim();
+    ctx.fillStyle = wallInk(color, this.brightness);
     ctx.textAlign = align;
     ctx.textBaseline = 'middle';
     // A dark halo keeps type crisp on the lit field.
@@ -200,30 +237,60 @@ export class VideoWall {
       { label: 'Linebackers', rows: c.beasts.filter((b) => b.pos === 'LB') },
       { label: 'Secondary', rows: c.beasts.filter((b) => b.pos === 'CB' || b.pos === 'S') },
     ];
-    const pages = c.page === 0 ? groups : [groups[c.page - 1]!];
-    let y = 150;
-    const rowH = pages.length > 1 ? 44 : 90;
-    for (const gp of pages) {
-      this.text(gp.label.toUpperCase(), 60, y, 24, 'rgba(255,255,255,0.5)', 'left');
-      y += pages.length > 1 ? 36 : 60;
-      for (const b of gp.rows) {
-        const big = pages.length === 1;
-        ctx.fillStyle = POS_HEX[b.pos]?.solid ?? '#fff';
-        ctx.fillRect(60, y - (big ? 26 : 16), big ? 90 : 60, big ? 52 : 32);
-        this.text(b.pos, 60 + (big ? 45 : 30), y + 2, big ? 34 : 22, '#0a0a0a');
-        this.text(b.name.toUpperCase(), big ? 180 : 140, y + 2, big ? 48 : 28, '#ffffff', 'left');
-        this.text(`${b.team} · ${b.decade}`, W - 60, y + 2, big ? 30 : 22, DECADE_HEX[b.decade]?.text ?? '#ccc', 'right');
-        y += rowH;
+    // All eleven (page 0) sit in two columns, the front and the backers on
+    // the left, the secondary on the right, so the lineup stays inside the
+    // frame (one column of eleven ran ~80 px past the bottom edge: Playtest 1,
+    // "the Beasts panel overflows its border").
+    const big = c.page !== 0;
+    const cols = big
+      ? [{ x: 60, w: W - 120, groups: [groups[c.page - 1]!] }]
+      : [
+          { x: 60, w: 560, groups: [groups[0]!, groups[1]!] },
+          { x: 680, w: 540, groups: [groups[2]!] },
+        ];
+    const rowH = big ? 96 : 60;
+    for (const col of cols) {
+      let y = 150;
+      for (const gp of col.groups) {
+        this.text(gp.label.toUpperCase(), col.x, y, 24, 'rgba(255,255,255,0.5)', 'left');
+        y += big ? 62 : 44;
+        for (const b of gp.rows) {
+          const boxW = big ? 90 : 64;
+          const boxH = big ? 52 : 40;
+          ctx.fillStyle = wallInk(POS_HEX[b.pos]?.solid ?? '#ffffff', this.brightness);
+          ctx.fillRect(col.x, y - boxH / 2, boxW, boxH);
+          this.text(b.pos, col.x + boxW / 2, y + 2, big ? 34 : 24, '#0a0a0a');
+          const nx = col.x + boxW + 20;
+          const name = b.name.toUpperCase();
+          const era = `${b.team} · ${b.decade}`;
+          const eraCol = DECADE_HEX[b.decade]?.text ?? '#cccccc';
+          if (big) {
+            this.text(name, nx, y + 2, this.fit(name, 'Bungee', 48, col.w - boxW - 260), '#ffffff', 'left');
+            this.text(era, col.x + col.w, y + 2, 34, eraCol, 'right', WALL_BODY, '700');
+          } else {
+            this.text(name, nx, y - 9, this.fit(name, 'Bungee', 28, col.w - boxW - 24), '#ffffff', 'left');
+            this.text(era, nx, y + 19, 22, eraCol, 'left', WALL_BODY, '700');
+          }
+          y += rowH;
+        }
+        y += 14;
       }
-      y += 16;
     }
     // Page dots.
     for (let i = 0; i < 4; i++) {
-      ctx.fillStyle = i === c.page ? '#ffffff' : 'rgba(255,255,255,0.2)';
+      ctx.fillStyle = i === c.page ? wallInk('#ffffff', this.brightness) : 'rgba(255,255,255,0.2)';
       ctx.beginPath();
       ctx.arc(W / 2 - 45 + i * 30, H - 44, 8, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  /** The largest size (≤ max, in steps of 2) at which `s` fits `width`. */
+  private fit(s: string, font: string, max: number, width: number): number {
+    let size = max;
+    this.ctx.font = `${size}px ${font}`;
+    while (size > 14 && this.ctx.measureText(s).width > width) this.ctx.font = `${(size -= 2)}px ${font}`;
+    return size;
   }
 
   private drawPick(c: Extract<WallContent, { kind: 'pick' }>): void {

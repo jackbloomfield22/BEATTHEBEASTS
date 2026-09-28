@@ -9,7 +9,9 @@ Every third-party asset, dataset, font and bundled resource used by the game, wi
 | Asset | Source | License |
 |---|---|---|
 | Bungee | Google Fonts, via the `@fontsource/bungee` npm package | SIL Open Font License 1.1 (also rasterized at runtime into the jersey number and name atlas, `src/render/players/glyphAtlas.ts`) |
-| Inter (variable) | rsms/inter, via `@fontsource-variable/inter` | SIL Open Font License 1.1 |
+| Inter (variable) | rsms/inter, via `@fontsource-variable/inter` | SIL Open Font License 1.1 (fallback only since M6.6) |
+| Barlow | The Barlow Project Authors (Jeremy Tribby, github.com/jpt/barlow), via the `@fontsource/barlow` npm package | SIL Open Font License 1.1 (body text since M6.6; also drawn into the locker room's canvas textures) |
+| Barlow Semi Condensed | The Barlow Project Authors (github.com/jpt/barlow), via the `@fontsource/barlow-semi-condensed` npm package | SIL Open Font License 1.1 (numbers, stat tables and labels since M6.6; also the locker room's stickers) |
 
 ## Runtime libraries
 

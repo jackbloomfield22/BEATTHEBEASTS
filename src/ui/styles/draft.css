@@ -15,13 +15,16 @@
 .draft-mode { font-family: var(--font-display); font-size: 1.1rem; }
 .draft-round { font-size: .78rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lime); }
 
-.draft-slots { display: flex; gap: .35rem; list-style: none; margin: 0 0 0 auto; padding: 0; }
+.draft-slots-wrap { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; }
+.depth-kicker { font-family: var(--font-num); font-size: .72rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--lime); }
+.draft-slots { display: flex; gap: .35rem; list-style: none; margin: 0; padding: 0; }
 .draft-slots li { --pc: #888; min-width: 5.4rem; padding: .35rem .6rem .4rem; border-top: 3px solid rgba(255,255,255,.14); background: rgba(8,8,10,.55); cursor: default; }
 .draft-slots li.filled { border-top-color: var(--pc); cursor: pointer; }
 .draft-slots li.focused { background: rgba(170,255,0,.12); }
-.slot-key { display: block; font-size: .64rem; font-weight: 800; letter-spacing: .14em; color: var(--ink-3); }
+.slot-key { display: flex; align-items: baseline; gap: .35rem; font-family: var(--font-num); font-size: .78rem; font-weight: 700; letter-spacing: .1em; color: var(--ink-3); }
+.slot-nth { font-size: .64rem; font-weight: 600; letter-spacing: .04em; color: var(--ink-3); text-transform: none; }
 .draft-slots li.filled .slot-key { color: var(--pc); }
-.slot-name { display: block; font-size: .8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 7rem; color: var(--ink-2); }
+.slot-name { display: block; font-size: .86rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 7rem; color: var(--ink-2); }
 .draft-slots li.filled .slot-name { color: #fff; }
 
 .draft-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); font-family: var(--font-display); color: var(--ink-2); }
@@ -36,7 +39,7 @@
 .stage-top { position: absolute; left: -4rem; right: -4rem; bottom: calc(100% + .7rem); display: flex; flex-direction: column; align-items: center; gap: .35rem; pointer-events: none; }
 .stage-caption { font-size: .85rem; color: var(--ink-2); letter-spacing: .04em; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
 .stage-caption b { color: #ff2a4d; font-weight: 800; }
-.stage-round { font-size: .9rem; font-weight: 800; letter-spacing: .24em; text-transform: uppercase; color: var(--lime); text-shadow: 0 0 .8rem rgba(170,255,0,.35), 0 1px 6px rgba(0,0,0,.9); }
+.stage-round { font-family: var(--font-num); font-size: .95rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--lime); text-shadow: 0 1px 6px rgba(0,0,0,.9); }
 .stage-btn { --pc: var(--lime); position: relative; width: 100%; height: 5.6rem; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1rem; padding: 0 1.3rem 0 1.8rem;
   color: #fff; text-align: left; cursor: pointer; border: 1px solid rgba(170,255,0,.62); border-radius: .55rem;
   background: linear-gradient(180deg, rgba(14,18,8,.5), rgba(4,6,4,.62)); backdrop-filter: blur(12px) saturate(1.15);
@@ -48,7 +51,7 @@
 .stage-btn.is-draft { border-left: 4px solid var(--pc); }
 @keyframes stage-in { from { opacity: 0; transform: translateY(.6rem) scale(.97); } to { opacity: 1; transform: none; } }
 .stage-text { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-.stage-verb { font-size: .72rem; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--lime); }
+.stage-verb { font-family: var(--font-num); font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--lime); }
 .stage-label { font-family: var(--font-display); font-size: 2.5rem; line-height: 1.05; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stage-btn.is-draft .stage-label { font-size: 1.75rem; letter-spacing: .02em; }
 .stage-btn.is-draft .stage-label.is-long { font-size: 1.35rem; }
@@ -57,18 +60,19 @@
 .stage-key.pad { min-width: 2.4rem; }
 .stage-btn.is-reels { cursor: default; grid-template-columns: 1fr; padding: 0 1.2rem; }
 .stage-reels { display: grid; grid-template-columns: 1.3fr 1fr; gap: .8rem; }
-.stage-reels .reel { font-family: var(--font-display); font-size: 2.3rem; line-height: 1; text-align: center; padding: .45rem 0; color: rgba(255,255,255,.72); background: rgba(0,0,0,.35); border-radius: .3rem;
-  box-shadow: inset 0 .5rem .7rem rgba(0,0,0,.6), inset 0 -.5rem .7rem rgba(0,0,0,.6); white-space: nowrap; overflow: hidden; }
-.stage-reels .reel.is-locked { color: #fff; outline: 2px solid var(--lime); outline-offset: -2px; }
+.stage-reels .reel { font-family: var(--font-num); font-weight: 800; font-size: 2.6rem; line-height: 1; letter-spacing: .04em; text-align: center; padding: .4rem 0; color: rgba(236,236,236,.66); background: rgba(0,0,0,.55); border-radius: .3rem;
+  box-shadow: inset 0 .5rem .7rem rgba(0,0,0,.6), inset 0 -.5rem .7rem rgba(0,0,0,.6); white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums; }
+/* Locked: plain near-white on black, a lime rule; no glow (Playtest 1: the bloom made team and year hard to read). */
+.stage-reels .reel.is-locked { color: #ececec; outline: 2px solid var(--lime); outline-offset: -2px; }
 .stage-sub { position: absolute; left: -4rem; right: -4rem; top: calc(100% + .8rem); display: flex; justify-content: center; gap: .6rem; }
 .stage-alt { background: rgba(6,6,8,.55); backdrop-filter: blur(8px); }
 
 .lower-third { --pc: var(--lime); position: absolute; left: 3rem; bottom: 5.5rem; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 1rem; padding: .9rem 1.6rem .9rem 1.1rem;
   background: linear-gradient(90deg, rgba(5,5,6,.9), rgba(5,5,6,.6)); border-left: 4px solid var(--pc); animation: lt-in 520ms cubic-bezier(.2,.7,.2,1) both; animation-delay: .6s; }
 @keyframes lt-in { from { opacity: 0; transform: translateX(-2rem); } to { opacity: 1; transform: none; } }
-.lt-pos { grid-row: span 2; align-self: center; font-family: var(--font-display); font-size: 1.6rem; color: var(--pc); }
+.lt-pos { grid-row: span 2; align-self: center; font-family: var(--font-num); font-weight: 800; font-size: 1.8rem; color: var(--pc); }
 .lt-name { font-family: var(--font-display); font-size: 2rem; line-height: 1.05; }
-.lt-meta { font-size: .85rem; font-weight: 700; letter-spacing: .08em; color: var(--ink-2); text-transform: uppercase; }
+.lt-meta { font-family: var(--font-num); font-size: .95rem; font-weight: 600; letter-spacing: .06em; color: var(--ink-2); text-transform: uppercase; }
 
 .pick-panel { position: absolute; right: 2.5rem; top: 6.5rem; bottom: 4.5rem; width: 31rem; display: flex; flex-direction: column; gap: .6rem;
   padding: 1rem 1.1rem; background: rgba(6,6,8,.8); border-top: 3px solid var(--lime); backdrop-filter: blur(10px); animation: detail-in 360ms cubic-bezier(.2,.7,.2,1) both; }
@@ -90,10 +94,14 @@
 .pick-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 0 1 auto; max-height: 38%; scrollbar-width: thin; scrollbar-color: rgba(170,255,0,.4) transparent; }
 .pick-list li { display: grid; grid-template-columns: 2.6rem 1fr auto; align-items: center; gap: .6rem; padding: .38rem .5rem; border-left: 3px solid transparent; cursor: pointer; }
 .pick-list li.is-focused { background: rgba(170,255,0,.1); border-left-color: var(--lime); }
-.pick-list li.is-full { opacity: .42; }
-.pl-pos { font-size: .68rem; font-weight: 900; text-align: center; color: #0a0a0a; border-radius: .15rem; padding: .1rem 0; }
+.pick-list li.is-full { opacity: .4; }
+/* Filled positions: struck through as well as faded, so the eye goes to the open ones (Playtest 2). */
+.pick-list li.is-full .pl-name { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: rgba(244,240,255,.7); }
+.pick-list li.is-full .pl-pos { filter: grayscale(1); }
+.pl-pos { font-family: var(--font-num); font-size: .74rem; font-weight: 800; text-align: center; color: #0a0a0a; border-radius: .15rem; padding: .1rem 0; }
 .pl-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pl-slot { font-size: .72rem; color: var(--ink-3); font-weight: 700; letter-spacing: .06em; }
+.pl-slot { font-family: var(--font-num); font-size: .82rem; color: var(--ink-2); font-weight: 600; letter-spacing: .03em; }
+.pick-list li.is-full .pl-slot { color: var(--ink-3); }
 .pl-empty { color: var(--ink-3); padding: .6rem; }
 
 .draft-scout { flex: 1 1 auto; overflow-y: auto; padding-top: .6rem; border-top: 1px solid rgba(255,255,255,.1); scrollbar-width: thin; }
@@ -105,9 +113,31 @@
 .ds-best-label { font-size: .66rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
 .ds-best ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem; }
 .ds-best li { padding: .22rem .6rem; font-size: .78rem; font-weight: 800; letter-spacing: .03em; color: var(--lime); border: 1px solid rgba(170,255,0,.45); border-radius: 999px; background: rgba(170,255,0,.07); }
-.ds-line { list-style: none; padding: 0; margin: .6rem 0; display: grid; gap: .2rem; }
-.ds-line li { display: grid; grid-template-columns: 2.2rem 1fr; gap: .5rem; font-size: .82rem; }
-.ds-line li span:first-child { color: #ff8a00; font-weight: 800; }
+.ds-unit { margin: .6rem 0 .4rem; }
+.unit-word { display: flex; align-items: baseline; gap: .7rem; margin-bottom: .5rem; }
+.uw-label { font-family: var(--font-num); font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+.uw-word { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: .04em; text-transform: uppercase; }
+.unit-word.w-elite .uw-word { color: var(--lime); }
+.unit-word.w-strong .uw-word { color: #d8f59a; }
+.unit-word.w-solid .uw-word { color: #e8e2c8; }
+.unit-word.w-weak .uw-word { color: #ff8a8a; }
+.ds-line { list-style: none; padding: 0; margin: 0; display: grid; gap: .3rem; }
+.ds-line li { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) auto; align-items: center; gap: .5rem; font-size: .92rem; }
+.ln-spot { font-family: var(--font-num); color: #ff8a00; font-weight: 800; }
+.ln-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ln-honors { display: flex; gap: .3rem; }
+.honor { font-family: var(--font-num); font-size: .74rem; font-weight: 700; padding: .08rem .45rem; border-radius: .3rem; white-space: nowrap; transform: rotate(-1.5deg); }
+.honor.ap { color: #111; background: #ffd400; border: 1px solid #fff2a0; }
+.honor.pb { color: #10233f; background: #e9eef7; border: 1px solid #6d8fd1; transform: rotate(1.5deg); }
 .ds-traits { margin: .4rem 0 .6rem; }
 .ds-era { font-size: .78rem; color: var(--ink-2); line-height: 1.4; }
 .ds-era span { font-weight: 800; margin-right: .3rem; }
+
+/* The rules card at the start of every draft (Playtest 1). */
+.rules-card { position: absolute; left: 3rem; top: 8.5rem; width: 27rem; padding: 1.1rem 1.3rem 1.2rem; background: rgba(6,6,8,.86); border-left: 3px solid var(--lime); backdrop-filter: blur(10px); animation: detail-in 360ms cubic-bezier(.2,.7,.2,1) both; }
+.rules-kicker { font-family: var(--font-display); font-size: 1.15rem; margin-bottom: .6rem; }
+.rules-list { margin: 0; padding: 0 0 0 1.2rem; display: grid; gap: .55rem; font-size: .98rem; line-height: 1.4; color: var(--ink-2); }
+.rules-list li::marker { font-family: var(--font-num); font-weight: 700; color: var(--lime); }
+.rules-list b { color: #fff; font-weight: 700; }
+.rules-list i { font-style: normal; font-family: var(--font-num); font-weight: 700; color: #fff; }
+.rules-list .rk { font-family: var(--font-num); font-weight: 700; color: #fff; border-bottom: 1px solid rgba(170,255,0,.5); }
