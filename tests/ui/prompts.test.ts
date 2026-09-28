@@ -87,7 +87,7 @@ describe('prompt labels per device', () => {
     expect(parsePadHint('—')).toBeNull();
   });
 
-  it('every pad hint written in the screens draws as glyphs (no stray words but "Hold")', () => {
+  it('every pad hint written in the screens draws as glyphs (no stray words but "Hold" and the kick\'s "Release")', () => {
     const files: string[] = [];
     const walk = (d: string) => {
       for (const e of readdirSync(d, { withFileTypes: true })) {
@@ -101,7 +101,7 @@ describe('prompt labels per device', () => {
     for (const h of hints) {
       const parts = parsePadHint(h);
       if (parts === null) continue; // no pad input: the hint is left off on a pad
-      for (const p of parts) if (typeof p === 'string') expect(p, `hint "${h}"`).toBe('Hold');
+      for (const p of parts) if (typeof p === 'string') expect(['Hold', 'Release'], `hint "${h}"`).toContain(p);
     }
   });
 

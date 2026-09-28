@@ -62,11 +62,13 @@ describe('outcomes: the passing game', () => {
     expect(d.pocket.sackRate).toBeLessThan(0.1);
     expect(d.pocket.scrambleRate).toBeGreaterThan(0.008);
     expect(d.pocket.scrambleRate).toBeLessThan(0.08);
-    expect(d.pocket.scrambleYds).toBeGreaterThan(3);
-    // (A mean over the ~30 AI scrambles in this sample, where two long ones
-    // move it 5 yd: at 30 reps, 7,800 dropbacks, it is 7.2 yd, NFL ~6–8. The
-    // Playtest 2 contain fix, underneath man defenders peeling to a scrambler,
-    // took it from 11.4 back under the old 7.6.)
+    // (A mean over the ~30 AI scrambles in this sample: bimodal, a 1.5-yd
+    // slide or a run to the sideline, so it swings from under 2 to over 17
+    // with the roster's ratings. At 30 reps, 7,800 dropbacks, it is 5.4 yd on
+    // M6.6's ratings and was 7.2 on M6.5's (NFL ~6–8); the Playtest 2 contain
+    // fix, underneath man defenders peeling to a scrambler, took it from 11.4.
+    // tools/sim/outcomes.ts measures it at scale.)
+    expect(d.pocket.scrambleYds).toBeGreaterThan(1);
     expect(d.pocket.scrambleYds).toBeLessThan(16);
   });
   it('pressure comes at about 3 s (median snap to first pressure), on a fifth or so of dropbacks', () => {
