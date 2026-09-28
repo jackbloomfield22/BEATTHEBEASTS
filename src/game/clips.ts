@@ -4,7 +4,7 @@
 // were found: tools/sim/findclips.ts) and the browser (where the video is
 // recorded) run the same play to the same whistle.
 
-import { findStint, input, PERSONNEL, playById, simPlayer, type BeastsDefense, type CatchType, type ContendersRoster, type DefSlot, type InputFrame, type PlayState, type SnapshotLike } from '@/sim';
+import { findStint, input, NEUTRAL, PERSONNEL, playById, simPlayer, type BeastsDefense, type CatchType, type ContendersRoster, type DefSlot, type InputFrame, type PlayState, type SnapshotLike } from '@/sim';
 import { dist, type V2 } from '@/sim/vec';
 
 export interface Clip {
@@ -171,14 +171,14 @@ export const CONCEPTS: Clip[] = [
   { id: 'out', title: 'Quick out', seed: 8, play: 'doubles-quick-outs', def: 'cover1', los: 30, script: concept({ icon: 1, at: 30 }) },
   // Curl against man: settles at 10 facing the QB, SECURE on the catch (10 yd).
   { id: 'curl', title: 'Curl', seed: 5, play: 'doubles-curls', def: 'cover1', los: 30, script: concept({ icon: 1, at: 60, call: 'possession' }) },
-  // Four verticals against Cover 2: the Z up the sideline, the touch ball dropped in between the corner and the half-field safety (48 yd).
-  { id: 'go', title: 'Go', seed: 6, play: 'trips-four-verts', def: 'cover2', los: 30, script: concept({ icon: 3, at: 140, hold: 16 }) },
+  // Four verticals against the fire zone: the blitz comes, the ball goes at 1.5 s, the Z up the sideline over the rotated corner (37 yd; re-found for the identity pass's sim).
+  { id: 'go', title: 'Go', seed: 19, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
   // Play-action post against man: the fake, the post behind it, the ball led into the middle (27 yd).
   { id: 'post', title: 'Post', seed: 13, play: 'singleback-pa-post', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 80, hold: 10 }) },
   // Snag's corner against man: the Z's corner from the bunch, the ball over the outside shoulder (36 yd).
   { id: 'corner', title: 'Corner', seed: 6, play: 'bunch-snag', def: 'cover2man', los: 30, script: concept({ icon: 3, at: 60, hold: 14 }) },
-  // PA crossers against Cover 3: the X's deep cross under the safety, caught running (15 yd).
-  { id: 'crosser', title: 'Crosser', seed: 7, play: 'ace-pa-crossers', def: 'cover3', los: 30, script: concept({ icon: 1, at: 80 }) },
+  // PA crossers against the fire zone: the blitz bites on the fake, the X's deep cross comes open behind it, caught running (14 yd; re-found for the identity pass's sim).
+  { id: 'crosser', title: 'Crosser', seed: 10, play: 'ace-pa-crossers', def: 'firezone', los: 30, script: concept({ icon: 1, at: 80 }) },
   // RB screen against man: the back slips out behind the rush, the linemen release in front of him (11 yd).
   { id: 'screen', title: 'Screen', seed: 4, play: 'doubles-rb-screen', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 76 }) },
   // Back shoulder against man: the corner on top of the Z's go, the ball thrown away from him, GO UP (19 yd).
@@ -191,4 +191,19 @@ export const CONCEPTS: Clip[] = [
 // each pair the same play, seed and coverage with one man swapped, found by
 // tools/sim/findidentity.ts where the contrast shows on that snap. Filled in
 // from its output.
-export const IDENTITY: Clip[] = [];
+const pair = (id: string, title: string, base: Omit<Clip, 'id' | 'title' | 'swap'>, a: Swap, b: Swap): Clip[] => [
+  { ...base, id: `${id}-a`, title: `${title}: ${a.name}`, swap: a },
+  { ...base, id: `${id}-b`, title: `${title}: ${b.name}`, swap: b },
+];
+export const IDENTITY: Clip[] = [
+  // Speed: the play-action post against Cover 2. Hill is behind the safety and gone (70 yd); Welker's ball is broken up (sep 2.4 against 1.2 at the catch point).
+  ...pair('speed', 'Speed', { seed: 7, play: 'singleback-pa-post', def: 'cover2', los: 30, script: concept({ icon: 1, at: 90, hold: 16 }) }, { off: 'X', name: 'Tyreek Hill', pos: 'WR' }, { off: 'X', name: 'Wes Welker', pos: 'WR' }),
+  // Elusive against power: I-form power against Cover 1, the AI carrying. Barry makes the man miss and goes 70; Bettis breaks two and is down at 6.5.
+  ...pair('elusive', 'Make a man miss', { seed: 11, play: 'iform-power', def: 'cover1', los: 30, user: false, script: () => NEUTRAL }, { off: 'RB', name: 'Barry Sanders', pos: 'RB' }, { off: 'RB', name: 'Jerome Bettis', pos: 'RB' }),
+  // Accuracy: the curl against Cover 3, thrown the same beat. Montana's is 0.6 yd off and caught for 11; Namath's is 1.8 off and falls incomplete.
+  ...pair('accuracy', 'On the hands', { seed: 16, play: 'doubles-curls', def: 'cover3', los: 30, script: concept({ icon: 1, at: 60 }) }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }, { off: 'QB', name: 'Joe Namath', pos: 'QB' }),
+  // The rush: the QB holds it against Cover 1. White sheds the tackle at 2.35 s and has the sack at 3.18; Aaron Smith never gets off his block.
+  ...pair('rush', 'Through the tackle', { seed: 19, play: 'doubles-dagger', def: 'cover1', los: 30, script: holdIt }, { def: 'LE', name: 'Reggie White', pos: 'DE' }, { def: 'LE', name: 'Aaron Smith', pos: 'DE' }),
+  // Coverage: four verticals against Cover 1, the ball to the X on his man. Deion picks it; Kam, out of place at corner, gives up 70.
+  ...pair('coverage', 'Half the field', { seed: 15, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
+];

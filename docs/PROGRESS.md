@@ -10,7 +10,8 @@
 - **M5 Core play:** merged (PR #7), with the quick pass (pass camera, 1/2/3 catches, arrows, Q–F moves).
 - **M5.5 Game feel:** merged (PR #8), with the round-two fixes (diagonal speed, the automatic burst, driven throws, no slowdown at the catch, defenders that don't bunch).
 - **M6 Full game:** built on `claude/trusting-ptolemy-m2i78d`, PR open. The draft in the Contenders' locker room, and a full game against the Beasts from Quick Play, Classic, Film Room or the Daily through the walk-out, every possession, kicks, the two-minute drill and overtime to the results screen. **Perf gate closed:** mid-game on the preview, Classic, Ultra (auto-selected) on your M1 Pro at 100% resolution (2029×1023): 88.4 fps average, 11.3 ms, p99 12.8 ms, 206 draw calls, 1.71 M triangles.
-- **M6.5 Gameplay pass:** in progress on `claude/m65-gameplay` (brief: `docs/M6_5_BRIEF.md`, plus the gameplay findings of Playtest 1). The 11-point brief is done: #1–11, the ten concept videos and their critique (below). Still to do in M6.5, from `docs/PLAYTEST-1.md`: the passing findings (live aim and lead, ball physics, receivers meeting the ball, contested-catch contact, routes stopping, screen target marked), running and QB (scramble contain, ratings visible on the field with a top-speed harness check), the Playtest 2 gameplay items and the identity harness, and the new item #12 (tackling as a resolution over several frames, collision capsules per body type, skinning at speed).
+- **M6.5 Gameplay pass:** in progress on `claude/m65-gameplay` (brief: `docs/M6_5_BRIEF.md`, plus the gameplay findings of Playtest 1). The 11-point brief is done: #1–11, the ten concept videos and their critique (below). Still to do in M6.5, from `docs/PLAYTEST-1.md`: the passing findings (live aim and lead, ball physics, receivers meeting the ball, contested-catch contact, routes stopping, screen target marked), running and QB (scramble contain, ratings visible on the field with a top-speed harness check), the Playtest 2 gameplay items, and the new item #12 (tackling as a resolution over several frames, collision capsules per body type, skinning at speed).
+- **Identity harness (Playtest 2):** 18 of 20 contrasting pairs pass, and 111 of 127 traits now do what their catalog line says (below, "Every player is himself"). The side-by-side videos are set up but not recorded.
 - **M6.6** (own branch after M6.5, from `docs/PLAYTEST-1.md`): a real game clock and play clock, hold-to-sprint, the white Contenders kit, the O-line in the draft, the draft and locker-room fixes, controller prompts everywhere, the one-screen box score and the data audit through 2025.
 - **Next: M7** (presentation): the tunnel reveal grows from the walk-out, pre-game, broadcast overlay, the Beasts' possession montage, instant replay, touchdown celebrations (the last three per `docs/PLAYTEST-1.md`), commentary, audio.
 - **Playtest 1** (owner's notes and decisions, 2026-09-27): `docs/PLAYTEST-1.md` is the plan of record for the M6.5 additions, M6.6 and those M7 items.
@@ -234,6 +235,63 @@ Needs the sim (not changed here):
 3. AI cuts: the AI keeps its arcs (#10 found real plants cost too many yards), so its cuts are only the render's heading-rate guess. A sim-side `cut` event for AI changes of direction over ~45° (even without the plant's speed cost) would let the render time them properly.
 4. The truck: the sim's truck is a 0.3 s move with no contact moment, so the clip's contact frame lands on its own schedule. A `contact` time on the move event would let the forearm land on the hit.
 
+
+#### Every player is himself (Playtest 2): the identity harness and the traits in play
+
+**The harness.** `tools/sim/identity.ts` runs twenty contrasting pairs in the same slot on the same plays and reports fan numbers:
+- top speed (mph), separation at the break, catch rate in traffic (a defender in phase at the catch point), yards after the catch;
+- for backs: tackles broken and tacklers made to miss a carry, and the share of his moves that are a truck or a stiff arm;
+- for QBs: time to throw, throws off target, scramble yards;
+- for defenders: completions and separation allowed, tackles finished, pressure, beating his blocker.
+
+A pair fails when a difference is under what a fan would see, or goes the wrong way. `tests/identity.test.ts` runs three of the widest pairs at two reps in `npm run check`, and checks that the five video pairs still show their contrast.
+
+**What the first run found (9 of 20).** Most of the ratings' spread was spent across the whole 0–99 scale, not the band the players are in:
+- **Contested catches:** Catch in Traffic moved the contested catch by 38 points across the whole scale, so Fitzgerald, Megatron and Boldin won 50/50 balls no more often than DeSean or Keenan Allen.
+- **Man coverage:** Revis (95) trailed only 0.05 s tighter than Ty Law (79).
+- **Tackling:** Ed Reed (Tackle 33) finished 88% of his tries and Kam (95) 93%.
+- **Carrier ratings:** Break Tackle, Elusiveness, Trucking and Stiff Arm exist only for backs, so every receiver and tight end ran after the catch as a 50.
+- **Move choice:** the AI carrier compared two ratings. With a stiff arm worth ~2 points of tackle odds against a juke's third of a man beaten, every back juked; Brandon Jacobs trucked 0% of the time.
+- **Traits:** of 127 traits (plus 25 combinations), the sim read about 20; every other catalog promise did nothing.
+- **Go routes:** all ran at the stem's 92%, so Moss and Hines Ward were within 0.8 mph.
+
+**The fixes.**
+- **Recentred on the band real players occupy:**
+  - Catch in Traffic: ~0.49 contested for a 99, ~0.22 for a 73, plus the high point by height and jump.
+  - Man Coverage read: 0.06 s for a 95, 0.24 s for a 60.
+  - Tackle: slope 4 on Tackle 70%. Reed misses about a third, Kam about 7%.
+  - The juke's evade now reads the tackler's Agility too.
+  - The stiff arm and truck are at par with the juke.
+- **Pass catchers carry the ball** with stand-ins from Run After Catch, Strength and Agility.
+- **The AI carrier's move** is the one with the best odds for him (the HUD's own ranking).
+- **The AI QB** leaves the pocket by his own Scramble rating.
+- **Go routes** run flat out.
+- **`src/sim/traits.ts`:** `has()` with combinations expanded. **111 of 127 traits now do what their catalog line says**, across the catch point, contact, the throw, the pass rush, protection, the OL unit (its traits now reach its linemen), coverage, routes, pursuit, the run game and the DC (an Alpha is rolled to).
+  - The 16 left are listed by `tools/sim/traitaudit.ts`. They need the drive-long stamina model (Workhorse, Committee Back, Volume Passer, Ground and Pound; M6.6 sprint), the playbook and coordinator (Designed Runner, Receiving Back, H-Back, Volume TE, Efficiency King, Field General, Pre-Snap Wizard, Slot Weapon, Third-Down Back, Safety Blanket, Patient Runner; M6.6 play calling), or a new clip (Hurdler).
+- **New football:** the strip sack (about one sack in ten, 25% more from a Strip Sack on the blind side), and a blitzer's pickup missed 5% of the time.
+- **Two pairs swapped for real contrasts:**
+  - Howie Long (91, a Hall of Fame rusher) out; Aaron Smith, the 2000s Steelers' two-gap end, in.
+  - Dave Casper (who rates as the receiver he was) out; Marcedes Lewis in.
+
+**Result: 18 of 20.** The two fails are tight ends:
+- **Gronk vs Gonzalez, YAC:** 4.8 vs 4.2 yd. The catalog's YAC Monster and Bruiser lines (+20% on a first tackle that misses ~10% of the time) add little, and tight-end catches are short, with little room to run.
+- **Gates vs Marcedes Lewis, top speed:** 21.1 vs 20.3 mph, 0.8 mph against a 0.8 line. Speed 81 vs 70 is a 4.70 vs 4.94 forty; what fans see is the yards after the catch, which passes.
+
+Whether YAC Monster and Bruiser should be worth more than the catalog says is the owner's call.
+
+**Side effects found and fixed.**
+- **Run game:** the power moves working and poorer tacklers missing put broken plus missed tackles at 0.53 a carry (the old build 0.44), and 40+ yd runs at 2.1% (old 1.3%, NFL 0.5%). The 40+ tail is still high and on the list.
+- **Scrambles:** 11.4 yd a scramble at 30 reps (old 7.6), mostly because more pressure meant more escapes into man coverage, where every defender trailed his man until the QB crossed the line. Underneath man defenders now peel off to a scrambler after their read, and the QB finds the scramble drill instead: **7.2 yd a scramble**, NFL ~6–8.
+- **Passing (60 reps):** 68.2% completions, 8.5 ypa, 7.5 YAC, 1.2% interceptions; sacks 5.1% (was 4.0%).
+
+**The side-by-side videos.**
+- `src/game/clips.ts` IDENTITY holds five pairs, each the same play, seed and coverage with one man swapped. They were found by `tools/sim/findidentity.ts`, where the contrast shows on that snap:
+  - Hill's post for 70 against Welker's broken-up ball;
+  - Barry's 70-yard run against Bettis's 6.5;
+  - Montana 0.6 yd off target and caught, against Namath 1.8 off and incomplete;
+  - White's sack at 3.2 s against Aaron Smith never getting off the block;
+  - Deion's interception against Kam giving up 70.
+- `BTB_VIDEO=1 BTB_IDENTITY=1` records them and stacks each pair side by side in `docs/screenshots/m6.5/identity/`. **Not recorded yet:** this container draws a frame in seconds, and ten clips need a quiet machine.
 
 ### M6 Full game (built, PR open)
 

@@ -309,7 +309,7 @@ export function runRoute(s: PlayState, a: Agent): void {
 }
 
 /** A blitzer's pickup missed at the snap (share): see assignProtection. */
-const PICKUP_MISS = 0.08;
+const PICKUP_MISS = 0.05;
 
 /** Rushers the protection is responsible for (defenders coming), nearest-lateral assignment. */
 export function assignProtection(s: PlayState): void {
@@ -337,7 +337,7 @@ export function assignProtection(s: PlayState): void {
       }
     }
     if (best >= 0) {
-      // A blitzer (not a lineman) is sometimes missed: ~8% of pickups (our
+      // A blitzer (not a lineman) is sometimes missed: ~5% of pickups (our
       // number; a blitz that comes free is most of the NFL's quick sacks). A
       // Smart Line picks it up 20% more often, a Sack-Prone one lets it
       // through 10% more, a back who's a Liability in Protection 30% more
@@ -979,6 +979,16 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
     spy(s, d);
     return;
   }
+  // The QB tucks it: an underneath man defender (within 8 yd of the line,
+  // his eyes can find the QB) peels off his man and comes for him once he's
+  // seen it (Playtest 2, scramble contain: in man every defender trailed his
+  // receiver until the QB crossed the line, so a QB who escaped the rush ran
+  // to the sideline untouched: 11 yd a scramble against the old 7.6).
+  const qbm = s.agents[s.qb]!;
+  if (s.scrambleT >= 0 && s.phase === 'pocket' && d.pos.x - s.setup.los < MAN_PEEL_DEPTH && s.t >= s.scrambleT + reaction(s, d) + 0.15 && dist(d.pos, qbm.pos) < SCRAMBLE_SEE) {
+    pursue(s, d, qbm);
+    return;
+  }
   // His read of the route: ~0.06 s for a 95 in Man Coverage, ~0.14 s for an
   // 80, ~0.24 s for a 60. (Playtest 2, identity harness: M6's 0.08 + 0.3·(1 −
   // Man) spread the whole scale over 0.3 s, so Revis (95) trailed only 0.05 s
@@ -1055,6 +1065,8 @@ const COVER_PLANT_GAP = 0.35;
 
 /** An underneath zone defender comes up on a scrambling QB within this (yd). */
 const SCRAMBLE_SEE = 20;
+/** A man defender this close to the line (yd) is underneath, and can see a scrambling QB (manCover). */
+const MAN_PEEL_DEPTH = 8;
 /** A spy sits this far past the line (yd), level with the QB. */
 const SPY_DEPTH = 5;
 

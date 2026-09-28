@@ -17,3 +17,16 @@ describe('identity: the same plays, different men', () => {
     }, 240_000);
   }
 });
+
+describe('identity videos: each side-by-side pair still shows its contrast', () => {
+  it('the same snap with each man, as the browser sets it up', async () => {
+    const { IDENTITY } = await import('@/game/clips');
+    const { SPECS, playClip } = await import('../tools/sim/findidentity');
+    for (const spec of SPECS) {
+      const clip = (id: string) => IDENTITY.find((c) => c.id === id)!;
+      const [a, b] = [clip(`${spec.id}-a`), clip(`${spec.id}-b`)];
+      const run = (c: (typeof IDENTITY)[number]) => playClip(c.play, c.def, c.seed, c.user ?? true, c.swap!, c.script);
+      expect(spec.score(run(a), run(b)), spec.id).not.toBeNull();
+    }
+  }, 120_000);
+});

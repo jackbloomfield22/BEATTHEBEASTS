@@ -16,6 +16,9 @@ function throwsAt(d: number, n: number, opts: { pressure?: number; offPlatform?:
   for (let k = 0; k < n; k++) {
     const s = createPlay({ seed: 5000 + k, offense: rosters.offense, defense: rosters.defense, play: playById('trips-stick'), def: defById('cover3'), los: 35, toGo: 10, user: false });
     const qb = s.agents[s.qb]!;
+    // The rating curves alone: Montana is Off Platform (half the on-the-run
+    // cost, the trait catalog's line), which tests/identity and the traits cover.
+    qb.p = { ...qb.p, traits: [] };
     qb.pos = { x: 30, y: 0 };
     qb.vel = { x: 0, y: opts.moving ?? 0 };
     const rec: Agent = s.agents[s.icons[0]!]!;
