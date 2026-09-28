@@ -9,8 +9,10 @@ import type { RatedEntry, RatedPos, RatingInputs } from '../types';
 
 /** What a condition needs from the engine for one entry. */
 export interface MetricSource {
-  /** Sample-shrunk pool z of a ../signals.ts signal (engine.ts zFrom). */
+  /** Sample-shrunk pool z of a ../signals.ts signal (engine.ts zFrom, what the attributes read): the percentile tables are built on it. */
   z: (e: RatedEntry, key: string) => number | undefined;
+  /** The same z shrunk by the gate's sample instead (`gateSample`): what a stint is placed in the table with. */
+  zGate: (e: RatedEntry, key: string) => number | undefined;
   /** The raw signal value, for its display string. */
   sig: (e: RatedEntry, key: string) => SignalValue | undefined;
   /** Physical pass result (absolute physicals, era-translated body). */
@@ -20,6 +22,8 @@ export interface MetricSource {
 export interface MetricValue {
   /** The number the percentile is taken on (higher = more of the thing). */
   v: number;
+  /** The value this stint adds to the pool's percentile table, when it differs from `v` (production gates, `gateSample`). */
+  ref?: number;
   /** Plain words for the why line, e.g. "Speed 97" or "17.9 yards per catch (league 13.1)". */
   text: string;
 }
@@ -28,9 +32,49 @@ const g = (inp: RatingInputs) => inp.games.v;
 const f1 = (x: number) => x.toFixed(1);
 
 /**
+ * The sample a production gate ("z:" and "t:" metrics) shrinks a stint's
+ * signal by when it places the stint in the percentile table (M6.6,
+ * docs/m66/DATA_AUDIT.md).
+ *
+ * The tables are the pool as the attributes measure it: each signal shrunk
+ * toward the position average by n/(n+k) games (../signals.ts). Placing a
+ * stint by that same shrunk value made every production gate prefer long
+ * stints, though traits describe a stint and never a career (types.ts: no
+ * gate reads seasons): the top 10% of the WR catches-per-game table is held
+ * by stints with a median of 77 games (the pool's median stint: 48), so a
+ * short stint landed in the middle whatever it produced (Davante Adams's 11
+ * Jets games: receptions per game at the 95th percentile on his numbers, the
+ * 84th after shrinkage), while body and measurable gates, never shrunk, still
+ * passed (Allen Lazard). So a stint with at least k games of sample (the
+ * signal's own constant: from there on its numbers outweigh the position
+ * average) is placed as if it had at least the position's median sample for
+ * the signal (`median`, taken from the pool itself): a short stint is judged
+ * like a typical one. Stints of the median sample or longer, and stints under
+ * k, are placed exactly as before, and the tables themselves don't change,
+ * so no other stint moves.
+ *
+ * Not for the per-play TD rates whose sample is counted in games rather than
+ * plays (`GAME_SAMPLED_RATES`): a backup's 12 catches over 17 games would
+ * "qualify" as 17 games of evidence. They keep their placement. And only at
+ * the draft's positions (`GATE_FLOOR_POSITIONS`): the defensive pools are the
+ * curated Beasts, 55–105 stints each, whose trait tables were set against the
+ * rule that at least 40% of every position has no trait (tests), and the
+ * floor would take safeties to 36%; they keep their placement too.
+ */
+export function gateSample(key: string, pos: RatedPos, games: number, k: number, median: number): number {
+  return k > 0 && games >= k && GATE_FLOOR_POSITIONS.has(pos) && !GAME_SAMPLED_RATES.has(key) ? Math.max(games, median) : games;
+}
+
+/** Positions whose production gates use the median floor (the draftable skill positions). */
+export const GATE_FLOOR_POSITIONS: ReadonlySet<RatedPos> = new Set<RatedPos>(['QB', 'RB', 'WR', 'TE']);
+
+/** Per-play rates whose SignalValue.games is the player's games, not his plays (see gateSample). */
+export const GAME_SAMPLED_RATES: ReadonlySet<string> = new Set(['w_tdrate', 't_tdtouch']);
+
+/**
  * Trait-only production signals: stat signatures no attribute reads, built
- * like ../signals.ts (era-relative where a baseline exists, shrunk by
- * n/(n+k) games after standardizing in the position pool).
+ * like ../signals.ts (era-relative where a baseline exists, standardized in
+ * the position pool) and gated like every production gate (`gateSample`).
  */
 export const TRAIT_SIGNALS: Record<string, SignalDef> = {
   // League attempts per team-game ≈ league passing yards per team-game ÷
@@ -135,18 +179,19 @@ function signalText(key: string, s: SignalValue): string {
 const PHYS_KEYS = new Set(['speed', 'acceleration', 'agility', 'strength', 'stamina', 'jumping']);
 
 /** Resolve a metric for an entry; undefined when the data doesn't exist. */
-export function metricOf(src: MetricSource, e: RatedEntry, key: string, traitZ: (e: RatedEntry, key: string) => number | undefined): MetricValue | undefined {
+export function metricOf(src: MetricSource, e: RatedEntry, key: string, traitZ: (e: RatedEntry, key: string) => { z: number; zGate: number } | undefined): MetricValue | undefined {
   if (key.startsWith('z:')) {
     const k = key.slice(2);
     const z = src.z(e, k);
+    const zg = src.zGate(e, k);
     const s = src.sig(e, k);
-    return z === undefined || !s ? undefined : { v: z, text: signalText(k, s) };
+    return z === undefined || zg === undefined || !s ? undefined : { v: zg, ...(zg !== z ? { ref: z } : {}), text: signalText(k, s) };
   }
   if (key.startsWith('t:')) {
     const k = key.slice(2);
-    const z = traitZ(e, k);
+    const t = traitZ(e, k);
     const s = TRAIT_SIGNALS[k]!.get(e.inputs, undefined as never);
-    return z === undefined || !s ? undefined : { v: z, text: signalText(k, s) };
+    return t === undefined || !s ? undefined : { v: t.zGate, ...(t.zGate !== t.z ? { ref: t.z } : {}), text: signalText(k, s) };
   }
   if (key === 'height') {
     const p = src.phys(e);

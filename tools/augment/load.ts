@@ -179,6 +179,8 @@ export interface NflData {
   readonly codesSeen: Record<'rosters' | 'stats' | 'games', Map<string, Set<number>>>;
   /** Weekly stat rows with an empty team code (skipped). */
   readonly skippedStatRows: number;
+  /** Weekly rows whose team code the source swapped with the visitor's, re-assigned (SWAPPED_HOME_ROWS). */
+  readonly swapFixed: readonly SwapFix[];
 }
 
 class UnionFind {
@@ -208,6 +210,32 @@ class UnionFind {
 
 /** A real GSIS id looks like 00-0011493; older players sometimes carry an ESB-style id instead. */
 export const isRealGsis = (id: string): boolean => /^00-\d{7}$/.test(id);
+
+/**
+ * A source defect in nflverse stats_player_week, found by the M6.6 stint
+ * audit (docs/m66/DATA_AUDIT.md): in 2001 and 2002 every Jacksonville player's
+ * row from a Jacksonville home game carries the visitor's code as `team`
+ * (and JAX as `opponent_team`): e.g. Jimmy Smith, 2001 week 1, game
+ * 2001_01_PIT_JAX, team PIT. That credited about 215 player-games a season to
+ * the visitors and cut the Jaguars' 2001–02 stints roughly in half. No other
+ * team or season shows the pattern (checked: rows credited to a team that
+ * is the player's opponent that week, against his main team that season, are
+ * 1–8 a season elsewhere, all real mid-season trades). A row is re-assigned
+ * to the home team only when the game is a home game of that team, the row
+ * names it as the opponent, and the player is on the home team's roster that
+ * season and not on the visitor's (a player traded between the two is left
+ * alone).
+ */
+export const SWAPPED_HOME_ROWS: readonly { readonly home: string; readonly seasons: readonly number[] }[] = [{ home: 'JAX', seasons: [2001, 2002] }];
+
+export interface SwapFix {
+  readonly season: number;
+  readonly gsis: string;
+  readonly name: string;
+  readonly game: string;
+  readonly was: string;
+  readonly now: string;
+}
 
 function note(map: Map<string, Set<number>>, code: string, season: number): void {
   let s = map.get(code);
@@ -372,6 +400,17 @@ export function loadAll(log: (s: string) => void = () => {}): NflData {
   const stats = new Map<string, Map<number, Map<LegacyFranchise, StatLine>>>();
   const league = new Map<number, StatLine>();
   let skippedStatRows = 0;
+  // Roster team codes per GSIS id and season (for the source fix below).
+  const rosterTeams = new Map<string, Map<number, Set<string>>>();
+  for (const r of rosters) {
+    if (!r.gsis) continue;
+    let bySeason = rosterTeams.get(r.gsis);
+    if (!bySeason) rosterTeams.set(r.gsis, (bySeason = new Map()));
+    let s = bySeason.get(r.season);
+    if (!s) bySeason.set(r.season, (s = new Set()));
+    s.add(r.team);
+  }
+  const swapFixed: SwapFix[] = [];
   for (let y = FIRST_STATS_SEASON; y <= LAST_SEASON; y++) {
     const c = readCsv(cache(`stats_player/stats_player_week_${y}.csv`));
     const cId = c.col('player_id');
@@ -379,6 +418,7 @@ export function loadAll(log: (s: string) => void = () => {}): NflData {
     const cSeason = c.col('season');
     const cType = c.col('season_type');
     const cTeam = c.col('team');
+    const cOpp = c.col('opponent_team');
     const cGame = c.col('game_id');
     const cols = STAT_KEYS.map((k) => [k, c.col(WEEK_COLUMNS[k])] as const);
     const lg = emptyLine();
@@ -386,7 +426,15 @@ export function loadAll(log: (s: string) => void = () => {}): NflData {
     for (const r of c.rows) {
       if (r[cType] !== 'REG') continue;
       const season = Number(r[cSeason]);
-      const team = r[cTeam] ?? '';
+      let team = r[cTeam] ?? '';
+      const swap = SWAPPED_HOME_ROWS.find((s) => s.seasons.includes(season));
+      if (swap && team !== swap.home && r[cOpp] === swap.home && (r[cGame] ?? '').endsWith(`_${swap.home}`)) {
+        const on = rosterTeams.get(r[cId] ?? '')?.get(season);
+        if (on?.has(swap.home) && !on.has(team)) {
+          swapFixed.push({ season, gsis: r[cId] ?? '', name: r[cName] ?? '', game: r[cGame] ?? '', was: team, now: swap.home });
+          team = swap.home;
+        }
+      }
       const line = emptyLine();
       for (const [k, i] of cols) line[k] = num(r[i]) ?? 0;
       // sack_yards_lost is stored negative in nflverse; keep yards lost as a positive number.
@@ -477,5 +525,6 @@ export function loadAll(log: (s: string) => void = () => {}): NflData {
   }
   log(`games: ${games.length} rows`);
 
-  return { rosters, players, combine, games, persons, byGsis, byPfr, stats, league, codesSeen, skippedStatRows };
+  if (swapFixed.length) log(`source fix: ${swapFixed.length} weekly rows re-assigned to their home team (SWAPPED_HOME_ROWS)`);
+  return { rosters, players, combine, games, persons, byGsis, byPfr, stats, league, codesSeen, skippedStatRows, swapFixed };
 }

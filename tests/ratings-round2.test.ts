@@ -44,6 +44,33 @@ describe('added stints', () => {
     expect(moss.seasons.v).toEqual([2000, 2001, 2002, 2003, 2004]);
   });
 
+  it('adds the M6.6 stints (the four the user named, and the audit\'s All-Pro seasons), each in its position\'s legacy line shape', () => {
+    const { offense } = applyAddedStints(added, DEFENSE, PLAYERS);
+    const m66 = ['players:stefon-diggs:NE:2020s', 'players:a-j-brown:TEN:2020s', 'players:davante-adams:GB:2020s', 'players:derrick-henry:TEN:2010s', 'players:dan-fouts:LAC:1980s', 'players:barry-sanders:DET:1980s', 'players:john-jefferson:LAC:1980s', 'players:joe-montana:SF:1990s', 'players:kurt-warner:LAR:1990s', 'players:tyreek-hill:KC:2020s'];
+    for (const id of m66) {
+      const e = offense.find((x) => x.id === id);
+      expect(e, id).toBeDefined();
+      expect(inputs.some((i) => i.id === id), id).toBe(true);
+      // The legacy schema of the position (data/legacy/types.ts).
+      const keys = Object.keys(e!.s).sort().join(',');
+      if (e!.p === 'QB') expect(keys, id).toBe('i,r,ry,t,y');
+      else if (e!.p === 'RB') expect(keys, id).toBe('c,r,t,y');
+      else expect(e!.s.y, id).toBeGreaterThan(0);
+    }
+    // Barry Sanders 1989: 1,470 rushing yards on 280 carries in 15 games (cited table).
+    const barry = offense.find((x) => x.id === 'players:barry-sanders:DET:1980s')!;
+    expect(barry.s.y).toBeCloseTo(1470 / 15, 1);
+    expect(barry.s.c).toBeCloseTo(1470 / 280, 1);
+    // Dan Fouts 1980–87: the estimated-stats slot carries his passing rates from the cited lines.
+    const fouts = S.estStats['players:dan-fouts:LAC:1980s']!;
+    expect(fouts.attemptsPerGame).toBeCloseTo(3599 / 101, 6);
+    expect(fouts.cmpPct).toBeCloseTo((100 * 2156) / 3599, 6);
+    // Kurt Warner 1999: nflverse misses the Rams' week-1 game; the ratings read nflverse's 15 games.
+    const warner = added.stints.find((x) => x.id === 'players:kurt-warner:LAR:1990s')!;
+    expect(warner.nflverse!.games['1999']).toBe(15);
+    expect(warner.bySeason['1999']!.games).toBe(16);
+  });
+
   it('the loader refuses a bad record', () => {
     const base = added.stints[0]!;
     const bad = (patch: object) => () => applyAddedStints({ stints: [{ ...structuredClone(base), ...patch }] }, DEFENSE);
@@ -55,6 +82,10 @@ describe('added stints', () => {
     const moss = added.stints.find((x) => x.id === 'players:randy-moss:MIN:2000s')!;
     expect(() => applyAddedStints({ stints: [{ ...structuredClone(moss), nflverse: undefined }] }, DEFENSE, PLAYERS)).toThrow(/nflverse/);
     expect(() => applyAddedStints({ stints: [{ ...structuredClone(moss), impFrom: 'players:terrell-owens:SF:1990s' }] }, DEFENSE, PLAYERS)).toThrow(/name/);
+    // A quarterback's record needs the passing line.
+    const fouts = structuredClone(added.stints.find((x) => x.id === 'players:dan-fouts:LAC:1980s')!);
+    delete fouts.totals.passTd;
+    expect(() => applyAddedStints({ stints: [fouts] }, DEFENSE, PLAYERS)).toThrow(/passTd/);
   });
 });
 

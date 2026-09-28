@@ -1,4 +1,4 @@
-// Added stints (user-approved: PR #3 round 2 and M4.5): stints the legacy
+// Added stints (user-approved: PR #3 round 2, M4.5 and M6.6): stints the legacy
 // data never had, kept in data/augment/added_stints.json (built and
 // source-checked by tools/augment/added-stints.ts). Legacy data stays
 // byte-identical (CLAUDE.md rule 1); this layer validates each record and
@@ -17,7 +17,7 @@ export interface AddedStintRecord {
   impWhy?: string;
   entry: { n: string; p: Defender['p'] | Player['p']; t: string; d: Decade };
   seasons: number[];
-  /** Cited season lines. Defense: games, sk, int, fr, td. Offense: games, rec, yds, td, rushYds, rushTd, fum. */
+  /** Cited season lines. Defense: games, sk, int, fr, td. Offense by position (REQUIRED): WR/TE games, rec, yds, td, rushYds, rushTd, fum; RB adds car; QB games, cmp, att, passYds, passTd, int, sck, car, rushYds, rushTd, fum. */
   bySeason: Record<string, Record<string, number>>;
   totals: Record<string, number>;
   /** 1999+ seasons: nflverse games per season and stats in the nflverse_entries.json shape (verified). */
@@ -33,10 +33,28 @@ export interface AddedStintsFile {
 }
 
 const DECADE_START: Record<Decade, number> = { '1960s': 1960, '1970s': 1970, '1980s': 1980, '1990s': 1990, '2000s': 2000, '2010s': 2010, '2020s': 2020 };
-const REQUIRED = { defense: ['games', 'sk', 'int', 'fr', 'td'], players: ['games', 'rec', 'yds', 'td', 'rushTd'] } as const;
+/** Season-line fields every record must total, by kind and (offense) by position (tools/augment/added-stints.ts OFF_FIELDS). */
+const REQUIRED = {
+  defense: ['games', 'sk', 'int', 'fr', 'td'],
+  WR: ['games', 'rec', 'yds', 'td', 'rushTd'],
+  TE: ['games', 'rec', 'yds', 'td', 'rushTd'],
+  RB: ['games', 'car', 'rushYds', 'rushTd', 'rec', 'yds', 'td'],
+  QB: ['games', 'cmp', 'att', 'passYds', 'passTd', 'int', 'rushYds', 'rushTd'],
+} as const;
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
 const r2 = (x: number) => Math.round(x * 100) / 100;
+
+/** NFL passer rating (the league's published formula: four components, each clamped to 0–2.375). */
+export function nflPasserRating(cmp: number, att: number, yds: number, td: number, int: number): number {
+  if (!(att > 0)) return 0;
+  const c = (x: number) => Math.max(0, Math.min(2.375, x));
+  const a = c((cmp / att - 0.3) * 5);
+  const b = c((yds / att - 3) * 0.25);
+  const t = c((td / att) * 20);
+  const i = c(2.375 - (int / att) * 25);
+  return ((a + b + t + i) / 6) * 100;
+}
 
 /**
  * Validate the file against the legacy entries and build the new entries:
@@ -68,7 +86,8 @@ export function applyAddedStints(
     const d0 = DECADE_START[r.entry.d];
     if (!r.seasons.length || r.seasons.some((y) => y < d0 || y > d0 + 9)) fail('seasons outside the decade');
     const lines = r.seasons.map((y) => r.bySeason[String(y)] ?? fail(`no line for ${y}`));
-    for (const f of REQUIRED[kind as keyof typeof REQUIRED]) if (typeof r.totals[f] !== 'number') fail(`no ${f} total`);
+    const required = kind === 'defense' ? REQUIRED.defense : (REQUIRED[r.entry.p as keyof typeof REQUIRED] ?? fail(`no offensive line shape for ${r.entry.p}`));
+    for (const f of required) if (typeof r.totals[f] !== 'number') fail(`no ${f} total`);
     for (const [f, t] of Object.entries(r.totals)) {
       const s = lines.reduce((a, l) => a + (l[f] ?? 0), 0);
       if (Math.abs(s - t) > 1e-9) fail(`${f} total ${t} ≠ season lines ${s}`);
@@ -100,10 +119,19 @@ export function applyAddedStints(
       if (!('ea' in impSrc)) fail('impFrom is not an offensive entry');
       const g = Math.max(1, t.games!);
       // Legacy-shaped per-game line (what the legacy sim's rateOffense reads, and
-      // the adapter fit's target): WR y rec yds/g, t TD/g, c catch %, p yds/target.
-      // Catch % and yards per target only where nflverse has targets.
+      // the adapter fit's target), in the legacy schema of the position
+      // (data/legacy/types.ts OffenseStats): WR/TE y rec yds/g, t TD/g, c catch
+      // %, p yds/target (catch % and yards per target only where nflverse has
+      // targets); RB y rush yds/g, c yds/carry, r rec yds/g, t TD/g; QB y pass
+      // yds/g, t pass TD/g, i INT/g, r passer rating, ry rush yds/g.
       const st = r.nflverse?.stats as Record<string, number> | undefined;
       const tgt = st?.targets ?? 0;
+      const s: Player['s'] =
+        r.entry.p === 'QB'
+          ? { y: r1(t.passYds! / g), t: r2(t.passTd! / g), i: r2(t.int! / g), r: r1(nflPasserRating(t.cmp!, t.att!, t.passYds!, t.passTd!, t.int!)), ry: r1(t.rushYds! / g) }
+          : r.entry.p === 'RB'
+            ? { y: r1(t.rushYds! / g), c: r1(t.rushYds! / Math.max(1, t.car!)), r: r1(t.yds! / g), t: r2((t.rushTd! + t.td!) / g) }
+            : { y: r1(t.yds! / g), t: r2((t.td! + t.rushTd!) / g), ...(tgt > 0 ? { c: r1((100 * st!.targetedReceptions!) / tgt), p: r1(st!.targetedReceivingYards! / tgt) } : {}) };
       offense.push({
         id: r.id,
         legacyIndex: -1,
@@ -111,7 +139,7 @@ export function applyAddedStints(
         p: r.entry.p as Player['p'],
         t: r.entry.t,
         d: r.entry.d,
-        s: { y: r1(t.yds! / g), t: r2((t.td! + t.rushTd!) / g), ...(tgt > 0 ? { c: r1((100 * st!.targetedReceptions!) / tgt), p: r1(st!.targetedReceivingYards! / tgt) } : {}) },
+        s,
         imp: impSrc.imp,
         // Legacy's era-adjusted rating is never read by legacy code; carried from impFrom like imp.
         ea: (impSrc as Player).ea,

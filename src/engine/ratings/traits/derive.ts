@@ -4,7 +4,7 @@ import { DEFENSE_TRAITS, UNIT_TRAITS } from './catalogDefense';
 import { OFFENSE_TRAITS } from './catalogOffense';
 import { COMBOS } from './combos';
 import { groupOf } from './groups';
-import { metricOf, TRAIT_SIGNALS, type MetricSource, type MetricValue } from './metrics';
+import { gateSample, metricOf, TRAIT_SIGNALS, type MetricSource, type MetricValue } from './metrics';
 import type { Cond, TraitDef, UnitTraitDef } from './types';
 
 // Trait derivation (engine.ts step 7, after attributes, OVR and calibration):
@@ -52,6 +52,23 @@ export interface TraitRun {
   /** Every trait an entry passes the gates for, before combinations and the cap (report and tests). */
   earned: Map<string, TraitResult[]>;
   units: Record<string, OlUnitTraits>;
+  /** Every gate of every definition at the entry's position, passed or missed (diagnostics; the ratings never read it). */
+  explain: (entryId: string) => GateCheck[];
+}
+
+/** One condition of one trait definition, checked for one entry. */
+export interface GateCheck {
+  trait: string;
+  metric: string;
+  side: Cond['side'];
+  gate: number;
+  /** The metric's value and plain text, when the entry has it. */
+  value?: number;
+  text?: string;
+  /** Percentile in the position pool (0–100), and the size of the table it was taken on. */
+  pct?: number;
+  poolN: number;
+  pass: boolean;
 }
 
 interface Subject {
@@ -86,15 +103,26 @@ interface Earned extends TraitResult {
   def: TraitDef | UnitTraitDef;
 }
 
-/** Evaluate definitions over a pool of subjects that share percentile tables. */
-function evaluate(defs: readonly (TraitDef | UnitTraitDef)[], subjects: readonly Subject[], plural: string): Map<string, Earned[]> {
+/** Sorted values of every metric the definitions read, over the pool (the percentile tables). */
+function percentileTables(defs: readonly (TraitDef | UnitTraitDef)[], subjects: readonly Subject[]): Map<string, number[]> {
   const sorted = new Map<string, number[]>();
   for (const d of defs)
     for (const c of d.conds)
       if (!sorted.has(c.m)) {
-        const xs = subjects.map((s) => s.metrics.get(c.m)?.v).filter((v): v is number => v !== undefined && Number.isFinite(v));
+        // Each stint adds its table value (metrics.ts MetricValue.ref: production gates, `gateSample`).
+        const xs = subjects
+          .map((s) => {
+            const mv = s.metrics.get(c.m);
+            return mv?.ref ?? mv?.v;
+          })
+          .filter((v): v is number => v !== undefined && Number.isFinite(v));
         sorted.set(c.m, xs.sort((a, b) => a - b));
       }
+  return sorted;
+}
+
+/** Evaluate definitions over a pool of subjects that share percentile tables. */
+function evaluate(defs: readonly (TraitDef | UnitTraitDef)[], subjects: readonly Subject[], plural: string, sorted = percentileTables(defs, subjects)): Map<string, Earned[]> {
   const out = new Map<string, Earned[]>();
   for (const s of subjects) {
     const list: Earned[] = [];
@@ -185,22 +213,29 @@ export function deriveAllTraits(entries: readonly RatedEntry[], src: MetricSourc
   const byPos = new Map<RatedPos, RatedEntry[]>();
   for (const e of entries) (byPos.get(e.pos) ?? byPos.set(e.pos, []).get(e.pos)!).push(e);
 
-  // Trait-only stat signals: standardized within the position pool, shrunk by games.
-  const traitZ = new Map<string, number>();
-  for (const [, list] of byPos) {
+  // Trait-only stat signals: standardized within the position pool and shrunk
+  // by games for the table; placed by the gate's sample (metrics.ts `gateSample`).
+  const traitZ = new Map<string, { z: number; zGate: number }>();
+  for (const [pos, list] of byPos) {
     for (const [key, def] of Object.entries(TRAIT_SIGNALS)) {
       const vals = list.map((e) => [e, def.get(e.inputs, undefined as never)] as const).filter(([, v]) => v && Number.isFinite(v.x));
       if (vals.length < 3) continue;
       const xs = vals.map(([, v]) => v!.x);
       const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
       const sd = Math.sqrt(xs.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, xs.length - 1)) || 1;
-      for (const [e, v] of vals) traitZ.set(`${e.id}|${key}`, Math.max(-Z_CLIP, Math.min(Z_CLIP, (def.dir * (v!.x - mean)) / sd)) * shrink(v!.games, def.k));
+      const ns = vals.map(([, v]) => v!.games).sort((a, b) => a - b);
+      const med = ns.length % 2 ? ns[ns.length >> 1]! : (ns[ns.length / 2 - 1]! + ns[ns.length / 2]!) / 2;
+      for (const [e, v] of vals) {
+        const z = Math.max(-Z_CLIP, Math.min(Z_CLIP, (def.dir * (v!.x - mean)) / sd));
+        traitZ.set(`${e.id}|${key}`, { z: z * shrink(v!.games, def.k), zGate: z * shrink(gateSample(key, pos, v!.games, def.k, med), def.k) });
+      }
     }
   }
   const tz = (e: RatedEntry, key: string) => traitZ.get(`${e.id}|${key}`);
 
   const byEntry = new Map<string, TraitResult[]>();
   const earnedOut = new Map<string, TraitResult[]>();
+  const explainers = new Map<string, () => GateCheck[]>();
   for (const [pos, list] of byPos) {
     const defs = TRAIT_DEFS.filter((d) => d.pos.includes(pos));
     const keys = new Set(defs.flatMap((d) => d.conds.map((c) => c.m)));
@@ -212,7 +247,20 @@ export function deriveAllTraits(entries: readonly RatedEntry[], src: MetricSourc
       }
       return { id: e.id, metrics };
     });
-    const earned = evaluate(defs, subjects, PLURAL[pos]);
+    const tables = percentileTables(defs, subjects);
+    const earned = evaluate(defs, subjects, PLURAL[pos], tables);
+    for (const s of subjects)
+      explainers.set(s.id, () =>
+        defs.flatMap((d) =>
+          d.conds.map((c): GateCheck => {
+            const mv = s.metrics.get(c.m);
+            const xs = tables.get(c.m)!;
+            const pct = mv ? pctOf(xs, mv.v) : undefined;
+            const pass = pct !== undefined && xs.length >= 20 && (c.side === 'top' ? pct >= 100 - c.gate : pct <= c.gate);
+            return { trait: d.id, metric: c.m, side: c.side, gate: c.gate, value: mv?.v, text: mv?.text, pct, poolN: xs.length, pass };
+          }),
+        ),
+      );
     // Peer rarity: prefix counts of each trait along the OVR ranking.
     const order = [...list].sort((a, b) => b.ovr.value - a.ovr.value || (a.id < b.id ? -1 : 1));
     const rankOf = new Map(order.map((e, i) => [e.id, i]));
@@ -276,5 +324,5 @@ export function deriveAllTraits(entries: readonly RatedEntry[], src: MetricSourc
   const unitEarned = evaluate(UNIT_TRAITS, unitSubjects, PLURAL.OL);
   for (const [id, got] of unitEarned) units[id]!.traits = select(got, 'OL', () => 0);
 
-  return { byEntry, earned: earnedOut, units };
+  return { byEntry, earned: earnedOut, units, explain: (id) => explainers.get(id)?.() ?? [] };
 }

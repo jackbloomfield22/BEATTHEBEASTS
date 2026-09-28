@@ -1136,6 +1136,17 @@ function writeReport(inp: ReportInput): void {
     L.push(`- **${ds}:** ${[...m.keys()].sort().map((k) => `${k || '(empty)'} ${ranges(m.get(k) ?? [])}`).join('; ')}`);
   }
   L.push('', `${inp.data.skippedStatRows} weekly stat row(s) with an empty team code were counted in league totals but not attributed to a team.`, '');
+  {
+    // Source fix (tools/augment/load.ts SWAPPED_HOME_ROWS, found by the M6.6 stint audit).
+    const fx = inp.data.swapFixed;
+    const by = new Map<string, number>();
+    for (const f of fx) by.set(`${f.season} ${f.now}`, (by.get(`${f.season} ${f.now}`) ?? 0) + 1);
+    const players = new Set(fx.map((f) => f.gsis)).size;
+    L.push(
+      `**Source fix: swapped team codes.** In \`stats_player_week\` 2001 and 2002, Jacksonville players' rows from Jacksonville home games carry the visitor's code as \`team\` (e.g. Jimmy Smith, game 2001_01_PIT_JAX, team PIT). ${fx.length} rows (${[...by].map(([k, n]) => `${k}: ${n}`).join(', ')}; ${players} players) are re-assigned to the home team: only where the player is on the home team's roster that season and not the visitor's (\`SWAPPED_HOME_ROWS\` in \`tools/augment/load.ts\`). League totals are unchanged (they sum every row).`,
+      '',
+    );
+  }
 
   // Match rates
   L.push('## Match rates', '');
