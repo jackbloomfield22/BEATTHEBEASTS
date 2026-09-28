@@ -152,8 +152,8 @@ export function holdIt(s: PlayState): InputFrame {
 
 // Seeds found by tools/sim/findclips.ts (re-found for M6's sim).
 export const CLIPS: Clip[] = [
-  // Stick against Cover 2: the driven ball to the stick, caught in stride, then 13 more after the catch with a juke (re-found as the M6.5 sim changed: seed 42).
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 42, play: 'trips-stick', def: 'cover2', los: 30, script: throwAndRun(2, 84, 'juke') },
+  // Four verticals against Cover 2: the slot's seam caught in stride, then 16 more after the catch with a juke (re-found for M6.6's ratings: seed 51).
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 51, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // A stiff arm sheds the first tackler and he takes it the distance (36 after the catch; re-found for M6.5: the slot against Cover 2, seed 71).
