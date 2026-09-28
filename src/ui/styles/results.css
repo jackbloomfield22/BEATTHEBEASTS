@@ -177,3 +177,13 @@
 /* A loss grades in the Beasts red. */
 .res-grade.loss .grade { color: #ff2a4d; text-shadow: 0 0 1.6rem rgba(255,42,77,.35); }
 .hist-grade.loss, .hd-grade.loss b, .lg-grade.loss b { color: #ff2a4d; }
+
+/* The line score (M6.6): points by quarter in a timed game, on the results, halftime and the final banner. */
+.linescore { margin: .9rem 0 .2rem; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 16rem; }
+.linescore th { font-size: .7rem; letter-spacing: .14em; color: var(--ink-3); font-weight: 800; padding: .15rem .6rem; text-align: center; }
+.linescore td { padding: .2rem .6rem; text-align: center; font-weight: 700; border-top: 1px solid rgba(255,255,255,.08); }
+.linescore td:first-child { text-align: left; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+.linescore tr.user td:first-child { border-left: 3px solid var(--lime); }
+.linescore tr.beasts td:first-child { border-left: 3px solid #ff2a4d; }
+.linescore td.tot { font-family: var(--font-display); font-size: 1.1rem; color: #fff; }
+.res-head .linescore { margin: .6rem auto 0; }

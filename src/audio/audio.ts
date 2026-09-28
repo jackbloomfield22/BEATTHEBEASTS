@@ -146,6 +146,35 @@ class AudioEngine {
     }
   }
 
+  /** Foot on the ball (M6.6): a leather thock, `delay` s from now (the kick's contact after the snap). A mis-hit sounds thinner. */
+  kickThump(delay: number, clean: boolean): void {
+    if (!this.ctx) return;
+    this.noiseHit(0.05, clean ? 1300 : 2100, 1.4, clean ? 0.34 : 0.24, 'sfx', delay);
+    this.tone(clean ? 92 : 120, 0.13, 'sine', clean ? 0.32 : 0.2, 'sfx', 58, delay);
+  }
+
+  /** The crowd on a kick's result: a roar for a make (or a big punt), a groan for a miss. */
+  kickCrowd(good: boolean): void {
+    if (!this.ctx) return;
+    if (good) this.noiseHit(1.8, 650, 0.45, 0.22, 'crowd');
+    else {
+      this.noiseHit(1.1, 380, 0.6, 0.14, 'crowd');
+      this.tone(150, 0.9, 'sawtooth', 0.012, 'crowd', 95);
+    }
+  }
+
+  /** The play clock's last five seconds: a dry tick each second. */
+  playClockTick(): void {
+    this.noiseHit(0.03, 3200, 5, 0.09, 'ui');
+  }
+
+  /** An official's whistle (the flag, the end of a quarter). */
+  whistle(): void {
+    if (!this.ctx) return;
+    this.tone(2950, 0.42, 'sine', 0.05, 'sfx', 3050);
+    this.tone(3400, 0.42, 'sine', 0.025, 'sfx', 3480);
+  }
+
   /** Stadium horn + sub hit for the title reveal. */
   titleSting(): void {
     const ctx = this.ctx;

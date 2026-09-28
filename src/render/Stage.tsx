@@ -11,6 +11,7 @@ import { FlyCamera } from './cameras/FlyCamera';
 import { GameScene } from './game/GameScene';
 import { GameCamera } from './game/GameCamera';
 import { KickBall } from './game/KickBall';
+import { KickAim } from './game/KickAim';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { renderDpr, useSettings, type QualityPreset } from '@/app/settings';
@@ -239,6 +240,7 @@ export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasEl
       {urlFlags.lineup ? <Lineup /> : null}
       {inGame ? <GameScene /> : null}
       {inGame ? <KickBall /> : null}
+      {inGame ? <KickAim /> : null}
       {roomMounted ? <LockerRoomMount active={inRoom} preset={preset} /> : null}
       {urlFlags.fly ? (
         <FlyCamera />

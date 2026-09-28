@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createPlay, DEF_CALLS, defenseFor, input, offenseFor, PLAYS, practiceRosters, runToWhistle, type PlayResult, type SnapshotLike } from '@/sim';
-import { applyBeastsDrive, applyKick, applyPlay, chooseFourth, chooseTry, createMatch, KICKER_RANGE, type BeastsDrive, type Match, type MatchConfig } from '@/game/match';
+import { applyBeastsDrive, applyKick, applyPlay, applyPunt, chooseFourth, chooseTry, createMatch, KICKER_RANGE, resolvePunt, SIDELINE, type BeastsDrive, type Match, type MatchConfig } from '@/game/match';
+import { puntFlight } from '@/game/kick';
 import { buildRecord, decodeFrames, encodeFrames, isReadableRecord, RECORD_VERSION, type RecordMeta } from '@/game/record';
 import { emptyGameBox, expectedPoints, passerRating, pickPlayOfGame, playImpact, runBlockReps, tallySnap, type PlayLog } from '@/game/stats';
 
@@ -21,6 +22,7 @@ function drive(m: Match, ypp: number): void {
     if (m.phase === 'fourth') {
       if (ypp < 5) {
         chooseFourth(m, 'punt');
+        applyPunt(m, resolvePunt(m, puntFlight({ power: 0.9, aim: 0, wind: m.wind, y0: 0, halfWidth: SIDELINE })));
         return;
       }
       chooseFourth(m, 'go');

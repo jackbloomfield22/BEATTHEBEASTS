@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '@/app/appStore';
-import { useSettings, type Settings, type QualityPreset } from '@/app/settings';
+import { QUARTER_MINUTES, useSettings, type Settings, type QualityPreset } from '@/app/settings';
 import { enterFullscreen, exitFullscreen } from '@/app/platform';
 import { ACTIONS, ACTIONS_BY_ID, CONTEXT_LABELS, defaultBindings, findConflicts, inputLabel, type InputContext } from '@/input/actions';
 import { Input } from '@/input/InputManager';
@@ -92,7 +92,8 @@ function buildTabs(nav: { openEditor: () => void; applyPreset: (p: QualityPreset
       label: 'Gameplay',
       rows: [
         { kind: 'choice', label: 'Difficulty', desc: 'Changes how fast and how smart the Beasts react, never player ratings.', options: [{ value: 'rookie', label: 'Rookie' }, { value: 'pro', label: 'Pro' }, { value: 'legend', label: 'Legend' }, { value: 'beast', label: 'Beast' }], get: (s) => s.gameplay.difficulty, set: (d, v) => { d.gameplay.difficulty = v as Settings['gameplay']['difficulty']; } },
-        { kind: 'choice', label: 'Game length', desc: 'How many offensive drives you get.', options: [{ value: 4, label: 'Quick · 4 drives' }, { value: 6, label: 'Standard · 6 drives' }, { value: 10, label: 'Full · 10 drives' }], get: (s) => s.gameplay.gameLength, set: (d, v) => { d.gameplay.gameLength = v as Settings['gameplay']['gameLength']; } },
+        { kind: 'choice', label: 'Quarter length', desc: 'Minutes on the clock each quarter in Classic and Film Room. The Daily Challenge always plays 5-minute quarters, so everyone\'s score is on the same clock.', options: QUARTER_MINUTES.map((q) => ({ value: q, label: `${q} minutes` })), get: (s) => s.gameplay.quarterMinutes, set: (d, v) => { d.gameplay.quarterMinutes = v as Settings['gameplay']['quarterMinutes']; } },
+        { kind: 'choice', label: 'Quick Play length', desc: 'Quick Play keeps the drive count: how many offensive drives you get, with the two-minute drill on the last.', options: [{ value: 4, label: 'Quick · 4 drives' }, { value: 6, label: 'Standard · 6 drives' }, { value: 10, label: 'Full · 10 drives' }], get: (s) => s.gameplay.gameLength, set: (d, v) => { d.gameplay.gameLength = v as Settings['gameplay']['gameLength']; } },
         { kind: 'choice', label: 'Default camera', desc: 'The camera used for every snap.', options: [{ value: 'broadcast', label: 'Broadcast' }, { value: 'all22', label: 'All-22' }, { value: 'field', label: 'Field level' }], get: (s) => s.gameplay.camera, set: (d, v) => { d.gameplay.camera = v as Settings['gameplay']['camera']; } },
         { kind: 'choice', label: 'Lighting', desc: 'Time of day and weather at the Beasts\' stadium.', options: [{ value: 'golden', label: 'Golden Hour' }, { value: 'night', label: 'Night' }, { value: 'overcast', label: 'Overcast' }, { value: 'rain', label: 'Rain' }, { value: 'snow', label: 'Snow' }, { value: 'random', label: 'Random' }], get: (s) => s.gameplay.lighting, set: (d, v) => { d.gameplay.lighting = v as Settings['gameplay']['lighting']; } },
         { kind: 'toggle', label: 'Skip intros', desc: 'Go straight to the title screen on launch.', get: (s) => s.gameplay.skipIntros, set: (d, v) => { d.gameplay.skipIntros = v; } },

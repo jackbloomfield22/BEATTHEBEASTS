@@ -39,11 +39,48 @@ const DRIVE_RESULT: Record<UserDrive['result'], string> = {
 };
 const BEASTS_RESULT: Record<string, string> = { TD: 'Touchdown', FG: 'Field goal', Punt: 'Punt', Turnover: 'Turnover', Downs: 'Downs', Safety: 'Safety', MissedFG: 'Missed FG' };
 
-export const roundLabel = (rec: GameRecord, i: number): string => (i < rec.drives ? `${i + 1}` : `OT${i - rec.drives + 1 > 1 ? i - rec.drives + 1 : ''}`);
+/** A drive chart row's label: the round (Quick Play), or the quarter the drive started in (a timed game). */
+export const roundLabel = (rec: GameRecord, i: number, q?: number): string =>
+  rec.quarterSecs && q ? (q > 4 ? 'OT' : `Q${q}`) : i < rec.drives ? `${i + 1}` : `OT${i - rec.drives + 1 > 1 ? i - rec.drives + 1 : ''}`;
 
-export function whenLabel(rec: GameRecord, round: number, ot: number): string {
+export function whenLabel(rec: GameRecord, round: number, ot: number, clock?: string): string {
   if (ot) return ot > 1 ? `${ot}OT` : 'Overtime';
+  if (rec.quarterSecs && clock) return clock;
   return `Round ${round} of ${rec.drives}`;
+}
+
+/** The game's length for the headers: "5-minute quarters", or Quick Play's "6 rounds". */
+export const lengthLabel = (rec: GameRecord): string => (rec.quarterSecs ? `${Math.round(rec.quarterSecs / 60)}-minute quarters` : `${rec.drives} rounds`);
+
+/** Points by quarter (a timed game): 1–4, OT if it went there, the total. */
+export function LineScore({ rec }: { rec: GameRecord }) {
+  const bq = rec.byQuarter;
+  if (!bq) return null;
+  const cols = [0, 1, 2, 3, ...(rec.ot ? [4] : [])];
+  return (
+    <table className="linescore">
+      <thead>
+        <tr>
+          <th />
+          {cols.map((i) => (
+            <th key={i}>{i === 4 ? 'OT' : i + 1}</th>
+          ))}
+          <th>T</th>
+        </tr>
+      </thead>
+      <tbody>
+        {(['user', 'beasts'] as const).map((side) => (
+          <tr key={side} className={side}>
+            <td>{side === 'user' ? 'Contenders' : 'Beasts'}</td>
+            {cols.map((i) => (
+              <td key={i}>{bq[side][i] ?? 0}</td>
+            ))}
+            <td className="tot">{rec.score[side]}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 export function modeLabel(mode: string): string {
@@ -106,7 +143,7 @@ export function DriveChart({ rec, compact = false }: { rec: GameRecord; compact?
       const pts = b.points ? ` +${b.points}` : '';
       rows.push(
         <tr key={`b${i}`} className={`dc-beasts ${b.points ? 'scored' : ''}`}>
-          <td className="dc-rd">{roundLabel(rec, i)}</td>
+          <td className="dc-rd">{roundLabel(rec, i, b.q)}</td>
           <td className="dc-team">Beasts</td>
           {compact ? null : <td>—</td>}
           <td>{b.plays}</td>
@@ -121,7 +158,7 @@ export function DriveChart({ rec, compact = false }: { rec: GameRecord; compact?
     if (u) {
       rows.push(
         <tr key={`u${i}`} className={`dc-you r-${u.result}`}>
-          <td className="dc-rd">{b ? '' : roundLabel(rec, i)}</td>
+          <td className="dc-rd">{b ? '' : roundLabel(rec, i, u.q)}</td>
           <td className="dc-team">You</td>
           {compact ? null : <td>{spotLabel(u.start)}</td>}
           <td>{u.plays}</td>
@@ -162,7 +199,7 @@ function PlayOfGame({ rec }: { rec: GameRecord }) {
       <div className="pog-head">{p.headline}</div>
       <div className="pog-detail">{p.detail}</div>
       <div className="pog-meta">
-        {whenLabel(rec, p.round, p.ot)} · drive {p.drive + 1}, play {p.n} · {p.down === 1 ? '1st' : p.down === 2 ? '2nd' : p.down === 3 ? '3rd' : '4th'} & {Math.max(1, Math.round(p.toGo))} at {spotLabel(p.los)} · {p.playName}
+        {whenLabel(rec, p.round, p.ot, p.clock)} · drive {p.drive + 1}, play {p.n} · {p.down === 1 ? '1st' : p.down === 2 ? '2nd' : p.down === 3 ? '3rd' : '4th'} & {Math.max(1, Math.round(p.toGo))} at {spotLabel(p.los)} · {p.playName}
       </div>
     </div>
   );

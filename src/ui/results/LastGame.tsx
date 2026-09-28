@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import type { GameRecord } from '@/game/record';
 import { useMenuNav } from '../nav';
 import { Hints, KeyCap } from '../components/controls';
-import { dateLabel, DriveChart, GameReport, modeLabel, ReportTabs, resultWord, TeamLine } from './GameReport';
+import { dateLabel, DriveChart, GameReport, lengthLabel, modeLabel, ReportTabs, resultWord, TeamLine } from './GameReport';
 import { useReportNav } from './useReportNav';
 
 // The Locker Room's "Last Game" board (the main menu's Locker Room entry):
@@ -34,7 +34,7 @@ export function LastGamePanel({ rec, onOpen }: { rec: GameRecord; onOpen: () => 
         <span className="them">{rec.score.beasts} Beasts</span>
       </div>
       <div className="lg-meta">
-        {rec.clock} · {modeLabel(rec.mode)} · {rec.drives} rounds
+        {rec.clock} · {modeLabel(rec.mode)} · {lengthLabel(rec)}
       </div>
       <TeamLine box={rec.box} />
       <DriveChart rec={rec} compact />
@@ -65,7 +65,7 @@ export function ReportOverlay({ rec, onClose }: { rec: GameRecord; onClose: () =
         <div className="res-meta">
           <span>{rec.clock}</span>
           <span>
-            {modeLabel(rec.mode)} · {rec.drives} rounds
+            {modeLabel(rec.mode)} · {lengthLabel(rec)}
           </span>
           <span>{dateLabel(rec.finishedAt)}</span>
         </div>

@@ -51,7 +51,7 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V2, 'carrier.spin': ['KeyX'] }, defaultBindings('pad'));
     (old as { version: number }).version = 2;
     const m = migrate(old);
-    expect(m.version).toBe(7);
+    expect(m.version).toBe(8);
     // Still on the old default: dropped, so the merge with the defaults fills in the new one.
     expect(m.controls.keyboard['carrier.up']).toBeUndefined();
     expect(m.controls.keyboard['air.possession']).toBeUndefined();
@@ -82,7 +82,7 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V5, 'carrier.sprint': ['ShiftRight'] }, { ...defaultBindings('pad'), 'carrier.sprint': ['Pad:RT'] });
     (old as { version: number }).version = 5;
     const m = migrate(old);
-    expect(m.version).toBe(7);
+    expect(m.version).toBe(8);
     expect(m.controls.keyboard['pocket.scramble']).toBeUndefined();
     expect(m.controls.keyboard['carrier.sprint']).toBeUndefined();
     expect(m.controls.gamepad['carrier.sprint']).toBeUndefined();
@@ -96,10 +96,32 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V6, 'carrier.spin': ['KeyX'] }, { ...defaultBindings('pad'), ...PAD_DEFAULTS_V6 });
     (old as { version: number }).version = 6;
     const m = migrate(old);
-    expect(m.version).toBe(7);
+    expect(m.version).toBe(8);
     expect(m.controls.keyboard['carrier.juke']).toBeUndefined();
     expect(m.controls.keyboard['carrier.spin']).toEqual(['KeyX']);
     for (const id of Object.keys(PAD_DEFAULTS_V6)) expect(m.controls.gamepad[id]).toBeUndefined();
+  });
+
+  it('v7 settings get the 5-minute quarter (M6.6) and drop the old drag-kick binding', () => {
+    const old = defaultSettings({ ...defaultBindings('kb'), 'kick.aim': ['Mouse0'] }, { ...defaultBindings('pad'), 'kick.aim': ['Pad:RSDown'] });
+    (old as { version: number }).version = 7;
+    delete (old.gameplay as Partial<typeof old.gameplay>).quarterMinutes;
+    const m = migrate(old);
+    expect(m.version).toBe(8);
+    expect(m.gameplay.quarterMinutes).toBe(5);
+    expect(m.gameplay.gameLength).toBe(6); // Quick Play's drive count stays
+    expect(m.controls.keyboard['kick.aim']).toBeUndefined();
+    expect(m.controls.gamepad['kick.aim']).toBeUndefined();
+    // A chosen quarter survives.
+    const eight = defaultSettings(defaultBindings('kb'), defaultBindings('pad'));
+    (eight as { version: number }).version = 7;
+    eight.gameplay.quarterMinutes = 8;
+    expect(migrate(eight).gameplay.quarterMinutes).toBe(8);
+    // The kick scheme's keys: aim on the arrows (pad D-pad), hold Space / A / the mouse to charge.
+    expect(defaultBindings('kb')['kick.charge']).toEqual(['Space', 'Enter', 'Mouse0']);
+    expect(defaultBindings('pad')['kick.charge']).toEqual(['Pad:A']);
+    expect(defaultBindings('kb')['kick.aimLeft']).toEqual(['ArrowLeft', 'KeyA']);
+    expect(defaultBindings('pad')['kick.aimLeft']).toEqual(['Pad:Left']);
   });
 
   it('labels inputs readably', () => {

@@ -115,8 +115,11 @@ export const ACTIONS: ActionDef[] = [
   a('carrier.dive', 'carrier', 'Dive / QB slide', ['KeyF'], ['Pad:A']),
   a('carrier.protect', 'carrier', 'Protect ball (hold)', ['KeyC'], ['Pad:LB']),
 
-  // Kicking
-  a('kick.aim', 'kick', 'Aim and power (drag)', ['Mouse0'], ['Pad:RSDown'], true),
+  // Kicking (M6.6, Playtest 2): aim first (the left stick aims too, analog),
+  // then hold to charge and release inside the moving accuracy window.
+  a('kick.aimLeft', 'kick', 'Aim left', ['ArrowLeft', 'KeyA'], ['Pad:Left']),
+  a('kick.aimRight', 'kick', 'Aim right', ['ArrowRight', 'KeyD'], ['Pad:Right']),
+  a('kick.charge', 'kick', 'Kick: hold to charge, release to strike', ['Space', 'Enter', 'Mouse0'], ['Pad:A']),
 
   // Replay
   a('replay.orbit', 'replay', 'Orbit camera (drag)', ['Mouse0'], ['Pad:RS'], true),

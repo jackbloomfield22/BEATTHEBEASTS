@@ -1,4 +1,4 @@
-/* A full game (M6): the score bug, the Meanwhile cut, decisions and the kick. */
+/* A full game (M6, M6.6): the score bug (quarter, game clock, play clock), the Meanwhile cut, decisions, the clock's banners, the flag, halftime and the kick. */
 
 .game-screen { position: absolute; inset: 0; pointer-events: none; }
 .game-screen > * { pointer-events: auto; }
@@ -9,7 +9,17 @@
 .sb-team.them { border-left: 4px solid #ff2a4d; }
 .sb-name { font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
 .sb-score { font-family: var(--font-display); font-size: 1.6rem; min-width: 2.2ch; text-align: right; }
-.sb-clock { display: flex; align-items: center; gap: .6rem; padding: .45rem .9rem; font-family: var(--font-display); font-size: 1.05rem; border-left: 1px solid rgba(255,255,255,.1); }
+.sb-clock { display: flex; align-items: center; gap: .55rem; padding: .45rem .5rem .45rem .9rem; font-family: var(--font-display); font-size: 1.05rem; border-left: 1px solid rgba(255,255,255,.1); }
+.sb-q { color: var(--ink-2); font-size: .9rem; letter-spacing: .06em; }
+/* Tabular figures so the clock doesn't jitter as it runs. */
+.sb-time { font-variant-numeric: tabular-nums; min-width: 3.1ch; text-align: right; }
+.sb-time.stopped { color: #fff; }
+.sb-time.running { color: var(--lime); }
+/* The play clock: its own box, amber, red and pulsing in the last five. */
+.sb-play { font-variant-numeric: tabular-nums; min-width: 2.6ch; padding: .1rem .35rem; font-size: .92rem; color: #ffd400; background: rgba(255,212,0,.12); border: 1px solid rgba(255,212,0,.35); text-align: center; }
+.sb-play.hot { color: #fff; background: #d0182f; border-color: #ff2a4d; animation: pc-pulse 1s steps(2, jump-none) infinite; }
+@keyframes pc-pulse { 50% { background: #7a0d1b; } }
+.sb-team .sb-tos { margin-left: -.2rem; flex-direction: column; gap: .15rem; }
 .sb-tos { display: flex; gap: .2rem; }
 .sb-tos i { width: .7rem; height: .25rem; background: rgba(255,255,255,.18); }
 .sb-tos i.on { background: #ffd400; }
@@ -37,21 +47,46 @@
 /* The choices stack (↑↓ picks one), so a long option never runs off the card. */
 .decision-card .result-actions { flex-direction: column; align-items: stretch; margin-top: .8rem; }
 .decision-card .result-actions .menu-item { white-space: normal; }
+/* A strip hung under the score bug (it clears the play call's header below it). */
+.clock-flag { position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; top: 6.05rem; padding: .22rem 1.4rem; z-index: 29; pointer-events: none; font-family: var(--font-display); font-size: .92rem; letter-spacing: .12em; text-transform: uppercase; color: #0b0b0d; background: #ffd400; animation: lt-in 380ms cubic-bezier(.2,.7,.2,1) both; box-shadow: 0 .3rem 1.4rem rgba(0,0,0,.5); }
+.clock-flag.ev-endOfQuarter { background: var(--lime); }
+.meanwhile.final .linescore { margin: .8rem auto .2rem; }
+.penalty-card { border-top-color: #ffd400; }
+.penalty-card .result-kicker { color: #ffd400; }
+/* A yellow flag, thrown: a square of cloth with a knot. */
+.flag-icon { position: absolute; right: 1.6rem; top: 1.3rem; width: 2.6rem; height: 2.6rem; background: #ffd400; transform: rotate(-14deg); border-radius: .25rem .9rem .3rem .6rem; box-shadow: inset -.4rem -.4rem 0 rgba(0,0,0,.12), 0 .3rem 1rem rgba(0,0,0,.4); animation: flag-in 520ms cubic-bezier(.2,.9,.3,1.2) both; }
+.flag-icon::after { content: ''; position: absolute; left: 42%; top: -.35rem; width: .55rem; height: .7rem; background: #e6bf00; border-radius: 50%; }
+@keyframes flag-in { from { transform: translate(3rem, -3rem) rotate(80deg); opacity: 0; } }
 .clock-note { position: absolute; left: 50%; bottom: 5rem; transform: translateX(-50%); padding: .4rem 1rem; background: rgba(255,212,0,.15); color: #ffd400; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 
-.kick-panel { position: absolute; inset: 0; cursor: grab; }
-.kick-panel:active { cursor: grabbing; }
-.kick-info { position: absolute; left: 3rem; top: 8rem; padding: 1rem 1.3rem; background: rgba(6,6,8,.7); border-left: 3px solid var(--lime); }
-.kick-pct { color: var(--ink-2); font-weight: 700; }
-.kick-meter { position: absolute; right: 4rem; top: 50%; transform: translateY(-50%); display: flex; gap: 1.2rem; align-items: flex-end; }
-.km-power { width: 1.1rem; height: 14rem; background: rgba(255,255,255,.1); display: flex; align-items: flex-end; border: 1px solid rgba(255,255,255,.2); }
-.km-power span { display: block; width: 100%; background: linear-gradient(0deg, var(--lime-dim), var(--lime)); }
-.km-power span.over { background: linear-gradient(0deg, var(--lime), #ff2a4d); }
-.km-aim { width: 5rem; height: 5rem; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); position: relative; }
-.km-aim span { position: absolute; left: 50%; top: 8%; width: 3px; height: 42%; margin-left: -1.5px; background: var(--lime); transform-origin: 50% 100%; }
-.kick-result { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); font-family: var(--font-display); font-size: 3.4rem; animation: lt-in 400ms both; text-shadow: 0 .2rem 2rem rgba(0,0,0,.8); }
+.kick-panel { position: absolute; inset: 0; cursor: crosshair; }
+.kick-info { position: absolute; left: 3rem; top: 8rem; padding: 1rem 1.3rem; background: rgba(6,6,8,.72); border-left: 3px solid var(--lime); min-width: 19rem; }
+.kick-pct { color: var(--ink-2); font-weight: 700; max-width: 20rem; }
+.kick-wind { margin-top: .6rem; display: flex; align-items: center; gap: .5rem; color: #9fd3f2; font-weight: 700; }
+.kick-wind .wind-arrow { font-size: 1.2rem; }
+.kick-aim { display: block; margin-top: .3rem; color: var(--lime); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* The meter: power fills from the bottom; the green window slides up and down it; the red band past full is overcooked. */
+.kick-meter2 { position: absolute; right: 4rem; top: 50%; transform: translateY(-50%); padding: 1rem 1.2rem 1.1rem; background: rgba(6,6,8,.78); border-left: 3px solid var(--lime); display: grid; grid-template-columns: auto auto; grid-template-rows: auto 1fr auto; column-gap: 1rem; align-items: end; }
+.km2-label { grid-column: 1; font-size: .72rem; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-2); margin-bottom: .4rem; }
+.km2-bar { grid-column: 1; grid-row: 2; position: relative; width: 2.2rem; height: 20rem; background: rgba(6,6,8,.72); border: 1px solid rgba(255,255,255,.25); overflow: hidden; }
+.km2-over { position: absolute; left: 0; right: 0; top: 0; background: repeating-linear-gradient(135deg, rgba(255,42,77,.35) 0 6px, rgba(255,42,77,.15) 6px 12px); }
+.km2-need { position: absolute; left: -.2rem; right: -.2rem; height: 2px; background: #fff; box-shadow: 0 0 .4rem rgba(255,255,255,.8); z-index: 3; }
+.km2-need::after { content: 'leg'; position: absolute; right: -2.1rem; top: -.5rem; font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #fff; }
+.km2-window { position: absolute; left: 0; right: 0; background: rgba(170,255,0,.28); border-top: 2px solid var(--lime); border-bottom: 2px solid var(--lime); z-index: 2; }
+.km2-fill { position: absolute; left: 22%; right: 22%; bottom: 0; height: 0; background: linear-gradient(0deg, #f4f4f4, #fff); box-shadow: 0 0 .6rem rgba(255,255,255,.6); z-index: 1; }
+.kick-meter2.struck .km2-fill { background: #ffd400; }
+.km2-steps { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: .7rem; align-self: center; font-size: .8rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); padding-left: 1.4rem; }
+.km2-steps .on { color: var(--lime); }
+.km2-steps .done { color: var(--ink-2); text-decoration: line-through; text-decoration-color: rgba(255,255,255,.3); }
+.km2-word { grid-column: 1 / span 2; grid-row: 3; margin-top: .6rem; font-family: var(--font-display); font-size: 1.4rem; animation: lt-in 300ms both; }
+.km2-word.clean { color: var(--lime); }
+.km2-word.miss { color: #ffb347; }
+.kick-result { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); font-family: var(--font-display); font-size: 3.4rem; animation: lt-in 400ms both; text-shadow: 0 .2rem 2rem rgba(0,0,0,.8); text-align: center; }
 .kick-result.good { color: var(--lime); }
 .kick-result.bad { color: #ff2a4d; }
+.kick-result.punt { color: #fff; display: flex; flex-direction: column; gap: .3rem; }
+.kick-result.punt small { font-family: var(--font-ui); font-size: 1.05rem; font-weight: 700; color: #fff; letter-spacing: .04em; text-shadow: none; padding: .35rem .9rem; background: rgba(6,6,8,.8); border-left: 3px solid var(--lime); }
 
 /* In a game the score bug owns the top centre: the play call sits below it. */
 .game-call .screen-head { top: 7.4rem; }

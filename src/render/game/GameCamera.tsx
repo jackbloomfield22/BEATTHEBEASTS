@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { kickView } from './kickView';
+import { contactFor, kickView } from './kickView';
 import * as THREE from 'three';
 import { useSettings } from '@/app/settings';
 import { urlFlags } from '@/app/platform';
@@ -49,6 +49,14 @@ class Spring {
 function targetPose(mode: Mode): Pose | null {
   // A field goal or PAT: from behind and above the kicker, the protection and
   // the block unit across the bottom of the frame, the posts square above them.
+  if (kickView.active && kickView.kind === 'PUNT') {
+    // A punt: from behind the punter over the protection, the coverage lanes and the returner in frame;
+    // once it's off his foot the lens rides the ball up and down the field, the dolly following.
+    const sx = kickView.spotX;
+    if (!kickView.path || kickView.t < contactFor('PUNT')) return { ex: sx - 11, ey: 0, eh: 4.4, lx: sx + 30, ly: 0, lh: 2, fov: 52 };
+    const [bx, by, bz] = kickView.ball;
+    return { ex: sx - 11 + bx * 0.55, ey: by * 0.4, eh: 4.4 + bz * 0.25, lx: sx + bx + 4, ly: by, lh: bz * 0.9144 * 0.8, fov: 52 };
+  }
   if (kickView.active) return { ex: kickView.spotX - 12, ey: 0, eh: 3.6, lx: 110, ly: 0, lh: 2.4, fov: 36 };
   const r = practice.runner;
   if (!r) {

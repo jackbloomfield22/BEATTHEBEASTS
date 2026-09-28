@@ -58,7 +58,7 @@ async function playOn(page: Page, until?: () => Promise<boolean>, snap: { hold?:
     if (st === 'final' || (await screen(page)) !== 'game') return snaps;
     if (until && (await until())) return snaps;
     if (st === 'loading') await page.waitForTimeout(500);
-    else if (st === 'meanwhile' || st === 'fourth' || st === 'try') {
+    else if (st === 'meanwhile' || st === 'fourth' || st === 'try' || st === 'penalty' || st === 'break') {
       await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
     } else if (st === 'call') {

@@ -30,6 +30,7 @@ import { loadJSON, saveJSON } from './storage';
 import type { Screen } from './appStore';
 import { getSettings } from './settings';
 import { game } from '@/game/game';
+import { quarterSecsFor } from '@/game/match';
 
 // The draft session the locker room and its UI share (M6). The rules live in
 // src/game/draft.ts (pure); this store holds the live draft, the Beasts it
@@ -240,6 +241,8 @@ export function startGame(): void {
     beasts: st.beasts,
     mode: st.mode,
     drives: g.gameLength,
+    // A real clock (Playtest 1, decision 1): the setting's quarter; the Daily's is fixed so scores compare; Quick Play keeps the drive count.
+    quarterSecs: quarterSecsFor(st.mode, g.quarterMinutes),
     seed: (st.draft.seed ^ 0x6a09e667) >>> 0,
     diffAdj: st.daily?.diffAdj ?? 0,
     difficulty: g.difficulty,
