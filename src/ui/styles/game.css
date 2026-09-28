@@ -136,6 +136,7 @@
 .result-box { margin: .2rem 0 .8rem; font-size: .92rem; color: rgba(244,240,255,.62); letter-spacing: .02em; }
 /* Pad glyphs in the play HUD (M6.6): sized to sit where the keycaps sat. */
 .rec-glyph.is-pad .glyph { height: 1.6rem; }
+.cue .glyph { height: 2.1em; }
 .cue .glyph-row { gap: .22rem; }
 .cue.big .glyph { height: 1.4em; }
 .carrier-keys .cue.opt .glyph { height: 1.4em; }

@@ -77,9 +77,9 @@ async function step(page: Page, n: number, draw = 2): Promise<{ phase: string; t
   return st;
 }
 
-async function until(page: Page, pred: (st: Awaited<ReturnType<typeof step>>) => boolean, max = 600) {
+async function until(page: Page, pred: (st: Awaited<ReturnType<typeof step>>) => boolean, max = 600, by = 1) {
   for (let k = 0; k < max; k++) {
-    const st = await step(page, 1, 1);
+    const st = await step(page, by, by);
     if (pred(st)) return st;
   }
   throw new Error('never got there');
@@ -132,12 +132,14 @@ if (!only || only === 'breakaway')
     mkdirSync(OUT, { recursive: true });
     const log: string[] = [];
     const pump = await open(page, false);
-    await clip(page, pump, process.env.BTB_M66_BREAK ?? 'go');
-    let st = await until(page, (s) => s.phase === 'carrier', 900);
-    await shot(page, 'breakaway-0', log, `catch t=${st.since.toFixed(2)}`);
+    // broken-tackle: the one scripted clip with a long breakaway (tools/sim/findbreak.ts: 4.3 to 8 s in Node).
+    await clip(page, pump, process.env.BTB_M66_BREAK ?? 'broken-tackle');
+    // To just before the breakaway, drawing a frame every 0.1 s so the camera eases as in play.
+    let st = await until(page, (s) => s.since >= 3.9 || s.result, 400, 6);
+    await shot(page, 'breakaway-0', log, `before t=${st.since.toFixed(2)} ${st.phase}`);
     for (let k = 1; k <= 5 && !st.result; k++) {
-      st = await step(page, 24, 3);
-      await shot(page, `breakaway-${k}`, log, `+${(k * 0.4).toFixed(1)} s t=${st.since.toFixed(2)} ${st.phase}`);
+      st = await step(page, 36, 6);
+      await shot(page, `breakaway-${k}`, log, `+${(k * 0.6).toFixed(1)} s t=${st.since.toFixed(2)} ${st.phase}`);
     }
   });
 
