@@ -626,6 +626,7 @@ function KickPanel() {
     if (import.meta.env.DEV)
       Object.assign(globalThis, {
         __btbKick: c,
+        __btbKickPress: (t: number) => c.press(t) && setPhase('charge'),
         __btbKickStrike: (t: number) => {
           const st = c.release(t);
           if (st) doStrike(st);
@@ -740,6 +741,7 @@ function KickPanel() {
           </small>
         </div>
       ) : null}
+      {phase === 'struck' ? null : (
       <Hints
         items={
           phase === 'aim'
@@ -750,6 +752,7 @@ function KickPanel() {
             : [{ kb: 'Release', pad: 'Release A', label: 'Strike in the green' }]
         }
       />
+      )}
     </div>
   );
 }

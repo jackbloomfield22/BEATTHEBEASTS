@@ -86,7 +86,7 @@
 .kick-result.good { color: var(--lime); }
 .kick-result.bad { color: #ff2a4d; }
 .kick-result.punt { color: #fff; display: flex; flex-direction: column; gap: .3rem; }
-.kick-result.punt small { font-family: var(--font-ui); font-size: 1.05rem; font-weight: 700; color: var(--ink-2); letter-spacing: .04em; }
+.kick-result.punt small { font-family: var(--font-ui); font-size: 1.05rem; font-weight: 700; color: #fff; letter-spacing: .04em; text-shadow: none; padding: .35rem .9rem; background: rgba(6,6,8,.8); border-left: 3px solid var(--lime); }
 
 /* In a game the score bug owns the top centre: the play call sits below it. */
 .game-call .screen-head { top: 7.4rem; }

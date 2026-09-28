@@ -29,6 +29,7 @@ type W = {
   __btbPractice: { runner: { paused: boolean } | null };
   __btbKick?: { aim: number; windowFrom: number; tuning: { fillMs: number; hz: number }; press(at: number): boolean };
   __btbKickStrike?: (t: number) => void;
+  __btbKickPress?: (t: number) => void;
   __btbKickNow?: number;
   __btbGameReady?: boolean;
   __btbReady?: boolean;
@@ -61,6 +62,9 @@ test('clock and kicking', async ({ page }) => {
   // 1. The play call after the Beasts' opening drive: the quarter, the clock, the play clock.
   await stageIs(page, 'call');
   await page.waitForFunction(() => (window as unknown as W).__btbGameReady === true, null, { timeout: 300_000 });
+  // BTB_FROM=kick: straight to the kicks (the clock shots are already on disk).
+  const early = process.env.BTB_FROM !== 'kick';
+  if (early) {
   await page.waitForTimeout(2500);
   await shot(page, '01-call-scorebug');
 
@@ -101,6 +105,8 @@ test('clock and kicking', async ({ page }) => {
   await page.waitForTimeout(1200);
   await shot(page, '04-two-minute-warning');
 
+  }
+
   // 5. A 44-yard field goal into a crosswind: the aim line, the wind, the meter.
   await ev(page, (w) => {
     const m = w.__btbGame.match!;
@@ -112,20 +118,19 @@ test('clock and kicking', async ({ page }) => {
   });
   await stageIs(page, 'fourth');
   await page.waitForTimeout(1200);
-  await shot(page, '05-fourth-card');
+  if (early) await shot(page, '05-fourth-card');
   await ev(page, (w) => w.__btbGame.fourth('fg'));
   await page.waitForSelector('.kick-panel', { timeout: 120_000 });
   await page.waitForFunction(() => !!(window as unknown as W).__btbKick, null, { timeout: 60_000 });
   await ev(page, (w) => void (w.__btbKick!.aim = -0.045));
-  await page.waitForTimeout(4000);
+  await page.waitForTimeout(25_000); // the slow software canvas has to draw the new aim, not just the DOM
   await shot(page, '06-fg-aim');
   // The charge, frozen for the still: pressed so the fill reaches full power as the window tops out
   // (its second peak), shown 0.3 s before that; then the strike at that moment, a clean one.
   await ev(page, (w) => {
     const k = w.__btbKick!;
     const peak = k.windowFrom + (1500 / k.tuning.hz);
-    const at = peak - k.tuning.fillMs;
-    k.press(at);
+    w.__btbKickPress!(peak - k.tuning.fillMs);
     w.__btbKickNow = peak - 300;
     (w as unknown as { __strikeAt: number }).__strikeAt = peak;
   });
@@ -140,7 +145,16 @@ test('clock and kicking', async ({ page }) => {
   await shot(page, '08-fg-result');
   await ev(page, (w) => w.__btbGame.endKick());
 
-  // 6. A punt from your 35, aimed for the right sideline.
+  // 6. The Beasts' answer: with ~1:55 left they run out the half, so halftime comes next (or the call if they don't).
+  await page.waitForFunction(() => ['call', 'break'].includes((window as unknown as W).__btbGameUi.getState().stage), null, { timeout: 300_000 });
+  if ((await ev(page, (w) => w.__btbGameUi.getState().stage)) === 'break') {
+    await page.waitForSelector('.halftime-card', { timeout: 120_000 });
+    await page.waitForTimeout(1200);
+    await shot(page, '09-halftime');
+    await page.keyboard.press('Enter');
+  }
+
+  // 7. A punt from your 35, aimed for the right sideline.
   await stageIs(page, 'call');
   await ev(page, (w) => {
     const m = w.__btbGame.match!;
@@ -152,33 +166,39 @@ test('clock and kicking', async ({ page }) => {
   await page.waitForSelector('.kick-panel', { timeout: 120_000 });
   await page.waitForFunction(() => !!(window as unknown as W).__btbKick, null, { timeout: 60_000 });
   await ev(page, (w) => void (w.__btbKick!.aim = -0.28));
-  await page.waitForTimeout(4000);
-  await shot(page, '09-punt-aim');
+  // Long enough for the (slow, software) canvas to draw the new aim, not just the DOM.
+  await page.waitForTimeout(25_000);
+  await shot(page, '10-punt-aim');
   await ev(page, (w) => {
     const k = w.__btbKick!;
     const peak = k.windowFrom + 1500 / k.tuning.hz;
-    k.press(peak - k.tuning.fillMs);
+    w.__btbKickPress!(peak - k.tuning.fillMs);
     w.__btbKickStrike!(peak);
   });
   await page.waitForSelector('.kick-result.punt', { timeout: 120_000 });
-  await page.waitForTimeout(3000);
-  await shot(page, '10-punt-result');
+  // Let the flight play out so the ball is in the air, the coverage downfield.
+  await page.waitForTimeout(6000);
+  await shot(page, '11-punt-result');
   await ev(page, (w) => w.__btbGame.endKick());
-
-  // 7. Halftime: the clock runs out in the 2nd.
+  await page.waitForFunction(() => ['call', 'meanwhile'].includes((window as unknown as W).__btbGameUi.getState().stage), null, { timeout: 300_000 });
   await stageIs(page, 'call');
-  await ev(page, (w) => {
-    const m = w.__btbGame.match!;
-    m.clock.quarter = 2;
-    m.clock.secs = 1;
-    m.lastWhistle = 'runs';
-    m.playClock = 20;
-    w.__btbGame.second();
-  });
-  await page.waitForSelector('.halftime-card', { timeout: 120_000 });
-  await page.waitForTimeout(1200);
-  await shot(page, '11-halftime');
-  await page.keyboard.press('Enter');
+
+  // 7b. Halftime, if it hasn't come yet: the clock runs out in the 2nd.
+  if ((await ev(page, (w) => w.__btbGame.match!.clock.quarter)) <= 2) {
+    await ev(page, (w) => {
+      const m = w.__btbGame.match!;
+      m.clock.quarter = 2;
+      m.clock.secs = 1;
+      m.lastWhistle = 'runs';
+      m.playClock = 20;
+      w.__btbGame.second();
+    });
+    await page.waitForSelector('.halftime-card', { timeout: 120_000 });
+    await page.waitForTimeout(1200);
+    await shot(page, '09-halftime');
+    await page.keyboard.press('Enter');
+    await stageIs(page, 'call');
+  }
 
   // 8. The final (you ahead by a field goal as the 4th runs out), and the results with the line score.
   await stageIs(page, 'call');
@@ -193,10 +213,8 @@ test('clock and kicking', async ({ page }) => {
     m.playClock = 20;
     w.__btbGame.second();
   });
-  await page.waitForSelector('.meanwhile.final', { timeout: 120_000 });
-  await page.waitForTimeout(1500);
-  await shot(page, '12-final');
+  // (Under ?shot the final banner hands straight to the results.)
   await page.waitForFunction(() => (window as unknown as W).__btbApp.getState().screen === 'results', null, { timeout: 120_000 });
   await page.waitForTimeout(5000);
-  await shot(page, '13-results');
+  await shot(page, '12-results');
 });
