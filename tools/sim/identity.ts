@@ -26,7 +26,7 @@ const ONLY = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
 const YDS_TO_MPH = 3600 / 1760;
 
 type Side = 'off' | 'def';
-type Metric = 'topSpeed' | 'sepBreak' | 'yac' | 'trafficCatch' | 'yacContact' | 'broken' | 'missed' | 'powerShare' | 'ttt' | 'offTarget' | 'scramble' | 'cmpAllowed' | 'sepAllowed' | 'tackleRate' | 'pressure' | 'rushWin';
+type Metric = 'topSpeed' | 'sepBreak' | 'yac' | 'trafficCatch' | 'yacContact' | 'broken' | 'missed' | 'powerMoves' | 'ttt' | 'offTarget' | 'scramble' | 'cmpAllowed' | 'sepAllowed' | 'tackleRate' | 'pressure' | 'rushWin';
 const LABEL: Record<Metric, [string, string, number]> = {
   // [what a fan calls it, unit, the smallest difference that shows]
   topSpeed: ['top speed', 'mph', 0.8],
@@ -36,7 +36,7 @@ const LABEL: Record<Metric, [string, string, number]> = {
   yacContact: ['yards after contact', 'yd', 0.4],
   broken: ['tackles broken a carry', '', 0.04],
   missed: ['tacklers made to miss a carry', '', 0.04],
-  powerShare: ['tacklers beaten through contact', '%', 10],
+  powerMoves: ['moves that are a truck or stiff arm', '%', 20],
   ttt: ['time to throw', 's', 0.08],
   offTarget: ['throws off target (1+ yd)', '%', 4],
   scramble: ['scramble yards', 'yd', 1],
@@ -66,7 +66,7 @@ export const PAIRS: Pair[] = [
   { a: ['Barry Sanders', 'RB'], b: ['Jerome Bettis', 'RB'], side: 'off', slot: 'RB', expect: { topSpeed: 1, missed: 1 }, why: 'Barry makes a man miss in a phone booth; the Bus runs through him' },
   { a: ['Chris Johnson', 'RB'], b: ['Christian Okoye', 'RB'], side: 'off', slot: 'RB', expect: { topSpeed: 1, missed: 1 }, why: 'CJ2K is the fastest back there is; the Nigerian Nightmare runs people over' },
   { a: ['Marshall Faulk', 'RB'], b: ['Larry Csonka', 'RB'], side: 'off', slot: 'RB', expect: { topSpeed: 1, missed: 1 }, why: 'Faulk cuts and catches; Csonka pounds it' },
-  { a: ['Jamaal Charles', 'RB'], b: ['Brandon Jacobs', 'RB'], side: 'off', slot: 'RB', expect: { missed: 1, powerShare: -1 }, why: 'Charles slips tackles; Jacobs runs through them' },
+  { a: ['Jamaal Charles', 'RB'], b: ['Brandon Jacobs', 'RB'], side: 'off', slot: 'RB', expect: { missed: 1, powerMoves: -1 }, why: 'Charles slips tackles; Jacobs runs through them' },
   { a: ['Dan Marino', 'QB'], b: ['Michael Vick', 'QB'], side: 'off', slot: 'QB', expect: { ttt: -1, scramble: -1, offTarget: -1 }, why: 'Marino gets it out before the rush arrives; Vick runs' },
   { a: ['Peyton Manning', 'QB'], b: ['Lamar Jackson', 'QB'], side: 'off', slot: 'QB', expect: { scramble: -1 }, why: 'Manning from the pocket; Lamar with his legs (their releases rate 98 and 92: the legs are the contrast)' },
   { a: ['Tom Brady', 'QB'], b: ['Steve Young', 'QB'], side: 'off', slot: 'QB', expect: { scramble: -1 }, why: 'Brady stands in; Young takes off' },
@@ -133,7 +133,8 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
     const yac: number[] = [];
     const sep: number[] = [];
     const plays = slot === 'TE' ? ['ace-te-seam', 'trips-y-cross', 'heavy-pa-te-leak', 'trips-stick'] : ['doubles-slants', 'doubles-quick-outs', 'doubles-curls', 'singleback-pa-post'];
-    for (const id of plays) for (const def of covers) for (let k = 0; k < REPS; k++) for (const at of [45, 70, 95]) {
+    // (Three times the reps: a contested ball is one throw in four or five, and at one rep set a pair's catch rate in traffic was ±7 points of noise.)
+    for (const id of plays) for (const def of covers) for (let k = 0; k < REPS * 3; k++) for (const at of [45, 70, 95]) {
       const play = PLAYS.find((p) => p.id === id);
       if (!play) continue;
       const s = mk(play, def, k, true);
@@ -153,6 +154,7 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
     // Carries: yards after first contact, tackles broken and missed a carry.
     let carries = 0;
     let trucks = 0;
+    let moves = 0;
     let broken = 0;
     let missed = 0;
     const after: number[] = [];
@@ -164,14 +166,16 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
       const hits = s.events.filter((ev) => (ev.type === 'hit' || ev.type === 'brokenTackle' || ev.type === 'missedTackle') && ev.who?.includes(rb.i));
       const br = s.events.filter((ev) => ev.type === 'brokenTackle' && ev.who?.[0] === rb.i);
       broken += br.length;
-      // Through contact: a tackle broken by power (a truck, a stiff arm, or no move at all: Break Tackle); around it: a miss, or one broken in a juke or spin.
-      trucks += br.filter((ev) => ev.data?.move !== 'jukeL' && ev.data?.move !== 'jukeR' && ev.data?.move !== 'spin').length;
+      // His moves: how he chooses to beat a man (a truck or a stiff arm, or a juke or a spin).
+      const mv = s.events.filter((ev) => ev.type === 'move' && ev.who?.[0] === rb.i && ev.data?.move !== 'dive');
+      moves += mv.length;
+      trucks += mv.filter((ev) => ev.data?.move === 'truck' || ev.data?.move === 'stiffArm').length;
       missed += s.events.filter((ev) => ev.type === 'missedTackle' && ev.who?.[1] === rb.i).length;
       if (hits[0]?.at && s.result) after.push(s.result.spot - hits[0].at.x);
     }
     out.broken = broken / Math.max(1, carries);
     out.missed = missed / Math.max(1, carries);
-    out.powerShare = (100 * trucks) / Math.max(1, broken + missed);
+    out.powerMoves = (100 * trucks) / Math.max(1, moves);
     out.yacContact = mean(after);
   }
   if (slot === 'QB') {

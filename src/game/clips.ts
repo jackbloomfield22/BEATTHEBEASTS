@@ -4,7 +4,7 @@
 // were found: tools/sim/findclips.ts) and the browser (where the video is
 // recorded) run the same play to the same whistle.
 
-import { input, type CatchType, type InputFrame, type PlayState } from '@/sim';
+import { findStint, input, PERSONNEL, playById, simPlayer, type BeastsDefense, type CatchType, type ContendersRoster, type DefSlot, type InputFrame, type PlayState, type SnapshotLike } from '@/sim';
 import { dist, type V2 } from '@/sim/vec';
 
 export interface Clip {
@@ -15,6 +15,32 @@ export interface Clip {
   def: string;
   los: number;
   script(s: PlayState): InputFrame;
+  /** Played by the AI (false) instead of the player (default true): the identity clips watch the men, not the stick. */
+  user?: boolean;
+  /** One man swapped into the classic line-up (the identity clips). */
+  swap?: Swap;
+}
+
+/** A player swapped in for a clip: into an offensive slot of the play (QB, RB, X, Z, SLOT, TE) or a Beasts slot. */
+export interface Swap {
+  off?: 'QB' | 'RB' | 'X' | 'Z' | 'SLOT' | 'TE';
+  def?: DefSlot;
+  name: string;
+  pos: string;
+}
+
+/** The line-up with `swap` in (his highest-rated stint at the position, the jersey number of the man he replaces). */
+export function withSwap(teams: { team: ContendersRoster; beasts: BeastsDefense }, play: string, swap: Swap, snap: SnapshotLike): { team: ContendersRoster; beasts: BeastsDefense } {
+  const e = findStint(snap, swap.name, swap.pos);
+  if (!e) throw new Error(`clip swap: ${swap.name} (${swap.pos}) not in the snapshot`);
+  const team = { ...teams.team };
+  const beasts = { ...teams.beasts, base: { ...teams.beasts.base } };
+  if (swap.off) {
+    const key = swap.off === 'QB' ? 'QB' : PERSONNEL[playById(play).formation.personnel][swap.off];
+    team[key] = simPlayer(e, team[key].num);
+  }
+  if (swap.def) beasts.base[swap.def] = simPlayer(e, beasts.base[swap.def].num);
+  return { team, beasts };
 }
 
 /** Nearest free defender to the carrier (yd). */
@@ -160,3 +186,9 @@ export const CONCEPTS: Clip[] = [
   // The scramble drill: the QB escapes right, the X breaks off his route and works back across to him (12 yd).
   { id: 'scramble-drill', title: 'Scramble drill', seed: 9, play: 'trips-y-cross', def: 'cover3', los: 30, script: concept({ icon: 4, at: 150, scramble: { at: 110, dir: { x: 0.25, y: 1 } } }) },
 ];
+
+// The side-by-side identity videos (Playtest 2, "every player is himself"):
+// each pair the same play, seed and coverage with one man swapped, found by
+// tools/sim/findidentity.ts where the contrast shows on that snap. Filled in
+// from its output.
+export const IDENTITY: Clip[] = [];

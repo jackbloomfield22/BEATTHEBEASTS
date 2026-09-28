@@ -19,17 +19,24 @@ import { has, more } from './traits';
  * mass terms). With the steeper skill slope (TACKLE_K) the base comes down so
  * an average tackler on an average back lands where 2.4 and 3.2 did.
  */
-const TACKLE0 = 2.11;
+const TACKLE0 = 2.27;
 /**
  * The skill slope (logit per unit of Tackle over Break Tackle). Playtest 2,
  * identity harness: at 3.2, with Tackle 60% of the tackler's side, Ed Reed
  * (Tackle 33) finished 88% of his tries and Kam Chancellor (95) 93%, a gap
- * no fan would see. At 5 with Tackle 75%: ~75% and ~97%.
+ * no fan would see. At 4 with Tackle 70% of it, in space against a 91 Break
+ * Tackle back: Reed ~64% (an Arm Tackler), Ronnie Lott (71) ~87%, Kam ~93%.
+ * (5 and 75% overshot: every 71-Tackle corner missed a quarter of his tries
+ * and 40-yard runs tripled.)
  */
-const TACKLE_K = 5;
+const TACKLE_K = 4;
 /** The juke and spin's evade: the logit at an average move against a good tackler from the side, and its slope (see tackleOdds). */
-const EVADE0 = -0.83;
+const EVADE0 = -1.2;
 const EVADE_K = 4.3;
+/** The stiff arm's and the truck's pull on the tackle logit (see tackleOdds). */
+const STIFF_K = 2.0;
+const TRUCK_K = 2.8;
+const TRUCK0 = 1.2;
 /** A QB behind the line is easier to bring down than a back (logit): the sack. */
 const QB_BACK_EDGE = 0.8;
 const logistic = (x: number): number => 1 / (1 + exp(-x));
@@ -91,7 +98,7 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
     const o = s.agents[k]!;
     return o.side === d.side && o.i !== d.i && !o.down && dist(o.pos, c.pos) < 1.6;
   }).length;
-  const tackle = d.fx.a('tackle') * 0.75 + d.fx.a('hitPower') * 0.15 + d.fx.a('pursuit') * 0.1;
+  const tackle = d.fx.a('tackle') * 0.7 + d.fx.a('hitPower') * 0.15 + d.fx.a('pursuit') * 0.15;
   // A quarterback behind the line isn't a back running through a tackle
   // (Playtest 1/2: a scrambling QB shrugged off the end chasing him on every
   // long scramble; the tackle was broken as an arm tackle from behind by a
@@ -110,16 +117,26 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
     // 4·(Elusiveness − ½ Tackle − 0.3 Pursuit) + 0.6 a 48-Elusiveness back
     // beat a good tackler from the side 41% of the time, so Brandon Jacobs
     // juked, and tacklers were missed 0.3–0.5 a carry). Now from the side
-    // against a good tackler (Tackle and Pursuit 90): ~55% for a 99, ~30%
-    // for a 75, ~12% for a 48; squared up, about half that.
-    const skill = counter - 0.75 - (d.fx.a('tackle') * 0.5 + d.fx.a('pursuit') * 0.3 - 0.72);
+    // against a good tackler: ~46% for a 99, ~23% for a 75, ~9% for a 48;
+    // squared up, about half that.
+    // The tackler's side: Tackle, Pursuit and his own Agility (a corner who
+    // can change direction stays with a cut; a lineman in space doesn't),
+    // centred on a good tackler (all three ~87).
+    const skill = counter - 0.75 - (d.fx.a('tackle') * 0.4 + d.fx.a('pursuit') * 0.3 + d.fx.a('agility') * 0.3 - 0.87);
     evade = logistic(EVADE0 + EVADE_K * skill + (squared ? -1.2 : 0));
   }
   // Baseline ~85% per attempt for an even matchup (NFL missed-tackle rate
   // runs 10–15% of attempts: PFF / Sports Info Solutions charting).
   let x = TACKLE0 + TACKLE_K * (tackle - counter * 0.85) - (qbBack ? 0.9 : 1.8) * massEdge + 0.7 * gang + (qbBack ? QB_BACK_EDGE : 0);
-  if (mv === 'stiffArm') x -= 0.5 * c.fx.a('stiffArm');
-  if (mv === 'truck') x -= 0.8 * c.fx.a('trucking') * (c.fx.mass / (c.fx.mass + d.fx.mass)) * 2 - 0.4;
+  // The power moves, at par with the juke (Playtest 2, identity harness: at
+  // 0.5·Stiff Arm and 0.8·Trucking a stiff arm turned a 93% tackle into a
+  // 91% one while a juke beat the man a third of the time, so every back
+  // juked and Brandon Jacobs ran like Jamaal Charles). Against a good
+  // tackler: a 93 stiff arm from the side keeps him up ~25% (30% for a Stiff
+  // Arm King); a 97 truck head on by a 264-lb back ~28%, a 66 by a 199-lb
+  // one ~3%.
+  if (mv === 'stiffArm') x -= STIFF_K * c.fx.a('stiffArm');
+  if (mv === 'truck') x -= TRUCK_K * c.fx.a('trucking') * (c.fx.mass / (c.fx.mass + d.fx.mass)) * 2 - TRUCK0;
   if (headOn < -0.3 && !qbBack) x -= 0.4; // arm tackles from behind get broken more (not on a QB still behind the line)
   // The traits, as the catalog words them: a factor on the chance he gets
   // away (the miss), so "20% more often" is 1.2.

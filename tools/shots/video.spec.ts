@@ -17,8 +17,12 @@ import { test, type Page } from '@playwright/test';
 // container renders ~2 frames a minute, and 20 still reads a cut).
 
 const CONCEPTS = !!process.env.BTB_CONCEPTS;
-const OUT = CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
-const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS ? 20 : 30));
+// BTB_IDENTITY=1: the side-by-side identity pairs (Playtest 2): each pair's
+// two clips (<pair>-a, <pair>-b: the same play with one man swapped) are
+// recorded, then put side by side in <pair>.mp4.
+const IDENTITY = !!process.env.BTB_IDENTITY;
+const OUT = IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
+const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
 const LEAD_IN = Math.round(FPS * 1.2);
@@ -31,7 +35,7 @@ const QUALITY = process.env.BTB_VIDEO_QUALITY ?? 'medium';
 
 type Clip = { id: string; title: string };
 type Win = {
-  __btbPractice: { runner: { paused: boolean; state: { result: unknown; tick: number; phase: string } } | null; callClip(c: unknown): void; tickWith(f: unknown): void };
+  __btbPractice: { runner: { paused: boolean; state: { result: unknown; tick: number; phase: string } } | null; callClip(c: unknown): void | Promise<void>; tickWith(f: unknown): void };
   __btbPracticeUi: { getState(): { stage: string } };
   __btbGameReady?: boolean;
   __btbClips(): Promise<(Clip & { script(s: unknown): unknown })[]>;
@@ -70,7 +74,7 @@ async function record(page: Page, clip: Clip) {
   await page.evaluate(async (id) => {
     const w = window as unknown as Win;
     const c = (await w.__btbClips()).find((x) => x.id === id)!;
-    w.__btbPractice.callClip(c);
+    await w.__btbPractice.callClip(c);
   }, clip.id);
   await pump('window.__btbGameReady === true');
   await page.evaluate(() => void ((window as unknown as Win).__btbPractice.runner!.paused = true));
@@ -120,11 +124,17 @@ async function record(page: Page, clip: Clip) {
 }
 
 const CONCEPT_IDS = ['slant', 'out', 'curl', 'go', 'post', 'corner', 'crosser', 'screen', 'back-shoulder', 'scramble-drill'];
-const IDS = (CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || process.env.BTB_CLIP === id);
+const PAIRS = ['speed', 'elusive', 'accuracy', 'rush', 'coverage'];
+const IDS = (IDENTITY ? PAIRS.flatMap((p) => [`${p}-a`, `${p}-b`]) : CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || id.startsWith(process.env.BTB_CLIP));
 test.use({ viewport: { width: W, height: H } });
 for (const id of IDS) {
   test(`feel video · ${id}`, async ({ page }) => {
     if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
     await record(page, { id, title: id });
+    // The second of a pair: the two side by side, held on the last frame of the shorter one.
+    if (IDENTITY && id.endsWith('-b')) {
+      const pair = id.slice(0, -2);
+      execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-i', `${OUT}/${pair}-a.mp4`, '-i', `${OUT}/${pair}-b.mp4`, '-filter_complex', '[0:v]tpad=stop=-1:stop_mode=clone[a];[1:v]tpad=stop=-1:stop_mode=clone[b];[a][b]hstack=inputs=2:shortest=0[v];[v]trim=duration=12[o]', '-map', '[o]', '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${OUT}/${pair}.mp4`]);
+    }
   });
 }

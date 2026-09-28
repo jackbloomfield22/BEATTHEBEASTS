@@ -12,9 +12,9 @@ import { createPlay, defenseFor, offenseFor, type BeastsDefense, type Contenders
 import { getSettings } from '@/app/settings';
 import { Controls } from './controls';
 import { describe, type ResultCard } from './describe';
-import { loadPracticeRosters } from './rosters';
+import { loadPracticeRosters, loadSnapshot } from './rosters';
 import { SimRunner } from './runner';
-import type { Clip } from './clips';
+import { withSwap, type Clip } from './clips';
 import { routeOf } from '@/sim/ai';
 import type { OffPlay } from '@/sim/plays';
 import { detectSynergies } from '@/engine/ratings/traits/synergies';
@@ -292,9 +292,14 @@ class PracticeSession {
   }
 
   /** A scripted clip's play (the feel videos): its seed, coverage and spot. Step it with tickWith. */
-  callClip(c: Clip): void {
+  /** The classic line-up, kept while clips swap men in and out. */
+  private clipTeams: { team: ContendersRoster; beasts: BeastsDefense } | null = null;
+
+  async callClip(c: Clip): Promise<void> {
     set({ playId: c.play });
-    this.setUp(c.play, c.seed, defById(c.def), { ...startSituation(0, 0), los: c.los, ballY: 0, toGo: 10, down: 1 }, true);
+    this.clipTeams ??= this.teams;
+    if (this.clipTeams) this.teams = c.swap ? withSwap(this.clipTeams, c.play, c.swap, await loadSnapshot()) : this.clipTeams;
+    this.setUp(c.play, c.seed, defById(c.def), { ...startSituation(0, 0), los: c.los, ballY: 0, toGo: 10, down: 1 }, true, c.user ?? true);
     // Held until the script steps it: time before the snap changes the play
     // (the concept videos: pre-snap ticks run while the page loaded took the
     // go route from a 48-yard catch to a drop), and Node snaps on tick 0.
@@ -332,7 +337,7 @@ class PracticeSession {
   }
 
   /** `clip`: a scripted clip's play, set up exactly as Node finds it (createPlay's defaults: no chemistry, fatigue or difficulty from this session). */
-  private setUp(playId: string, seed: number, def: DefCall, sit: Situation, clip = false): void {
+  private setUp(playId: string, seed: number, def: DefCall, sit: Situation, clip = false, user = true): void {
     if (!this.rosters) return;
     this.closeHot();
     const play = playById(playId);
@@ -347,7 +352,7 @@ class PracticeSession {
       los: sit.los,
       ballY: sit.ballY,
       toGo: sit.toGo,
-      user: true,
+      user,
       difficulty: clip ? undefined : this.difficulty,
       fatigue: clip ? undefined : { ...this.fatigue },
       chem: clip ? undefined : this.chemistry(play),
@@ -630,7 +635,7 @@ if (import.meta.env.DEV) {
     __btbInput: Input,
     __btbClips: async () => {
       const m = await import('./clips');
-      return [...m.CLIPS, ...m.CONCEPTS];
+      return [...m.CLIPS, ...m.CONCEPTS, ...m.IDENTITY];
     },
     // The browser half of the determinism check (e2e/practice.spec.ts).
     __btbSimHashes: async () => (await import('./determinism')).simHashes(await loadPracticeRosters()),
