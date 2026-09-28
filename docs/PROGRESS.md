@@ -11,6 +11,7 @@
 - **M5.5 Game feel:** merged (PR #8), with the round-two fixes (diagonal speed, the automatic burst, driven throws, no slowdown at the catch, defenders that don't bunch).
 - **M6 Full game:** built on `claude/trusting-ptolemy-m2i78d`, PR open. The draft in the Contenders' locker room, and a full game against the Beasts from Quick Play, Classic, Film Room or the Daily through the walk-out, every possession, kicks, the two-minute drill and overtime to the results screen. **Perf gate closed:** mid-game on the preview, Classic, Ultra (auto-selected) on your M1 Pro at 100% resolution (2029×1023): 88.4 fps average, 11.3 ms, p99 12.8 ms, 206 draw calls, 1.71 M triangles.
 - **M6.5 Gameplay pass:** in progress on `claude/m65-gameplay` (brief: `docs/M6_5_BRIEF.md`, plus the gameplay findings of Playtest 1). The 11-point brief is done: #1–11, the ten concept videos and their critique (below). Still to do in M6.5, from `docs/PLAYTEST-1.md`: the passing findings (live aim and lead, ball physics, receivers meeting the ball, contested-catch contact, routes stopping, screen target marked), running and QB (scramble contain, ratings visible on the field with a top-speed harness check), the Playtest 2 gameplay items and the identity harness, and the new item #12 (tackling as a resolution over several frames, collision capsules per body type, skinning at speed).
+- **M6.6 clock and kicking:** built on `m66-clock-kicking` (from `claude/m65-gameplay`): a real game clock (four quarters, default 5 minutes, the Daily fixed at 5, Quick Play keeps the drive count), the 40/25-second play clock and delay of game, the two-minute warning, halftime; aim-then-charge kicking for PATs, field goals and punts, timed from the input events; every yardage whole. Write-up and critique: `docs/m66/CLOCK_KICKING.md`, stills in `docs/screenshots/m6.6/`.
 - **M6.6** (own branch after M6.5, from `docs/PLAYTEST-1.md`): a real game clock and play clock, hold-to-sprint, the white Contenders kit, the O-line in the draft, the draft and locker-room fixes, controller prompts everywhere, the one-screen box score and the data audit through 2025.
 - **Next: M7** (presentation): the tunnel reveal grows from the walk-out, pre-game, broadcast overlay, the Beasts' possession montage, instant replay, touchdown celebrations (the last three per `docs/PLAYTEST-1.md`), commentary, audio.
 - **Playtest 1** (owner's notes and decisions, 2026-09-27): `docs/PLAYTEST-1.md` is the plan of record for the M6.5 additions, M6.6 and those M7 items.
@@ -37,6 +38,13 @@ These are bugs and dead ends found in `legacy/beat-the-beasts.jsx` during planni
 | L13 | `todayKey` uses the player's local date | 4606 | Kept on purpose (Wordle-style: the daily flips at local midnight) |
 
 ## Milestone log
+
+### M6.6 Game clock, play clock and kicking (built, branch `m66-clock-kicking`)
+
+The clock half of Playtest 1 decision 1 and the kicking item of Playtest 2. Full write-up, rules table, tests and the honest critique of the stills: `docs/m66/CLOCK_KICKING.md`.
+- Timed games (Classic, Film Room, the Daily): four quarters (setting: 3/5/8/10/15 min, default 5; settings v8), the Daily fixed at 5 minutes; whole-second clock off the sim's play durations; stops by NFL rule (out of bounds only late in a half); an accelerated huddle (the play clock at 25 when the call comes up, 15 s off a running clock) and the no-huddle hurry-up late; delay of game; the two-minute warning; quarter ends (the wind turns with the teams); halftime (you receive); the Beasts' possessions on the clock, fitted to the half. Quick Play keeps its rounds and M6 drill.
+- Kicking: aim (keys, D-pad, stick, mouse; a dashed aim line, a goal-mouth or landing ring and wind chevrons on the field), hold to charge, release inside a green window sliding up the meter. Press and release timed from the input events (`Input.onRelease`, the pad's own timestamp). Punts are real flights with returns, fair catches, touchbacks and coffin corners, a spread punt set and coverage.
+- No `src/sim` change; the determinism golden is as pinned.
 
 ### M6.5 Gameplay pass (in progress)
 
