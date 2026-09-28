@@ -210,7 +210,7 @@ Named anchors, M2 value (rank of 634) → now. Air = intended air yards ratio vs
 
 </details>
 
-Arm traits shown on QBs (after combinations and the four-trait cap), M2 → now: Cannon 26 → 28, Bomb Squad 36 → 36, Laser 40 → 31, Gunslinger 15 → 23, Riverboat Gambler 12 → 13, Noodle Arm 63 → 64. Every kept trait still has at least five holders and none always appears alongside another (tests/ratings-traits.test.ts), so no trait was cut.
+Arm traits shown on QBs (after combinations and the four-trait cap), M2 → now: Cannon 26 → 28, Bomb Squad 36 → 36, Laser 40 → 30, Gunslinger 15 → 23, Riverboat Gambler 12 → 13, Noodle Arm 63 → 64. Every kept trait still has at least five holders and none always appears alongside another (tests/ratings-traits.test.ts), so no trait was cut.
 
 Known limit: air yards reward all-or-nothing deep passers whatever their arm (Tim Tebow and Drew Stanton rank near the top on them). The grade can only correct that where a cited description exists.
 
@@ -853,7 +853,7 @@ No attribute has more than 5 players at 99.
 | 13 | Fran Tarkenton (MIN 1970s) | 94 | medium | 97 | 96 | 94 | 89 | 97 | Backyard Ball, Maestro, Volume Passer, Deep Ball Artist |
 | 14 | Tom Brady (NE 2000s) | 94 | high | 95 | 95 | 93 | 94 | 96 | Maestro, Air Raid, Climber, Deep Ball Artist |
 | 15 | Lamar Jackson (BAL 2020s) | 94 | high | 91 | 92 | 84 | 97 | 95 | Run-Pass Nightmare, Bomb Squad, Maestro, Red Zone Sniper |
-| 16 | Lamar Jackson (BAL 2010s) | 93 | high | 92 | 92 | 91 | 94 | 95 | Run-Pass Nightmare, Unflappable, Deep Ball Artist, Red Zone Sniper |
+| 16 | Lamar Jackson (BAL 2010s) | 93 | high | 92 | 92 | 91 | 94 | 95 | Run-Pass Nightmare, Unflappable, Red Zone Sniper, Deep Ball Artist |
 | 17 | Brett Favre (GB 1990s) | 93 | medium | 95 | 95 | 82 | 95 | 97 | Air Raid, Maestro, Deep Ball Artist, Off-Platform |
 | 18 | Patrick Mahomes (KC 2020s) | 93 | high | 91 | 92 | 86 | 92 | 94 | Backyard Ball, Unflappable, Volume Passer, Bomb Squad |
 | 19 | Roger Staubach (DAL 1970s) | 93 | medium | 94 | 94 | 95 | 92 | 91 | Backyard Ball, Maestro, Bomb Squad, Efficiency King |
@@ -892,7 +892,7 @@ No attribute has more than 5 players at 99.
 | 20 | Larry Brown (WAS 1970s) | 93 | medium | 92 | 88 | 89 | 94 | 92 | Human Joystick, Receiving Back, Patient Runner, Tackle Breaker |
 | 21 | William Andrews (ATL 1980s) | 93 | medium | 92 | 90 | 92 | 94 | 93 | Swiss Army Knife, Human Joystick, Home Run Hitter, Tackle Breaker |
 | 22 | Billy Sims (DET 1980s) | 93 | medium | 92 | 91 | 88 | 91 | 89 | Bell Cow, Swiss Army Knife, Human Joystick, Patient Runner |
-| 23 | Edgerrin James (IND 1990s) | 93 | high | 94 | 93 | 94 | 94 | 94 | Human Joystick, Bell Cow, Lightning in a Bottle, Stiff Arm King |
+| 23 | Edgerrin James (IND 1990s) | 93 | high | 94 | 93 | 94 | 94 | 94 | Bell Cow, Human Joystick, Lightning in a Bottle, Stiff Arm King |
 | 24 | Robert Smith (MIN 2000s) | 93 | high | 94 | 92 | 96 | 87 | 88 | Human Joystick, Swiss Army Knife, Spin Cycle, Tackle Breaker |
 | 25 | Marshall Faulk (IND 1990s) | 93 | medium | 91 | 90 | 92 | 95 | 94 | Human Joystick, Lightning in a Bottle, Receiving Back, Low Center of Gravity |
 
@@ -912,7 +912,7 @@ No attribute has more than 5 players at 99.
 | 8 | Paul Warfield (MIA 1970s) | 95 | medium | 93 | 93 | 98 | 95 | 97 | Big Play, Mr. Reliable, Red Zone Threat, Highlight Reel |
 | 9 | Julio Jones (ATL 2010s) | 95 | high | 94 | 94 | 95 | 94 | 95 | Human Highlight, Go-To Guy, Mismatch, Deep Threat |
 | 10 | Justin Jefferson (MIN 2020s) | 95 | high | 95 | 95 | 97 | 92 | 96 | Go-To Guy, YAC Monster, Highlight Reel, Release Artist |
-| 11 | John Jefferson (LAC 1980s) | 95 | medium | 96 | 94 | 94 | 94 | 96 | Mr. Reliable, Highlight Reel, Contested Catch King, YAC Monster |
+| 11 | John Jefferson (LAC 1980s) | 95 | medium | 96 | 94 | 94 | 94 | 96 | Go-To Guy, Highlight Reel, Contested Catch King, Release Artist |
 | 12 | Marvin Harrison (IND 2000s) | 95 | high | 97 | 96 | 91 | 90 | 98 | Go-To Guy, Release Artist, Sideline Toe-Tap, Route Technician |
 | 13 | Herman Moore (DET 1990s) | 95 | medium | 96 | 95 | 91 | 97 | 96 | Go-To Guy, Contested Catch King, Blocking WR, Release Artist |
 | 14 | Andre Rison (ATL 1990s) | 94 | medium | 95 | 94 | 92 | 93 | 95 | Go-To Guy, YAC Monster, Head Fake, Contested Catch King |
@@ -1562,6 +1562,7 @@ Catalog, gameplay effects and icons: `docs/TRAITS.md`. Engine: `src/engine/ratin
 - **Three kinds of signal**, so traits don't all say the same thing: *physical* (measurables and body, era-translated), *technical* (attribute thresholds) and *production* (stat signatures the attributes don't capture on their own: share of the team's catches, yards per catch, TDs per touch, attempts vs the league).
 - **Up to 4 per player, at most 2 negatives.** A combination replaces its two parts and counts as one. The best trait of each facet (for a QB: arm, pocket and legs, mind, style) is shown first, then the rest by rank. Rank = how far past its gates + an elite bonus + a combination bonus + how rare the trait is among the player's peers (similar OVR at his position), so a star shows what sets him apart from the other stars.
 - **Within the stint, never the career arc:** no gate reads age, experience or a count of seasons (tested).
+- **Short stints on production gates (M6.6):** the percentile tables hold each stint's stat signals shrunk toward the position average by games, as the attributes read them. At QB, RB, WR and TE a stint with at least the signal's shrinkage constant k in games is placed in that table as if it had at least the position's median sample, so an 11-game stint is judged like a typical one instead of landing mid-table whatever it produced (Davante Adams, NYJ 2024: catches per game 95th percentile on his numbers, 84th after shrinkage). The tables don't move; longer stints, stints under k, the per-play TD rates counted in games, and the defensive pools keep their placement. `gateSample` in `src/engine/ratings/traits/metrics.ts`; diagnosis in `docs/m66/DATA_AUDIT.md`.
 - **The cut rules** (tested): every kept trait is held by at least 5 players; no trait's holders hold another trait 95% of the time or more (combination parts excepted); at least 40% of every position has no trait.
 - **Why lines** quote the player's own numbers and where they rank ("Speed 97 (top 2% of WRs)"). Film Room hides them with the other numbers.
 
@@ -1569,10 +1570,10 @@ Catalog, gameplay effects and icons: `docs/TRAITS.md`. Engine: `src/engine/ratin
 
 | Pos | Players | No trait | 1 | 2 | 3 | 4 |
 |---|---|---|---|---|---|---|
-| QB | 637 | **40%** | 168 | 83 | 34 | 96 |
-| RB | 824 | **45%** | 161 | 103 | 52 | 141 |
-| WR | 980 | **42%** | 192 | 134 | 62 | 185 |
-| TE | 559 | **41%** | 114 | 70 | 54 | 94 |
+| QB | 637 | **40%** | 165 | 84 | 34 | 99 |
+| RB | 824 | **44%** | 159 | 106 | 52 | 143 |
+| WR | 980 | **41%** | 193 | 133 | 65 | 188 |
+| TE | 559 | **41%** | 114 | 70 | 52 | 96 |
 | DE | 99 | **44%** | 34 | 12 | 7 | 2 |
 | DT | 54 | **44%** | 22 | 4 | 1 | 3 |
 | LB | 105 | **44%** | 25 | 15 | 7 | 12 |
@@ -1589,35 +1590,35 @@ Earned: passes the gates. Held: keeps it after combinations and the four-trait c
 |---|---|---|---|---|---|---|---|
 | Cannon | technical | elite | 64 | 64 | 28 | Deep Ball Artist (56%) | Steve Young (SF 90s), Patrick Mahomes (KC 10s), Peyton Manning (IND 00s) |
 | Deep Ball Artist | technical | elite | 64 | 60 | 24 | Cannon (60%) | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s) |
-| Laser | technical | standard | 65 | 31 | 31 | Cannon (48%) | Bert Jones (IND 70s), John Elway (DEN 90s), Brett Favre (MIN 00s) |
-| Quick Trigger | technical | elite | 64 | 35 | 8 | Ice in His Veins (77%) | Patrick Mahomes (KC 10s), Dan Marino (MIA 80s), Drew Brees (NO 00s) |
+| Laser | technical | standard | 65 | 30 | 30 | Cannon (47%) | Bert Jones (IND 70s), John Elway (DEN 90s), Brett Favre (MIN 00s) |
+| Quick Trigger | technical | elite | 64 | 34 | 7 | Ice in His Veins (79%) | Patrick Mahomes (KC 10s), Dan Marino (MIA 80s), Drew Brees (NO 00s) |
 | Escape Artist | technical | standard | 33 | 30 | 8 | Off-Platform (73%) | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s) |
-| Dual Threat | physical | elite | 39 | 39 | 13 | Designed Runner (67%) | Lamar Jackson (BAL 20s), Lamar Jackson (BAL 10s), Russell Wilson (SEA 10s) |
+| Dual Threat | physical | elite | 39 | 39 | 10 | Designed Runner (74%) | Lamar Jackson (BAL 20s), Lamar Jackson (BAL 10s), Russell Wilson (SEA 10s) |
 | Off-Platform | technical | elite | 64 | 53 | 31 | Escape Artist (42%) | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s) |
-| Climber | technical | standard | 66 | 61 | 61 | Volume Passer (34%) | Peyton Manning (IND 00s), Kurt Warner (LAR 90s), Dan Marino (MIA 80s) |
-| Designed Runner | production | elite | 64 | 55 | 29 | Dual Threat (47%) | Lamar Jackson (BAL 20s), Lamar Jackson (BAL 10s), Russell Wilson (SEA 10s) |
+| Climber | technical | standard | 66 | 61 | 61 | Volume Passer (36%) | Peyton Manning (IND 00s), Kurt Warner (LAR 90s), Dan Marino (MIA 80s) |
+| Designed Runner | production | elite | 69 | 60 | 31 | Dual Threat (48%) | Lamar Jackson (BAL 20s), Lamar Jackson (BAL 10s), Russell Wilson (SEA 10s) |
 | −Statue | physical | standard | 43 | 37 | 37 | Climber (32%) | Tom Brady (NE 10s), Brett Favre (MIN 00s), Dan Marino (MIA 90s) |
 | Surgeon | technical | elite | 58 | 45 | 9 | Field General (80%) | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Peyton Manning (IND 00s) |
 | Field General | technical | elite | 64 | 49 | 13 | Surgeon (73%) | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Peyton Manning (IND 00s) |
-| Game Manager | production | standard | 29 | 28 | 28 | Noodle Arm (25%) | Jim McMahon (CHI 80s), Tyrod Taylor (BUF 10s), Jim Harbaugh (IND 90s) |
+| Game Manager | production | standard | 29 | 28 | 28 | Designed Runner (25%) | Jim McMahon (CHI 80s), Tyrod Taylor (BUF 10s), Jim Harbaugh (IND 90s) |
 | Ice in His Veins | technical | elite | 64 | 34 | 7 | Quick Trigger (79%) | Patrick Mahomes (KC 10s), Dan Marino (MIA 80s), Drew Brees (NO 00s) |
 | Pre-Snap Wizard | production | standard | 62 | 28 | 28 | Climber (46%) | Joe Montana (SF 90s), Brian Sipe (CLE 80s), Ben Roethlisberger (PIT 10s) |
-| Checkdown Charlie | production | standard | 14 | 12 | 12 | Climber (33%) | Kirk Cousins (MIN 10s), Ken O'Brien (NYJ 80s), Sam Bradford (MIN 10s) |
+| Checkdown Charlie | production | standard | 15 | 13 | 13 | Climber (31%) | Kirk Cousins (MIN 10s), Ken O'Brien (NYJ 80s), Sam Bradford (MIN 10s) |
 | Gunslinger | technical | standard | 36 | 36 | 23 | Turnover Machine (36%) | Kurt Warner (LAR 00s), Cam Newton (CAR 10s), Sam Darnold (SEA 20s) |
-| Volume Passer | production | elite | 45 | 44 | 28 | Deep Ball Artist (57%) | Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s), Peyton Manning (IND 00s) |
-| Efficiency King | production | elite | 63 | 32 | 32 | Surgeon (47%) | Joe Montana (SF 80s), Rich Gannon (LV 00s), Boomer Esiason (CIN 80s) |
-| Red Zone Sniper | production | elite | 39 | 33 | 17 | Deep Ball Artist (88%) | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s) |
-| −Turnover Machine | production | standard | 39 | 35 | 22 | Gunslinger (37%) | Kurt Warner (LAR 00s), Joe Namath (NYJ 70s), Eli Manning (NYG 10s) |
-| −Sack Magnet | production | standard | 40 | 34 | 34 | Designed Runner (35%) | Randall Cunningham (PHI 90s), Deshaun Watson (HOU 10s), Tyrod Taylor (BUF 10s) |
-| −Happy Feet | technical | standard | 64 | 57 | 57 | Turnover Machine (18%) | J.T. O'Sullivan (SF 00s), Justin Fields (CHI 20s), Joe Pisarcik (PHI 80s) |
+| Volume Passer | production | elite | 51 | 49 | 32 | Deep Ball Artist (51%) | Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s), Peyton Manning (IND 00s) |
+| Efficiency King | production | elite | 66 | 34 | 34 | Deep Ball Artist (44%) | Joe Montana (SF 80s), Rich Gannon (LV 00s), Boomer Esiason (CIN 80s) |
+| Red Zone Sniper | production | elite | 40 | 34 | 17 | Deep Ball Artist (85%) | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s) |
+| −Turnover Machine | production | standard | 40 | 36 | 23 | Gunslinger (36%) | Kurt Warner (LAR 00s), Joe Namath (NYJ 70s), Eli Manning (NYG 10s) |
+| −Sack Magnet | production | standard | 42 | 37 | 37 | Designed Runner (35%) | Randall Cunningham (PHI 90s), Deshaun Watson (HOU 10s), Tyrod Taylor (BUF 10s) |
+| −Happy Feet | technical | standard | 64 | 56 | 56 | Turnover Machine (18%) | J.T. O'Sullivan (SF 00s), Justin Fields (CHI 20s), Joe Pisarcik (PHI 80s) |
 | −Noodle Arm | technical | standard | 64 | 64 | 64 | Happy Feet (14%) | Alex Smith (KC 10s), Sam Bradford (MIN 10s), Chad Pennington (MIA 00s) |
 | Bomb Squad (Cannon + Deep Ball Artist) | technical | elite | 0 | 36 | 36 | Red Zone Sniper (50%) | Steve Young (SF 90s), Patrick Mahomes (KC 10s), Peyton Manning (IND 00s) |
 | Backyard Ball (Escape Artist + Off-Platform) | technical | elite | 0 | 22 | 22 | Deep Ball Artist (50%) | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s) |
 | Riverboat Gambler (Gunslinger + Turnover Machine) | production | standard | 0 | 13 | 13 | Cannon (38%) | Kurt Warner (LAR 00s), Joe Namath (NYJ 70s), Jay Cutler (CHI 10s) |
 | Maestro (Surgeon + Field General) | technical | elite | 0 | 36 | 36 | Deep Ball Artist (81%) | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Peyton Manning (IND 00s) |
 | Unflappable (Quick Trigger + Ice in His Veins) | technical | elite | 0 | 27 | 27 | Deep Ball Artist (52%) | Patrick Mahomes (KC 10s), Dan Marino (MIA 80s), Drew Brees (NO 00s) |
-| Run-Pass Nightmare (Dual Threat + Designed Runner) | physical | elite | 0 | 26 | 26 | Off-Platform (50%) | Lamar Jackson (BAL 20s), Lamar Jackson (BAL 10s), Russell Wilson (SEA 10s) |
-| Air Raid (Volume Passer + Red Zone Sniper) | production | elite | 0 | 16 | 16 | Deep Ball Artist (94%) | Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s), Peyton Manning (IND 00s) |
+| Run-Pass Nightmare (Dual Threat + Designed Runner) | physical | elite | 0 | 29 | 29 | Off-Platform (45%) | Lamar Jackson (BAL 20s), Lamar Jackson (BAL 10s), Russell Wilson (SEA 10s) |
+| Air Raid (Volume Passer + Red Zone Sniper) | production | elite | 0 | 17 | 17 | Deep Ball Artist (88%) | Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s), Peyton Manning (IND 00s) |
 
 </details>
 
@@ -1625,34 +1626,34 @@ Earned: passes the gates. Held: keeps it after combinations and the four-trait c
 
 | Trait | Kind | Tier | Earned | Held | Shown | Partner (share) | Top holders |
 |---|---|---|---|---|---|---|---|
-| Home Run Hitter | production | standard | 74 | 69 | 30 | Ankle Breaker (59%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), O.J. Simpson (BUF 70s) |
+| Home Run Hitter | production | standard | 75 | 70 | 31 | Ankle Breaker (59%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), O.J. Simpson (BUF 70s) |
 | Burst | physical | elite | 82 | 82 | 43 | Liability in Protection (49%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), Chris Johnson (TEN 00s) |
 | Battering Ram | technical | elite | 82 | 74 | 65 | Stiff Arm King (65%) | Bo Jackson (LV 80s), Mike Alstott (TB 90s), Larry Csonka (MIA 70s) |
-| Stiff Arm King | technical | elite | 82 | 79 | 79 | Battering Ram (61%) | O.J. Simpson (BUF 70s), Saquon Barkley (PHI 20s), LaDainian Tomlinson (LAC 00s) |
-| Tackle Breaker | technical | elite | 82 | 67 | 33 | Patient Runner (54%) | Marshall Faulk (LAR 90s), O.J. Simpson (BUF 70s), Marshall Faulk (LAR 00s) |
+| Stiff Arm King | technical | elite | 82 | 78 | 78 | Battering Ram (62%) | O.J. Simpson (BUF 70s), Saquon Barkley (PHI 20s), LaDainian Tomlinson (LAC 00s) |
+| Tackle Breaker | technical | elite | 82 | 67 | 31 | Workhorse (54%) | Marshall Faulk (LAR 90s), O.J. Simpson (BUF 70s), Marshall Faulk (LAR 00s) |
 | Low Center of Gravity | physical | standard | 49 | 43 | 43 | Jump Cut (51%) | Barry Sanders (DET 90s), Walter Payton (CHI 70s), Walter Payton (CHI 80s) |
-| Freight Train | physical | standard | 15 | 13 | 13 | Stiff Arm King (31%) | Saquon Barkley (PHI 20s), Herschel Walker (DAL 80s), Fred Taylor (JAX 00s) |
+| Freight Train | physical | standard | 15 | 12 | 12 | Stiff Arm King (33%) | Saquon Barkley (PHI 20s), Herschel Walker (DAL 80s), Fred Taylor (JAX 00s) |
 | Ankle Breaker | technical | elite | 82 | 73 | 11 | Jump Cut (85%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), O.J. Simpson (BUF 70s) |
 | Spin Cycle | physical | standard | 72 | 42 | 42 | Burst (50%) | Christian McCaffrey (SF 20s), Robert Smith (MIN 00s), Ray Rice (BAL 10s) |
 | Hurdler | physical | elite | 82 | 71 | 71 | Fumble Risk (21%) | Saquon Barkley (PHI 20s), Saquon Barkley (NYG 10s), Curtis Martin (NYJ 00s) |
 | Jump Cut | technical | standard | 88 | 82 | 20 | Ankle Breaker (76%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), O.J. Simpson (BUF 70s) |
-| One-Cut | technical | standard | 50 | 14 | 14 | Jump Cut (57%) | Herschel Walker (DAL 80s), Matt Forte (CHI 10s), Jonathan Taylor (IND 20s) |
+| One-Cut | technical | standard | 50 | 13 | 13 | Jump Cut (54%) | Herschel Walker (DAL 80s), Matt Forte (CHI 10s), Jonathan Taylor (IND 20s) |
 | Patient Runner | technical | elite | 82 | 44 | 44 | Tackle Breaker (82%) | Marshall Faulk (LAR 00s), Roger Craig (SF 80s), Eric Dickerson (IND 80s) |
-| Workhorse | production | elite | 51 | 50 | 16 | Tackle Breaker (68%) | O.J. Simpson (BUF 70s), Saquon Barkley (PHI 20s), LaDainian Tomlinson (LAC 00s) |
-| Change of Pace | production | standard | 45 | 41 | 41 | Big-Play Back (41%) | Stephen Davis (WAS 90s), CJ Spiller (BUF 10s), Jerious Norwood (ATL 00s) |
+| Workhorse | production | elite | 54 | 53 | 17 | Tackle Breaker (68%) | O.J. Simpson (BUF 70s), Saquon Barkley (PHI 20s), LaDainian Tomlinson (LAC 00s) |
+| Change of Pace | production | standard | 47 | 44 | 44 | Big-Play Back (45%) | Stephen Davis (WAS 90s), CJ Spiller (BUF 10s), Jerious Norwood (ATL 00s) |
 | Receiving Back | technical | elite | 82 | 71 | 45 | Jump Cut (49%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), Marshall Faulk (LAR 00s) |
 | Third-Down Back | technical | standard | 43 | 27 | 27 | Stiff Arm King (52%) | Roger Craig (SF 80s), Freeman McNeil (NYJ 80s), Mike Alstott (TB 90s) |
 | Goal Line Hammer | production | elite | 53 | 48 | 39 | Battering Ram (19%) | Chuck Foreman (MIN 70s), Priest Holmes (KC 00s), Lydell Mitchell (IND 70s) |
-| Grinder | production | standard | 20 | 19 | 19 | Stiff Arm King (21%) | Joe Mixon (CIN 20s), Josh Jacobs (LV 20s), Melvin Gordon (LAC 10s) |
-| Big-Play Back | production | elite | 81 | 69 | 43 | Jump Cut (55%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), Marshall Faulk (LAR 00s) |
-| Scatback | physical | standard | 33 | 20 | 20 | Ankle Breaker (25%) | Christian McCaffrey (CAR 10s), Tiki Barber (NYG 00s), Charlie Garner (SF 90s) |
+| Grinder | production | standard | 25 | 24 | 24 | Workhorse (17%) | Joe Mixon (CIN 20s), Josh Jacobs (LV 20s), Joe Mixon (HOU 20s) |
+| Big-Play Back | production | elite | 87 | 75 | 49 | Jump Cut (52%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), Marshall Faulk (LAR 00s) |
+| Scatback | physical | standard | 34 | 21 | 21 | Jump Cut (29%) | Christian McCaffrey (CAR 10s), Tiki Barber (NYG 00s), Charlie Garner (SF 90s) |
 | −Fumble Risk | technical | standard | 82 | 72 | 72 | Hurdler (21%) | Ezekiel Elliott (DAL 10s), Bijan Robinson (ATL 20s), Frank Gore (SF 00s) |
 | −Straight-Line Only | physical | standard | 11 | 7 | 7 | Workhorse (14%) | Maurice Jones-Drew (JAX 10s), DeMarco Murray (TEN 10s), Joseph Addai (IND 00s) |
 | −Dancer | technical | standard | 11 | 9 | 9 | Liability in Protection (67%) | Michael Carter (ARI 20s), Bobby Hammond (NYG 70s), Ameer Abdullah (LV 20s) |
-| −Liability in Protection | technical | standard | 82 | 71 | 71 | Burst (56%) | Charlie Garner (PHI 90s), Eric Metcalf (CLE 90s), Joe Washington (IND 70s) |
+| −Liability in Protection | technical | standard | 82 | 69 | 69 | Burst (58%) | Charlie Garner (PHI 90s), Eric Metcalf (CLE 90s), Joe Washington (IND 70s) |
 | Short-Yardage Nightmare (Battering Ram + Goal Line Hammer) | technical | elite | 0 | 9 | 9 | Stiff Arm King (78%) | Franco Harris (PIT 70s), Stephen Davis (WAS 90s), John Riggins (WAS 70s) |
 | Human Joystick (Ankle Breaker + Jump Cut) | technical | elite | 0 | 62 | 62 | Home Run Hitter (58%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), O.J. Simpson (BUF 70s) |
-| Bell Cow (Workhorse + Tackle Breaker) | production | elite | 0 | 34 | 34 | Stiff Arm King (65%) | O.J. Simpson (BUF 70s), Saquon Barkley (PHI 20s), LaDainian Tomlinson (LAC 00s) |
+| Bell Cow (Workhorse + Tackle Breaker) | production | elite | 0 | 36 | 36 | Stiff Arm King (64%) | O.J. Simpson (BUF 70s), Saquon Barkley (PHI 20s), LaDainian Tomlinson (LAC 00s) |
 | Swiss Army Knife (Receiving Back + Big-Play Back) | production | elite | 0 | 26 | 26 | Ankle Breaker (81%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), Marshall Faulk (LAR 00s) |
 | Lightning in a Bottle (Burst + Home Run Hitter) | physical | elite | 0 | 39 | 39 | Ankle Breaker (77%) | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), Chris Johnson (TEN 00s) |
 
@@ -1665,24 +1666,24 @@ Earned: passes the gates. Held: keeps it after combinations and the four-trait c
 | Burner | physical | elite | 98 | 97 | 70 | YAC Monster (32%) | Calvin Johnson (DET 10s), Julio Jones (ATL 10s), Ja'Marr Chase (CIN 20s) |
 | Long Strider | physical | standard | 26 | 16 | 16 | Mismatch (25%) | Randy Moss (NE 00s), James Lofton (GB 70s), Matt Jones (JAX 00s) |
 | Skyscraper | physical | elite | 32 | 31 | 20 | Mismatch (42%) | Calvin Johnson (DET 10s), Randy Moss (MIN 00s), Randy Moss (MIN 90s) |
-| Big Body | physical | standard | 65 | 40 | 40 | Blocking WR (65%) | Otis Taylor (KC 70s), A.J. Brown (PHI 20s), Sterling Sharpe (GB 80s) |
+| Big Body | physical | standard | 65 | 39 | 39 | Blocking WR (64%) | Otis Taylor (KC 70s), A.J. Brown (PHI 20s), Sterling Sharpe (GB 80s) |
 | Twitch | physical | standard | 54 | 53 | 24 | Burner (57%) | Cliff Branch (LV 70s), Tyreek Hill (KC 20s), Tyreek Hill (KC 10s) |
-| Route Technician | technical | standard | 165 | 104 | 61 | Glue Hands (46%) | James Lofton (GB 80s), Paul Warfield (MIA 70s), John Jefferson (LAC 80s) |
-| Release Artist | technical | elite | 98 | 54 | 54 | Glue Hands (69%) | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
+| Route Technician | technical | standard | 165 | 102 | 61 | Glue Hands (45%) | James Lofton (GB 80s), Paul Warfield (MIA 70s), Marvin Harrison (IND 00s) |
+| Release Artist | technical | elite | 98 | 56 | 56 | Glue Hands (70%) | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
 | Slot Weapon | technical | standard | 65 | 52 | 52 | Route Technician (31%) | Antonio Brown (PIT 10s), Harold Jackson (LAR 70s), Steve Largent (SEA 70s) |
 | Deep Threat | technical | standard | 71 | 55 | 31 | Burner (49%) | Julio Jones (ATL 10s), Randy Moss (MIN 00s), Randy Moss (MIN 90s) |
 | Head Fake | technical | standard | 74 | 49 | 49 | YAC Monster (41%) | Andre Rison (ATL 90s), Tyreek Hill (MIA 20s), Jimmy Smith (JAX 90s) |
-| Glue Hands | technical | elite | 98 | 95 | 6 | Route Technician (51%) | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
+| Glue Hands | technical | elite | 98 | 95 | 6 | Alpha (51%) | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
 | Sideline Toe-Tap | technical | standard | 98 | 45 | 45 | Glue Hands (78%) | Marvin Harrison (IND 00s), Steve Largent (SEA 80s), Drew Pearson (DAL 70s) |
 | Highlight Reel | technical | elite | 98 | 62 | 35 | Glue Hands (47%) | Calvin Johnson (DET 10s), James Lofton (GB 80s), Paul Warfield (MIA 70s) |
 | Contested Catch King | technical | elite | 98 | 71 | 60 | Glue Hands (54%) | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
 | Blocking WR | technical | elite | 98 | 87 | 87 | Contested Catch King (39%) | Jerry Rice (SF 80s), Davante Adams (GB 20s), Terrell Owens (SF 00s) |
-| Chain Mover | production | standard | 69 | 55 | 55 | Glue Hands (24%) | Amon-Ra St. Brown (DET 20s), Tim Brown (LV 90s), Wes Welker (NE 00s) |
-| Alpha | production | elite | 61 | 60 | 14 | Glue Hands (77%) | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
-| Big Play | production | elite | 62 | 55 | 31 | Deep Threat (44%) | James Lofton (GB 80s), Paul Warfield (MIA 70s), Mike Quick (PHI 80s) |
-| Home Run Threat | production | standard | 77 | 46 | 46 | Big Play (43%) | Roy Green (ARI 80s), Wes Chandler (LAC 80s), Louis Lipps (PIT 80s) |
+| Chain Mover | production | standard | 73 | 58 | 58 | Glue Hands (22%) | Amon-Ra St. Brown (DET 20s), Tim Brown (LV 90s), Wes Welker (NE 00s) |
+| Alpha | production | elite | 67 | 66 | 18 | Glue Hands (73%) | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
+| Big Play | production | elite | 74 | 66 | 42 | Home Run Threat (36%) | James Lofton (GB 80s), Paul Warfield (MIA 70s), Mike Quick (PHI 80s) |
+| Home Run Threat | production | standard | 81 | 49 | 49 | Big Play (49%) | Roy Green (ARI 80s), Wes Chandler (LAC 80s), Louis Lipps (PIT 80s) |
 | Mismatch | physical | standard | 74 | 48 | 48 | YAC Monster (31%) | Julio Jones (ATL 10s), Ja'Marr Chase (CIN 20s), Cliff Branch (LV 70s) |
-| YAC Monster | technical | elite | 98 | 75 | 46 | Athlete (28%) | Justin Jefferson (MIN 20s), John Jefferson (LAC 80s), Andre Rison (ATL 90s) |
+| YAC Monster | technical | elite | 98 | 73 | 44 | Athlete (28%) | Justin Jefferson (MIN 20s), Andre Rison (ATL 90s), John Jefferson (LAC 70s) |
 | Red Zone Threat | production | elite | 64 | 47 | 47 | Drops (25%) | Paul Warfield (MIA 70s), Steve Largent (SEA 80s), Lynn Swann (PIT 70s) |
 | −Drops | technical | standard | 98 | 93 | 93 | Alligator Arms (20%) | Alec Pierce (IND 20s), Emeka Egbuka (TB 20s), Calvin Ridley (TEN 20s) |
 | −One-Speed | physical | standard | 78 | 73 | 73 | Blocking WR (37%) | Jerry Rice (SF 90s), Puka Nacua (LAR 20s), Irving Fryar (MIA 90s) |
@@ -1690,8 +1691,8 @@ Earned: passes the gates. Held: keeps it after combinations and the four-trait c
 | −Alligator Arms | technical | standard | 74 | 73 | 73 | Drops (41%) | Billy Johnson (TEN 70s), Eddie Bell (NYJ 70s), Leo Lewis (MIN 80s) |
 | Human Highlight (Burner + Highlight Reel) | physical | elite | 0 | 27 | 27 | Deep Threat (59%) | Calvin Johnson (DET 10s), Julio Jones (ATL 10s), Ja'Marr Chase (CIN 20s) |
 | Jump Ball King (Skyscraper + Contested Catch King) | physical | elite | 0 | 11 | 11 | Highlight Reel (55%) | Calvin Johnson (DET 10s), Randy Moss (MIN 00s), Randy Moss (MIN 90s) |
-| Go-To Guy (Alpha + Glue Hands) | production | elite | 0 | 46 | 46 | Release Artist (65%) | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
-| Mr. Reliable (Route Technician + Glue Hands) | technical | elite | 0 | 43 | 43 | Highlight Reel (47%) | James Lofton (GB 80s), Paul Warfield (MIA 70s), John Jefferson (LAC 80s) |
+| Go-To Guy (Alpha + Glue Hands) | production | elite | 0 | 48 | 48 | Release Artist (67%) | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
+| Mr. Reliable (Route Technician + Glue Hands) | technical | elite | 0 | 41 | 41 | Sideline Toe-Tap (46%) | James Lofton (GB 80s), Paul Warfield (MIA 70s), Mike Quick (PHI 80s) |
 | Vertical Nightmare (Deep Threat + Big Play) | production | elite | 0 | 24 | 24 | Burner (63%) | Randy Moss (MIN 90s), Gene Washington (SF 70s), Wesley Walker (NYJ 70s) |
 | Open-Field Menace (YAC Monster + Twitch) | physical | elite | 0 | 29 | 29 | Burner (59%) | Cliff Branch (LV 70s), Tyreek Hill (KC 20s), Tyreek Hill (KC 10s) |
 
@@ -1706,11 +1707,11 @@ Earned: passes the gates. Held: keeps it after combinations and the four-trait c
 | Red Zone Threat | production | elite | 33 | 32 | 32 | Drops (25%) | Dave Casper (LV 70s), Raymond Chester (LV 70s), Ben Coates (NE 90s) |
 | −Drops | technical | standard | 56 | 55 | 55 | Alligator Arms (20%) | Mo Alie-Cox (IND 20s), Vance McDonald (SF 10s), Jerramy Stevens (TB 00s) |
 | Seam Stretcher | physical | standard | 50 | 47 | 32 | YAC Monster (49%) | George Kittle (SF 20s), Travis Kelce (KC 10s), George Kittle (SF 10s) |
-| Move TE | technical | standard | 51 | 44 | 44 | Seam Stretcher (27%) | Shannon Sharpe (DEN 90s), Tony Gonzalez (ATL 10s), Dallas Clark (IND 00s) |
-| Safety Blanket | production | standard | 41 | 40 | 40 | Move TE (20%) | Jason Witten (DAL 10s), Tony Gonzalez (ATL 10s), Trey McBride (ARI 20s) |
-| Sure Hands | technical | elite | 56 | 51 | 37 | Complete TE (29%) | Dave Casper (LV 70s), Rob Gronkowski (NE 10s), George Kittle (SF 20s) |
+| Move TE | technical | standard | 51 | 45 | 45 | Seam Stretcher (27%) | Shannon Sharpe (DEN 90s), Tony Gonzalez (ATL 10s), Dallas Clark (IND 00s) |
+| Safety Blanket | production | standard | 40 | 39 | 39 | Move TE (21%) | Jason Witten (DAL 10s), Tony Gonzalez (ATL 10s), Trey McBride (ARI 20s) |
+| Sure Hands | technical | elite | 56 | 51 | 37 | Volume TE (31%) | Dave Casper (LV 70s), Rob Gronkowski (NE 10s), George Kittle (SF 20s) |
 | Big Slot | physical | standard | 30 | 22 | 22 | H-Back (36%) | Wesley Walls (CAR 90s), Russ Francis (NE 70s), Ben Coates (NE 90s) |
-| Volume TE | production | elite | 33 | 27 | 27 | Sure Hands (56%) | Kellen Winslow (LAC 80s), Travis Kelce (KC 20s), Jason Witten (DAL 00s) |
+| Volume TE | production | elite | 35 | 29 | 29 | Sure Hands (55%) | Kellen Winslow (LAC 80s), Travis Kelce (KC 20s), Jason Witten (DAL 00s) |
 | Sixth Lineman | technical | elite | 56 | 51 | 37 | Lead Blocker (75%) | Dave Casper (LV 70s), Rob Gronkowski (NE 10s), George Kittle (SF 20s) |
 | Complete TE | technical | standard | 44 | 29 | 29 | H-Back (55%) | Kellen Winslow (LAC 80s), Jason Witten (DAL 00s), Charle Young (PHI 70s) |
 | Pass Pro TE | technical | elite | 56 | 47 | 47 | Sixth Lineman (72%) | Dave Casper (LV 70s), Mark Bavaro (NYG 80s), Jason Witten (DAL 10s) |
@@ -1853,17 +1854,17 @@ Combinations redefined while tuning:
 | Riverboat Gambler | Gunslinger + Turnover Machine | QB | 13 | Kurt Warner (LAR 00s), Joe Namath (NYJ 70s), Jay Cutler (CHI 10s) |
 | Maestro | Surgeon + Field General | QB | 36 | Steve Young (SF 90s), Aaron Rodgers (GB 10s), Peyton Manning (IND 00s) |
 | Unflappable | Quick Trigger + Ice in His Veins | QB | 27 | Patrick Mahomes (KC 10s), Dan Marino (MIA 80s), Drew Brees (NO 00s) |
-| Run-Pass Nightmare | Dual Threat + Designed Runner | QB | 26 | Lamar Jackson (BAL 20s), Lamar Jackson (BAL 10s), Russell Wilson (SEA 10s) |
-| Air Raid | Volume Passer + Red Zone Sniper | QB | 16 | Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s), Peyton Manning (IND 00s) |
+| Run-Pass Nightmare | Dual Threat + Designed Runner | QB | 29 | Lamar Jackson (BAL 20s), Lamar Jackson (BAL 10s), Russell Wilson (SEA 10s) |
+| Air Raid | Volume Passer + Red Zone Sniper | QB | 17 | Aaron Rodgers (GB 10s), Patrick Mahomes (KC 10s), Peyton Manning (IND 00s) |
 | Short-Yardage Nightmare | Battering Ram + Goal Line Hammer | RB | 9 | Franco Harris (PIT 70s), Stephen Davis (WAS 90s), John Riggins (WAS 70s) |
 | Human Joystick | Ankle Breaker + Jump Cut | RB | 62 | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), O.J. Simpson (BUF 70s) |
-| Bell Cow | Workhorse + Tackle Breaker | RB | 34 | O.J. Simpson (BUF 70s), Saquon Barkley (PHI 20s), LaDainian Tomlinson (LAC 00s) |
+| Bell Cow | Workhorse + Tackle Breaker | RB | 36 | O.J. Simpson (BUF 70s), Saquon Barkley (PHI 20s), LaDainian Tomlinson (LAC 00s) |
 | Swiss Army Knife | Receiving Back + Big-Play Back | RB | 26 | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), Marshall Faulk (LAR 00s) |
 | Lightning in a Bottle | Burst + Home Run Hitter | RB | 39 | Marshall Faulk (LAR 90s), Barry Sanders (DET 90s), Chris Johnson (TEN 00s) |
 | Human Highlight | Burner + Highlight Reel | WR | 27 | Calvin Johnson (DET 10s), Julio Jones (ATL 10s), Ja'Marr Chase (CIN 20s) |
 | Jump Ball King | Skyscraper + Contested Catch King | WR | 11 | Calvin Johnson (DET 10s), Randy Moss (MIN 00s), Randy Moss (MIN 90s) |
-| Go-To Guy | Alpha + Glue Hands | WR | 46 | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
-| Mr. Reliable | Route Technician + Glue Hands | WR | 43 | James Lofton (GB 80s), Paul Warfield (MIA 70s), John Jefferson (LAC 80s) |
+| Go-To Guy | Alpha + Glue Hands | WR | 48 | Jerry Rice (SF 80s), Jerry Rice (SF 90s), Davante Adams (GB 20s) |
+| Mr. Reliable | Route Technician + Glue Hands | WR | 41 | James Lofton (GB 80s), Paul Warfield (MIA 70s), Mike Quick (PHI 80s) |
 | Vertical Nightmare | Deep Threat + Big Play | WR | 24 | Randy Moss (MIN 90s), Gene Washington (SF 70s), Wesley Walker (NYJ 70s) |
 | Open-Field Menace | YAC Monster + Twitch | WR | 29 | Cliff Branch (LV 70s), Tyreek Hill (KC 20s), Tyreek Hill (KC 10s) |
 | Matchup Nightmare | Seam Stretcher + Mismatch | TE | 15 | George Kittle (SF 20s), Travis Kelce (KC 10s), George Kittle (SF 10s) |
@@ -1895,20 +1896,20 @@ Pairs whose traits fit together (QB with receiver or back, QB or back with the O
 
 | Synergy | Side A | Side B | Effect | Possible pairs |
 |---|---|---|---|---|
-| Moonball | QB: Deep Ball Artist, Cannon | WR/TE: Burner, Deep Threat, Long Strider, Seam Stretcher, Big Play, Home Run Threat | Deep balls (20+ air yards) to this receiver: placement error −5%. (`pass.deepError` -5 pct) | 88 × 233 |
-| Timing Offense | QB: Quick Trigger, Surgeon | WR/TE: Route Technician, Slot Weapon, Head Fake, Twitch | On routes under 15 yd thrown on the last step of the drop: +0.05 s of separation at the break. (`route.breakSeparation` +0.05 s) | 65 × 209 |
-| Red Zone Connection | QB: Red Zone Sniper | WR/TE: Red Zone Threat, Contested Catch King, Basketball Body | Inside the 20: catch probability +4% on throws to this receiver. (`catch.redZone` +4 pct) | 33 × 164 |
-| Throw It Up | QB: Gunslinger, Cannon | WR/TE: Contested Catch King, Skyscraper, Mismatch, Big Body | Contested catches on his throws to this receiver +4%. (`catch.contested` +4 pct) | 89 × 184 |
+| Moonball | QB: Deep Ball Artist, Cannon | WR/TE: Burner, Deep Threat, Long Strider, Seam Stretcher, Big Play, Home Run Threat | Deep balls (20+ air yards) to this receiver: placement error −5%. (`pass.deepError` -5 pct) | 88 × 241 |
+| Timing Offense | QB: Quick Trigger, Surgeon | WR/TE: Route Technician, Slot Weapon, Head Fake, Twitch | On routes under 15 yd thrown on the last step of the drop: +0.05 s of separation at the break. (`route.breakSeparation` +0.05 s) | 65 × 207 |
+| Red Zone Connection | QB: Red Zone Sniper | WR/TE: Red Zone Threat, Contested Catch King, Basketball Body | Inside the 20: catch probability +4% on throws to this receiver. (`catch.redZone` +4 pct) | 34 × 164 |
+| Throw It Up | QB: Gunslinger, Cannon | WR/TE: Contested Catch King, Skyscraper, Mismatch, Big Body | Contested catches on his throws to this receiver +4%. (`catch.contested` +4 pct) | 89 × 183 |
 | Scramble Drill | QB: Escape Artist, Off-Platform, Dual Threat | WR/TE: Sideline Toe-Tap, Twitch, Head Fake, Athlete | When the QB leaves the pocket this receiver converts his route 0.1 s sooner. (`route.scrambleConvert` -0.1 s) | 86 × 198 |
-| Security Blanket | QB: Checkdown Charlie, Game Manager | TE/RB: Safety Blanket, Sure Hands, Receiving Back, Third-Down Back, H-Back | Under pressure, short throws to this target +4% completion. (`catch.shortUnderPressure` +4 pct) | 40 × 194 |
-| Pitch and Catch | QB: Surgeon, Efficiency King | WR/TE: Chain Mover, Glue Hands, Sure Hands | On third down, throws to this receiver past the sticks +3% catch probability. (`catch.thirdDown` +3 pct) | 62 × 188 |
-| Read Option | QB: Dual Threat, Designed Runner | RB: Burst, One-Cut, Home Run Hitter, Big-Play Back | On option plays the edge defender reads the mesh 0.1 s later. (`run.meshRead` +0.1 s) | 68 × 164 |
+| Security Blanket | QB: Checkdown Charlie, Game Manager | TE/RB: Safety Blanket, Sure Hands, Receiving Back, Third-Down Back, H-Back | Under pressure, short throws to this target +4% completion. (`catch.shortUnderPressure` +4 pct) | 41 × 193 |
+| Pitch and Catch | QB: Surgeon, Efficiency King | WR/TE: Chain Mover, Glue Hands, Sure Hands | On third down, throws to this receiver past the sticks +3% catch probability. (`catch.thirdDown` +3 pct) | 64 × 191 |
+| Read Option | QB: Dual Threat, Designed Runner | RB: Burst, One-Cut, Home Run Hitter, Big-Play Back | On option plays the edge defender reads the mesh 0.1 s later. (`run.meshRead` +0.1 s) | 70 × 169 |
 | Follow the Convoy | RB: Patient Runner | OL unit: Road Graders, Ground and Pound | Running lanes behind this line stay open 0.1 s longer for him. (`run.laneHold` +0.1 s) | 44 × 48 |
-| Downhill | RB: Battering Ram, Tackle Breaker, Goal Line Hammer, Grinder | OL unit: Road Graders | Inside runs: +0.3 yd before contact. (`run.yardsBeforeContact` +0.3 yd) | 181 × 46 |
-| Outside Zone | RB: One-Cut, Burst, Home Run Hitter | OL unit: Athletic Line | Stretch runs reach the edge 0.1 s sooner. (`run.edgeReach` -0.1 s) | 117 × 44 |
-| Screen Game | RB: Receiving Back, Scatback | OL unit: Athletic Line | On screens the lead blockers arrive 0.1 s sooner. (`screen.blockArrival` -0.1 s) | 87 × 44 |
+| Downhill | RB: Battering Ram, Tackle Breaker, Goal Line Hammer, Grinder | OL unit: Road Graders | Inside runs: +0.3 yd before contact. (`run.yardsBeforeContact` +0.3 yd) | 186 × 46 |
+| Outside Zone | RB: One-Cut, Burst, Home Run Hitter | OL unit: Athletic Line | Stretch runs reach the edge 0.1 s sooner. (`run.edgeReach` -0.1 s) | 118 × 44 |
+| Screen Game | RB: Receiving Back, Scatback | OL unit: Athletic Line | On screens the lead blockers arrive 0.1 s sooner. (`screen.blockArrival` -0.1 s) | 88 × 44 |
 | Clean Pocket | QB: Climber, Pre-Snap Wizard, Field General | OL unit: Pass-Pro Wall, Smart Line | Pocket-collapse time +0.1 s. (`pocket.collapseTime` +0.1 s) | 108 × 48 |
-| −Sitting Duck | QB: Statue, Sack Magnet, Happy Feet | OL unit: Turnstile, Sack-Prone | A clash: pocket-collapse time −0.1 s. (`pocket.collapseTime` -0.1 s) | 121 × 22 |
+| −Sitting Duck | QB: Statue, Sack Magnet, Happy Feet | OL unit: Turnstile, Sack-Prone | A clash: pocket-collapse time −0.1 s. (`pocket.collapseTime` -0.1 s) | 123 × 22 |
 
 ## Corrections applied
 

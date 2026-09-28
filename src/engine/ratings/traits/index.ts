@@ -9,8 +9,8 @@ export { COMBOS } from './combos';
 export { CUT_TRAITS, REDEFINED_COMBOS } from './cut';
 export { DEFENSE_TRAITS, UNIT_TRAITS } from './catalogDefense';
 export { OFFENSE_TRAITS } from './catalogOffense';
-export { deriveAllTraits, MAX_NEGATIVE, MAX_TRAITS, TRAIT_DEFS, type OlUnitTraits, type TraitRun } from './derive';
-export { metricLabel } from './metrics';
+export { deriveAllTraits, MAX_NEGATIVE, MAX_TRAITS, TRAIT_DEFS, type GateCheck, type OlUnitTraits, type TraitRun } from './derive';
+export { gateSample, metricLabel } from './metrics';
 export { parseRanks, plainWhy, type Rank } from './plain';
 export { detectSynergies, SYNERGIES, SYNERGY_LIMITS, type RosterView, type SynergyDef, type SynergyHit } from './synergies';
 

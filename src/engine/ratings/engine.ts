@@ -3,7 +3,7 @@ import { MISSING_REWEIGHT, PLAYER_CAPPED_SIGNALS, PHYSICAL_BY_POS, SKILL_ATTRS, 
 import { computePhysicals, type PhysicalResult } from './physical';
 import { composeFromZ, CONF_WEIGHT, confLabel, normInv, POOL_BEST_RATING, poolScale, shrink, zToRating } from './scale';
 import { SIGNALS, type PhysicalSnapshot, type SignalValue } from './signals';
-import { deriveAllTraits, type OlUnitTraits } from './traits';
+import { deriveAllTraits, gateSample, type GateCheck, type OlUnitTraits } from './traits';
 import type { AttributeResult, Contribution, RatedEntry, RatedPos, RatingInputs } from './types';
 
 // The rating pass (TECH_PLAN §7):
@@ -83,6 +83,8 @@ export interface RatingRun {
   olUnits: Record<string, OlUnitTraits>;
   /** Every trait each entry passes the gates for, before combinations and the four-trait cap. */
   traitsEarned: Record<string, RatedEntry['traits']>;
+  /** Every trait gate at an entry's position, passed or missed, with his value and pool percentile (diagnostics). */
+  traitGates: (entryId: string) => GateCheck[];
 }
 
 type PoolKey = `${RatedPos}|${string}`;
@@ -101,29 +103,42 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
     return m.get(key);
   };
 
-  // 1. Non-physical signal pools.
+  // 1. Non-physical signal pools (and the median sample behind each, which the trait gates read).
   const pools = new Map<PoolKey, Moments>();
+  const sampleMedian = new Map<PoolKey, number>();
   const signalKeys = Object.keys(SIGNALS).filter((k) => !PHYS_SIGNALS.has(k));
   for (const [pos, list] of byPos) {
     for (const key of signalKeys) {
       const xs: number[] = [];
+      const ns: number[] = [];
       for (const e of list) {
         const v = rawOf(e, key, noPhys);
-        if (v && Number.isFinite(v.x)) xs.push(v.x);
+        if (v && Number.isFinite(v.x)) {
+          xs.push(v.x);
+          ns.push(v.games);
+        }
       }
-      if (xs.length >= 3) pools.set(`${pos}|${key}`, moments(xs));
+      if (xs.length >= 3) {
+        pools.set(`${pos}|${key}`, moments(xs));
+        sampleMedian.set(`${pos}|${key}`, median(ns));
+      }
     }
   }
 
-  const zFrom = (e: RatingInputs, key: string, v: SignalValue | undefined): number | undefined => {
+  /** Pool z of a signal before sample shrinkage (clipped). */
+  const zRaw = (e: RatingInputs, key: string, v: SignalValue | undefined): number | undefined => {
     if (!v || !Number.isFinite(v.x)) return undefined;
     const def = SIGNALS[key]!;
     // Already on the z scale (signals.ts `absolute`): not standardized in the pool.
-    if (def.absolute) return Math.max(-Z_CLIP, Math.min(Z_CLIP, def.dir * v.x)) * shrink(v.games, def.k);
+    if (def.absolute) return Math.max(-Z_CLIP, Math.min(Z_CLIP, def.dir * v.x));
     const m = pools.get(`${e.pos}|${key}`);
     if (!m) return undefined;
-    const z = Math.max(-Z_CLIP, Math.min(Z_CLIP, (def.dir * (v.x - m.mean)) / m.sd));
-    return z * shrink(v.games, def.k);
+    return Math.max(-Z_CLIP, Math.min(Z_CLIP, (def.dir * (v.x - m.mean)) / m.sd));
+  };
+  /** Pool z shrunk toward the position average by sample (what the attributes read). */
+  const zFrom = (e: RatingInputs, key: string, v: SignalValue | undefined): number | undefined => {
+    const z = zRaw(e, key, v);
+    return z === undefined ? undefined : z * shrink(v!.games, SIGNALS[key]!.k);
   };
 
   // 2. Physicals.
@@ -293,6 +308,13 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
   // entry's traits are derived against them.
   const traitRun = deriveAllTraits(entries, {
     z: (e, key) => zFrom(e.inputs, key, signal(e.inputs, key)),
+    zGate: (e, key) => {
+      const v = signal(e.inputs, key);
+      const z = zRaw(e.inputs, key, v);
+      if (z === undefined) return undefined;
+      const def = SIGNALS[key]!;
+      return z * shrink(gateSample(key, e.pos, v!.games, def.k, sampleMedian.get(`${e.pos}|${key}`) ?? v!.games), def.k);
+    },
     sig: (e, key) => signal(e.inputs, key),
     phys: (e) => physicals.get(e.id)!,
   });
@@ -310,7 +332,7 @@ export function rateAll(inputs: readonly RatingInputs[], opts: RateOptions = {})
   }
   const bodies: RatingRun['bodies'] = {};
   for (const [id, p] of physicals) bodies[id] = { heightIn: p.heightIn, weightLb: p.weightLb, weightEq: p.weightEq };
-  return { entries, pools: poolsOut, composites: compOut, bodies, calibration, olUnits: traitRun.units, traitsEarned: Object.fromEntries(traitRun.earned) };
+  return { entries, pools: poolsOut, composites: compOut, bodies, calibration, olUnits: traitRun.units, traitsEarned: Object.fromEntries(traitRun.earned), traitGates: traitRun.explain };
 }
 
 function labelOf(pos: RatedPos, key: string): string {
