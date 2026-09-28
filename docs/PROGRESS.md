@@ -325,7 +325,18 @@ Whether YAC Monster and Bruiser should be worth more than the catalog says is th
   - Montana 0.6 yd off target and caught, against Namath 1.8 off and incomplete;
   - White's sack at 3.2 s against Aaron Smith never getting off the block;
   - Deion's interception against Kam giving up 70.
-- `BTB_VIDEO=1 BTB_IDENTITY=1` records them and stacks each pair side by side in `docs/screenshots/m6.5/identity/`. **Not recorded yet:** this container draws a frame in seconds, and ten clips need a quiet machine.
+- `BTB_VIDEO=1 BTB_IDENTITY=1` records them and stacks each pair side by side in `docs/screenshots/m6.5/identity/` (`speed`, `elusive`, `accuracy`, `rush`, `coverage`; the first man on the left). They were recorded on the M6.6 build, low quality at 960 wide and 20 fps.
+
+**Watched: can you tell who's who from the motion alone?** Four of five, yes:
+- **Speed:** Hill is behind the Cover 2 safety at the catch and in the end zone untouched. Welker's ball is short of him and dropped with a man on his back.
+- **Make a man miss:** Barry's carry gets through the second level and goes the distance. Bettis is dragged down in a pile after 5. At broadcast distance the juke itself is small: the result tells it more than the move.
+- **On the hands:** Montana's curl hits Rice in the chest for 11. Namath's arrives behind him and Ray Lewis gets a hand on it.
+- **Half the field:** Deion is on the X's hip at the break and jumps the go route for the interception. With Kam at corner, the same throw is a 70-yard touchdown. This is the clearest of the five.
+- **Through the tackle: not shown.** Both clips end in the same 6-yard sack. In the browser the card credits Smith (White's clip) and Lewis (Aaron Smith's clip), while Node has White beating his man at 2.7 s and finishing at 3.35 s, and Bruce Smith sacking in the other clip.
+  - The browser reproduces Node's hashes exactly (`e2e/practice.spec.ts` determinism passes on this build), so the sim isn't the cause. Something in how the browser sets up this one clip (a Beasts swap with the QB holding the ball) differs from `tools/sim/findidentity.ts`. Not found yet.
+  - A held ball also gets sacked eventually by someone, so this pair needs a snap where the difference is White's win, not the sack. Next step: find the setup difference, then re-find the snap.
+
+**Pops:** 14–26 spikes a clip (worst ~60 rad/s), the same range as the concept videos.
 
 ### M6 Full game (built, PR open)
 
