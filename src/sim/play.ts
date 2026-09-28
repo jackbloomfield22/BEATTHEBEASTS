@@ -31,8 +31,8 @@ import { blockOf, stepBlocks } from './blocks';
 import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tackleOdds, tickMoves } from './contact';
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
-import { aiMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
-import { catchLook, findsBallAt, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
+import { aiMove, autoMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
+import { autoCatch, catchLook, findsBallAt, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { has } from './traits';
 import { manOf, type PlayState } from './state';
@@ -655,12 +655,15 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     if (c.mem.opts === undefined || s.tick % OPTIONS_EVERY === 0) c.mem.opts = carrierOptions(s, c).join(',');
     const opt = inp.option > 0 ? ((c.mem.opts as string).split(',')[inp.option - 1] as MoveOption | undefined) : undefined;
     const optMove: Move | null = !opt ? null : opt === 'juke' ? jukeSide(s, c, inp.move, attack) : opt === 'protect' ? null : opt;
-    // Protecting from the options holds until the next move (the direct key is held).
-    if (opt === 'protect') {
+    // The one action button: the game picks the move for the picture in front of him (moves.ts autoMove).
+    const auto = inp.auto ? autoMove(s, c) : null;
+    const autoPick: Move | null = auto && auto !== 'protect' ? auto : null;
+    // Protecting from the options (or the action button) holds until the next move (the direct key is held).
+    if (opt === 'protect' || auto === 'protect') {
       c.mem.optProtect = true;
       if (!c.move) c.move = 'protect';
-    } else if (optMove || pressed) c.mem.optProtect = false;
-    bufferedMove(s, c, pressed ?? optMove);
+    } else if (optMove || pressed || autoPick) c.mem.optProtect = false;
+    bufferedMove(s, c, pressed ?? optMove ?? autoPick);
     if (inp.protect && !c.move) c.move = 'protect';
     if (!inp.protect && c.move === 'protect' && !c.mem.optProtect) c.move = null;
   } else {
@@ -1763,6 +1766,7 @@ export function stepPlay(s: PlayState, inp: InputFrame): void {
     return;
   }
   if (s.phase === 'air' && inp.catchType) s.catchType = inp.catchType;
+  else if (s.phase === 'air' && inp.auto && s.setup.user) s.catchType = autoCatch(s);
   // Nobody but the ball carrier runs out of bounds on his own (movement.ts
   // governs his speed toward a sideline): route runners keep ~1 yd, everyone
   // else half a yard. The QB with the ball is a runner too (his lines are lineCheck's).

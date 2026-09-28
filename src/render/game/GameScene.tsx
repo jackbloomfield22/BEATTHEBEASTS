@@ -18,7 +18,7 @@ import { PUNT_DEPTH } from '@/game/kick';
 import { LOFT_CHARGE, DEF_SLOTS, HOT_ROUTES, OFF_SLOTS, TAP_MAX, TICK, type PlayState, type SimPlayer } from '@/sim';
 import { openness } from '@/sim/ai';
 import { previewThrow } from '@/sim/passing';
-import { carrierOptions } from '@/sim/moves';
+import { autoMove, carrierOptions } from '@/sim/moves';
 import { openState } from '@/game/view';
 import { YARD } from '../world/constants';
 import { hudDom, RING_LEN } from '@/ui/game/hudDom';
@@ -628,12 +628,15 @@ export function GameScene() {
         const opts = held ? (live.mem.opts as string).split(',') : carrierOptions(s, live);
         if (ch.dataset.pending !== String(!held)) ch.dataset.pending = String(!held);
         const inMove = live.busy > 0 && live.move ? (live.move === 'jukeL' || live.move === 'jukeR' ? 'juke' : live.move) : live.move === 'protect' ? 'protect' : null;
+        // The one action button's cue (slot 0): the move the game would make now (autoMove, read-only), or "Move" while nobody's close enough.
+        const pick = autoMove(s, live);
+        const autoWord = pick === 'jukeL' || pick === 'jukeR' ? 'juke' : (pick ?? '');
         for (let k = 0; k < 3; k++) {
           const el = hudDom.opts[k];
           if (!el) continue;
-          const o = opts[k] ?? '';
+          const o = k === 0 ? autoWord : (opts[k] ?? '');
           const w = OPTION_WORD[o] ?? '';
-          const word = o === 'dive' && live.slot === 'QB' ? 'Slide' : w;
+          const word = o === 'dive' && live.slot === 'QB' ? 'Slide' : w || (k === 0 ? 'Move' : '');
           const span = el.lastElementChild as HTMLElement | null;
           if (span && span.textContent !== word) span.textContent = word;
           el.classList.toggle('lit', !!o && o === inMove);

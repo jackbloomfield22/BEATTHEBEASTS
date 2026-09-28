@@ -15,7 +15,7 @@ import { atan2, cos, sin } from '@/engine/math/detmath';
 import { blockOf } from './blocks';
 import { tackleOdds } from './contact';
 import type { PlayState } from './state';
-import type { Agent, Move } from './types';
+import { GOAL_X, type Agent, type Move } from './types';
 import { dist } from './vec';
 
 /** A move as the HUD names it: the juke's side is picked when it's pressed (away from the tackler). */
@@ -90,4 +90,38 @@ export function aiMove(s: PlayState, c: Agent, d: Agent): Move {
   if (best !== 'juke') return best as Move;
   const attack = c.side === 'off' ? 1 : -1;
   return (d.pos.y - c.pos.y) * attack > 0 ? 'jukeR' : 'jukeL';
+}
+
+/** A tackler this close (yd) is one the one-button move is made against; farther, the button waits for him. */
+const AUTO_R = 3.5;
+/** Two or more tacklers this close (yd): he wraps up the ball instead of trying a move. */
+const SWARM_R = 2;
+/** Within this of the line to gain or the goal line (yd), a tackler on him means he dives for it. */
+const REACH_R = 2;
+
+/**
+ * The one-button move (Space / A with the ball): the move a back would make
+ * himself against what's in front of him now.
+ * - Two or more tacklers converging: protect the ball.
+ * - A man on him short of the sticks or the goal line: dive for it.
+ * - Otherwise the likeliest move for the angle and the man (the same ranking
+ *   as the HUD's options: juke, spin, stiff arm, truck); a juke goes away from him.
+ * Null when nobody is close enough to beat yet (the press is ignored, not wasted).
+ */
+export function autoMove(s: PlayState, c: Agent): Move | 'protect' | null {
+  const d = threatOf(s, c);
+  if (!d || dist(d.pos, c.pos) > AUTO_R) return null;
+  const attack = c.side === 'off' ? 1 : -1;
+  let swarm = 0;
+  for (const i of c.side === 'off' ? s.def : s.off) {
+    const o = s.agents[i]!;
+    if (!o.down && !blockOf(s, i) && dist(o.pos, c.pos) < SWARM_R) swarm++;
+  }
+  if (swarm >= 2) return 'protect';
+  const x = c.pos.x * attack;
+  const sticks = (s.setup.los + s.setup.toGo) * attack;
+  const goal = attack > 0 ? GOAL_X : 0;
+  const short = (target: number) => target - x > 0 && target - x < REACH_R;
+  if (short(sticks) || short(goal * attack)) return 'dive';
+  return aiMove(s, c, d);
 }

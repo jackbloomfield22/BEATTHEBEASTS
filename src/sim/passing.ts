@@ -12,6 +12,7 @@ import { breakCarry, continueDir } from './ai';
 import { gauss } from './rand';
 import { exp } from '@/engine/math/detmath';
 import type { PlayState } from './state';
+import type { CatchType } from './input';
 import { has, more } from './traits';
 import { FIELD_HALF_W, GOAL_X, TICK, type Agent, type CatchHard, type OffSlot } from './types';
 import { dist, len, type V2 } from './vec';
@@ -528,6 +529,29 @@ export function catchLook(s: PlayState, r: Agent, at: { x: number; y: number; z:
   if (call === 'possession') return 'body';
   return 'hands';
 }
+
+/**
+ * The one-button catch (Space / A in the air): the call a receiver would make
+ * himself from what he sees as the ball comes. A defender who'll be at the
+ * catch point with him: go up for a ball at the shoulders or higher (or deep),
+ * else secure it through the hit. At the sideline: secure it and get both feet
+ * down. Open: catch it in stride and run.
+ */
+export function autoCatch(s: PlayState): CatchType {
+  const r = s.ball.target >= 0 ? s.agents[s.ball.target]! : null;
+  const at = s.ball.aim;
+  if (!r) return 'rac';
+  let near = Infinity;
+  for (const o of s.agents) if (o.side !== r.side && !o.down) near = Math.min(near, dist(o.pos, { x: at.x, y: at.y }));
+  const contested = near < AUTO_CONTEST;
+  if (contested && (at.z > GO_UP_Z || at.x - s.setup.los > 18)) return 'aggressive';
+  if (contested || FIELD_HALF_W - Math.abs(at.y) < AUTO_SIDELINE) return 'possession';
+  return 'rac';
+}
+/** A defender within this of the catch point (yd) makes it a contested ball for the one-button catch. */
+const AUTO_CONTEST = 2;
+/** Within this of the sideline (yd) the one-button catch secures it for the toe tap. */
+const AUTO_SIDELINE = 1.5;
 
 /** How far a player can reach for a ball: standing reach plus a jump. */
 export function reach(a: Agent): { r: number; top: number } {

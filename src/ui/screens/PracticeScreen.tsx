@@ -295,8 +295,6 @@ const CATCHES = [
   { type: "rac", action: "air.rac", word: "Run" },
 ] as const;
 
-/** The carrier's three move options (M6.5 #9): whatever the situation offers now, 1 the likeliest to work. The words are written every frame from the sim (GameScene, hudDom.opts). */
-const OPTIONS = ["carrier.option1", "carrier.option2", "carrier.option3"] as const;
 
 /**
  * The key (or button) bound to an action, drawn for a prompt: a keycap, or
@@ -440,16 +438,11 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
             />
           </div>
           <div className="carrier-keys carrier-opts">
-            {OPTIONS.map((a, k) => (
-              <span
-                key={a}
-                className="cue opt"
-                ref={(el) => void (hudDom.opts[k] = el)}
-              >
-                {key(a)}
-                <span className="cue-w" />
-              </span>
-            ))}
+            {/* One action button: the game picks the move; the word is the one it would make now (GameScene, hudDom.opts[0]). */}
+            <span className="cue opt" ref={(el) => void (hudDom.opts[0] = el)}>
+              {key("carrier.auto")}
+              <span className="cue-w" />
+            </span>
           </div>
         </div>
       </div>
@@ -523,10 +516,8 @@ function Tutorial() {
       [key.row(THROWS), "Throw"],
       ["Hold", "Touch"],
     ],
-    catch: CATCHES.map((c) => [key(c.action), c.word]),
-    run: [
-      [key.row(["carrier.option1", "carrier.option2", "carrier.option3"], false), "Moves"],
-    ],
+    catch: [[key("air.auto"), "Catch"]],
+    run: [[key("carrier.auto"), "Make a move"]],
   };
   const order = ["snap", "read", "throw", "catch", "run"];
   return (
@@ -622,15 +613,11 @@ function CatchCall({
   return (
     <div className="catch-call" data-called={called ?? "none"}>
       <div className="catch-opts">
-        {CATCHES.map((c) => (
-          <div
-            key={c.type}
-            className={`catch-opt${called === c.type ? " on" : called ? " off" : ""}`}
-          >
-            {keyOf(c.action)}
-            <span className="catch-name">{c.word}</span>
-          </div>
-        ))}
+        {/* One action button: the game picks the catch (go up, secure it, or catch and run); once made, it names the one it chose. */}
+        <div className={`catch-opt${called ? " on" : ""}`}>
+          {keyOf("air.auto")}
+          <span className="catch-name">{called ? CATCHES.find((c) => c.type === called)!.word : "Catch"}</span>
+        </div>
       </div>
     </div>
   );

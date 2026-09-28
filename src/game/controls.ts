@@ -308,6 +308,7 @@ export class Controls {
     if (ctx === 'ballInAir') {
       const c: CatchType | null = e.has('air.aggressive') ? 'aggressive' : e.has('air.rac') ? 'rac' : e.has('air.possession') ? 'possession' : null;
       f.catchType = c;
+      f.auto = e.has('air.auto');
     }
 
     if (carrier) {
@@ -321,6 +322,7 @@ export class Controls {
       f.dive = e.has('carrier.dive');
       f.protect = Input.isHeld('carrier.protect');
       f.option = e.has('carrier.option1') ? 1 : e.has('carrier.option2') ? 2 : e.has('carrier.option3') ? 3 : 0;
+      f.auto = e.has('carrier.auto');
     }
     e.clear();
     return f;

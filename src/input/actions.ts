@@ -92,8 +92,12 @@ export const ACTIONS: ActionDef[] = [
 
   // Ball in air
   a('air.switch', 'ballInAir', 'Switch to target', ['Tab'], ['Pad:B']),
+  // One action button (the owner's call after M6.6): Space / A and the game
+  // picks the catch (go up, secure it, or catch and run: sim autoCatch). The
+  // three calls stay on 1, 2, 3 (Y, X on a pad) for anyone who wants them.
+  a('air.auto', 'ballInAir', 'Catch it (the game picks: go up, secure it, or catch and run)', ['Space'], ['Pad:A']),
   a('air.aggressive', 'ballInAir', 'Go up and get it (aggressive)', ['Digit1'], ['Pad:Y']),
-  a('air.possession', 'ballInAir', 'Secure it and go down (possession)', ['Digit2'], ['Pad:A']),
+  a('air.possession', 'ballInAir', 'Secure it and go down (possession)', ['Digit2'], []),
   a('air.rac', 'ballInAir', 'Catch and run', ['Digit3'], ['Pad:X']),
 
   // Ball carrier
@@ -105,6 +109,10 @@ export const ACTIONS: ActionDef[] = [
   // the likeliest to work in 1), shown under him; Q W E R F C are every move
   // directly. No speed key: he runs at the pace the play calls for and
   // bursts on his own (out of a cut, into open field).
+  // Space / A: the game picks the move for what's in front of him (sim
+  // autoMove: juke, spin, stiff arm, truck, a dive for the sticks or the goal
+  // line, protecting the ball in a crowd). The rest stay for direct control.
+  a('carrier.auto', 'carrier', 'Make a move (the game picks it)', ['Space'], ['Pad:A']),
   a('carrier.option1', 'carrier', 'Move option 1 (the likeliest to work)', ['Digit1'], ['Pad:X']),
   a('carrier.option2', 'carrier', 'Move option 2', ['Digit2'], ['Pad:Y']),
   a('carrier.option3', 'carrier', 'Move option 3', ['Digit3'], ['Pad:B']),
@@ -114,7 +122,7 @@ export const ACTIONS: ActionDef[] = [
   a('carrier.stiffArm', 'carrier', 'Stiff arm', ['KeyW'], []),
   a('carrier.spin', 'carrier', 'Spin', ['KeyE'], []),
   a('carrier.truck', 'carrier', 'Truck', ['KeyR'], ['Pad:RSUp']),
-  a('carrier.dive', 'carrier', 'Dive / QB slide', ['KeyF'], ['Pad:A']),
+  a('carrier.dive', 'carrier', 'Dive / QB slide', ['KeyF'], []),
   a('carrier.protect', 'carrier', 'Protect ball (hold)', ['KeyC'], ['Pad:LB']),
 
   // Kicking (M6.6, Playtest 2): aim first (the left stick aims too, analog),
@@ -204,6 +212,12 @@ export const KB_DEFAULTS_V6: Record<string, string[]> = {
 export const PAD_DEFAULTS_V6: Record<string, string[]> = {
   'carrier.stiffArm': ['Pad:X'],
   'carrier.spin': ['Pad:B'],
+};
+
+/** Gamepad defaults that changed in settings v9 (A is the one action button in the air and with the ball), with their v8 values. */
+export const PAD_DEFAULTS_V8: Record<string, string[]> = {
+  'air.possession': ['Pad:A'],
+  'carrier.dive': ['Pad:A'],
 };
 
 export const ACTIONS_BY_ID = new Map(ACTIONS.map((d) => [d.id, d]));

@@ -47,6 +47,12 @@ export interface InputFrame {
    * mem.opts and shown on the HUD). M6.5 #9.
    */
   option: 0 | 1 | 2 | 3;
+  /**
+   * The one action button (Space / A), pressed this tick: in the air the game
+   * picks the catch (autoCatch), with the ball it picks the move (autoMove).
+   * Optional so older recorded frames read as not pressed.
+   */
+  auto?: boolean;
   /** In the pocket: tuck it and run (pressed this tick). He can still throw on the run until he crosses the line. */
   scramble: boolean;
   /** Pre-snap: change a receiver's route (icon 1..5 and one of HOT_ROUTES). Applied before the snap. */

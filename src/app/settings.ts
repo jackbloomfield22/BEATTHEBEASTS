@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { loadJSON, saveJSON } from './storage';
-import { KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4, KB_DEFAULTS_V5, KB_DEFAULTS_V6, PAD_DEFAULTS_V6, type Bindings } from '@/input/actions';
+import { KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4, KB_DEFAULTS_V5, KB_DEFAULTS_V6, PAD_DEFAULTS_V6, PAD_DEFAULTS_V8, type Bindings } from '@/input/actions';
 
 export type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
 export type Difficulty = 'rookie' | 'pro' | 'legend' | 'beast';
@@ -21,7 +21,7 @@ export interface GraphicsSettings {
 }
 
 export interface Settings {
-  version: 8;
+  version: 9;
   display: {
     fullscreen: boolean;
     resolutionScale: number; // 0.5 .. 1.0
@@ -117,7 +117,7 @@ export function renderDpr(cssW: number, cssH: number, deviceDpr: number, preset:
 
 export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings {
   return {
-    version: 8,
+    version: 9,
     display: { fullscreen: false, resolutionScale: 1, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 180, ballInAir: 'assist', keyboard, gamepad },
@@ -254,6 +254,13 @@ export function migrate(stored: Settings): Settings {
     delete s.controls?.keyboard?.['kick.aim'];
     delete s.controls?.gamepad?.['kick.aim'];
     (s as { version: number }).version = 8;
+  }
+  if ((s.version as number) === 8) {
+    // v9: Space / A is the one action button in the air and with the ball (the game picks the catch and the move); A comes off secure and dive where they're still on their defaults.
+    const same = (cur: string[] | undefined, old: string[]) => !!cur && cur.length === old.length && cur.every((c, i) => c === old[i]);
+    const pad = s.controls?.gamepad;
+    if (pad) for (const [id, old] of Object.entries(PAD_DEFAULTS_V8)) if (same(pad[id], old)) delete pad[id];
+    (s as { version: number }).version = 9;
   }
   return s;
 }
