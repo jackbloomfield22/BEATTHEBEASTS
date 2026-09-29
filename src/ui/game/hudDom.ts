@@ -13,6 +13,8 @@ export const hudDom = {
   staminaFill: null as HTMLElement | null,
   /** The carrier's three move options (their words are written every frame; the one he's in lights up). */
   opts: [] as (HTMLElement | null)[],
+  /** The sprint cue: lit while he's sprinting (the sim's mem.sprint). */
+  sprint: null as HTMLElement | null,
 };
 
 /** Circumference of the power ring's circle (r = 17). */

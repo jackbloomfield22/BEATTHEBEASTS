@@ -53,6 +53,12 @@ export interface InputFrame {
    * Optional so older recorded frames read as not pressed.
    */
   auto?: boolean;
+  /**
+   * Sprint (held; Playtest 1 #2): the carrier you control (a scrambling QB
+   * too) runs flat out and burns stamina. Unheld he runs the context pace
+   * (play.ts userPace). Optional so older recorded frames read as not held.
+   */
+  sprint?: boolean;
   /** In the pocket: tuck it and run (pressed this tick). He can still throw on the run until he crosses the line. */
   scramble: boolean;
   /** Pre-snap: change a receiver's route (icon 1..5 and one of HOT_ROUTES). Applied before the snap. */

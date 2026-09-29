@@ -300,6 +300,8 @@ export class Controls {
       f.pumpFake = e.has('pocket.pumpFake');
       f.throwAway = e.has('pocket.throwAway');
       f.scramble = e.has('pocket.scramble');
+      // A scrambling QB sprints on the carrier's key, or by keeping the scramble button down (RT on a pad).
+      f.sprint = Input.isHeld('carrier.sprint') || Input.isHeld('pocket.scramble');
     } else {
       this.hold = null;
       this.reticle.icon = 0;
@@ -323,6 +325,7 @@ export class Controls {
       f.protect = Input.isHeld('carrier.protect');
       f.option = e.has('carrier.option1') ? 1 : e.has('carrier.option2') ? 2 : e.has('carrier.option3') ? 3 : 0;
       f.auto = e.has('carrier.auto');
+      f.sprint = Input.isHeld('carrier.sprint');
     }
     e.clear();
     return f;

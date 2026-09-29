@@ -312,10 +312,11 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
   if (s.scrambleT >= 0) {
     // Tucked: he runs like a ball carrier (context speed, cuts), eyes still downfield until the line.
     // A Statue outside the tackle box (~4 yd off the ball) runs 15% slower (the trait catalog's line).
-    const pace = carrierPace(s, qb, 1) * (Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) > 4 && has(qb, 'statue') ? 0.85 : 1);
+    const ctxPace = carrierPace(s, qb, 1) * (Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) > 4 && has(qb, 'statue') ? 0.85 : 1);
+    const pace = s.setup.user ? userPace(qb, ctxPace, inp) : ctxPace;
     const dir = stickDir(inp.move);
     const want = s.setup.user ? { x: dir.x * qb.fx.vmax * pace, y: dir.y * qb.fx.vmax * pace } : scrambleLane(s, qb, pace);
-    autoBurst(s, qb, pace, want);
+    autoBurst(s, qb, ctxPace, want);
     steer(qb, cutWeight(qb, want), { brake: len(want) < 0.1 ? CARRIER_COAST : 1, burst: qb.burst > 0 });
     if (qb.anim !== 'throw') qb.anim = 'carry';
   } else if (s.setup.user && since > 0.35 && (inp.move.x !== 0 || inp.move.y !== 0)) {
@@ -616,7 +617,8 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
   // The player's arrows are steering him (not the after-catch plan): his changes of direction are planted cuts.
   let steering = false;
   // Context speed (feedback item 3): flat out in space, controlled with a tackler on him.
-  const pace = carrierPace(s, c, attack);
+  const ctxPace = carrierPace(s, c, attack);
+  const pace = userCarrier ? userPace(c, ctxPace, inp) : ctxPace;
   if (userCarrier) {
     // The stick is a direction only: his speed is the situation's (a diagonal is as fast as straight ahead).
     const dir = stickDir(inp.move);
@@ -712,13 +714,13 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
       }
     }
   }
-  autoBurst(s, c, pace, want);
+  autoBurst(s, c, ctxPace, want);
   // Committed moves carry him (their velocity change builds over the plant); protecting costs speed.
   applyImpulse(c);
   if (c.busy > 0 && c.move && c.move !== 'protect' && c.move !== 'stiffArm') {
     c.mem.cutLeft = 0;
     steer(c, c.vel, { mult: 1 });
-  } else if (userCarrier && (steering || (c.mem.cutLeft as number) > 0) && plantCut(s, c, want, pace)) {
+  } else if (userCarrier && (steering || (c.mem.cutLeft as number) > 0) && plantCut(s, c, want, ctxPace)) {
     // In a planted cut (M6.5 #10): the cut sets his velocity itself.
   } else {
     // Protecting the ball (two hands, covered up) is the one slow gait: a jog.
@@ -775,6 +777,30 @@ export function carrierPace(s: PlayState, c: Agent, attack: 1 | -1): number {
   }
   return near < 2.5 ? 0.86 + 0.14 * Math.max(0, Math.min(1, (near - 1.2) / 1.3)) : 1;
 }
+
+/**
+ * Hold-to-sprint (Playtest 1 #2), for the carrier the player controls (a
+ * scrambling QB too); AI carriers keep the context pace. Unheld he runs
+ * CRUISE of his top speed in space, the controlled pace near a tackler as
+ * before: a run, never a jog, and under movement.ts's 90% effort line, so
+ * his stamina comes back. Held he finds the last gear everywhere, the
+ * breakdown near a tackler included, so his cuts lose CUT_NEAR's
+ * sharpness and take SPRINT_CUT longer, and he pays stamina for every tick
+ * over 90% (movement.ts advance). His top speed falls with his stamina
+ * (0.86 + 0.14·stamina, movement.ts), so a long sprint fades on its own;
+ * spent (under SPRINT_MIN) he can't sprint at all. On mem.sprint for the cut and the HUD.
+ */
+export function userPace(c: Agent, ctxPace: number, inp: InputFrame): number {
+  const sprint = !!inp.sprint && c.stamina >= SPRINT_MIN;
+  c.mem.sprint = sprint;
+  return sprint ? 1 : Math.min(ctxPace, CRUISE);
+}
+/** Unheld, the share of top speed he runs in space: on the 90% effort line (movement.ts), so stamina recovers. */
+const CRUISE = 0.9;
+/** Below this stamina there's no sprint left in him. */
+const SPRINT_MIN = 0.15;
+/** A cut at a sprint takes this much longer than one at the context pace (the plant against the extra speed). */
+const SPRINT_CUT = 1.15;
 
 /**
  * A stick reading as a direction: any push past the dead zone is a full
@@ -867,7 +893,7 @@ function plantCut(s: PlayState, c: Agent, want: V2, pace: number): boolean {
     const ang = Math.abs(atan2(cross, dot));
     if (ang < CUT_MIN) return false;
     const ag = c.fx.a('agility');
-    const T = (CUT_T0 + (CUT_T1 * ang) / Math.PI) * (1.6 - 0.85 * ag) * (0.55 + 0.45 * Math.min(1, sp / c.fx.vmax)) * (pace < 1 ? CUT_NEAR : 1);
+    const T = (CUT_T0 + (CUT_T1 * ang) / Math.PI) * (1.6 - 0.85 * ag) * (0.55 + 0.45 * Math.min(1, sp / c.fx.vmax)) * (c.mem.sprint ? SPRINT_CUT : pace < 1 ? CUT_NEAR : 1);
     const keep = Math.max(CUT_KEEP_MIN, 1 - (0.55 - 0.2 * ag) * (ang / (Math.PI / 2)));
     const out = Math.min(keep * sp, wl);
     left = Math.max(3, Math.round(T / TICK));

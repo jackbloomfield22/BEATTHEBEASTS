@@ -34,8 +34,9 @@ describe('action map', () => {
       expect(kb[p + up]).toEqual(['ArrowUp']);
     }
     expect(kb['carrier.right']).toEqual(['ArrowRight']);
-    // No speed key (round two): he sets his own pace and bursts on his own.
-    expect(kb['carrier.sprint']).toBeUndefined();
+    // Hold-to-sprint on either Shift and RT (Playtest 1 #2); the burst is still his own.
+    expect(kb['carrier.sprint']).toEqual(['ShiftLeft', 'ShiftRight']);
+    expect(defaultBindings('pad')['carrier.sprint']).toEqual(['Pad:RT']);
     expect([kb['air.aggressive'], kb['air.possession'], kb['air.rac']]).toEqual([['Digit1'], ['Digit2'], ['Digit3']]);
     // 1–3 are the carrier's three move options (v7, M6.5 #9); each move keeps a letter.
     expect([kb['carrier.option1'], kb['carrier.option2'], kb['carrier.option3']]).toEqual([['Digit1'], ['Digit2'], ['Digit3']]);

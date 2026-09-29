@@ -51,6 +51,9 @@ function nearest(s: PlayState): number {
   return d;
 }
 
+/** Room to sprint (Playtest 1 #2): the scripts hold the key in the open and let it go with a tackler within a couple of yards, as a player does. */
+const open = (s: PlayState) => nearest(s) >= 2.6;
+
 /** Ticks since the snap (scripts time everything from it, so frames spent before the snap don't change the play). */
 const since = (s: PlayState) => (s.snapT < 0 ? -1 : Math.round((s.t - s.snapT) * 60));
 
@@ -61,7 +64,7 @@ export function throwAndRun(icon: number, at: number, move: 'juke' | 'stiffArm' 
     if (s.phase === 'air') return input({ catchType: 'rac' });
     if (s.phase === 'carrier') {
       const close = nearest(s) < 2.6;
-      return input({ move: { x: 1, y: lean }, juke: move === 'juke' && close, stiffArm: move === 'stiffArm' && close, spin: move === 'spin' && close });
+      return input({ move: { x: 1, y: lean }, sprint: !close, juke: move === 'juke' && close, stiffArm: move === 'stiffArm' && close, spin: move === 'spin' && close });
     }
     return input({ snap: s.phase === 'presnap', throwHeld: t >= at && t < at + 4 ? icon : 0 });
   };
@@ -107,13 +110,14 @@ export function concept(p: ConceptPlan) {
         }
       }
       const cutting = cut !== undefined && s.t - cut.at < 0.35;
-      return input({ move: cutting ? { x: 0.35, y: cut!.side } : { x: 1, y: 0 } });
+      return input({ move: cutting ? { x: 0.35, y: cut!.side } : { x: 1, y: 0 }, sprint: open(s) });
     }
     const scrambling = p.scramble && t >= p.scramble.at;
     return input({
       snap: s.phase === 'presnap',
       scramble: !!p.scramble && t === p.scramble.at,
       move: scrambling ? p.scramble!.dir : { x: 0, y: 0 },
+      sprint: !!scrambling,
       throwHeld: t >= p.at && t < p.at + (p.hold ?? 4) ? p.icon : 0,
       aim: p.aim ?? { x: 0, y: 0 },
     });
@@ -138,10 +142,10 @@ export function runAndCut(cutPast: number, cutY: number) {
       const hx = s.setup.los + 1.5 - c.pos.x;
       const hy = (s.setup.ballY ?? 0) + (s.setup.play.run?.aim ?? 0) - c.pos.y;
       const k = Math.hypot(hx, hy);
-      return input({ move: past < 1.5 && k > 0.5 ? { x: hx / k, y: hy / k } : { x: 1, y: 0 } });
+      return input({ move: past < 1.5 && k > 0.5 ? { x: hx / k, y: hy / k } : { x: 1, y: 0 }, sprint: open(s) });
     }
-    if ((c.pos.y - cutY) * dir < 0 && past < cutPast + 1.5) return input({ move: { x: 0, y: dir } });
-    return input({ move: { x: Math.SQRT1_2, y: dir * Math.SQRT1_2 } });
+    if ((c.pos.y - cutY) * dir < 0 && past < cutPast + 1.5) return input({ move: { x: 0, y: dir }, sprint: open(s) });
+    return input({ move: { x: Math.SQRT1_2, y: dir * Math.SQRT1_2 }, sprint: open(s) });
   };
 }
 

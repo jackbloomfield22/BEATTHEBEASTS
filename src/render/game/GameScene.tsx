@@ -641,6 +641,7 @@ export function GameScene() {
           if (span && span.textContent !== word) span.textContent = word;
           el.classList.toggle('lit', !!o && o === inMove);
         }
+        hudDom.sprint?.classList.toggle('lit', live.mem.sprint === true);
       }
     }
   }

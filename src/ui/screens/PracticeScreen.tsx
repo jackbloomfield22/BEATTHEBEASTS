@@ -443,6 +443,10 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
               {key("carrier.auto")}
               <span className="cue-w" />
             </span>
+            <span className="cue sprint" ref={(el) => void (hudDom.sprint = el)}>
+              {key("carrier.sprint")}
+              <span className="cue-w">Sprint</span>
+            </span>
           </div>
         </div>
       </div>
@@ -466,6 +470,7 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
       {live && inPocket && !runPlay && ui.scrambling ? (
         <div className="prompt-row cue-row">
           <Cue k={moveKeys("pocket.move")} w="Run" />
+          <Cue k={key("carrier.sprint")} w="Sprint" />
           <Cue k={key.row(THROWS.slice(0, Math.max(1, icons.length)))} w="Throw on the run" />
           <Cue k={key("pocket.throwAway")} w="Throw away" />
         </div>
@@ -517,7 +522,7 @@ function Tutorial() {
       ["Hold", "Touch"],
     ],
     catch: [[key("air.auto"), "Catch"]],
-    run: [[key("carrier.auto"), "Make a move"]],
+    run: [[key("carrier.auto"), "Make a move"], [key("carrier.sprint"), "Sprint"]],
   };
   const order = ["snap", "read", "throw", "catch", "run"];
   return (

@@ -113,6 +113,7 @@ export const ACTIONS: ActionDef[] = [
   // autoMove: juke, spin, stiff arm, truck, a dive for the sticks or the goal
   // line, protecting the ball in a crowd). The rest stay for direct control.
   a('carrier.auto', 'carrier', 'Make a move (the game picks it)', ['Space'], ['Pad:A']),
+  a('carrier.sprint', 'carrier', 'Sprint (hold; costs stamina)', ['ShiftLeft', 'ShiftRight'], ['Pad:RT']),
   a('carrier.option1', 'carrier', 'Move option 1 (the likeliest to work)', ['Digit1'], ['Pad:X']),
   a('carrier.option2', 'carrier', 'Move option 2', ['Digit2'], ['Pad:Y']),
   a('carrier.option3', 'carrier', 'Move option 3', ['Digit3'], ['Pad:B']),
