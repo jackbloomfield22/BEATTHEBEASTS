@@ -30,3 +30,16 @@ describe('identity videos: each side-by-side pair still shows its contrast', () 
     }
   }, 120_000);
 });
+
+describe('the result card credits the sack to the man who got it', () => {
+  it("Reggie White's strip sack in the rush pair is his, not the man who tackled the recovery", async () => {
+    const { IDENTITY } = await import('@/game/clips');
+    const { playClip } = await import('../tools/sim/findidentity');
+    const { describe: card } = await import('@/game/describe');
+    const c = IDENTITY.find((x) => x.id === 'rush-a')!;
+    const s = playClip(c.play, c.def, c.seed, c.user ?? true, c.swap!, c.script);
+    const d = card(s);
+    expect(d.headline).toMatch(/^Sacked/);
+    expect(d.detail).toMatch(/^White strips him/);
+  }, 60_000);
+});

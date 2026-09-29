@@ -332,9 +332,10 @@ Whether YAC Monster and Bruiser should be worth more than the catalog says is th
 - **Make a man miss:** Barry's carry gets through the second level and goes the distance. Bettis is dragged down in a pile after 5. At broadcast distance the juke itself is small: the result tells it more than the move.
 - **On the hands:** Montana's curl hits Rice in the chest for 11. Namath's arrives behind him and Ray Lewis gets a hand on it.
 - **Half the field:** Deion is on the X's hip at the break and jumps the go route for the interception. With Kam at corner, the same throw is a 70-yard touchdown. This is the clearest of the five.
-- **Through the tackle: not shown.** Both clips end in the same 6-yard sack. In the browser the card credits Smith (White's clip) and Lewis (Aaron Smith's clip), while Node has White beating his man at 2.7 s and finishing at 3.35 s, and Bruce Smith sacking in the other clip.
-  - The browser reproduces Node's hashes exactly (`e2e/practice.spec.ts` determinism passes on this build), so the sim isn't the cause. Something in how the browser sets up this one clip (a Beasts swap with the QB holding the ball) differs from `tools/sim/findidentity.ts`. Not found yet.
-  - A held ball also gets sacked eventually by someone, so this pair needs a snap where the difference is White's win, not the sack. Next step: find the setup difference, then re-find the snap.
+- **Through the tackle:** White beats the left tackle at 2.7 s and strip-sacks the QB at 3.35 s (Strip Sack is one of his traits). Harris Barton falls on the ball and Bruce Smith tackles him. Aaron Smith never gets off his block, and Bruce Smith gets home from the other side.
+  - The first critique called this pair "not shown" because the result card credited whoever made the last tackle ("Smith gets home").
+  - It isn't a Node/browser split: the browser's event log matches Node's tick for tick.
+  - Fixed in `src/game/describe.ts`: a sack is credited to the man who got it, a strip sack says who stripped him and who fell on it, and a last name two men on the field share (Bruce and Aaron Smith) is written in full. The rush video predates the fix, so its card still reads the old way.
 
 **Pops:** 14–26 spikes a clip (worst ~60 rad/s), the same range as the concept videos.
 

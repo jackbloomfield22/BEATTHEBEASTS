@@ -15,10 +15,15 @@ export interface ResultCard {
 const DROP_WHY: Record<string, string> = { contact: ', hit as it arrived', behind: ', thrown behind him', bullet: ', a fastball from close in', reach: ', at full stretch', hands: '' };
 const THROW_WHY: Record<string, string> = { pressure: ' under pressure', 'on the run': ' on the run', 'feet not set': ' with his feet not set', 'long throw': '', clean: '' };
 
-const last = (name: string): string => name.split(' ').slice(-1)[0] ?? name;
+const lastName = (name: string): string => name.split(' ').slice(-1)[0] ?? name;
 const yds = (n: number): string => `${n >= 0 ? '+' : '−'}${Math.abs(Math.round(n))} yd${Math.abs(Math.round(n)) === 1 ? '' : 's'}`;
 
 export function describe(s: PlayState): ResultCard {
+  // A last name, or the full name when two men on the field share it (Bruce and Aaron Smith).
+  const last = (name: string): string => {
+    const l = lastName(name);
+    return s.agents.filter((a) => lastName(a.p.name) === l).length > 1 ? name : l;
+  };
   const r = s.result!;
   const who = (i: number | undefined) => (i !== undefined && i >= 0 ? s.agents[i]!.p.name : '');
   const ev = (type: string) => [...s.events].reverse().find((e) => e.type === type);
@@ -27,12 +32,15 @@ export function describe(s: PlayState): ResultCard {
     return t ? last(who(t.who?.[0])) : '';
   };
   const y = r.yards;
+  // A strip sack (the ball out as he's brought down): the man who stripped him, whoever fell on it.
+  const strip = s.events.find((e) => e.type === 'fumble' && e.data?.sack);
+  const stripper = strip ? last(who(strip.who?.[1])) : '';
   if (!r.offenseBall) {
     const pick = ev('interception');
     const rec = ev('recovery');
     const by = pick ? who(pick.who?.[0]) : rec ? who(rec.who?.[0]) : '';
     return {
-      headline: pick ? `Intercepted by ${by}` : `Fumble, recovered by ${by}`,
+      headline: pick ? `Intercepted by ${by}` : strip ? `Strip sack by ${stripper}, recovered by ${by}` : `Fumble, recovered by ${by}`,
       detail: r.touchdown ? 'Returned for a touchdown.' : r.reason === 'touchback' ? 'Out the back of the end zone: a touchback.' : `Down at the ${spotLabel(r.spot)}.`,
       tone: 'bad',
       yards: 0,
@@ -44,7 +52,22 @@ export function describe(s: PlayState): ResultCard {
     return { headline: 'Touchdown', detail: caught ? `${c}, ${Math.round(100 - s.setup.los)} yards out, from ${last(who(s.qb))}.` : `${c} takes it in.`, tone: 'good', yards: y };
   }
   if (r.reason === 'safety') return { headline: 'Safety', detail: 'Tackled in the end zone.', tone: 'bad', yards: y };
-  if (r.sack) return { headline: `Sacked ${yds(y)}`, detail: r.bigHit ? `${last(who(r.bigHit.by))} lays him out.` : tackler() ? `${tackler()} gets home.` : 'Brought down in the backfield.', tone: 'bad', yards: y };
+  // The sack is credited to the man who got the sack (not whoever made the last tackle on a strip-sack recovery).
+  const sacker = (() => {
+    const e = [...s.events].find((x) => x.type === 'sack');
+    return e ? last(who(e.who?.[0])) : tackler();
+  })();
+  if (r.sack) {
+    const rec = ev('recovery');
+    const detail = r.bigHit
+      ? `${last(who(r.bigHit.by))} lays him out.`
+      : strip
+        ? `${stripper} strips him; ${rec ? last(who(rec.who?.[0])) : 'the offense'} falls on it.`
+        : sacker
+          ? `${sacker} gets home.`
+          : 'Brought down in the backfield.';
+    return { headline: `Sacked ${yds(y)}`, detail, tone: 'bad', yards: y };
+  }
   if (r.reason === 'incomplete') {
     const drop = ev('drop');
     const defl = ev('deflection');
