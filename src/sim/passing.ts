@@ -9,6 +9,7 @@
 import { flightTime, G, solveLaunch, speed3, stepFlight, type V3 } from './ball';
 import { errorAt20, maxRange, maxThrowSpeed, releaseTime } from './effects';
 import { breakCarry, continueDir } from './ai';
+import { blockOf } from './blocks';
 import { gauss } from './rand';
 import { exp } from '@/engine/math/detmath';
 import type { PlayState } from './state';
@@ -145,6 +146,8 @@ const ONRUN_FREE = 2;
  * it passes) who could reach the ball's height there makes the QB put air
  * under it. Up to four 12% steps; past that it's thrown into him anyway.
  */
+/** An engaged rusher this close to the release (yd) still makes the QB put air on it: he's in his lap (the bat at the line reaches 0.7 yd round the ball's path; a step more for his arms coming up). */
+const LAP_R = 1.5;
 function clearLoft(s: PlayState, from: V3, to: V3, T: number): number {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -155,6 +158,12 @@ function clearLoft(s: PlayState, from: V3, to: V3, T: number): number {
     for (const i of s.def) {
       const d = s.agents[i]!;
       if (d.down) continue;
+      // A rusher locked up with a blocker isn't in the lane: he can't leave
+      // the block to undercut it, and the QB throws over the scrum on a line
+      // (the AI's read, ai.ts openness, already ignores engaged linemen).
+      // Only one driven back into the QB's lap, within LAP_R, has the ball
+      // over his hands as it leaves (batAtLine's tipped ball at the line).
+      if (blockOf(s, i) && dist(d.pos, from) > LAP_R) continue;
       for (const u of [0.25, 0.4, 0.55, 0.7, 0.85]) {
         const t = u * T;
         const px = d.pos.x + d.vel.x * Math.min(t, 0.4);
