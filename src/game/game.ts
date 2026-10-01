@@ -217,6 +217,7 @@ class GameSession {
         onTick: (s) => this.onTick(s),
         // The depth chart's rotation: RB2 on his downs (src/game/rotation.ts).
         squad: (play, sit) => squadFor(this.team!, play, sit, (this.m?.drive?.plays ?? 0) + 1),
+        driveKey: () => this.m?.userDrives.length ?? 0,
       },
     });
     this.offKeys?.();
@@ -538,7 +539,7 @@ class GameSession {
     const st = s.setup;
     this.capsules.push(
       run && run.state === s
-        ? { seed: st.seed, playId: st.play.id, def: st.def, los: st.los, ballY: st.ballY ?? 0, toGo: st.toGo, down: before.down, difficulty: st.difficulty, tapMax: st.tapMax, flip: st.flip, fatigue: st.fatigue as Record<string, number> | undefined, frames: encodeFrames(run.frames) }
+        ? { seed: st.seed, playId: st.play.id, def: st.def, los: st.los, ballY: st.ballY ?? 0, toGo: st.toGo, down: before.down, difficulty: st.difficulty, tapMax: st.tapMax, flip: st.flip, fatigue: st.fatigue as Record<string, number> | undefined, legs: st.legs as Record<string, number> | undefined, frames: encodeFrames(run.frames) }
         : null,
     );
     // Keep the inputs of the snaps that could still be the play of the game (memory: a game is ~60 snaps).

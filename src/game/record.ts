@@ -42,6 +42,8 @@ export interface ReplayCapsule {
   tapMax?: number;
   flip?: boolean;
   fatigue?: Record<string, number>;
+  /** Top speed factor by slot (Change of Pace's fresh legs). */
+  legs?: Record<string, number>;
   /** [count, frame] runs: the InputFrame the sim got each tick. */
   frames: [number, InputFrame][];
 }

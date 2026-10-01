@@ -16,6 +16,7 @@ import { loadPracticeRosters, loadSnapshot } from './rosters';
 import { SimRunner } from './runner';
 import { withSwap, type Clip } from './clips';
 import { AUDIBLES, audiblePlay, type AudibleKind } from './audible';
+import { afterSnap, emptyFatigue, fatigueOf, freshLegs, type DriveFatigue, type Snap } from './fatigue';
 import { routeOf } from '@/sim/ai';
 import type { OffPlay } from '@/sim/plays';
 import { detectSynergies } from '@/engine/ratings/traits/synergies';
@@ -159,6 +160,8 @@ const hitToll = (force: number) => Math.min(0.45, 0.15 + force * 0.02);
 const HIT_STOP = 0.09;
 const SLOWMO = { force: 9, secs: 0.8, speed: 0.35 };
 const get = () => usePractice.getState();
+/** Change of Pace's fresh legs: +3% top speed on his first two touches of a drive (the trait catalog's line). */
+const FRESH_LEGS = 1.03;
 /** Seconds the play-action call stays up after the fake ends (the drop out of it, while the linebackers recover). */
 const PA_CALL_HOLD = 0.9;
 
@@ -196,6 +199,8 @@ export interface GameHooks {
    * eleven from it as always (sim/personnel.ts). Absent: `teams.team`.
    */
   squad?(play: OffPlay, sit: Situation): ContendersRoster;
+  /** Which of the user's drives this is (it changes when a series ends): fatigue resets with a new one. */
+  driveKey?(): number;
 }
 
 type Rosters = { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> };
@@ -242,7 +247,8 @@ class PracticeSession {
   /** The session's first catch is still to come (it plays slowed). */
   private firstCatch = true;
   /** Stamina each offensive player is down going into the next play (a big hit's toll). */
-  private fatigue: Partial<Record<OffSlot, number>> = {};
+  /** Stamina through the drive, by player (src/game/fatigue.ts). */
+  private drive: DriveFatigue = emptyFatigue();
   /** Throws to each receiver (by player id) this game: QB–receiver chemistry builds with them (M6.5 #6). */
   private targets: Record<string, number> = {};
   /** Sim events already looked at this play (for the hit-stop). */
@@ -386,9 +392,18 @@ class PracticeSession {
     if (!this.rosters) return;
     this.closeHot();
     const play = playById(playId);
+    const offense = this.teams ? offenseFor(play, this.squadFor(play, sit)) : this.rosters.offense;
+    // The drive so far: what each man starts without, and a Change of Pace back's fresh legs.
+    const fatigue: Partial<Record<OffSlot, number>> = {};
+    const legs: Partial<Record<OffSlot, number>> = {};
+    for (const [k, p] of Object.entries(offense) as [OffSlot, SimPlayer][]) {
+      const f = fatigueOf(this.drive, p.id);
+      if (f > 0) fatigue[k] = f;
+      if (freshLegs(this.drive, p.id, p.traits ?? [])) legs[k] = FRESH_LEGS;
+    }
     const state = createPlay({
       seed,
-      offense: this.teams ? offenseFor(play, this.squadFor(play, sit)) : this.rosters.offense,
+      offense,
       defense: this.teams ? defenseFor(def, this.teams.beasts) : this.rosters.defense,
       play,
       // The Touch pass hold setting: how long a receiver key is held before a driven ball becomes touch.
@@ -399,7 +414,8 @@ class PracticeSession {
       toGo: sit.toGo,
       user,
       difficulty: clip ? undefined : this.difficulty,
-      fatigue: clip ? undefined : { ...this.fatigue },
+      fatigue: clip ? undefined : fatigue,
+      legs: clip || !Object.keys(legs).length ? undefined : legs,
       chem: clip ? undefined : this.chemistry(play, sit),
       down: sit.down,
     });
@@ -665,18 +681,26 @@ class PracticeSession {
     this.reported = this.playId;
     const ui = get();
     const endY = s.carrier >= 0 ? s.agents[s.carrier]!.pos.y : s.ball.pos.y;
+    const driveBefore = this.game?.driveKey?.();
     const g = this.game ? this.game.onResult(s, s.result, endY) : null;
     const next = g ? (g.over ? null : g.next) : nextSituation(ui.situation, s.result, endY);
     this.setContext(null);
-    // Fatigue for the next play: last play's toll recovers by half; a big hit adds his.
-    const f: Partial<Record<OffSlot, number>> = {};
-    for (const [k, v] of Object.entries(this.fatigue)) if (v && v / 2 > 0.02) f[k as OffSlot] = v / 2;
+    // Fatigue for the next snap (src/game/fatigue.ts): what this play took, the carries, a big hit's toll; a new series starts fresh.
     const bh = s.result.bigHit;
-    if (bh && s.agents[bh.on]!.side === 'off') {
-      const slot = s.agents[bh.on]!.slot as OffSlot;
-      f[slot] = Math.min(0.6, (f[slot] ?? 0) + hitToll(bh.force));
-    }
-    this.fatigue = f;
+    const snaps: Snap[] = s.off.map((i) => {
+      const a = s.agents[i]!;
+      return {
+        id: a.p.id,
+        start: Math.max(0.2, 1 - (s.setup.fatigue?.[a.slot as OffSlot] ?? 0)),
+        end: a.stamina,
+        staminaAttr: a.fx.a('stamina'),
+        touched: a.i === s.carrier || s.events.some((e) => (e.type === 'handoff' && e.who?.[1] === a.i) || (e.type === 'catch' && e.who?.[0] === a.i)),
+        dropback: a.i === s.qb && !s.setup.play.run,
+        traits: a.p.traits ?? [],
+        hit: bh && bh.on === a.i ? hitToll(bh.force) : 0,
+      };
+    });
+    this.drive = afterSnap(this.drive, snaps, next === null || (driveBefore !== undefined && this.game?.driveKey?.() !== driveBefore));
     // Chemistry: every throw to a receiver counts toward his timing with the QB.
     const tgt = s.ball.target;
     if (s.pass?.attempted && tgt >= 0 && s.agents[tgt]!.side === 'off') {

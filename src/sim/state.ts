@@ -43,6 +43,8 @@ export interface PlaySetup {
   autoSnap?: boolean;
   /** Stamina each player starts the play without (0–1), e.g. still shaking off a big hit. */
   fatigue?: Partial<Record<OffSlot | DefSlot, number>>;
+  /** Top speed factor by slot (Change of Pace's fresh legs, src/game/fatigue.ts). */
+  legs?: Partial<Record<OffSlot, number>>;
   /**
    * The user's touch-pass threshold (s): a receiver key held this long or
    * less is a tap (the driven ball), longer is a hold (touch). The player's
@@ -335,7 +337,7 @@ export function createPlay(setup: PlaySetup): PlayState {
   for (const a of agents) for (let k = 0; k < 3; k++) a.hist.push({ pos: { ...a.pos }, vel: { ...a.vel } });
   // Effort on this snap: ±2% top speed per player (seeded), so no two plays run alike.
   const effort = deriveStream(s.seed, 'effort');
-  for (const a of agents) a.fx.vmax *= 1 + (effort() - 0.5) * 0.04;
+  for (const a of agents) a.fx.vmax *= (1 + (effort() - 0.5) * 0.04) * (a.side === 'off' ? (s.legs?.[a.slot as OffSlot] ?? 1) : 1);
   for (const a of agents) a.stamina = Math.max(0.2, 1 - (s.fatigue?.[a.slot] ?? 0));
   return {
     setup: s,
