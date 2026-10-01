@@ -226,7 +226,7 @@ const contactPairs: [number, number][] = [];
 const _lean = { x: 0, z: 0 };
 
 /** The carrier's move options as the HUD says them (one word each). */
-const OPTION_WORD: Record<string, string> = { juke: 'Juke', stiffArm: 'Stiff arm', spin: 'Spin', truck: 'Truck', dive: 'Dive', protect: 'Protect' };
+const OPTION_WORD: Record<string, string> = { juke: 'Juke', stiffArm: 'Stiff arm', spin: 'Spin', truck: 'Truck', hurdle: 'Hurdle', dive: 'Dive', protect: 'Protect' };
 
 export function GameScene() {
   const scene = useThree((s) => s.scene);

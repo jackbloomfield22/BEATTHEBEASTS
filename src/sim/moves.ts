@@ -5,7 +5,7 @@
 // carrier (mem.opts) so the HUD shows exactly what a press will do.
 //
 // - A tackler coming from the side (35–120° off his run): juke, stiff arm, spin.
-// - One square in front (within 35°): truck, spin, juke.
+// - One square in front (within 35°): truck, spin, juke (and the hurdle for a Hurdler: the best three show).
 // - Open field (nobody who can get to him within OPEN_R): dive, protect, and
 //   the best move for the nearest defender's angle.
 // Inside each set the order is the odds (contact.ts tackleOdds, the same
@@ -13,13 +13,14 @@
 
 import { atan2, cos, sin } from '@/engine/math/detmath';
 import { blockOf } from './blocks';
-import { tackleOdds } from './contact';
+import { goesLow, tackleOdds } from './contact';
+import { has } from './traits';
 import type { PlayState } from './state';
 import { GOAL_X, type Agent, type Move } from './types';
 import { dist } from './vec';
 
 /** A move as the HUD names it: the juke's side is picked when it's pressed (away from the tackler). */
-export type MoveOption = 'juke' | 'stiffArm' | 'spin' | 'truck' | 'dive' | 'protect';
+export type MoveOption = 'juke' | 'stiffArm' | 'spin' | 'truck' | 'hurdle' | 'dive' | 'protect';
 
 /** Nobody within this (yd) in front of him: the open field. */
 const OPEN_R = 6;
@@ -61,21 +62,24 @@ export function carrierOptions(s: PlayState, c: Agent): [MoveOption, MoveOption,
   const rank = (ms: MoveOption[]) => (d ? [...ms].sort((a, b) => moveOdds(s, c, d, b) - moveOdds(s, c, d, a)) : ms);
   if (!d || dist(d.pos, c.pos) > OPEN_R) {
     // Open field: the best move for the nearest man's angle, then the dive and protecting it.
-    const best = d ? rank(angleSet(c, d))[0]! : 'juke';
+    const best = d ? rank(angleSet(s, c, d))[0]! : 'juke';
     return [best, 'dive', 'protect'];
   }
-  const r = rank(angleSet(c, d));
+  const r = rank(angleSet(s, c, d));
   return [r[0]!, r[1]!, r[2]!];
 }
 
+
 /** The three moves that suit a man at this angle to his run. */
-function angleSet(c: Agent, d: Agent): MoveOption[] {
+function angleSet(s: PlayState, c: Agent, d: Agent): MoveOption[] {
   const attack = c.side === 'off' ? 1 : -1;
   const sp = Math.sqrt(c.vel.x * c.vel.x + c.vel.y * c.vel.y);
   const heading = sp > 1 ? atan2(c.vel.y, c.vel.x) : attack > 0 ? 0 : Math.PI;
   const to = atan2(d.pos.y - c.pos.y, d.pos.x - c.pos.x);
   const off = Math.abs(atan2(sin(to - heading), cos(to - heading)));
-  return off < (SQUARE_DEG * Math.PI) / 180 ? ['truck', 'spin', 'juke'] : ['juke', 'stiffArm', 'spin'];
+  // A Hurdler can go over a man squared up in front who goes low (the trait unlocks the move).
+  if (off < (SQUARE_DEG * Math.PI) / 180) return has(c, 'hurdler') && goesLow(s, c, d) ? ['truck', 'hurdle', 'spin', 'juke'] : ['truck', 'spin', 'juke'];
+  return ['juke', 'stiffArm', 'spin'];
 }
 
 /**
@@ -86,7 +90,7 @@ function angleSet(c: Agent, d: Agent): MoveOption[] {
  * trucks). A juke goes away from him.
  */
 export function aiMove(s: PlayState, c: Agent, d: Agent): Move {
-  const best = [...angleSet(c, d)].sort((a, b) => moveOdds(s, c, d, b) - moveOdds(s, c, d, a))[0]!;
+  const best = [...angleSet(s, c, d)].sort((a, b) => moveOdds(s, c, d, b) - moveOdds(s, c, d, a))[0]!;
   if (best !== 'juke') return best as Move;
   const attack = c.side === 'off' ? 1 : -1;
   return (d.pos.y - c.pos.y) * attack > 0 ? 'jukeR' : 'jukeL';

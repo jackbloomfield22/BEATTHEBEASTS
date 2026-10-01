@@ -21,7 +21,7 @@
 
 import type { V2 } from '@/sim/vec';
 
-export type LatKind = 'snap' | 'move' | 'throwHold' | 'throwRelease' | 'catch' | 'juke' | 'spin' | 'stiffArm' | 'truck' | 'dive' | 'protect';
+export type LatKind = 'snap' | 'move' | 'throwHold' | 'throwRelease' | 'catch' | 'juke' | 'spin' | 'stiffArm' | 'truck' | 'hurdle' | 'dive' | 'protect';
 
 export interface LatSample {
   kind: LatKind;

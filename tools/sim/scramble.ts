@@ -23,7 +23,7 @@ export function scramble(legs: number, play: string, def: string, seed: number, 
   qb.fx = effects(qb.p);
   for (let k = 0; k < 60 * 12 && !s.result; k++) {
     const t = s.snapT < 0 ? -1 : Math.round((s.t - s.snapT) * 60);
-    stepPlay(s, input({ snap: s.phase === 'presnap', scramble: t === TAKE_OFF, move: t >= TAKE_OFF ? { x: 1, y: dirY } : { x: 0, y: 0 } }));
+    stepPlay(s, input({ snap: s.phase === 'presnap', scramble: t === TAKE_OFF, move: t >= TAKE_OFF ? { x: 1, y: dirY } : { x: 0, y: 0 }, sprint: t >= TAKE_OFF }));
   }
   return s.result!;
 }

@@ -579,7 +579,7 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         if (!a) break;
         const mv = e.data?.move;
         const kind = mv === 'jukeL' || mv === 'jukeR' ? 'juke' : mv;
-        if (kind === 'juke' || kind === 'spin' || kind === 'stiffArm' || kind === 'truck' || kind === 'dive') latency.respond(kind);
+        if (kind === 'juke' || kind === 'spin' || kind === 'stiffArm' || kind === 'truck' || kind === 'hurdle' || kind === 'dive') latency.respond(kind);
         if (mv === 'tuck') a.animator.playOverlay('ovl_tuck');
         else if (mv === 'slide') lyingClip(a, 'qb_slide');
         else if (mv === 'redirect') a.animator.play(Number(e.data?.side ?? 1) > 0 ? 'rush_redirect_l' : 'rush_redirect_r', { now: true });
@@ -602,7 +602,15 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
           if (a.animator.lib.meta.truck && Math.hypot(v.x, v.y) > 2.5) a.animator.play('truck', { now: true });
           else a.animator.playOverlay('ovl_truck');
         }
-        else if (mv === 'pumpFake') a.animator.playOverlay('ovl_pump');
+        else if (mv === 'hurdle' && a.animator.lib.meta.hurdle) {
+          // Over the man in front (the sim's hurdle move): the clip starts so its flight's `over` frame comes as he meets him.
+          const c = s.agents[who[0]!]!;
+          const d = threatOf(s, c);
+          const sp = Math.hypot(c.vel.x, c.vel.y);
+          const tc = d && sp > 1 ? Math.hypot(d.pos.x - c.pos.x, d.pos.y - c.pos.y) / (sp + Math.max(0, Math.hypot(d.vel.x, d.vel.y) * 0.5)) : 0.4;
+          const over = eventAt(a, 'hurdle', 'over') ?? 0.6;
+          a.animator.play('hurdle', { now: true, t0: Math.max(0, Math.min(0.35, over - tc)) });
+        } else if (mv === 'pumpFake') a.animator.playOverlay('ovl_pump');
         else if (mv === 'secureDown') {
           // SECURE in traffic: the cradle turns into going down with it (from the catch's secure frame on).
           a.animator.stopOverlay();

@@ -726,7 +726,7 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     // Protecting the ball (two hands, covered up) is the one slow gait: a jog.
     steer(c, cutWeight(c, want), { mult: c.move === 'protect' ? PROTECT_PACE : 1, brake: len(want) < 0.1 ? CARRIER_COAST : 1, burst: c.burst > 0 });
   }
-  if (c.anim !== 'juke' && c.anim !== 'spin' && c.anim !== 'stiffArm' && c.anim !== 'truck' && c.anim !== 'dive') c.anim = 'carry';
+  if (c.anim !== 'juke' && c.anim !== 'spin' && c.anim !== 'stiffArm' && c.anim !== 'truck' && c.anim !== 'hurdle' && c.anim !== 'dive') c.anim = 'carry';
   if (c.move === 'dive' && c.busy <= 1) {
     c.down = true;
     c.anim = 'down';

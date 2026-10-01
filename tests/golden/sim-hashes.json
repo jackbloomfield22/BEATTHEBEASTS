@@ -2557,7 +2557,7 @@
  },
  {
   "key": "doubles-hail-mary/cover4/11",
-  "hash": 2543073977,
+  "hash": 2103834721,
   "ticks": 351,
   "reason": "tackle"
  },
@@ -3493,8 +3493,8 @@
  },
  {
   "key": "singleback-outside-zone/cover1/11",
-  "hash": 4165071868,
-  "ticks": 126,
+  "hash": 959614930,
+  "ticks": 132,
   "reason": "tackle"
  },
  {
@@ -3541,8 +3541,8 @@
  },
  {
   "key": "singleback-outside-zone/cover1blitz/11",
-  "hash": 1958824983,
-  "ticks": 126,
+  "hash": 147509321,
+  "ticks": 131,
   "reason": "tackle"
  },
  {
@@ -3553,7 +3553,7 @@
  },
  {
   "key": "singleback-outside-zone/cover1off/11",
-  "hash": 2328287285,
+  "hash": 165594832,
   "ticks": 116,
   "reason": "tackle"
  },
@@ -4237,8 +4237,8 @@
  },
  {
   "key": "iform-toss/cover4/11",
-  "hash": 559958613,
-  "ticks": 267,
+  "hash": 2233117490,
+  "ticks": 290,
   "reason": "tackle"
  },
  {
@@ -4369,8 +4369,8 @@
  },
  {
   "key": "pistol-stretch/cover2man/11",
-  "hash": 6508178,
-  "ticks": 162,
+  "hash": 1932214140,
+  "ticks": 152,
   "reason": "tackle"
  },
  {
@@ -4573,8 +4573,8 @@
  },
  {
   "key": "heavy-power/cover1/11",
-  "hash": 3010594117,
-  "ticks": 145,
+  "hash": 2976952258,
+  "ticks": 134,
   "reason": "tackle"
  },
  {

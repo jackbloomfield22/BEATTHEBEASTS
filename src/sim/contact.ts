@@ -33,6 +33,20 @@ const TACKLE_K = 4;
 /** The juke and spin's evade: the logit at an average move against a good tackler from the side, and its slope (see tackleOdds). */
 const EVADE0 = -1.2;
 const EVADE_K = 4.3;
+/**
+ * The hurdle (the Hurdler trait's move: "unlocks the hurdle move against low
+ * tackles; success scales with Jumping"). Over a man squared up in front who
+ * goes low (a back seven defender; a lineman stays tall), against a good
+ * tackler diving at his legs: ~65–70% for an elite Hurdler (the gate's ~93
+ * Jumping), the move that beats a man going low. Caught in the air he
+ * has nothing to break the tackle with (HURDLE_FAIL). Owner-feel numbers:
+ * hurdles are rare and spectacular, and fail ugly.
+ */
+const HURDLE0 = -0.7;
+const HURDLE_K = 4;
+const HURDLE_FAIL = 1.5;
+/** A Hurdler's Jumping when the snapshot doesn't carry it: the trait's elite gate (top 10% at the position; Saquon Barkley's 96 the high end), ~93. */
+const HURDLER_JUMP = 0.93;
 /** The stiff arm's and the truck's pull on the tackle logit (see tackleOdds). */
 const STIFF_K = 2.0;
 const TRUCK_K = 2.8;
@@ -108,7 +122,8 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
   // The carrier's counter: the move he's in, else Break Tackle.
   const counterAttr = mv ? MOVE_ATTR[mv] ?? 'breakTackle' : 'breakTackle';
   // Spam: each recent move takes a bite out of the next (GDD §9.3).
-  const counter = c.fx.a(counterAttr) * (1 - Math.min(0.6, c.moveFatigue * 0.25));
+  // In the air (a hurdle) there's no counter: he can't break a tackle off the ground.
+  const counter = mv === 'hurdle' ? 0 : c.fx.a(counterAttr) * (1 - Math.min(0.6, c.moveFatigue * 0.25));
   // Juke / spin: beat the tackler outright, or it's a loss if he's squared up.
   let evade = 0;
   if (mv === 'jukeL' || mv === 'jukeR' || mv === 'spin') {
@@ -125,6 +140,15 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
     const skill = counter - 0.75 - (d.fx.a('tackle') * 0.4 + d.fx.a('pursuit') * 0.3 + d.fx.a('agility') * 0.3 - 0.87);
     evade = logistic(EVADE0 + EVADE_K * skill + (squared ? -1.2 : 0));
   }
+  const low = goesLow(s, c, d);
+  if (mv === 'hurdle') {
+    const square = headOn > 0.6 ? 1 : 0.25;
+    // His spring: Jumping where the snapshot carries it, else the Hurdler gate's
+    // (the sim snapshot has no Jumping for backs), with Agility for the gather.
+    const jump = c.p.attrs.jumping !== undefined ? c.fx.a('jumping') : HURDLER_JUMP;
+    const skill = 0.7 * jump + 0.3 * c.fx.a('agility') - 0.8 - (d.fx.a('tackle') * 0.5 + d.fx.a('agility') * 0.5 - 0.87);
+    evade = logistic(HURDLE0 + HURDLE_K * skill) * (low ? 1 : 0.3) * square;
+  }
   // Baseline ~85% per attempt for an even matchup (NFL missed-tackle rate
   // runs 10–15% of attempts: PFF / Sports Info Solutions charting).
   let x = TACKLE0 + TACKLE_K * (tackle - counter * 0.85) - (qbBack ? 0.9 : 1.8) * massEdge + 0.7 * gang + (qbBack ? QB_BACK_EDGE : 0);
@@ -137,6 +161,8 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
   // one ~3%.
   if (mv === 'stiffArm') x -= STIFF_K * c.fx.a('stiffArm');
   if (mv === 'truck') x -= TRUCK_K * c.fx.a('trucking') * (c.fx.mass / (c.fx.mass + d.fx.mass)) * 2 - TRUCK0;
+  if (mv === 'hurdle') x += HURDLE_FAIL;
+  else if (low && (mv === 'stiffArm' || mv === 'truck' || mv === 'spin')) x += LOW_POWER;
   if (headOn < -0.3 && !qbBack) x -= 0.4; // arm tackles from behind get broken more (not on a QB still behind the line)
   // The traits, as the catalog words them: a factor on the chance he gets
   // away (the miss), so "20% more often" is 1.2.
@@ -159,6 +185,23 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
   if (evade > 0) evade = Math.min(0.95, evade * more(c, 'ankle-breaker', 0.1)); // juke ceiling +10%
   return { evade, tackle: Math.max(0, 1 - (1 - p) * miss), closing, headOn };
 }
+
+/**
+ * A defender who goes low at him: a defensive back or linebacker lighter than
+ * him, on LOW_SHARE of encounters. The sim has no tackle height, so which
+ * ones is fixed per play and man from the seed (pure: the HUD and the sim
+ * agree). Most DBs on a big back go high or wrap; the ones who dive at the
+ * legs are the ones a Hurdler goes over, and there's nothing up top to
+ * stiff-arm or run through (LOW_POWER).
+ */
+export function goesLow(s: PlayState, c: Agent, d: Agent): boolean {
+  if (!(d.p.pos === 'CB' || d.p.pos === 'S' || d.p.pos === 'LB') || d.fx.mass >= c.fx.mass) return false;
+  return ((s.setup.seed >>> 0) * 31 + d.i * 7 + c.i * 13) % 100 < LOW_SHARE * 100;
+}
+/** The share of lighter back-seven tacklers who go low on a back (owner-feel: hurdles are rare and spectacular). */
+const LOW_SHARE = 0.35;
+/** A low tackle against a stiff arm, a truck or a spin: the tackle's logit up this much (he's at the shins; a spin slows into him). */
+const LOW_POWER = 0.6;
 
 /**
  * Resolve a defender reaching the ball carrier. Returns the outcome and the
@@ -219,7 +262,7 @@ export function isBigHit(s: PlayState, d: Agent, c: Agent, closing: number, head
  * steps/s), so the juke's sidestep and the spin's slowdown build over that
  * instead of teleporting the velocity in one tick.
  */
-const PLANT: Record<string, number> = { jukeL: 5, jukeR: 5, spin: 6, dive: 3 };
+const PLANT: Record<string, number> = { jukeL: 5, jukeR: 5, spin: 6, hurdle: 6, dive: 3 };
 
 /** A quarterback's dive is a slide (feet first: he gives himself up and can't be hit); not on a designed QB run (the sneak: he dives for the yard). */
 export const slides = (c: Agent): boolean => c.slot === 'QB' && c.side === 'off' && !c.mem.designed;
@@ -227,7 +270,8 @@ export const slides = (c: Agent): boolean => c.slot === 'QB' && c.side === 'off'
 /** A carrier's move: commits him for a few frames and sets a cooldown. False if he can't start it now. */
 export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>): boolean {
   if (c.busy > 0 || c.moveCooldown > 0 || c.down) return false;
-  const frames: Record<string, number> = { jukeL: 16, jukeR: 16, spin: 24, stiffArm: 20, truck: 18, dive: 30, protect: 1 };
+  // The hurdle: gather, takeoff and flight to the landing (the clip's 0.96 s, tools/blender actions_m65_carrier.py hurdle).
+  const frames: Record<string, number> = { jukeL: 16, jukeR: 16, spin: 24, stiffArm: 20, truck: 18, hurdle: 58, dive: 30, protect: 1 };
   c.move = mv;
   c.busy = frames[mv] ?? 12;
   // Spin Cycle: spins chain (two in a run); Human Joystick: any move chains with no recovery (the trait catalog's lines).
@@ -252,6 +296,10 @@ export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>
     const keep = has(c, 'spin-cycle') ? 0.9 : 0.7;
     tx *= keep;
     ty *= keep;
+  } else if (mv === 'hurdle') {
+    // The gather step and the flight keep ~92% of his speed (the clip's 5.4 m/s out of a 5.9 run).
+    tx *= 0.92;
+    ty *= 0.92;
   } else if (mv === 'dive' && slides(c)) {
     // A QB's slide: feet first, giving himself up. He's down where it began
     // (forward progress), and he slows along the turf (~60% of his speed).

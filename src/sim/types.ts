@@ -60,6 +60,7 @@ export type Anim =
   | 'spin'
   | 'stiffArm'
   | 'truck'
+  | 'hurdle'
   | 'dive'
   | 'tackle'
   | 'tackled'
@@ -67,7 +68,7 @@ export type Anim =
   | 'celebrate';
 
 /** Carrier moves (GDD §9.3). */
-export type Move = 'jukeL' | 'jukeR' | 'spin' | 'stiffArm' | 'truck' | 'dive' | 'protect';
+export type Move = 'jukeL' | 'jukeR' | 'spin' | 'stiffArm' | 'truck' | 'hurdle' | 'dive' | 'protect';
 
 export interface Agent {
   i: number;

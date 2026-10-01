@@ -89,13 +89,22 @@ const slotAgent = (s: PlayState, slot: string) => s.agents.find((a) => a.slot ==
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN);
 const since = (s: PlayState) => (s.snapT < 0 ? -1 : Math.round((s.t - s.snapT) * 60));
 
+/** Room to sprint (hold-to-sprint, Playtest 1 #2): a player holds it in the open and lets go with a tackler within ~2.6 yd (as src/game/clips.ts does). */
+function open(s: PlayState): boolean {
+  const c = s.agents[s.carrier]!;
+  return !s.def.some((i) => {
+    const d = s.agents[i]!;
+    return !d.down && Math.hypot(d.pos.x - c.pos.x, d.pos.y - c.pos.y) < 2.6;
+  });
+}
+
 /** Throw to the man in `slot` on his break (a tap), a catch-and-run call, upfield after. */
 function throwTo(s: PlayState, slot: string, at: number) {
   const icon = s.icons.findIndex((i) => s.agents[i]!.slot === slot) + 1;
   return (st: PlayState) => {
     const t = since(st);
     if (st.phase === 'air') return input({ catchType: 'rac' });
-    if (st.phase === 'carrier') return input({ move: { x: 1, y: 0 } });
+    if (st.phase === 'carrier') return input({ move: { x: 1, y: 0 }, sprint: open(st) });
     return input({ snap: st.phase === 'presnap', throwHeld: icon > 0 && t >= at && t < at + 3 ? icon : 0 });
   };
 }
@@ -198,7 +207,7 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
       const s = mk(PLAYS.find((p) => p.id === id)!, def, k, true);
       runToWhistle(s, (st) => {
         const t = since(st);
-        return input({ snap: st.phase === 'presnap', scramble: t === 90, move: t >= 90 ? { x: 1, y: dy } : { x: 0, y: 0 } });
+        return input({ snap: st.phase === 'presnap', scramble: t === 90, move: t >= 90 ? { x: 1, y: dy } : { x: 0, y: 0 }, sprint: t >= 90 });
       });
       if (s.result) scr.push(s.result.yards);
     }
