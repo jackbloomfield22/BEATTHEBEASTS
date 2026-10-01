@@ -52,6 +52,8 @@ export interface PracticeUi {
   tutorial: TutorialStep | null;
   /** The hot-route picker, when open: choosing the receiver, then his route. */
   hot: HotPicker | null;
+  /** Play action, readable (Playtest 2): through the fake, how many linebackers bit on it (null: no fake on). */
+  pa: { bit: number; lbs: boolean } | null;
   /** The audible picker is open (pre-snap, Playtest 2). */
   audible: boolean;
   /** The last audible's call, shown at the line until the snap (its play's name). */
@@ -79,6 +81,7 @@ export const usePractice = create<PracticeUi>(() => ({
   catchType: null,
   tutorial: null,
   hot: null,
+  pa: null,
   audible: false,
   audibled: null,
   result: null,
@@ -156,6 +159,8 @@ const hitToll = (force: number) => Math.min(0.45, 0.15 + force * 0.02);
 const HIT_STOP = 0.09;
 const SLOWMO = { force: 9, secs: 0.8, speed: 0.35 };
 const get = () => usePractice.getState();
+/** Seconds the play-action call stays up after the fake ends (the drop out of it, while the linebackers recover). */
+const PA_CALL_HOLD = 0.9;
 
 function contextFor(phase: Phase, userCarrier: boolean): InputContext {
   switch (phase) {
@@ -621,6 +626,15 @@ class PracticeSession {
     if (s.scrambleT >= 0 !== get().scrambling) set({ scrambling: s.scrambleT >= 0 });
     if (s.phase === 'air') this.sawAir = true;
     else if (this.sawAir) this.firstCatch = false;
+    // Play action: the call shows from the snap through the fake and a beat
+    // after (PA_CALL_HOLD), with the linebackers who triggered on it
+    // (runs.ts runFit marks them), gone at the throw or the scramble.
+    const pa = s.setup.play.pa;
+    const paOn = !!pa && s.snapT >= 0 && s.t - s.snapT < 0.25 + pa.fake + PA_CALL_HOLD && s.ball.mode === 'held' && s.ball.holder === s.qb && s.scrambleT < 0;
+    const bitten = paOn ? s.def.map((i) => s.agents[i]!).filter((a) => a.mem.paFrom !== undefined) : [];
+    const bit = bitten.length;
+    const cur = get().pa;
+    if (paOn ? cur?.bit !== bit : cur !== null) set({ pa: paOn ? { bit, lbs: bitten.every((a) => a.p.pos === 'LB') } : null });
     this.stepTutorial(s);
     this.game?.onTick?.(s);
     if (s.result && get().stage === 'live' && s.t - s.whistleT >= DEAD_HOLD) this.report();

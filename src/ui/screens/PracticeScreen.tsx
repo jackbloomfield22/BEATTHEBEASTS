@@ -471,6 +471,16 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
           )}
         </div>
       ) : null}
+      {ui.pa ? (
+        <div className="pa-call">
+          <span className="pa-tag">Play action</span>
+          {ui.pa.bit ? (
+            <span className="pa-bit">
+              {ui.pa.bit} {ui.pa.lbs ? (ui.pa.bit === 1 ? "linebacker" : "linebackers") : ui.pa.bit === 1 ? "defender" : "defenders"} bit
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       {ui.stage === "presnap" && ui.hot ? <HotRoutePicker /> : null}
       {ui.stage === "presnap" && ui.audible ? <AudiblePicker /> : null}
       {live && inPocket && !runPlay && ui.scrambling ? (

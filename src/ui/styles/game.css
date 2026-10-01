@@ -126,6 +126,10 @@
 .audible-item.off { opacity: .45; cursor: default; }
 .audible-item:not(.off):hover { border-color: var(--lime); }
 .snap-call .audibled { font-weight: 800; font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; color: var(--lime); }
+/* Play action (Playtest 2): the call through the fake, under the top bar, and who bit on it. */
+.pa-call { position: absolute; top: 9.5rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: .6rem; padding: .35rem .8rem; background: var(--panel-strong); border-left: 3px solid var(--lime); animation: catch-in .12s ease-out; pointer-events: none; }
+.pa-tag { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: .08em; text-transform: uppercase; color: var(--lime); }
+.pa-bit { font-weight: 700; font-size: 1rem; color: var(--ink); }
 .hot-foot { display: flex; gap: .5rem; align-items: center; font-size: .78rem; color: var(--ink-2); }
 
 /* Prompts: a key and a word or two, uppercase, one style everywhere. */

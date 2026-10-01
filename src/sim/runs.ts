@@ -29,6 +29,10 @@ const DEEP_READ = 0.1;
  * the back at the line on most short runs; NFL backers fill ~2 yd off it.
  */
 const LB_FIT = 2;
+/** Seconds a play-action fake holds a 0 Play Recognition defender past the pass show (0 at 99); was 0.25, widened so the rating shows in the bite. */
+const PA_READ = 0.4;
+/** How far a play-action trigger goes with Play Recognition (1 − PA_STEP·PR of the way to his fill): a 99 takes ~60% of it, a read step and a half; a 0 fills all the way. */
+const PA_STEP = 0.42;
 
 /** Gap offsets from the ball (yd): A (center–guard), B (guard–tackle), C (outside the tackle), D (outside the tight end). */
 export const GAPS = [0.7, 2.0, 3.4, 5.2];
@@ -437,11 +441,14 @@ export function belief(s: PlayState, d: Agent): 'run' | 'pass' {
   const deep = as.kind === 'zone' && ZONES[as.zone].deep;
   const tRun = s.runShow >= 0 ? s.runShow + rt + (db ? DB_READ : 0) + (deep ? (s.setup.play.pa ? 0.35 : DEEP_READ) : 0) : Infinity;
   // Seeing the ball come out of a fake takes a sharper eye than seeing the
-  // fake (Play Recognition: the best read it almost at once, the worst a
-  // quarter-second late).
+  // fake (Play Recognition: the best read it almost at once, the worst
+  // PA_READ late).
   // (A Complete TE on the field: the play action fools them 0.1 s longer, the trait catalog's line.)
   const completeTe = s.off.some((i) => s.agents[i]!.p.pos === 'TE' && has(s.agents[i]!, 'complete-te'));
-  const tPass = s.passShow >= 0 ? s.passShow + rt + (s.setup.play.pa ? 0.25 * (1 - d.fx.a('playRec')) + (completeTe ? 0.1 : 0) : 0) : Infinity;
+  // Playtest 2 (play action readable, every player himself): the spread is
+  // PA_READ, so a 60 Play Recognition linebacker stays fooled ~0.15 s longer
+  // than a 95, a couple of yards more downhill before he bails.
+  const tPass = s.passShow >= 0 ? s.passShow + rt + (s.setup.play.pa ? PA_READ * (1 - d.fx.a('playRec')) + (completeTe ? 0.1 : 0) : 0) : Infinity;
   const seenRun = s.t >= tRun;
   const seenPass = s.t >= tPass;
   if (seenRun && seenPass) return s.runShow > s.passShow ? 'run' : 'pass';
@@ -459,9 +466,14 @@ export function runFit(s: PlayState, d: Agent): void {
   const los = s.setup.los;
   const by = s.setup.ballY ?? 0;
   const c = s.carrier >= 0 ? s.agents[s.carrier]! : null;
-  const ball = c ?? s.agents[s.qb]!;
+  // Play action (Playtest 2: the fake has to read): in the mesh he can't see
+  // the ball, so his run key is the back carrying the fake, pressing the
+  // line, not the quarterback 3 yd deep. He fits off the back and triggers
+  // downhill with him until he reads pass (belief), the bite a fan sees.
+  const fake = !c && s.setup.play.pa ? s.agents.find((a) => a.side === 'off' && a.slot === 'RB') : undefined;
+  const ball = c ?? fake ?? s.agents[s.qb]!;
   const committed = c !== null && (c.pos.x > los - 0.5 || s.t - s.runReadT > 0.9);
-  if (committed || dist(d.pos, ball.pos) < 3) {
+  if (committed || (!fake && dist(d.pos, ball.pos) < 3)) {
     // Contain: pursue, but never let him outside me.
     const k = d.mem.contain as number | undefined;
     if (k !== undefined && c && (c.pos.y - d.pos.y) * k > -0.5 && c.pos.x < los + 1.5) {
@@ -488,7 +500,15 @@ export function runFit(s: PlayState, d: Agent): void {
     // gap, and downhill only as the back gets to the line (read and flow,
     // then fill: attack too early and the back cuts behind him).
     const toLine = Math.max(0, los - ball.pos.x);
-    const depth = Math.max(LB_FIT, Math.min(4.5, LB_FIT + toLine * 0.5));
+    let depth = Math.max(LB_FIT, Math.min(4.5, LB_FIT + toLine * 0.5));
+    if (fake) {
+      // On a fake he triggers toward his fill, as far as he believes it:
+      // Play Recognition is how far (an elite linebacker reads the guards'
+      // high hats and takes a shorter step, ~60% of the way at 99 (PA_STEP);
+      // a low-rated one fills flat out to the line). From where he first read it.
+      const from = (d.mem.paFrom as number | undefined) ?? (d.mem.paFrom = d.pos.x - los);
+      depth = from + (LB_FIT - from) * (1 - PA_STEP * d.fx.a('playRec'));
+    }
     const flow = (ball.pos.y - by) * 0.6;
     steer(d, arrive(d, v2(los + depth, gap + flow), 1, 0.6), {});
     return;

@@ -15,7 +15,7 @@ type P = {
   __btbGameReady?: boolean;
   __btbSimHashes(): Promise<{ key: string; hash: number; ticks: number; reason: string }[]>;
 };
-type S = { tick: number; t: number; phase: string; icons: number[]; carrier: number; events: { type: string; who?: number[] }[]; result: { reason: string; yards: number; touchdown: boolean } | null };
+type S = { setup: { seed: number; def: { id: string }; play: { type: string; formation: { name: string } } }; tick: number; t: number; phase: string; icons: number[]; carrier: number; events: { type: string; who?: number[] }[]; result: { reason: string; yards: number; touchdown: boolean } | null };
 
 /** The play call's tabs from the first (quick game): 2 is Shots (Four Verticals first). */
 const PLAY: Record<string, [tabs: number, downs: number]> = { stick: [0, 0], fourVerts: [2, 0] };
