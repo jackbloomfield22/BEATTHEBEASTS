@@ -118,7 +118,7 @@ const ONRUN_FREE = 2;
  * under it. Up to four 12% steps; past that it's thrown into him anyway.
  */
 /** An engaged rusher this close to the release (yd) still makes the QB put air on it: he's in his lap (the bat at the line reaches 0.7 yd round the ball's path; a step more for his arms coming up). */
-const LAP_R = 1.5;
+export const LAP_R = 1.5;
 function clearLoft(s: PlayState, from: V3, to: V3, T0: number): number {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
