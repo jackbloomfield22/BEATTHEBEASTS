@@ -71,7 +71,10 @@ const SIDELINE = new Set(['doubles-quick-outs', 'doubles-curls', 'bunch-flood', 
  * where the ball is (compressed routes in the red zone, the heavy set at the
  * goal line, nothing slow backed up), the clock, and the roster's strengths.
  */
-export function suggestPlays(sit: OffSituation, team: ContendersRoster, n = 5): string[] {
+/** The Suggested tab's length (Playtest 2: ten, ranked). */
+export const SUGGESTED = 10;
+
+export function suggestPlays(sit: OffSituation, team: ContendersRoster, n = SUGGESTED): string[] {
   const st = strengths(team);
   const toGoal = 100 - sit.los;
   const late = (sit.secondsLeft ?? 999) <= 120 && (sit.scoreDiff ?? 0) <= 0;
@@ -110,22 +113,43 @@ export function suggestPlays(sit: OffSituation, team: ContendersRoster, n = 5): 
     return s;
   };
   const ranked = PLAYS.map((p, i) => ({ p, s: score(p), i })).filter((r) => r.s > -50);
+  // A mixed list (Playtest 2: "mixed runs and passes, ranked"): at least
+  // MIX_SHARE of it runs and as much passes, except in the two-minute drill
+  // (no runs) and on third and long (one: the draw). Where the quota needs
+  // the last slots, only that kind is eligible; the order is still the score.
+  const isRun = (p: OffPlay) => p.type === 'run';
+  const minRun = late ? 0 : third && long ? 1 : Math.round(n * MIX_SHARE);
+  const minPass = Math.round(n * MIX_SHARE);
+  const runsAvail = ranked.filter((r) => isRun(r.p)).length;
   // Greedy with variety: each pick costs the next play of the same type a point.
   const out: string[] = [];
   const used: Record<string, number> = {};
+  let runs = 0;
+  const named = new Set<string>();
   while (out.length < n && ranked.length) {
-    let best = 0;
+    const left = n - out.length;
+    const needRun = Math.min(runsAvail - runs, Math.max(0, minRun - runs));
+    const needPass = Math.max(0, minPass - (out.length - runs));
+    const only: boolean | null = needRun >= left ? true : needPass >= left ? false : null;
+    let best = -1;
     let bs = -Infinity;
     ranked.forEach((r, j) => {
-      const v = r.s - (used[r.p.type] ?? 0) - r.i * 1e-4;
+      if (only !== null && isRun(r.p) !== only) return;
+      // The same concept from another formation reads as a repeat on the list: it costs more than another play of the type.
+      const v = r.s - (used[r.p.type] ?? 0) - (named.has(r.p.name) ? 1.5 : 0) - r.i * 1e-4;
       if (v > bs) {
         bs = v;
         best = j;
       }
     });
+    if (best < 0) break;
     const [r] = ranked.splice(best, 1);
     out.push(r!.p.id);
+    if (isRun(r!.p)) runs++;
+    named.add(r!.p.name);
     used[r!.p.type] = (used[r!.p.type] ?? 0) + 1;
   }
   return out;
 }
+/** The least share of a suggested list that runs (and that passes): 3 of 10, a coordinator's call sheet for a down rarely leans further. */
+const MIX_SHARE = 0.3;

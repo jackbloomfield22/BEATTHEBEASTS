@@ -355,6 +355,18 @@ describe('M6: the offensive coordinator suggests plays', () => {
     expect(long.every((p) => p.type !== 'run' || p.run?.scheme === 'draw')).toBe(true);
     expect(long.some((p) => p.type === 'dropback' || p.type === 'shot')).toBe(true);
   });
+  it('the Suggested tab is ten plays, mixed runs and passes (Playtest 2), all runs gone in the two-minute drill', () => {
+    for (const sit of [{ down: 1, toGo: 10, los: 25 }, { down: 2, toGo: 6, los: 50 }, { down: 3, toGo: 2, los: 60 }, { down: 1, toGo: 10, los: 85 }]) {
+      const ten = suggestPlays(sit, t).map(playById);
+      expect(ten.length, JSON.stringify(sit)).toBe(10);
+      expect(new Set(ten.map((p) => p.id)).size).toBe(10);
+      expect(ten.filter((p) => p.type === 'run').length, JSON.stringify(sit)).toBeGreaterThanOrEqual(3);
+      expect(ten.filter((p) => p.type !== 'run').length, JSON.stringify(sit)).toBeGreaterThanOrEqual(3);
+    }
+    const third = suggestPlays({ down: 3, toGo: 12, los: 50 }, t).map(playById);
+    expect(third.filter((p) => p.type === 'run').length).toBeLessThanOrEqual(2);
+    expect(suggestPlays({ down: 1, toGo: 10, los: 40, secondsLeft: 70, scoreDiff: -3 }, t).map(playById).some((p) => p.type === 'run')).toBe(false);
+  });
   it('the Hail Mary only at the end of a half, from far out; the heavy set at the goal line', () => {
     expect(suggestPlays({ down: 1, toGo: 10, los: 45, secondsLeft: 5 }, t, 3)[0]).toBe('doubles-hail-mary');
     expect(suggestPlays({ down: 1, toGo: 10, los: 45 }, t, 10)).not.toContain('doubles-hail-mary');

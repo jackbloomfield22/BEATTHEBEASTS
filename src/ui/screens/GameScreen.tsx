@@ -420,7 +420,7 @@ function GamePlayCall() {
   const sit = m.sit;
   const twoPoint = m.phase === 'twoPoint';
   const rush = hurry(m);
-  // The coordinator's five (sim/coordinator.ts: down, distance, field, clock and this roster's strengths), each with the coach's reason.
+  // The coordinator's ten, ranked (Playtest 2; sim/coordinator.ts: down, distance, field, clock and this roster's strengths), each with the coach's reason.
   const sugg = useMemo(() => {
     const team = practice.teams?.team;
     const opts = { twoMinute: rush, clockRunning: m.lastWhistle === 'runs' };
@@ -484,7 +484,15 @@ function GamePlayCall() {
         <div className="call-list">
           <div className="setting-header">{g === 'suggested' ? 'Your coordinator' : PLAY_TYPE_LABEL[g]}</div>
           {plays.map((p, i) => (
-            <MenuItem key={p.id} size="md" label={p.name} tag={p.formation.name} focused={focus === i} onHover={() => setFocus(i)} onClick={() => call(i)} />
+            <MenuItem
+              key={p.id}
+              size="md"
+              label={g === 'suggested' ? `${i + 1}. ${p.name}` : p.name}
+              tag={g === 'suggested' ? `${p.type === 'run' ? 'Run' : PLAY_TYPE_LABEL[p.type]} · ${p.formation.name}` : p.formation.name}
+              focused={focus === i}
+              onHover={() => setFocus(i)}
+              onClick={() => call(i)}
+            />
           ))}
         </div>
         <aside className="call-art" key={cur.id}>
