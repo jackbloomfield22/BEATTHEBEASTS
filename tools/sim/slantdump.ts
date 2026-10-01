@@ -6,7 +6,8 @@
 import { readFileSync } from 'node:fs';
 import { createPlay, DEF_CALLS, playById, practiceRosters, stepPlay, type SnapshotLike } from '../../src/sim/index.ts';
 import { cellSeed, sidesFor } from '../../src/sim/outcomes.ts';
-import { lead } from '../../src/sim/passing.ts';
+import { lead, LOFT_DBG } from '../../src/sim/passing.ts';
+LOFT_DBG.on = process.argv.includes('--loft');
 import { dist } from '../../src/sim/vec.ts';
 import { CALLED, isMan, ON_TIME, slantInput, type SlantScript } from './slants.ts';
 
@@ -23,6 +24,7 @@ const sc: SlantScript = lateAt ? { id: 'late', at: 24 + Number(lateAt), backFrom
 const r2 = (x: number) => (Math.round(x * 100) / 100).toFixed(2).padStart(6);
 interface Row { def: string; how: string; kind: string; hang: number; along: number; across: number; meantAlong: number; meantAcross: number; leadErr: number; leadAlong: number; leadAcross: number; ok: boolean; idxRel: number; leg: number; busy: number; spRel: number; spArr: number }
 const rows: Row[] = [];
+const tips: string[] = [];
 let shown = 0;
 for (const def of DEF_CALLS) {
   if (isMan(def) !== man) continue;
@@ -38,6 +40,7 @@ for (const def of DEF_CALLS) {
     let row: Partial<Row> | null = null;
     let arrived = false;
     let tgt = -1;
+    let defAtRel: { i: number; pos: { x: number; y: number }; d: number; dc: number; onBall: boolean }[] = [];
     let aim0 = { x: 0, y: 0, z: 0 };
     let meant0 = { x: 0, y: 0 };
     let last = { pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } };
@@ -50,6 +53,7 @@ for (const def of DEF_CALLS) {
         aim0 = { ...s.ball.aim };
         meant0 = { ...s.ball.meant };
         const r = s.agents[tgt]!;
+        defAtRel = s.def.map((i) => ({ i, pos: { ...s.agents[i]!.pos }, d: dist(s.agents[i]!.pos, r.pos), dc: dist(s.agents[i]!.pos, s.ball.meant), onBall: !!s.agents[i]!.mem.onBall }));
         // What lead() says now, for the hang the throw got (the plan used his state a tick earlier).
         pred = lead(r, s.ball.arrive - s.t);
         row = { def: def.id, kind: s.ball.kind ?? '', hang: s.ball.arrive - s.ball.releaseT, idxRel: r.route?.idx ?? -1, leg: (r.mem.catchLeg as number) ?? -9, busy: r.busy, spRel: Math.hypot(r.vel.x, r.vel.y) };
@@ -87,6 +91,13 @@ for (const def of DEF_CALLS) {
     const first = s.events.find((e) => e.type === 'catch' || e.type === 'deflection' || e.type === 'drop' || e.type === 'interception');
     row.how = complete ? 'catch' : res.pass?.intercepted ? 'int' : !first ? 'miss' : first.type === 'drop' ? 'drop' : res.pass?.sep !== undefined ? 'pbu' : 'tip';
     row.ok = complete;
+    if (row.how === 'tip' || row.how === 'int' || row.how === 'pbu') {
+      const by = first?.who[0] ?? -1;
+      const at = defAtRel.find((x) => x.i === by);
+      const ag = by >= 0 ? s.agents[by]! : null;
+      const as = ag ? (sd.def.assign as Record<string, { kind: string; zone?: string }>)[ag.slot] : null;
+      tips.push(`${row.how.padEnd(4)} ${def.id.padEnd(11)} k${String(k).padStart(2)} by ${(ag?.slot ?? '?').padEnd(4)} ${as?.kind ?? ''}${as?.zone ? ':' + as.zone : ''} relDist ${at ? r2(at.d) : '   ?'} toCatch ${at ? r2(at.dc) : '   ?'} onBallAtRel ${at?.onBall} t ${first ? r2(first.t - s.ball.releaseT) : '?'} batted ${!!first?.data?.batted}`);
+    }
     rows.push(row as Row);
     if (shown < ticksFor) {
       shown++;
@@ -110,3 +121,12 @@ for (const how of ['catch', 'miss', 'tip', 'pbu', 'drop', 'int']) {
   const xs = rows.filter((r) => r.how === how);
   if (xs.length) console.log(`  ${how.padEnd(5)} ${String(xs.length).padStart(3)} meant along ${avg(xs.map((r) => r.meantAlong)).toFixed(2)} |across| ${avg(xs.map((r) => Math.abs(r.meantAcross))).toFixed(2)}  aim off ${avg(xs.map((r) => Math.hypot(r.along, r.across))).toFixed(2)} hang ${avg(xs.map((r) => r.hang)).toFixed(2)}`);
 }
+if (LOFT_DBG.on) {
+  const c: Record<string, number> = {};
+  for (const r of LOFT_DBG.rows) {
+    const k = r.step === 9 ? `end ${r.slot}` : `step${r.step} ${r.slot} u${r.u}`;
+    c[k] = (c[k] ?? 0) + 1;
+  }
+  for (const [k, v] of Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 40)) console.log(`  ${k.padEnd(28)} ${v}`);
+}
+if (process.argv.includes('--tips')) for (const t of tips) console.log(t);
