@@ -16,6 +16,7 @@ import {
 } from "@/game/situation";
 import {
   DEF_CALLS,
+  HOT_COLS,
   HOT_ROUTES,
   PLAY_TYPE_LABEL,
   playById,
@@ -33,7 +34,7 @@ import {
   useDevice,
 } from "../components/controls";
 import { InputGlyph, TabKey, useBindings } from "../components/Glyph";
-import { PlayArt } from "../game/PlayArt";
+import { PlayArt, RouteGlyph } from "../game/PlayArt";
 import { hudDom, RING_LEN } from "../game/hudDom";
 import "../styles/game.css";
 
@@ -572,7 +573,8 @@ function HotRoutePicker() {
         {a.p.name.split(" ").slice(-1)[0]}{" "}
         <span className="hot-now">{current ? ROUTE_LABEL[current] : ""}</span>
       </div>
-      <ol className="hot-list">
+      {/* Playtest 2: twelve routes as a grid (deep, intermediate, short), each with its shape, navigated as a grid. */}
+      <ol className="hot-list" style={{ gridTemplateColumns: `repeat(${HOT_COLS}, 1fr)` }}>
         {HOT_ROUTES.map((r, i) => (
           <li
             key={r}
@@ -582,12 +584,17 @@ function HotRoutePicker() {
             }
             onClick={() => practice.pickHot(hot.icon, r)}
           >
-            {pad ? null : key(`hot.n${i + 1}`)}
-            <span>{ROUTE_LABEL[r]}</span>
+            <RouteGlyph route={r} side={Math.sign(a.pos.y) || 1} />
+            <span className="hot-name">{ROUTE_LABEL[r]}</span>
+            {pad ? null : <span className="hot-key">{key.text(`hot.n${i + 1}`)}</span>}
           </li>
         ))}
       </ol>
       <div className="cue-row">
+        <Cue
+          k={pad ? <InputGlyph code="Pad:LStick" /> : ["hot.up", "hot.left", "hot.down", "hot.right"].map((x) => key.text(x)).join("")}
+          w="Pick"
+        />
         {pad ? (
           <>
             <Cue k={key("hot.n1")} w="Call" />

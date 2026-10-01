@@ -8,7 +8,7 @@ import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
 import { loadJSON, saveJSON } from '@/app/storage';
 import type { InputContext } from '@/input/actions';
-import { createPlay, defenseFor, offenseFor, type BeastsDefense, type ContendersRoster, DEAD_HOLD, DEF_CALLS, HOT_ROUTES, type DefCall, type InputFrame, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayResult, type PlayState, type SimPlayer } from '@/sim';
+import { createPlay, defenseFor, offenseFor, type BeastsDefense, type ContendersRoster, DEAD_HOLD, DEF_CALLS, HOT_COLS, HOT_ROUTES, type DefCall, type InputFrame, type RouteName, defById, playById, PLAYS, type CatchType, type DefSlot, type Difficulty, type OffSlot, type Phase, type PlayResult, type PlayState, type SimPlayer } from '@/sim';
 import { getSettings } from '@/app/settings';
 import { Controls } from './controls';
 import { describe, type ResultCard } from './describe';
@@ -431,9 +431,16 @@ class PracticeSession {
       return;
     }
     const pad = device === 'gamepad';
-    if (id === 'hot.up' || id === 'hot.down') {
-      const k = HOT_ROUTES.length;
-      set({ hot: { ...hot, focus: (hot.focus + (id === 'hot.up' ? k - 1 : 1)) % k } });
+    if (id === 'hot.up' || id === 'hot.down' || id === 'hot.left' || id === 'hot.right') {
+      // A grid (Playtest 2): up and down move a row (deep, intermediate, short), left and right along it; both wrap.
+      const rows = HOT_ROUTES.length / HOT_COLS;
+      let r = Math.floor(hot.focus / HOT_COLS);
+      let c = hot.focus % HOT_COLS;
+      if (id === 'hot.up') r = (r + rows - 1) % rows;
+      else if (id === 'hot.down') r = (r + 1) % rows;
+      else if (id === 'hot.left') c = (c + HOT_COLS - 1) % HOT_COLS;
+      else c = (c + 1) % HOT_COLS;
+      set({ hot: { ...hot, focus: r * HOT_COLS + c } });
     } else if (id === 'hot.confirm' || (pad && n === 1)) this.callHot(hot.icon, HOT_ROUTES[hot.focus]!);
     else if (pad && n === 2) set({ hot: { stage: 'receiver' } });
     else if (!pad && n >= 1 && n <= HOT_ROUTES.length) this.callHot(hot.icon, HOT_ROUTES[n - 1]!);

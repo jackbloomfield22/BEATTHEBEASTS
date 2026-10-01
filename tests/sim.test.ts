@@ -522,7 +522,7 @@ describe('sim: hot routes (M5.5)', () => {
   it('ignores a hot route that is not on the list or for an icon that does not exist', () => {
     const s = setup(41, playById('trips-stick'), defById('cover3'), true);
     stepPlay(s, input({ hotRoute: { icon: 9, route: 'go' } }));
-    stepPlay(s, input({ hotRoute: { icon: 1, route: 'wheel' } }));
+    stepPlay(s, input({ hotRoute: { icon: 1, route: 'leak' } }));
     expect(Object.keys(s.hot)).toEqual([]);
   });
 });

@@ -26,16 +26,16 @@ interface P {
 
 const path = (pts: P[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${sx(p.y).toFixed(1)},${sy(p.d).toFixed(1)}`).join(' ');
 
-/** Clip a polyline at the top of the art. */
-function clip(pts: P[]): P[] {
+/** Clip a polyline at the top of the art (`top` yd past the line). */
+function clip(pts: P[], top = DEEP - 1): P[] {
   const out: P[] = [pts[0]!];
   for (let i = 1; i < pts.length; i++) {
     const p = pts[i]!;
     const q = out[out.length - 1]!;
-    if (p.d <= DEEP - 1) out.push(p);
+    if (p.d <= top) out.push(p);
     else {
-      const k = (DEEP - 1 - q.d) / (p.d - q.d);
-      out.push({ d: DEEP - 1, y: q.y + (p.y - q.y) * k });
+      const k = (top - q.d) / (p.d - q.d);
+      out.push({ d: top, y: q.y + (p.y - q.y) * k });
       break;
     }
   }
@@ -220,5 +220,46 @@ function ReadMark({ x, y, read, color }: { x: number; y: number; read: number; c
         {label}
       </text>
     </g>
+  );
+}
+
+/**
+ * One route's shape, small (the hot-route grid, Playtest 2): the stem from
+ * the receiver (the dot) as the sim runs it (ROUTES), outside drawn toward
+ * his own sideline (`side`: +1 for a receiver on the offense's left), deep
+ * routes cut off at the top with an arrowhead.
+ */
+export function RouteGlyph({ route, side }: { route: keyof typeof ROUTES; side: number }) {
+  // Stem yards shown: 12 across each way, 2 behind to 28 past the line, the
+  // first 10 at full scale and the rest compressed, so a post's break and a
+  // corner's both read against a go.
+  const pts = clip([{ d: 0, y: 0 }, ...ROUTES[route].map((q) => ({ d: q.d, y: q.o }))], 28);
+  // Across: 1.3 px a yard, less for a route that runs wider than the cell (the drag's 22 yd).
+  const wide = Math.max(...pts.map((p) => Math.abs(p.y)));
+  const kx = Math.min(1.3, 15 / Math.max(1, wide));
+  const xy = pts.map((p) => [18 - p.y * side * kx, 36 - (p.d <= 10 ? p.d * 1.8 : 18 + (p.d - 10) * 0.8)] as [number, number]);
+  // A settle (curl, comeback, hitch) is a short step back: drawn at least 6 px across and 8 back, so the
+  // hook back (in for a curl, out for a comeback) stands off the stem and its arrowhead reads.
+  const n = xy.length;
+  if (n > 2 && ROUTES[route].at(-1)?.sit) {
+    const [ax, ay] = xy[n - 2]!;
+    const [bx, by] = xy[n - 1]!;
+    const dx = bx - ax;
+    const dy = by - ay;
+    xy[n - 1] = [ax + (Math.abs(dx) > 0.3 ? Math.sign(dx) * Math.max(6, Math.abs(dx)) : dx), ay + (Math.abs(dy) > 0.3 ? Math.sign(dy) * Math.max(8, Math.abs(dy)) : dy)];
+  }
+  const gx = (o: number) => 18 - o * side * kx;
+  const gy = (d: number) => 36 - (d <= 10 ? d * 1.8 : 18 + (d - 10) * 0.8);
+  const dpath = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  return (
+    <svg className="route-glyph" viewBox="0 0 36 40" width="36" height="40" aria-hidden="true">
+      <defs>
+        <marker id="rg-tip" viewBox="0 0 6 6" refX="3" refY="3" markerWidth="3.4" markerHeight="3.4" orient="auto-start-reverse">
+          <path d="M0,0 L6,3 L0,6 z" fill="currentColor" />
+        </marker>
+      </defs>
+      <path d={dpath} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" markerEnd="url(#rg-tip)" />
+      <circle cx={gx(0)} cy={gy(0)} r="2.6" fill="currentColor" />
+    </svg>
   );
 }

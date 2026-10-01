@@ -99,8 +99,14 @@ export const ROUTES: Record<RouteName, RoutePoint[]> = {
 /** Routes that start late (s after the snap): the slip screen's back shows pass protection first. */
 export const ROUTE_DELAY: Partial<Record<RouteName, number>> = { slip: 0.9, leak: 0.7 };
 
-/** The routes a receiver can be hot-routed to at the line (the picker's order). */
-export const HOT_ROUTES: RouteName[] = ['go', 'out', 'in', 'slant', 'curl', 'comeback', 'flat', 'hitch'];
+/**
+ * The routes a receiver can be hot-routed to at the line (Playtest 2: twelve,
+ * drawn and navigated as a grid of HOT_COLS by depth): the shots on top, the
+ * intermediate breaks, the quick game underneath, the way a coach's tree reads.
+ */
+export const HOT_ROUTES: RouteName[] = ['go', 'post', 'corner', 'wheel', 'in', 'out', 'curl', 'comeback', 'slant', 'drag', 'flat', 'hitch'];
+/** The hot-route grid's columns (three rows: deep, intermediate, short). */
+export const HOT_COLS = 4;
 
 /** Display names for routes (the hot-route picker, the play call). */
 export const ROUTE_LABEL: Record<RouteName, string> = {

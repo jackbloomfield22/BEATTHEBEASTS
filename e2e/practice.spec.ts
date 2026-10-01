@@ -104,12 +104,12 @@ test('pre-snap: the prompts, the route preview key, and a hot route the sim runs
   await expect(page.locator('.tutorial-card')).toContainText('Snap');
   await expect(page.locator('.snap-call')).toContainText('Tab');
   await expect(page.locator('.snap-call')).toContainText('Hot route');
-  // H, then receiver 1, then route 3 (In).
+  // H, then receiver 1, then route 5 (In: the grid's middle row starts at 5).
   await page.keyboard.press('KeyH');
   await expect(page.locator('.hot-picker')).toContainText('Receiver');
   await page.keyboard.press('Digit1');
-  await expect(page.locator('.hot-item')).toHaveCount(8);
-  await page.keyboard.press('Digit3');
+  await expect(page.locator('.hot-item')).toHaveCount(12);
+  await page.keyboard.press('Digit5');
   await expect(page.locator('.hot-picker')).toHaveCount(0);
   await tick(page, 1);
   const hot = await page.evaluate(() => {
