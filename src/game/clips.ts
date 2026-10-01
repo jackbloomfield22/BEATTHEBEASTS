@@ -177,8 +177,9 @@ export const CONCEPTS: Clip[] = [
   { id: 'curl', title: 'Curl', seed: 5, play: 'doubles-curls', def: 'cover1', los: 30, script: concept({ icon: 1, at: 60, call: 'possession' }) },
   // Four verticals against the fire zone: the blitz comes, the ball goes at 1.5 s, the Z up the sideline over the rotated corner (37 yd; re-found for the identity pass's sim).
   { id: 'go', title: 'Go', seed: 19, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
-  // Play-action post against man: the fake, the post behind it, the ball led into the middle (27 yd).
-  { id: 'post', title: 'Post', seed: 13, play: 'singleback-pa-post', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 80, hold: 10 }) },
+  // Play-action post against man: the fake, the post behind it, the ball led into the middle (25 yd).
+  // Seed 13 → 40 for the slant squeeze (docs/m66/SLANTS.md): a half safety now breaks on the ball at the pace that gets him there, and on seed 13 he got a hand to it. Seed 40 is the same play, coverage and throw: 24.8 yd, 1.5 yd of separation.
+  { id: 'post', title: 'Post', seed: 40, play: 'singleback-pa-post', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 80, hold: 10 }) },
   // Snag's corner against man: the Z's corner from the bunch, the ball over the outside shoulder (36 yd).
   { id: 'corner', title: 'Corner', seed: 6, play: 'bunch-snag', def: 'cover2man', los: 30, script: concept({ icon: 3, at: 60, hold: 14 }) },
   // PA crossers against the fire zone: the blitz bites on the fake, the X's deep cross comes open behind it, caught running (14 yd; re-found for the identity pass's sim).
@@ -188,8 +189,10 @@ export const CONCEPTS: Clip[] = [
   { id: 'screen', title: 'Screen', seed: 60, play: 'doubles-rb-screen', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 76 }) },
   // Back shoulder against man: the corner on top of the Z's go, the ball thrown away from him, GO UP (19 yd).
   { id: 'back-shoulder', title: 'Back shoulder', seed: 2, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 3, at: 48, aim: { x: -1, y: -0.2 }, call: 'aggressive' }) },
-  // The scramble drill: the QB escapes right, the X breaks off his route and works back across to him (12 yd).
-  { id: 'scramble-drill', title: 'Scramble drill', seed: 9, play: 'trips-y-cross', def: 'cover3', los: 30, script: concept({ icon: 4, at: 150, scramble: { at: 110, dir: { x: 0.25, y: 1 } } }) },
+  // The scramble drill: the QB escapes right, the Y breaks off his cross and works back to him in the open grass (10 yd).
+  // Re-found for the slant squeeze (docs/m66/SLANTS.md: the underneath zones now plaster when the QB leaves the pocket; on cover 3 seed 9 the ball was picked):
+  // tools/sim/findconcepts.ts --only=scramble-drill, the same escape and throw time.
+  { id: 'scramble-drill', title: 'Scramble drill', seed: 17, play: 'trips-y-cross', def: 'cover4', los: 30, script: concept({ icon: 1, at: 150, scramble: { at: 110, dir: { x: 0.25, y: 1 } } }) },
 ];
 
 // The side-by-side identity videos (Playtest 2, "every player is himself"):
@@ -210,5 +213,6 @@ export const IDENTITY: Clip[] = [
   // The rush: the QB holds it against Cover 1. White sheds the tackle at 2.35 s and has the sack at 3.18; Aaron Smith never gets off his block.
   ...pair('rush', 'Through the tackle', { seed: 19, play: 'doubles-dagger', def: 'cover1', los: 30, script: holdIt }, { def: 'LE', name: 'Reggie White', pos: 'DE' }, { def: 'LE', name: 'Aaron Smith', pos: 'DE' }),
   // Coverage: four verticals against Cover 1, the ball to the X on his man. Deion picks it; Kam, out of place at corner, gives up 70.
-  ...pair('coverage', 'Half the field', { seed: 15, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
+  // (Seed 15 → 20 for the slant squeeze, docs/m66/SLANTS.md; tools/sim/findidentity.ts --only=coverage: the same play and call, Deion's pick, Kam's 70 yd at 2.1 yd of separation.)
+  ...pair('coverage', 'Half the field', { seed: 20, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
 ];
