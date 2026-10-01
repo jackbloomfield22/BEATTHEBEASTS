@@ -6,13 +6,13 @@
 
 import { atan2, cos, exp, sin } from '@/engine/math/detmath';
 import { blockOf, engage } from './blocks';
-import { arrive, boundaryGovern, CRUISE, seen, steer } from './movement';
+import { arrive, boundaryGovern, CRUISE, seen, steer, timeTo } from './movement';
 export { boundaryGovern } from './movement';
 import { driveTime, lead, releaseOf } from './passing';
 import { has } from './traits';
 import { ROUTE_DELAY, ROUTES, ZONES, type OffPlay, type RouteName, type ZoneName } from './plays';
 import { DIFFICULTY, zoneSpot, type PlayState } from './state';
-import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, type Agent, type OffSlot } from './types';
+import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, TICK, type Agent, type OffSlot } from './types';
 
 /** Room a route keeps from the sideline and the end line (yd): a catchable spot, in bounds. */
 const ROUTE_ROOM = 1.5;
@@ -1237,6 +1237,9 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
     return;
   }
 
+  // Off schedule (the QB held it or bailed backward): plaster the man in my area.
+  if (offSchedule(s, d) && plaster(s, d, receivers, now, spot, face)) return;
+
   const side = role === 'hook' ? (Math.sign(ZONES[zone].y) || 0) : Math.sign(ZONES[zone].y);
   const call = s.setup.def.assign;
   const flatHelp = role === 'curl' && Object.values(call).some((a) => a.kind === 'zone' && a.zone === (side > 0 ? 'flatL' : 'flatR'));
@@ -1278,7 +1281,10 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
       const inArea = Math.abs(v.pos.y - spot.y) < (role === 'curl' ? 9 : 7) && depth > -1 && depth < ZONES[zone].d + 6;
       const num = (r.mem.rnum as number | undefined) ?? 0;
       const mySide = side === 0 || (r.mem.rside as number | undefined) === side;
-      const vertical = v.vel.x > 3.5 && depth > 4;
+      // Vertical: running up the field, not across it. A slant's 45° break
+      // isn't a vertical (Playtest 2: it counted, so a flat defender or a
+      // cloud corner carried #1's slant across the field and left his area).
+      const vertical = v.vel.x > 3.5 && depth > 4 && Math.abs(v.vel.y) < VERTICAL_TAN * v.vel.x;
       // In the flat: short, and working out to it or sitting there (a wide receiver stemming upfield isn't a flat route yet).
       const toFlat = depth < 7 && v.vel.x < 5 && (v.vel.y * (side || 1) > 1.5 || len(v.vel) < 2);
       let sc = -Infinity;
@@ -1398,6 +1404,103 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
   steer(d, want, { face });
   d.anim = d.vel.x > 0.8 ? 'backpedal' : 'run';
 }
+/** A receiver within this of straight upfield (|vy| / vx, tan ~35°) is running a vertical; a slant (45°) or a crosser isn't. */
+const VERTICAL_TAN = 0.7;
+/**
+ * The QB is off schedule this long after his drop's set (s): the ball
+ * should be out by now. A quick game's three-step sets at ~0.6 s and the
+ * slant or hitch goes on the hitch-up (~1 s); a five-step's dig or curl a
+ * hitch after its 1.0 s set; a second hitch past that is late.
+ */
+const HOLD_LATE = 1.0;
+/** ...or he has bailed this far behind his launch point (yd): a drop is 7–8 yd, a slide in the pocket a yard or two. */
+const BAIL = 3;
+
+/**
+ * When the QB went off schedule (s), or −1: held past his drop and a hitch
+ * or two (HOLD_LATE), or bailed straight back behind his launch point (BAIL;
+ * Playtest 2: backing away from the rush and throwing the slant late was
+ * always open). Kept on the QB (scratch memory, not hashed).
+ */
+function offScheduleT(s: PlayState): number {
+  if (s.setup.play.run || s.snapT < 0) return -1;
+  const qb = s.agents[s.qb]!;
+  const drop = s.setup.play.drop;
+  let t = s.snapT + drop.set + HOLD_LATE;
+  if ((qb.mem.bailT as number | undefined) === undefined && qb.pos.x < s.setup.los - drop.depth - BAIL) qb.mem.bailT = s.t;
+  const bail = qb.mem.bailT as number | undefined;
+  if (bail !== undefined) t = Math.min(t, bail);
+  return t;
+}
+
+/** He's seen the QB go off schedule (his read time on it, Play Recognition). The ball still in the QB's hands. */
+function offSchedule(s: PlayState, d: Agent): boolean {
+  if (s.phase !== 'pocket' && s.phase !== 'dropback') return false;
+  const t = offScheduleT(s);
+  return t >= 0 && s.t >= t + reaction(s, d);
+}
+
+/** An underneath defender plasters a man within this of him (yd): his area and the next step out of it. */
+const PLASTER_R = 8;
+
+/**
+ * Plaster (the scramble rule every secondary coach teaches): with the QB off
+ * schedule, an underneath zone defender stops spacing on his landmark and
+ * sticks to the nearest receiver in his area wherever he goes, on his inside
+ * hip and a step underneath, so the window that was there on time closes
+ * (the slant that's flattened across the field has a man on him, not open
+ * grass between the zones). How tight he sits is his Zone Coverage (~0.5 yd
+ * under him for a 95, ~0.9 for a 70, ~1.5 for a 30); his read of the man
+ * (Play Recognition) goes through the usual delayed perception. A vertical with a deep
+ * defender over the top still goes to the deep man (the zone's handoff).
+ * Returns false when nobody's near him (he plays his zone).
+ */
+function plaster(s: PlayState, d: Agent, receivers: Agent[], now: (r: Agent) => { pos: V2; vel: V2 }, spot: V2, face: number): boolean {
+  const los = s.setup.los;
+  const taken = (r: Agent) => s.def.some((i) => i !== d.i && (s.agents[i]!.mem.plaster as number | undefined) === r.i);
+  // A vertical past the underneath depth with a deep defender over him is the deep man's (the zone's handoff); a crosser stays mine.
+  const handDeep = (r: Agent, v: { pos: V2; vel: V2 }) => v.pos.x - los > 11 && v.vel.x > 3.5 && Math.abs(v.vel.y) < VERTICAL_TAN * v.vel.x && deepHelp(s, r, d);
+  let match: Agent | null = null;
+  const cur = (d.mem.plaster as number | undefined) ?? -1;
+  if (cur >= 0) {
+    const r = s.agents[cur]!;
+    const v = now(r);
+    if (!r.down && !r.mem.outOfPlay && !handDeep(r, v)) match = r;
+  }
+  if (!match) {
+    // The nearest man in my area nobody else has: the one I'm already on, else the closest to me.
+    let best = Infinity;
+    const carry = (d.mem.carry as number | undefined) ?? -1;
+    for (const r of receivers) {
+      if (taken(r)) continue;
+      const v = now(r);
+      if (handDeep(r, v)) continue;
+      const k = dist(v.pos, d.pos) - (r.i === carry ? 2 : 0);
+      if (k < PLASTER_R && dist(v.pos, spot) < PLASTER_R + ZW && k < best) {
+        best = k;
+        match = r;
+      }
+    }
+  }
+  if (!match) {
+    d.mem.plaster = -1;
+    return false;
+  }
+  d.mem.plaster = match.i;
+  d.mem.carry = match.i;
+  const v = now(match);
+  const by = s.setup.ballY ?? 0;
+  const ins = Math.sign(by - v.pos.y) || 1;
+  // A step underneath him and on his inside hip (between him and the QB), at his speed.
+  const off = 0.45 + 1.6 * (1 - d.fx.a('zoneCov'));
+  const aim = v2(v.pos.x - off, v.pos.y + ins * off * 0.5);
+  const want = boundaryGovern(d, track(d, aim, v.vel, 2.6), 1);
+  coverPlant(s, d, want);
+  steer(d, want, { face });
+  d.anim = d.vel.x > 0.8 ? 'backpedal' : 'run';
+  return true;
+}
+
 /**
  * Break on a thrown ball: to the catch point, flat out while it's far and
  * braking to be there with the ball (not running through it: a defender over
@@ -1406,7 +1509,51 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
  */
 export function breakOnBall(s: PlayState, d: Agent): void {
   const b = s.ball;
-  const aim = { x: b.aim.x, y: b.aim.y };
-  steer(d, arrive(d, aim, 1, 1));
+  let aim = { x: b.aim.x, y: b.aim.y };
+  // Undercut: one who'll be there with time to spare steps in front of the
+  // catch point, into the ball's path, so it reaches his hands before the
+  // receiver's (Playtest 2: he stood on the spot and the receiver, arriving
+  // with the ball, caught it in front of him). A ball that hangs is the one
+  // that gets picked. Decided once per throw, when he breaks.
+  // Not from a trail: a man behind the receiver (on his hip, chasing) can't
+  // get round him to the front of the catch; he plays through the hands.
+  if ((d.mem.cutFor as number | undefined) !== b.releaseT) {
+    d.mem.cutFor = b.releaseT;
+    const r = b.target >= 0 ? s.agents[b.target]! : null;
+    const trail = !!r && dist(d.pos, r.pos) < TRAIL_R && (d.pos.x - r.pos.x) * r.vel.x + (d.pos.y - r.pos.y) * r.vel.y < 0;
+    const hv = Math.sqrt(b.vel.x * b.vel.x + b.vel.y * b.vel.y);
+    const cut = hv > 1 ? { x: aim.x - (b.vel.x / hv) * UNDERCUT, y: aim.y - (b.vel.y / hv) * UNDERCUT } : aim;
+    d.mem.cut = !trail && hv > 1 && timeTo(d, cut) < b.arrive - s.t - UNDERCUT_SLACK;
+  }
+  if (d.mem.cut === true) {
+    const hv = Math.sqrt(b.vel.x * b.vel.x + b.vel.y * b.vel.y);
+    if (hv > 1) aim = { x: aim.x - (b.vel.x / hv) * UNDERCUT, y: aim.y - (b.vel.y / hv) * UNDERCUT };
+  }
+  // Braking to stop on the spot only while that still gets him there with
+  // the ball: a man who'd be late runs at the pace that makes it (flat out
+  // if need be). Playtest 2: he braked to the stopping curve from 10+ yd
+  // out whatever the time, so on a ball that hung 2 s a safety arrived at
+  // 6 yd/s, 4 yd short, and the late throw to the sideline was caught.
+  let want = arrive(d, aim, 1, 1);
+  const k = dist(d.pos, aim);
+  const need = k / Math.max(TICK, b.arrive - s.t);
+  const sp = len(want);
+  if (need > sp && sp > 1e-6) {
+    const v = Math.min(d.fx.vmax, need);
+    want = { x: (want.x / sp) * v, y: (want.y / sp) * v };
+  }
+  steer(d, want);
   d.mem.onBall = true;
 }
+/** How far in front of the catch point (yd, back along the ball's line) an undercutting defender plays it: a step and an arm. */
+const UNDERCUT = 1;
+/**
+ * ...when he can be there this much (s) before the ball: his read and a
+ * step in hand. On a quick throw on rhythm (~0.6–0.7 s in the air) only a
+ * man already sitting in the window gets in front of it; on a ball that
+ * hangs (a late throw from deep in the pocket, 1.5–2.5 s) a defender who
+ * reads it has time to.
+ */
+const UNDERCUT_SLACK = 0.3;
+/** A defender behind the receiver along his run and within this (yd) is trailing him. */
+const TRAIL_R = 3;
