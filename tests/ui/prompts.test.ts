@@ -15,6 +15,7 @@ const PROMPTED = [
   'preSnap.snap',
   'preSnap.routes',
   'preSnap.hotRoute',
+  'preSnap.audible',
   ...[1, 2, 3, 4, 5].map((n) => `pocket.throw${n}`),
   'pocket.pumpFake',
   'pocket.throwAway',

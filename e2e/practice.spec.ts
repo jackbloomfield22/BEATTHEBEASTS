@@ -123,6 +123,29 @@ test('pre-snap: the prompts, the route preview key, and a hot route the sim runs
   expect((await state(page)).phase).not.toBe('presnap');
 });
 
+test('an audible at the line: the offense re-sets in the run against the same look, and it snaps', async ({ page }) => {
+  await open(page, 5, 'stick'); // Stick, Shotgun Trips Right
+  const before = await page.evaluate(() => {
+    const s = (window as unknown as P).__btbPractice.runner!.state;
+    return { seed: s.setup.seed, def: s.setup.def.id };
+  });
+  await expect(page.locator('.snap-call')).toContainText('Audible');
+  await page.keyboard.press('KeyZ');
+  await expect(page.locator('.audible-item')).toHaveCount(4);
+  await page.screenshot({ path: 'test-results/audible-picker.png' });
+  await page.keyboard.press('Digit2'); // Run
+  await expect(page.locator('.audible-picker')).toHaveCount(0);
+  await expect(page.locator('.snap-call .audibled')).toContainText('Audible');
+  const after = await page.evaluate(() => {
+    const s = (window as unknown as P).__btbPractice.runner!.state;
+    return { seed: s.setup.seed, def: s.setup.def.id, type: s.setup.play.type, form: s.setup.play.formation.name, phase: s.phase };
+  });
+  expect(after).toMatchObject({ seed: before.seed, def: before.def, type: 'run', form: 'Shotgun Trips Right', phase: 'presnap' });
+  await page.keyboard.press('Space');
+  await tick(page, 2);
+  expect((await state(page)).phase).not.toBe('presnap');
+});
+
 test('a tackle: the carrier goes down and the next snap is at the new spot', async ({ page }) => {
   await open(page, 5, 'stick'); // Stick
   await page.keyboard.press('Space');

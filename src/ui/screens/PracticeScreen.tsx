@@ -6,6 +6,7 @@ import { Audio } from "@/audio/audio";
 import { inputLabel } from "@/input/actions";
 import { promptCode } from "@/input/prompts";
 import { practice, usePractice } from "@/game/practice";
+import { AUDIBLES } from "@/game/audible";
 import { latency } from "@/game/latency";
 import {
   downLabel,
@@ -451,23 +452,27 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
           </div>
         </div>
       </div>
-      {ui.stage === "presnap" && !ui.hot ? (
+      {ui.stage === "presnap" && !ui.hot && !ui.audible ? (
         <div className="snap-call">
+          {ui.audibled ? <div className="audibled">Audible: {ui.audibled}</div> : null}
           <Cue className="big" k={key("preSnap.snap")} w="Snap" />
           {runPlay ? (
             <div className="cue-row">
               <Cue k={key("preSnap.routes")} w="Play" />
+              <Cue k={key("preSnap.audible")} w="Audible" />
             </div>
           ) : (
             <div className="cue-row">
               <Cue k={key.row(THROWS.slice(0, Math.max(1, icons.length)))} w="Receivers" />
               <Cue k={key("preSnap.routes")} w="Routes" />
               <Cue k={key("preSnap.hotRoute")} w="Hot route" />
+              <Cue k={key("preSnap.audible")} w="Audible" />
             </div>
           )}
         </div>
       ) : null}
       {ui.stage === "presnap" && ui.hot ? <HotRoutePicker /> : null}
+      {ui.stage === "presnap" && ui.audible ? <AudiblePicker /> : null}
       {live && inPocket && !runPlay && ui.scrambling ? (
         <div className="prompt-row cue-row">
           <Cue k={moveKeys("pocket.move")} w="Run" />
@@ -543,6 +548,32 @@ function Tutorial() {
  * number, or up/down and confirm; on a gamepad the D-pad and A). The route
  * art on the field previews the focused route.
  */
+/** Audibles at the line (Playtest 2): four checks, each naming the play it goes to, greyed when this personnel has none. */
+function AudiblePicker() {
+  const key = useKey();
+  usePractice((s) => s.playId);
+  return (
+    <div className="hot-picker audible-picker">
+      <div className="hot-head">Audible</div>
+      <ol className="hot-list audible-list">
+        {AUDIBLES.map((a, i) => {
+          const to = practice.audibleFor(a.kind);
+          return (
+            <li key={a.kind} className={`hot-item audible-item${to ? "" : " off"}`} onClick={() => to && practice.callAudible(a.kind)}>
+              <span className="audible-key">{key(`hot.n${i + 1}`)}</span>
+              <span className="hot-name">{a.label}</span>
+              <span className="audible-to">{to ? to.name : "None from here"}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="cue-row">
+        <Cue k={key("hot.cancel")} w="Close" />
+      </div>
+    </div>
+  );
+}
+
 function HotRoutePicker() {
   const hot = usePractice((s) => s.hot);
   const device = useDevice();

@@ -60,10 +60,10 @@ export const ACTIONS: ActionDef[] = [
   // Hot route picker (pre-snap, after the hot-route key): a receiver's
   // number, then his new route by its number (or up/down and confirm).
   // On a gamepad: his button, then the D-pad and A (B goes back).
-  a('hot.n1', 'hotRoute', 'Receiver 1 / route 1', ['Digit1'], ['Pad:A']),
-  a('hot.n2', 'hotRoute', 'Receiver 2 / route 2', ['Digit2'], ['Pad:B']),
-  a('hot.n3', 'hotRoute', 'Receiver 3 / route 3', ['Digit3'], ['Pad:X']),
-  a('hot.n4', 'hotRoute', 'Receiver 4 / route 4', ['Digit4'], ['Pad:Y']),
+  a('hot.n1', 'hotRoute', 'Receiver 1 / route 1 / audible 1', ['Digit1'], ['Pad:A']),
+  a('hot.n2', 'hotRoute', 'Receiver 2 / route 2 / audible 2', ['Digit2'], ['Pad:B']),
+  a('hot.n3', 'hotRoute', 'Receiver 3 / route 3 / audible 3', ['Digit3'], ['Pad:X']),
+  a('hot.n4', 'hotRoute', 'Receiver 4 / route 4 / audible 4', ['Digit4'], ['Pad:Y']),
   a('hot.n5', 'hotRoute', 'Receiver 5 / route 5', ['Digit5'], ['Pad:RB']),
   a('hot.n6', 'hotRoute', 'Route 6', ['Digit6'], []),
   a('hot.n7', 'hotRoute', 'Route 7', ['Digit7'], []),
@@ -233,7 +233,7 @@ export const CONTEXT_LABELS: Record<InputContext, string> = {
   menu: 'Menus',
   playCall: 'Play Call',
   preSnap: 'Pre-Snap',
-  hotRoute: 'Hot Route',
+  hotRoute: 'Hot Route and Audible',
   pocket: 'Passing',
   ballInAir: 'Ball in the Air',
   carrier: 'Ball Carrier',

@@ -119,6 +119,13 @@
 .hot-item.current .hot-name::after { content: " (now)"; font-weight: 600; font-size: .72rem; color: var(--ink-2); }
 .hot-item.focus { border-color: var(--lime); border-style: solid; background: color-mix(in srgb, var(--lime) 18%, transparent); color: var(--ink); }
 .hot-item.focus .route-glyph { color: var(--lime); }
+.audible-list { grid-template-columns: repeat(2, 1fr); }
+.audible-item { flex-direction: row; justify-content: flex-start; gap: .55rem; padding: .5rem .6rem; }
+.audible-item .hot-name { font-size: 1rem; }
+.audible-item .audible-to { margin-left: auto; font-size: .75rem; font-weight: 600; color: var(--ink-2); }
+.audible-item.off { opacity: .45; cursor: default; }
+.audible-item:not(.off):hover { border-color: var(--lime); }
+.snap-call .audibled { font-weight: 800; font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; color: var(--lime); }
 .hot-foot { display: flex; gap: .5rem; align-items: center; font-size: .78rem; color: var(--ink-2); }
 
 /* Prompts: a key and a word or two, uppercase, one style everywhere. */

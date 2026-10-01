@@ -15,6 +15,7 @@ import { describe, type ResultCard } from './describe';
 import { loadPracticeRosters, loadSnapshot } from './rosters';
 import { SimRunner } from './runner';
 import { withSwap, type Clip } from './clips';
+import { AUDIBLES, audiblePlay, type AudibleKind } from './audible';
 import { routeOf } from '@/sim/ai';
 import type { OffPlay } from '@/sim/plays';
 import { detectSynergies } from '@/engine/ratings/traits/synergies';
@@ -51,6 +52,10 @@ export interface PracticeUi {
   tutorial: TutorialStep | null;
   /** The hot-route picker, when open: choosing the receiver, then his route. */
   hot: HotPicker | null;
+  /** The audible picker is open (pre-snap, Playtest 2). */
+  audible: boolean;
+  /** The last audible's call, shown at the line until the snap (its play's name). */
+  audibled: string | null;
   result: ResultCard | null;
   /** The coverage the Beasts played on the last snap (revealed with the result). */
   lastCover: string | null;
@@ -74,6 +79,8 @@ export const usePractice = create<PracticeUi>(() => ({
   catchType: null,
   tutorial: null,
   hot: null,
+  audible: false,
+  audibled: null,
   result: null,
   lastCover: null,
   seriesOver: false,
@@ -401,7 +408,7 @@ class PracticeSession {
     this.setContext('preSnap');
     this.readSince = -1;
     this.sawAir = false;
-    set({ stage: 'presnap', playId, situation: sit, playSit: sit, phase: 'presnap', carrier: null, scrambling: false, result: null, lastCover: def.name, seriesOver: false, tutorial: this.tutorialNext ? 'snap' : null });
+    set({ stage: 'presnap', playId, situation: sit, playSit: sit, phase: 'presnap', carrier: null, scrambling: false, result: null, lastCover: def.name, seriesOver: false, tutorial: this.tutorialNext ? 'snap' : null, audibled: null });
   }
 
   /**
@@ -413,8 +420,20 @@ class PracticeSession {
     const ui = get();
     if (ui.stage !== 'presnap' || !this.runner) return;
     const s = this.runner.state;
+    if (ui.audible) {
+      // The audible picker shares the hot-route context's keys: 1–4 (A, B, X, Y) call, H (LB) closes.
+      if (id === 'hot.cancel') return this.closeHot();
+      const k = id.startsWith('hot.n') ? Number(id.slice(5)) : 0;
+      if (k >= 1 && k <= AUDIBLES.length) this.callAudible(AUDIBLES[k - 1]!.kind);
+      return;
+    }
     const hot = ui.hot;
     if (!hot) {
+      if (id === 'preSnap.audible') {
+        this.hotPop = Input.pushContext('hotRoute');
+        set({ audible: true });
+        return;
+      }
       if (id === 'preSnap.hotRoute') {
         this.hotPop = Input.pushContext('hotRoute');
         set({ hot: { stage: 'receiver' } });
@@ -460,7 +479,30 @@ class PracticeSession {
   closeHot(): void {
     this.hotPop?.();
     this.hotPop = null;
-    if (get().hot) set({ hot: null });
+    if (get().hot || get().audible) set({ hot: null, audible: false });
+  }
+
+  /** The play an audible of this kind checks to now (null: none in this personnel), for the picker. */
+  audibleFor(kind: AudibleKind): OffPlay | null {
+    const s = this.runner?.state;
+    if (!s) return null;
+    const sit = get().playSit;
+    return audiblePlay(s.setup.play, kind, { down: sit.down, toGo: sit.toGo, los: sit.los }, this.teams?.team ?? null);
+  }
+
+  /**
+   * Check to another play at the line (Playtest 2): the offense re-sets in
+   * the new play against the same defense (its call, the same seed: the
+   * Beasts showed their look and keep it), same spot and down. Hot routes
+   * called before it are gone with the old play.
+   */
+  callAudible(kind: AudibleKind): void {
+    const s = this.runner?.state;
+    const play = this.audibleFor(kind);
+    if (!s || !play || s.phase !== 'presnap') return;
+    const { seed, def } = s.setup;
+    this.setUp(play.id, seed, def, get().playSit);
+    set({ audibled: play.name });
   }
 
   /** Stop the tutorial now and don't show it again. */
