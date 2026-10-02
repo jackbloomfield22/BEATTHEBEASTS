@@ -1581,15 +1581,21 @@ function runToBall(s: PlayState, a: Agent): void {
   }
   const top = a.fx.vmax;
   if (left > 0.1 && d > 0.25) {
-    // On time at full stride: never brake to wait for the ball (it's led to
-    // where he'll be at speed). Only a ball well short of him (it needs him
-    // at under 60% of his run) makes him throttle down and come back to it.
+    // On time at full stride: never brake to wait for the ball before he's
+    // found it (it's led to where he'll be at speed). Only a ball well short
+    // of him (it needs him at under 60% of his run) makes him throttle down
+    // and come back to it.
     const need = d / left;
     const cur = len(a.vel);
     // A back-shoulder ball he paces to exactly: he throttles down and turns
     // back to it as it comes (M6.5 #6: at full stride he ran past every one).
+    // And once he's found it he tracks it (M6.6, the second slant pass): a
+    // ball a step behind his run he gathers himself for, at the pace that
+    // meets it, instead of running on past the spot and having it arrive
+    // behind him. (With the lead now on his real path, a ball on time needs
+    // his full speed anyway.)
     const back = (b.place ?? 0) < -0.5;
-    const sp = Math.min(top, back || need < 0.6 * cur ? need : Math.max(need, cur));
+    const sp = Math.min(top, back || need < 0.6 * cur || read > 0 ? need : Math.max(need, cur));
     steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp }, 0.25));
     return;
   }

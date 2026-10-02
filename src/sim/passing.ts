@@ -196,8 +196,8 @@ export function findsBallAt(s: PlayState, a: Agent): number {
  * after the route ran out, a couple of yards. Route running (short or deep
  * for the throw's depth, or the all-round figure if better) takes
  * TIMING_RR of it off for a perfect route runner, chemistry with his QB
- * CHEM_TIMING of what's left. Jerry Rice on time: ~0.35 yd; John Taylor
- * (74 short) ~0.5. M5–M6.6 got this from a bug: the lead ran the route's
+ * CHEM_TIMING of what's left. Jerry Rice on time: ~0.45 yd; John Taylor
+ * (74 short) ~0.6. M5–M6.6 got this from a bug: the lead ran the route's
  * straight legs while he ran it round, so every throw to a man on a bend
  * landed ~1 yd off him whoever threw it or ran it.
  */
@@ -210,10 +210,11 @@ export function timingSigma(s: PlayState, rec: Agent, air: number, speed: number
  * Calibrated on the AI pass game (tools/sim/outcomes.ts, 20 a cell): with
  * the lead running his real path and no timing, the 80s 49ers completed
  * 74% against the Beasts for 9.5 yd an attempt, open men catching 95% of
- * their targets (PFF's ~80%: tests/outcomes.test.ts); 0.35 puts them at
- * 68% and 8.6, open men at 88%.
+ * their targets (PFF's ~80%: tests/outcomes.test.ts); 0.4 (and the
+ * receiver tracking the ball, play.ts runToBall) puts them at 69% and 8.4,
+ * open men at 89%.
  */
-const TIMING = 0.35;
+const TIMING = 0.4;
 /** The horizon (s) past which it grows only with the horizon, not faster: a deep ball's hang. */
 const TIMING_H = 2;
 /** A perfect route runner takes 60% of it off: where he is is mostly how he runs it. */
