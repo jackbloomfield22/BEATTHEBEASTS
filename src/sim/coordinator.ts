@@ -3,8 +3,8 @@
 // position, the clock and the score) and the roster's strengths. Pure and
 // deterministic: the same situation and roster give the same list.
 
-import type { ContendersRoster } from './personnel';
-import { PLAYS, type OffPlay, type PlayType } from './plays';
+import { playUnlocked, type ContendersRoster } from './personnel';
+import { DRAWS, PLAYS, type OffPlay, type PlayType } from './plays';
 import type { SimPlayer } from './types';
 
 export interface OffSituation {
@@ -93,9 +93,9 @@ export function suggestPlays(sit: OffSituation, team: ContendersRoster, n = SUGG
     // Down and distance.
     if (sit.down === 1) s += t === 'run' ? 2 : t === 'playAction' ? 2 : t === 'quick' ? 1 : t === 'shot' ? 0.5 : 1;
     else if (short) s += t === 'run' ? 3 : t === 'quick' ? 2 : t === 'playAction' ? 1.5 : 0;
-    else if (third && long) s += t === 'dropback' ? 3 : t === 'shot' ? 2 : t === 'screen' ? 1 : t === 'quick' ? 0.5 : t === 'run' ? (p.run?.scheme === 'draw' ? 1 : -2) : 0;
+    else if (third && long) s += t === 'dropback' ? 3 : t === 'shot' ? 2 : t === 'screen' ? 1 : t === 'quick' ? 0.5 : t === 'run' ? (p.run && DRAWS.includes(p.run.scheme) ? 1 : -2) : 0;
     else if (third) s += t === 'quick' ? 3 : t === 'dropback' ? 2.5 : t === 'screen' ? 1 : t === 'run' ? 0.5 : 0.5;
-    else if (long) s += t === 'dropback' ? 2 : t === 'screen' ? 2 : t === 'quick' ? 1.5 : t === 'run' ? (p.run?.scheme === 'draw' ? 1.5 : 0.5) : 1;
+    else if (long) s += t === 'dropback' ? 2 : t === 'screen' ? 2 : t === 'quick' ? 1.5 : t === 'run' ? (p.run && DRAWS.includes(p.run.scheme) ? 1.5 : 0.5) : 1;
     else s += t === 'run' ? 2 : t === 'playAction' ? 1.5 : 1.5;
     // Field position.
     if (goalLine) s += p.formation.personnel === '22' ? 3 : t === 'run' ? 1 : t === 'shot' ? -3 : 0;
@@ -106,13 +106,15 @@ export function suggestPlays(sit: OffSituation, team: ContendersRoster, n = SUGG
     // Personnel strengths.
     if (deepShot(p)) s += 3 * st.deep - 1;
     if (t === 'quick') s += 1.5 * st.quick;
-    if (t === 'run') s += 2 * st.run - 0.5;
+    // A Designed Runner's own runs (the QB draw, the zone read) go on his legs, not the back's.
+    if (t === 'run') s += 2 * (p.unlock === 'designed-runner' ? st.mobile : st.run) - 0.5;
     if (Object.entries(p.assign).some(([k, a]) => k === 'TE' && a.kind === 'route' && a.read === 1)) s += 1.5 * st.te;
     if (p.formation.personnel === '21' || p.formation.personnel === '22') s += 1.2 * st.fb - 0.4;
     if (p.drop.boot) s += 1.2 * st.mobile;
     return s;
   };
-  const ranked = PLAYS.map((p, i) => ({ p, s: score(p), i })).filter((r) => r.s > -50);
+  // Only this roster's book: a play a trait unlocks needs the man who holds it (personnel.ts playUnlocked).
+  const ranked = PLAYS.map((p, i) => ({ p, s: score(p), i })).filter((r) => r.s > -50 && playUnlocked(r.p, team));
   // A mixed list (Playtest 2: "mixed runs and passes, ranked"): at least
   // MIX_SHARE of it runs and as much passes, except in the two-minute drill
   // (no runs) and on third and long (one: the draw). Where the quota needs

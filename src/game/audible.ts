@@ -6,7 +6,7 @@
 // the situation picks between candidates. A call the personnel has no play
 // for is offered greyed out with the reason.
 
-import { PLAYS, suggestPlays, type ContendersRoster, type OffPlay, type OffSituation } from '@/sim';
+import { PLAYS, playUnlocked, suggestPlays, type ContendersRoster, type OffPlay, type OffSituation } from '@/sim';
 
 export type AudibleKind = 'quick' | 'run' | 'paShot' | 'screen';
 
@@ -28,7 +28,7 @@ const fits = (p: OffPlay, kind: AudibleKind): boolean => {
 
 /** The play an audible of `kind` checks to from `current`, or null when this personnel has none. */
 export function audiblePlay(current: OffPlay, kind: AudibleKind, sit: OffSituation, team: ContendersRoster | null): OffPlay | null {
-  const pool = PLAYS.filter((p) => p.id !== current.id && fits(p, kind) && p.formation.personnel === current.formation.personnel);
+  const pool = PLAYS.filter((p) => p.id !== current.id && fits(p, kind) && p.formation.personnel === current.formation.personnel && playUnlocked(p, team));
   if (!pool.length) return null;
   const rank = team ? suggestPlays(sit, team, PLAYS.length) : [];
   const at = (p: OffPlay) => {

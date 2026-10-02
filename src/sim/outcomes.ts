@@ -42,8 +42,8 @@ export function sidesFor(r: HarnessRosters, play: OffPlay, def: DefCall): { offe
 }
 
 /** The harness's book: the everyday plays (situational calls, the sneak and the Hail Mary, are left out). */
-const PASS_BASE = PASS_PLAYS.filter((p) => !p.situ);
-const RUN_BASE = RUN_PLAYS.filter((p) => !p.situ);
+const PASS_BASE = PASS_PLAYS.filter((p) => !p.situ && !p.unlock);
+const RUN_BASE = RUN_PLAYS.filter((p) => !p.situ && !p.unlock);
 import { dist, type V2 } from './vec';
 
 /**

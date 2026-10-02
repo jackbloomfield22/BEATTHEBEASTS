@@ -10,7 +10,7 @@ import { arrive, boundaryGovern, CRUISE, seen, steer, timeTo } from './movement'
 export { boundaryGovern } from './movement';
 import { driveTime, lead, releaseOf } from './passing';
 import { has } from './traits';
-import { ROUTE_DELAY, ROUTES, ZONES, type OffPlay, type RouteName, type ZoneName } from './plays';
+import { DRAWS, ROUTE_DELAY, ROUTES, ZONES, type OffPlay, type RouteName, type ZoneName } from './plays';
 import { DIFFICULTY, zoneSpot, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, TICK, type Agent, type OffSlot } from './types';
 
@@ -338,7 +338,7 @@ const PICKUP_MISS = 0.05;
 export function assignProtection(s: PlayState): void {
   const rushers = s.def.filter((i) => s.setup.def.assign[s.agents[i]!.slot as keyof typeof s.setup.def.assign].kind === 'rush');
   // The draw's line pass-sets too (it's the look that sells it).
-  const draw = s.setup.play.run?.scheme === 'draw';
+  const draw = DRAWS.includes(s.setup.play.run?.scheme ?? 'insideZone');
   const blockers = s.off.filter((i) => {
     const a = s.agents[i]!;
     const k = s.setup.play.assign[a.slot as keyof OffPlay['assign']].kind;
@@ -740,12 +740,14 @@ export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
     // play's aiming point on a designed run).
     const behind = (s.setup.los - c.pos.x) * attack > -0.5;
     let score = dir.x * attack * (behind ? 5 : 2.2);
-    const aimY = s.setup.play.run && c.slot === 'RB' ? (s.setup.ballY ?? 0) + s.setup.play.run.aim : null;
+    // (A Designed Runner's QB draw or zone-read keep reads its aiming point too: the keeper's is the backside edge, runs.ts keepIt.)
+    const qbRun = c.mem.designed === true && s.setup.play.run?.scheme !== 'sneak';
+    const aimY = s.setup.play.run && (c.slot === 'RB' || qbRun) ? (s.setup.ballY ?? 0) + ((c.mem.runAim as number | undefined) ?? s.setup.play.run.aim) : null;
     // (M6: 0.35 a yard let inside runs bounce to the sideline a third of the time; a back on inside zone reads front side to cutback and rarely leaves the tackle box.)
     if (behind && aimY !== null) {
       score -= Math.abs(c.pos.y + dir.y * 3 - aimY) * AIM_PULL;
       // The run's width: an inside run stays in the tackle box (within ~4 yd of its aiming point), an outside one ~8 (the bounce is the exception, not the read).
-      const wide = s.setup.play.run!.scheme === 'outsideZone' || s.setup.play.run!.scheme === 'toss' ? 8 : 4;
+      const wide = s.setup.play.run!.scheme === 'outsideZone' || s.setup.play.run!.scheme === 'toss' || c.mem.runAim !== undefined ? 8 : 4;
       const off = Math.abs(c.pos.y + dir.y * 3 - aimY) - wide;
       if (off > 0) score -= off * 2.5;
     }

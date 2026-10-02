@@ -5,6 +5,7 @@
 // stays in the formation's alignment.
 
 import type { OffPlay, Personnel } from './plays';
+import { holds } from './traits';
 import type { OffSlot, SimPlayer } from './types';
 
 export interface ContendersRoster {
@@ -44,7 +45,24 @@ export const PERSONNEL: Record<Personnel, Record<'RB' | 'X' | 'Z' | 'SLOT' | 'TE
 export function offenseFor(play: OffPlay, team: ContendersRoster): Record<OffSlot, SimPlayer> {
   const g = PERSONNEL[play.formation.personnel];
   const [LT, LG, C, RG, RT] = team.OL;
-  return { QB: team.QB, RB: team[g.RB], X: team[g.X], Z: team[g.Z], SLOT: team[g.SLOT], TE: team[g.TE], LT, LG, C, RG, RT };
+  const out = { QB: team.QB, RB: team[g.RB], X: team[g.X], Z: team[g.Z], SLOT: team[g.SLOT], TE: team[g.TE], LT, LG, C, RG, RT };
+  // An H-back set: the tight end who holds the trait takes the H spot (the other one stays in-line).
+  const h = play.formation.hBack;
+  if (h && out[h] === team.TE2 && !holds(team.TE2, 'h-back') && holds(team.TE, 'h-back')) {
+    out[h] = team.TE;
+    out.TE = team.TE2;
+  }
+  return out;
+}
+
+/** Where a play's unlocking trait has to be (the QB's legs, a tight end's H-back alignment). */
+const UNLOCK_BY: Record<string, (keyof ContendersRoster)[]> = { 'designed-runner': ['QB'], 'h-back': ['TE', 'TE2'] };
+
+/** Is the play in this roster's book? A play a trait unlocks (plays.ts `unlock`) needs a man who holds it at its position. */
+export function playUnlocked(play: OffPlay, team: ContendersRoster | null | undefined): boolean {
+  if (!play.unlock) return true;
+  if (!team) return false;
+  return (UNLOCK_BY[play.unlock] ?? []).some((k) => holds(team[k] as SimPlayer, play.unlock!));
 }
 
 /** How many wide receivers a grouping puts on the field (the Beasts' nickel trigger: three or more). */
