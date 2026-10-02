@@ -1,72 +1,72 @@
 {
- "frames": 2198,
- "worst": 38,
- "p99": 28,
+ "frames": 2330,
+ "worst": 62,
+ "p99": 29,
  "spikes": [
   {
-   "frame": 31,
-   "slot": "LE",
-   "bone": "upperarm_r",
+   "frame": 40,
+   "slot": "RDT",
+   "bone": "upperarm_l",
    "rate": 31,
-   "clip": "getoff_dl_3pt",
+   "clip": "dl_bull_rush",
    "overlay": "",
-   "anim": "rush",
-   "phase": "snap"
+   "anim": "engaged",
+   "phase": "dropback"
   },
   {
-   "frame": 31,
-   "slot": "LDT",
-   "bone": "upperarm_r",
-   "rate": 31,
-   "clip": "getoff_dl_4pt",
-   "overlay": "",
-   "anim": "rush",
-   "phase": "snap"
-  },
-  {
-   "frame": 31,
+   "frame": 40,
    "slot": "RDT",
    "bone": "upperarm_r",
    "rate": 31,
-   "clip": "getoff_dl_4pt",
+   "clip": "dl_bull_rush",
    "overlay": "",
-   "anim": "rush",
-   "phase": "snap"
+   "anim": "engaged",
+   "phase": "dropback"
   },
   {
-   "frame": 31,
-   "slot": "RE",
+   "frame": 46,
+   "slot": "QB",
    "bone": "upperarm_r",
-   "rate": 31,
-   "clip": "getoff_dl_3pt",
-   "overlay": "",
-   "anim": "rush",
-   "phase": "snap"
+   "rate": 35,
+   "clip": "qb_drop_gun5",
+   "overlay": "qb_throw",
+   "anim": "throw",
+   "phase": "dropback"
   },
   {
    "frame": 48,
    "slot": "QB",
-   "bone": "upperarm_r",
-   "rate": 34,
+   "bone": "upperarm_l",
+   "rate": 32,
    "clip": "qb_drop_gun5",
    "overlay": "qb_throw",
    "anim": "throw",
+   "phase": "dropback"
+  },
+  {
+   "frame": 48,
+   "slot": "LDT",
+   "bone": "upperarm_l",
+   "rate": 31,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 48,
+   "slot": "LDT",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
    "phase": "dropback"
   },
   {
    "frame": 50,
    "slot": "QB",
    "bone": "upperarm_l",
-   "rate": 34,
-   "clip": "qb_drop_gun5",
-   "overlay": "qb_throw",
-   "anim": "throw",
-   "phase": "dropback"
-  },
-  {
-   "frame": 52,
-   "slot": "QB",
-   "bone": "upperarm_l",
    "rate": 32,
    "clip": "",
    "overlay": "qb_throw",
@@ -74,54 +74,114 @@
    "phase": "pocket"
   },
   {
-   "frame": 52,
+   "frame": 50,
    "slot": "QB",
    "bone": "upperarm_r",
-   "rate": 34,
+   "rate": 32,
    "clip": "",
    "overlay": "qb_throw",
    "anim": "throw",
    "phase": "pocket"
   },
   {
-   "frame": 76,
-   "slot": "LDT",
+   "frame": 54,
+   "slot": "LE",
    "bone": "upperarm_l",
-   "rate": 32,
-   "clip": "dl_club_l",
+   "rate": 31,
+   "clip": "dl_bull_rush",
    "overlay": "",
    "anim": "engaged",
    "phase": "air"
   },
   {
-   "frame": 89,
+   "frame": 54,
+   "slot": "LE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  },
+  {
+   "frame": 54,
+   "slot": "RE",
+   "bone": "upperarm_l",
+   "rate": 31,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  },
+  {
+   "frame": 54,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  },
+  {
+   "frame": 64,
+   "slot": "RDT",
+   "bone": "calf_l",
+   "rate": 62,
+   "clip": "dl_spin_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  },
+  {
+   "frame": 72,
+   "slot": "LE",
+   "bone": "upperarm_l",
+   "rate": 43,
+   "clip": "dl_shed_l",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "air"
+  },
+  {
+   "frame": 73,
+   "slot": "LDT",
+   "bone": "upperarm_l",
+   "rate": 41,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  },
+  {
+   "frame": 77,
+   "slot": "RE",
+   "bone": "calf_r",
+   "rate": 59,
+   "clip": "dl_spin_r",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 82,
    "slot": "RCB",
    "bone": "forearm_l",
-   "rate": 31,
+   "rate": 60,
    "clip": "tackle",
    "overlay": "",
    "anim": "tackle",
-   "phase": "dead"
+   "phase": "carrier"
   },
   {
-   "frame": 89,
+   "frame": 82,
    "slot": "RCB",
    "bone": "forearm_r",
-   "rate": 33,
+   "rate": 56,
    "clip": "tackle",
    "overlay": "",
    "anim": "tackle",
-   "phase": "dead"
-  },
-  {
-   "frame": 90,
-   "slot": "RCB",
-   "bone": "forearm_r",
-   "rate": 31,
-   "clip": "tackle",
-   "overlay": "",
-   "anim": "tackle",
-   "phase": "dead"
+   "phase": "carrier"
   }
  ]
 }

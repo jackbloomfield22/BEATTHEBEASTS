@@ -1,117 +1,177 @@
 {
- "frames": 3870,
- "worst": 55,
+ "frames": 3320,
+ "worst": 60,
  "p99": 28,
  "spikes": [
   {
-   "frame": 30,
-   "slot": "LE",
-   "bone": "upperarm_r",
+   "frame": 46,
+   "slot": "LDT",
+   "bone": "upperarm_l",
    "rate": 31,
-   "clip": "getoff_dl_3pt",
+   "clip": "dl_bull_rush",
    "overlay": "",
-   "anim": "rush",
-   "phase": "snap"
+   "anim": "engaged",
+   "phase": "dropback"
   },
   {
-   "frame": 30,
+   "frame": 46,
    "slot": "LDT",
    "bone": "upperarm_r",
    "rate": 31,
-   "clip": "getoff_dl_4pt",
+   "clip": "dl_bull_rush",
    "overlay": "",
-   "anim": "rush",
-   "phase": "snap"
+   "anim": "engaged",
+   "phase": "dropback"
   },
   {
-   "frame": 30,
+   "frame": 50,
+   "slot": "WLB",
+   "bone": "calf_r",
+   "rate": 56,
+   "clip": "dl_spin_r",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 53,
+   "slot": "LE",
+   "bone": "upperarm_l",
+   "rate": 31,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 53,
+   "slot": "LE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 59,
    "slot": "RDT",
-   "bone": "upperarm_r",
-   "rate": 31,
-   "clip": "getoff_dl_4pt",
+   "bone": "upperarm_l",
+   "rate": 41,
+   "clip": "dl_rip_l",
    "overlay": "",
-   "anim": "rush",
-   "phase": "snap"
+   "anim": "engaged",
+   "phase": "pocket"
   },
   {
-   "frame": 30,
-   "slot": "RE",
-   "bone": "upperarm_r",
-   "rate": 31,
-   "clip": "getoff_dl_3pt",
-   "overlay": "",
-   "anim": "rush",
-   "phase": "snap"
-  },
-  {
-   "frame": 84,
+   "frame": 66,
    "slot": "QB",
    "bone": "upperarm_l",
-   "rate": 51,
+   "rate": 53,
    "clip": "qb_throw",
    "overlay": "",
    "anim": "throw",
    "phase": "pocket"
   },
   {
-   "frame": 84,
+   "frame": 67,
    "slot": "LDT",
    "bone": "upperarm_l",
-   "rate": 40,
+   "rate": 41,
    "clip": "dl_rip_l",
    "overlay": "",
    "anim": "engaged",
    "phase": "pocket"
   },
   {
-   "frame": 88,
+   "frame": 68,
    "slot": "QB",
-   "bone": "upperarm_r",
-   "rate": 31,
+   "bone": "upperarm_l",
+   "rate": 32,
    "clip": "qb_throw",
    "overlay": "",
    "anim": "throw",
-   "phase": "air"
+   "phase": "pocket"
   },
   {
-   "frame": 107,
-   "slot": "RDT",
-   "bone": "upperarm_l",
-   "rate": 40,
-   "clip": "dl_rip_l",
+   "frame": 68,
+   "slot": "QB",
+   "bone": "upperarm_r",
+   "rate": 32,
+   "clip": "qb_throw",
    "overlay": "",
-   "anim": "engaged",
-   "phase": "air"
+   "anim": "throw",
+   "phase": "pocket"
   },
   {
-   "frame": 118,
+   "frame": 73,
    "slot": "LE",
    "bone": "upperarm_l",
-   "rate": 40,
-   "clip": "dl_rip_l",
+   "rate": 31,
+   "clip": "dl_bull_rush",
    "overlay": "",
    "anim": "engaged",
    "phase": "air"
   },
   {
-   "frame": 164,
-   "slot": "FS",
+   "frame": 73,
+   "slot": "LE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  },
+  {
+   "frame": 76,
+   "slot": "SLB",
+   "bone": "calf_l",
+   "rate": 59,
+   "clip": "dl_spin_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  },
+  {
+   "frame": 79,
+   "slot": "SLB",
+   "bone": "head",
+   "rate": 30,
+   "clip": "dl_spin_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  },
+  {
+   "frame": 114,
+   "slot": "Z",
+   "bone": "upperarm_l",
+   "rate": 30,
+   "clip": "",
+   "overlay": "catch_hands_run",
+   "anim": "catch",
+   "phase": "carrier"
+  },
+  {
+   "frame": 125,
+   "slot": "RCB",
    "bone": "forearm_l",
-   "rate": 50,
+   "rate": 60,
    "clip": "tackle",
    "overlay": "",
-   "anim": "tackle",
-   "phase": "dead"
+   "anim": "engaged",
+   "phase": "carrier"
   },
   {
-   "frame": 164,
-   "slot": "FS",
+   "frame": 125,
+   "slot": "RCB",
    "bone": "forearm_r",
-   "rate": 55,
+   "rate": 57,
    "clip": "tackle",
    "overlay": "",
-   "anim": "tackle",
-   "phase": "dead"
+   "anim": "engaged",
+   "phase": "carrier"
   }
  ]
 }
