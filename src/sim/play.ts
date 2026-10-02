@@ -32,7 +32,7 @@ import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tack
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
 import { aiMove, autoMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
-import { autoCatch, catchLook, findsBallAt, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
+import { autoCatch, catchLook, findsBallAt, LAP_R, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { has } from './traits';
 import { manOf, type PlayState } from './state';
@@ -507,7 +507,11 @@ function batAtLine(s: PlayState): boolean {
     if (dh > BAT_R || b.pos.z > reach(d).top || b.pos.z < 1.2) continue;
     s.touched.push(i);
     const tall = Math.max(0, Math.min(1, (d.p.heightIn - 72) / 6));
-    if (s.rng.catch() >= BAT_P * (0.5 + 0.5 * tall)) continue;
+    // Locked up with a blocker his hands are on the man in front of him: he
+    // gets them up into the lane on BAT_ENGAGED of the throws he'd have
+    // reached free, unless he's been driven back into the QB's lap.
+    const engaged = !!blockOf(s, i) && dist(d.pos, s.agents[b.thrower]!.pos) > LAP_R;
+    if (s.rng.catch() >= BAT_P * (0.5 + 0.5 * tall) * (engaged ? BAT_ENGAGED : 1)) continue;
     b.vel = { x: b.vel.x * 0.1 + gauss(s.rng.bounce) * 1.5, y: b.vel.y * 0.1 + gauss(s.rng.bounce) * 1.5, z: 3 + 2 * s.rng.bounce() };
     b.target = -2;
     d.anim = 'rush';
@@ -519,6 +523,14 @@ function batAtLine(s: PlayState): boolean {
 const BAT_T = 0.3;
 const BAT_R = 0.7;
 const BAT_P = 0.45;
+/**
+ * The share of throws an engaged rusher in the lane gets his hands up to:
+ * set so the AI pass game has ~2% of its attempts batted at the line (the
+ * NFL runs ~1.5–2%; tools/sim/batted.ts: 1.4% from free rushers and the
+ * QB's lap alone, 5.8% with every engaged rusher batting like a free one,
+ * 4.2% before the second slant pass, when clearLoft lofted over them).
+ */
+const BAT_ENGAGED = 0.15;
 
 /** A vertical route with the man covering him level or on top of him, close: the back-shoulder throw. */
 function backShoulder(s: PlayState, r: Agent): boolean {
@@ -1569,15 +1581,21 @@ function runToBall(s: PlayState, a: Agent): void {
   }
   const top = a.fx.vmax;
   if (left > 0.1 && d > 0.25) {
-    // On time at full stride: never brake to wait for the ball (it's led to
-    // where he'll be at speed). Only a ball well short of him (it needs him
-    // at under 60% of his run) makes him throttle down and come back to it.
+    // On time at full stride: never brake to wait for the ball before he's
+    // found it (it's led to where he'll be at speed). Only a ball well short
+    // of him (it needs him at under 60% of his run) makes him throttle down
+    // and come back to it.
     const need = d / left;
     const cur = len(a.vel);
     // A back-shoulder ball he paces to exactly: he throttles down and turns
     // back to it as it comes (M6.5 #6: at full stride he ran past every one).
+    // And once he's found it he tracks it (M6.6, the second slant pass): a
+    // ball a step behind his run he gathers himself for, at the pace that
+    // meets it, instead of running on past the spot and having it arrive
+    // behind him. (With the lead now on his real path, a ball on time needs
+    // his full speed anyway.)
     const back = (b.place ?? 0) < -0.5;
-    const sp = Math.min(top, back || need < 0.6 * cur ? need : Math.max(need, cur));
+    const sp = Math.min(top, back || need < 0.6 * cur || read > 0 ? need : Math.max(need, cur));
     steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp }, 0.25));
     return;
   }

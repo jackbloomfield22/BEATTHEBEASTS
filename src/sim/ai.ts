@@ -211,6 +211,48 @@ export function runRoute(s: PlayState, a: Agent): void {
     a.anim = 'block';
     return;
   }
+  if (stepRoute(a)) return;
+  // Settled on a sit route: face the QB and work to the open window. He
+  // slides a step or two across, away from the nearest defender, never more
+  // than WINDOW_SLIDE off his spot (M6.5 #7: he stood still wherever the
+  // spot was, even with a linebacker sitting on it).
+  if (rt.sit[rt.pts.length - 1]) {
+    const qb = s.agents[s.qb]!;
+    const home = rt.pts[rt.pts.length - 1]!;
+    let near: Agent | null = null;
+    let nd = WINDOW_SEE;
+    for (const i of s.def) {
+      const d = s.agents[i]!;
+      if (d.down) continue;
+      const k = dist(d.pos, a.pos);
+      if (k < nd) {
+        nd = k;
+        near = d;
+      }
+    }
+    let to = home;
+    if (near) {
+      const side = a.pos.y >= near.pos.y ? 1 : -1;
+      to = v2(home.x, Math.max(-FIELD_HALF_W + ROUTE_ROOM, Math.min(FIELD_HALF_W - ROUTE_ROOM, home.y + side * WINDOW_SLIDE)));
+    }
+    steer(a, dist(a.pos, to) > 0.3 ? arrive(a, to, 0.45, 0.8) : { x: 0, y: 0 }, { face: atan2(qb.pos.y - a.pos.y, qb.pos.x - a.pos.x) });
+    return;
+  }
+}
+
+/**
+ * One tick of his route, the part that's his alone (no defenders, no QB):
+ * past a break he plants (the velocity set down the new leg), and the
+ * velocity he asks for, stem pace, braking into the break, settling on a
+ * sit, or on along the line past the last point. Null once he's settled on
+ * a sit route (runRoute works him into the window). runRoute steers on it;
+ * the throw's lead (passing.ts lead) runs it forward on a copy of him, so
+ * the ball is led to the path he really runs (the turn rounded at his
+ * Agility), not the route's straight legs.
+ */
+export function routeWant(a: Agent): V2 | null {
+  const rt = a.route;
+  if (!rt) return null;
   const rr = Math.max(a.fx.a('shortRoute'), a.fx.a('deepRoute'), a.fx.a('routeRunning'));
   if (rt.idx < rt.pts.length) {
     const q = rt.pts[rt.idx]!;
@@ -270,42 +312,23 @@ export function runRoute(s: PlayState, a: Agent): void {
       const cap = Math.sqrt(vb * vb + 2 * a.fx.cutAccel * 0.8 * dist(a.pos, q));
       pace = Math.min(pace, cap / a.fx.vmax);
     }
-    const want = sit ? arrive(a, q, 1, 1) : arrive(a, q, pace);
-    steer(a, boundaryGovern(a, want, ROUTE_ROOM - 0.3), {});
-    return;
+    return sit ? arrive(a, q, 1, 1) : arrive(a, q, pace);
   }
-  // Settled on a sit route: face the QB and work to the open window. He
-  // slides a step or two across, away from the nearest defender, never more
-  // than WINDOW_SLIDE off his spot (M6.5 #7: he stood still wherever the
-  // spot was, even with a linebacker sitting on it).
-  if (rt.sit[rt.pts.length - 1]) {
-    const qb = s.agents[s.qb]!;
-    const home = rt.pts[rt.pts.length - 1]!;
-    let near: Agent | null = null;
-    let nd = WINDOW_SEE;
-    for (const i of s.def) {
-      const d = s.agents[i]!;
-      if (d.down) continue;
-      const k = dist(d.pos, a.pos);
-      if (k < nd) {
-        nd = k;
-        near = d;
-      }
-    }
-    let to = home;
-    if (near) {
-      const side = a.pos.y >= near.pos.y ? 1 : -1;
-      to = v2(home.x, Math.max(-FIELD_HALF_W + ROUTE_ROOM, Math.min(FIELD_HALF_W - ROUTE_ROOM, home.y + side * WINDOW_SLIDE)));
-    }
-    steer(a, dist(a.pos, to) > 0.3 ? arrive(a, to, 0.45, 0.8) : { x: 0, y: 0 }, { face: atan2(qb.pos.y - a.pos.y, qb.pos.x - a.pos.x) });
-    return;
-  }
+  if (rt.sit[rt.pts.length - 1]) return null;
   // Past the last point: keep running the line, bending away from the sideline.
   const n = rt.pts.length;
   const p0 = n > 1 ? rt.pts[n - 2]! : a.pos;
   const p1 = rt.pts[n - 1]!;
   const dir = continueDir(a.pos, p0, p1);
-  steer(a, boundaryGovern(a, { x: dir.x * a.fx.vmax, y: dir.y * a.fx.vmax }, ROUTE_ROOM - 0.3));
+  return { x: dir.x * a.fx.vmax, y: dir.y * a.fx.vmax };
+}
+
+/** Run one tick of his route (routeWant, steered inside the boundary); false once he's settled on a sit route. */
+export function stepRoute(a: Agent): boolean {
+  const want = routeWant(a);
+  if (!want) return false;
+  steer(a, boundaryGovern(a, want, ROUTE_ROOM - 0.3), {});
+  return true;
 }
 
 /** A blitzer's pickup missed at the snap (share): see assignProtection. */

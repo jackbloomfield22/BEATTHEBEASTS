@@ -8,7 +8,9 @@
 
 import { flightTime, G, solveLaunch, speed3, stepFlight, type V3 } from './ball';
 import { errorAt20, maxRange, maxThrowSpeed, releaseTime } from './effects';
-import { breakCarry, continueDir } from './ai';
+import { stepRoute } from './ai';
+import { steer } from './movement';
+import { blockOf } from './blocks';
 import { gauss } from './rand';
 import { exp } from '@/engine/math/detmath';
 import type { PlayState } from './state';
@@ -41,74 +43,46 @@ export function fullSpeedRun(r: Agent, T: number): number {
  * stride (feedback item 7). Settle routes stop at their settle point.
  */
 export function lead(r: Agent, T: number): V2 {
+  return leadRun(r, T).pos;
+}
+/** lead(), and the way he'll be running there (his velocity at the catch point). */
+export function leadRun(r: Agent, T: number): { pos: V2; vel: V2; offScript: number } {
   const rt = r.route;
   if (!rt) {
     // No route: on along the way he's going, flat out.
     const sp = len(r.vel);
-    if (sp < 0.5) return { x: r.pos.x, y: r.pos.y };
+    if (sp < 0.5) return { pos: { x: r.pos.x, y: r.pos.y }, vel: { x: r.vel.x, y: r.vel.y }, offScript: 0 };
     const d = fullSpeedRun(r, T);
-    return { x: r.pos.x + (r.vel.x / sp) * d, y: r.pos.y + (r.vel.y / sp) * d };
+    return { pos: { x: r.pos.x + (r.vel.x / sp) * d, y: r.pos.y + (r.vel.y / sp) * d }, vel: { x: r.vel.x, y: r.vel.y }, offScript: 0 };
   }
   // Settled on a sit route: he's there.
-  if (rt.idx >= rt.pts.length && rt.sit[rt.pts.length - 1]) return { x: r.pos.x, y: r.pos.y };
-  // Run the route forward the way he'll run it (M6.5 #6), tick by tick: the
-  // stem at ~92%, braking into each break to the speed he can carry through
-  // it (breakCarry), the plant, then building back up (the sprint model, τ),
-  // exactly as ai.ts runRoute and movement.ts do. M6 charged each break
-  // v²(1 − cos θ)/a of ground (~5 yd round a right angle, against the ~2 he
-  // loses), so a ball thrown before the break was led short and he
-  // throttled down to wait for it coming out of the break.
-  const vTop = r.fx.vmax * (0.86 + 0.14 * r.stamina);
-  const brake = r.fx.cutAccel * 0.8;
-  let v = Math.min(len(r.vel), vTop);
-  let at = { x: r.pos.x, y: r.pos.y };
-  let t = 0;
-  for (let k = rt.idx; k < rt.pts.length; k++) {
-    const q = rt.pts[k]!;
-    const nx = rt.pts[k + 1];
-    let vq = vTop;
-    if (rt.sit[k]) vq = 0;
-    else if (nx) {
-      const d0 = dist(at, q);
-      const d1 = dist(q, nx);
-      if (d0 > 1e-6 && d1 > 1e-6) vq = breakCarry(r, ((q.x - at.x) * (nx.x - q.x) + (q.y - at.y) * (nx.y - q.y)) / (d0 * d1)) * r.fx.vmax;
-    }
-    const top = k === 0 ? vTop * 0.92 : vTop;
-    for (let n = 0; n < 600; n++) {
-      const d = dist(at, q);
-      if (d < 1e-3) break;
-      if (t >= T) return at;
-      const want = Math.min(top, Math.sqrt(vq * vq + 2 * brake * d));
-      v = v > want ? Math.max(want, v - brake * TICK) : v + ((want - v) / r.fx.tau) * TICK;
-      const step = Math.max(0.01, v * TICK);
-      if (step >= d) {
-        at = { x: q.x, y: q.y };
-        t += d / Math.max(0.5, v);
-        break;
-      }
-      at = { x: at.x + ((q.x - at.x) / d) * step, y: at.y + ((q.y - at.y) / d) * step };
-      t += TICK;
-    }
-    if (rt.sit[k]) return at;
-    v = Math.min(v, vq);
+  if (rt.idx >= rt.pts.length && rt.sit[rt.pts.length - 1]) return { pos: { x: r.pos.x, y: r.pos.y }, vel: { x: 0, y: 0 }, offScript: 0 };
+  // Run his route forward on a copy of him, tick by tick, on the movement
+  // model he really runs on (ai.ts stepRoute: the stem at ~92%, braking
+  // into each break, the plant, building back up, and every turn rounded at
+  // his Agility). M6.5 #6 ran the route's straight legs instead; a bend he
+  // runs round at speed (the slant flattening at 7 yd turns ~25°) he
+  // really swings a yard wide of, so the second-pass slant dumps had the
+  // driven ball arriving ~1.1 yd off him, mostly across his run, and a
+  // third of them where nobody could reach (tools/sim/slantdump.ts).
+  const g: Agent = { ...r, pos: { x: r.pos.x, y: r.pos.y }, vel: { x: r.vel.x, y: r.vel.y }, route: { pts: rt.pts, sit: rt.sit, idx: rt.idx }, mem: { room: r.mem.room ?? null } };
+  const n = Math.min(LEAD_TICKS, Math.floor(T / TICK));
+  // When he runs past the route's last point (s from now; 0 if he's past it already, T if he never is).
+  let ends = rt.idx >= rt.pts.length ? 0 : T;
+  for (let k = 0; k < n; k++) {
+    if (ends === T && g.route!.idx >= rt.pts.length) ends = k * TICK;
+    // Jammed at the line, he's held there until he gets off it (runRoute).
+    if (g.busy > 0) {
+      g.busy--;
+      steer(g, { x: 0, y: 0 });
+    } else if (!stepRoute(g)) return { pos: g.pos, vel: g.vel, offScript: 0 };
   }
-  if (t >= T) return at;
-  // What's left of the time, run on from his speed out of the last point.
-  const rest = T - t;
-  let left = vTop * rest - (vTop - v) * r.fx.tau * (1 - exp(-rest / r.fx.tau));
-  // Past the last point: keep going the way the route ends (upfield near the sideline).
-  const n = rt.pts.length;
-  const a = n > 1 ? rt.pts[n - 2]! : r.pos;
-  const b = rt.pts[n - 1]!;
-  // (Half-yard steps, as far as he runs: up to 60 yd, a bomb's worth.)
-  for (let k = 0; k < 120 && left > 0; k++) {
-    const dir = continueDir(at, a, b);
-    const stepL = Math.min(left, 0.5);
-    at = { x: at.x + dir.x * stepL, y: at.y + dir.y * stepL };
-    left -= stepL;
-  }
-  return at;
+  // The part-tick left, and past the cap (a throw hanging more than LEAD_TICKS), on the way he's going.
+  const rest = T - n * TICK;
+  return { pos: { x: g.pos.x + g.vel.x * rest, y: g.pos.y + g.vel.y * rest }, vel: g.vel, offScript: rt.idx >= rt.pts.length ? OFF_SCRIPT : T - ends };
 }
+/** The longest a lead runs his route forward (ticks: 4 s, longer than any throw hangs). */
+const LEAD_TICKS = 240;
 
 /**
  * Hang time of a driven ball, the default throw, s from release to the catch
@@ -139,22 +113,33 @@ const HOLD_LEAD = 1.5;
 /** A QB moving slower than this (yd/s) is setting his feet, not throwing on the run. */
 const ONRUN_FREE = 2;
 
+/** An engaged rusher this close to the release (yd) still makes the QB put air on it: he's in his lap (the bat at the line reaches 0.7 yd round the ball's path; a step more for his arms coming up). */
+export const LAP_R = 1.5;
+
 /**
  * Stretch a throw's hang time until it clears the defenders under its path:
  * a defender near the line of the throw (within ~0.9 yd, where he'd be as
  * it passes) who could reach the ball's height there makes the QB put air
- * under it. Up to four 12% steps; past that it's thrown into him anyway.
+ * under it. Up to four 12% steps; if that still doesn't clear him, it's
+ * thrown on a line anyway (he's on the catch point: see the end).
  */
-function clearLoft(s: PlayState, from: V3, to: V3, T: number): number {
+function clearLoft(s: PlayState, from: V3, to: V3, T0: number): number {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const L2 = dx * dx + dy * dy;
+  let T = T0;
   if (L2 < 1) return T;
   for (let step = 0; step < 4; step++) {
     let blocked = false;
     for (const i of s.def) {
       const d = s.agents[i]!;
       if (d.down) continue;
+      // A rusher locked up with a blocker isn't in the lane: he can't leave
+      // the block to undercut it, and the QB throws over the scrum on a line
+      // (the AI's read, ai.ts openness, already ignores engaged linemen).
+      // Only one driven back into the QB's lap, within LAP_R, has the ball
+      // over his hands as it leaves (batAtLine's tipped ball at the line).
+      if (blockOf(s, i) && dist(d.pos, from) > LAP_R) continue;
       for (const u of [0.25, 0.4, 0.55, 0.7, 0.85]) {
         const t = u * T;
         const px = d.pos.x + d.vel.x * Math.min(t, 0.4);
@@ -170,7 +155,13 @@ function clearLoft(s: PlayState, from: V3, to: V3, T: number): number {
     if (!blocked) return T;
     T *= 1.12;
   }
-  return T;
+  // Air didn't clear him: he's sitting on the catch point, where the ball
+  // comes down to the hands whatever its arc (the second-pass slant dumps:
+  // every lofted on-time slant was still blocked after the fourth step, all
+  // by a linebacker within a yard of the last tenth of its path). Floating it
+  // only gives him and everyone else ~0.4 s more to close, so it's thrown on
+  // a line, into the window as it is.
+  return T0;
 }
 
 /**
@@ -192,6 +183,46 @@ const CHEM_FIND = 0.08;
 export function findsBallAt(s: PlayState, a: Agent): number {
   return s.ball.releaseT + 0.2 + 0.25 * (1 - a.fx.a('catching')) - CHEM_FIND * Math.max(0, Math.min(1, s.setup.chem?.[a.slot as OffSlot] ?? 0));
 }
+
+/**
+ * Timing (M6.6, the second slant pass): how far a running receiver is from
+ * the spot the QB led him to, 1σ along his run (yd), a step early or late,
+ * a stride long or short. The QB leads him `horizon` seconds ahead: the
+ * ball's flight, plus however long he'll have been past the end of his
+ * route by then (running on, working free: a spot nobody drew up). It grows
+ * with his speed and that horizon, and faster than the horizon: on a slant
+ * on rhythm (0.7 s, the drop's last step and the break one motion) it's a
+ * few tenths of a yard; on a 2-s deep ball, or a slant thrown a second
+ * after the route ran out, a couple of yards. Route running (short or deep
+ * for the throw's depth, or the all-round figure if better) takes
+ * TIMING_RR of it off for a perfect route runner, chemistry with his QB
+ * CHEM_TIMING of what's left. Jerry Rice on time: ~0.45 yd; John Taylor
+ * (74 short) ~0.6. M5–M6.6 got this from a bug: the lead ran the route's
+ * straight legs while he ran it round, so every throw to a man on a bend
+ * landed ~1 yd off him whoever threw it or ran it.
+ */
+export function timingSigma(s: PlayState, rec: Agent, air: number, speed: number, horizon: number): number {
+  const rr = Math.max(air < 12 ? rec.fx.a('shortRoute') : rec.fx.a('deepRoute'), rec.fx.a('routeRunning'));
+  const chem = Math.max(0, Math.min(1, s.setup.chem?.[rec.slot as OffSlot] ?? 0));
+  return TIMING * (1 - TIMING_RR * rr) * (1 - CHEM_TIMING * chem) * speed * horizon * Math.min(1, horizon / TIMING_H);
+}
+/**
+ * Calibrated on the AI pass game (tools/sim/outcomes.ts, 20 a cell): with
+ * the lead running his real path and no timing, the 80s 49ers completed
+ * 74% against the Beasts for 9.5 yd an attempt, open men catching 95% of
+ * their targets (PFF's ~80%: tests/outcomes.test.ts); 0.4 (and the
+ * receiver tracking the ball, play.ts runToBall) puts them at 69% and 8.4,
+ * open men at 89%.
+ */
+const TIMING = 0.4;
+/** The horizon (s) past which it grows only with the horizon, not faster: a deep ball's hang. */
+const TIMING_H = 2;
+/** A perfect route runner takes 60% of it off: where he is is mostly how he runs it. */
+const TIMING_RR = 0.6;
+/** Full chemistry takes half of what's left (CHEM_CONE and CHEM_FIND's kind: a timing bonus, not a new receiver). */
+const CHEM_TIMING = 0.5;
+/** A man already past his route's end at the throw counts as this long past it (s) at the catch (when he ran out of it isn't kept). */
+const OFF_SCRIPT = 1;
 
 export const coneScale = (d: number): number => (d >= 20 ? d / 20 : 0.7 + 0.3 * (d / 20));
 
@@ -229,6 +260,8 @@ export interface ThrowError {
   /** The placement asked for along his path (−1 back shoulder … +1 lead). */
   place: number;
   sigma: number;
+  /** The timing error's 1σ along his run (yd): his speed, the horizon, his route running and the chemistry (timingSigma). */
+  timing: number;
   /** The mechanics miss: its odds, and whether it happened ('sail' long and high, 'short' in the dirt). */
   pMiss: number;
   miss: 'sail' | 'short' | null;
@@ -254,6 +287,22 @@ export function releaseOf(qb: Agent): number {
   return releaseTime(qb.fx.r('release')) - (has(qb, 'quick-trigger') ? 0.04 : 0);
 }
 
+/**
+ * Where the ball meets him: the flight time iterated against where he'll be
+ * (`hang` is the flight to a spot), and the way he'll be running there.
+ */
+function leadFor(rec: Agent, hang: (at: V2) => number): { spot: V2; rv: V2; T: number; speed: number; offScript: number } {
+  let T = 0.8;
+  let run = leadRun(rec, T);
+  for (let k = 0; k < 4; k++) {
+    T = hang(run.pos);
+    run = leadRun(rec, T);
+  }
+  const v = len(run.vel) > 0.5 ? run.vel : rec.vel;
+  const sp = len(v);
+  return { spot: run.pos, rv: sp > 0.5 ? { x: v.x / sp, y: v.y / sp } : { x: 1, y: 0 }, T, speed: len(run.vel), offScript: run.offScript };
+}
+
 export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2, pressure: number, offPlatform: boolean): ThrowPlan {
   const power = qb.fx.r('throwPower');
   const { vmax, range } = arm(qb);
@@ -261,14 +310,11 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
   const hang = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T);
   // Lead the receiver: iterate the flight time against where he will be.
-  let T = 0.8;
-  let spot = lead(rec, T);
-  for (let k = 0; k < 4; k++) {
-    T = hang({ x: spot.x, y: spot.y, z: CATCH_Z }) + 0.05;
-    spot = lead(rec, T);
-  }
-  // Placement input: lead / back shoulder along his path, high / low.
-  const rv = len(rec.vel) > 0.5 ? { x: rec.vel.x / len(rec.vel), y: rec.vel.y / len(rec.vel) } : { x: 1, y: 0 };
+  // (M5 to M6.6 led him for 0.05 s more than the ball flies, with no reason
+  // given: the driven slant landed ~0.5 yd in front of him, and with the
+  // cone on top a fifth of them out of his reach. On time is on him.)
+  const { spot, rv, speed: recSpeed, T: leadT, offScript } = leadFor(rec, (at) => hang({ x: at.x, y: at.y, z: CATCH_Z }));
+  // Placement input: lead / back shoulder along his path (the way he'll be running at the catch), high / low.
   const place = 1.6 * aim.x + HOLD_LEAD * Math.max(0, Math.min(1, loft));
   let tx = spot.x + rv.x * place;
   let ty = spot.y + rv.y * place;
@@ -335,8 +381,14 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const ux = (tx - from.x) / Math.max(1e-6, d);
   const uy = (ty - from.y) / Math.max(1e-6, d);
   const along = missed ? (sail ? 3 + 1.5 * s.rng.throw() : -(2.5 + s.rng.throw())) : 0;
-  const ex = gauss(s.rng.throw) * sigma + along * ux;
-  const ey = gauss(s.rng.throw) * sigma + along * uy;
+  // Timing: the QB throws to where this man should be when it gets there;
+  // how close he is to it is how long he's been led for (the flight, and any
+  // time he's been running on past his route), his speed, his route running
+  // and their chemistry (timingSigma). Along his run: a step early or late.
+  const tSigma = timingSigma(s, rec, air, recSpeed, leadT + offScript);
+  const late = gauss(s.rng.throw) * tSigma;
+  const ex = gauss(s.rng.throw) * sigma + along * ux + late * rv.x;
+  const ey = gauss(s.rng.throw) * sigma + along * uy + late * rv.y;
   const ez = gauss(s.rng.throw) * sigma * 0.35 + (missed ? (sail ? 2.2 + 0.8 * s.rng.throw() : -0.6 - tz) : 0);
   tx += ex;
   ty += ey;
@@ -353,7 +405,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const Tf = clearLoft(s, from, to, hang(to));
   const kind = touch || Tf > hang(to) * 1.01 ? 'touch' : 'driven';
   const v0 = solveLaunch(from, to, Tf);
-  const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, chem: fChem, place: aim.x, sigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
+  const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, chem: fChem, place: aim.x, sigma, timing: tSigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
   return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err };
 }
 
@@ -368,14 +420,11 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   const { vmax, range } = arm(qb);
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
-  let T = 0.8;
-  let spot = lead(rec, T);
-  for (let k = 0; k < 4; k++) {
-    const to = { x: spot.x, y: spot.y, z: CATCH_Z };
-    T = Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T) + 0.05;
-    spot = lead(rec, T);
-  }
-  const rv = len(rec.vel) > 0.5 ? { x: rec.vel.x / len(rec.vel), y: rec.vel.y / len(rec.vel) } : { x: 1, y: 0 };
+  const run = leadFor(rec, (at) => {
+    const to = { x: at.x, y: at.y, z: CATCH_Z };
+    return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T);
+  });
+  const { spot, rv } = run;
   let x = spot.x + rv.x * 1.6 * aim.x;
   let y = spot.y + rv.y * 1.6 * aim.x;
   const d = dist(from, { x, y });
@@ -394,8 +443,10 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   const wideOut = Math.min(1, Math.max(0, Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) - 4) / 6);
   const moving = Math.min(1, 0.7 * speedOn + 0.3 * wideOut * (speedOn > 0 ? 1 : 0.5));
   // (The same moving cost as planThrow, Off Platform included, so the reticle tells the truth.)
-  const sigma = errorAt20(acc) * coneScale(d) * (1 + (has(qb, 'off-platform') ? 0.5 : 1) * moving * (0.15 + 0.9 * (1 - qb.fx.a('throwOnRun'))));
-  return { x, y, sigma };
+  const cone = errorAt20(acc) * coneScale(d) * (1 + (has(qb, 'off-platform') ? 0.5 : 1) * moving * (0.15 + 0.9 * (1 - qb.fx.a('throwOnRun'))));
+  // ...and the timing along his run, folded in (the reticle is a circle).
+  const timing = timingSigma(s, rec, air, run.speed, run.T + run.offScript);
+  return { x, y, sigma: Math.sqrt(cone * cone + timing * timing) };
 }
 
 /** Release the planned throw: the ball flies. */
