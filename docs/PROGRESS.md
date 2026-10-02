@@ -20,7 +20,7 @@
   - the draft, locker room and post-game fixes, the one-screen box score, grades against expectation and the pre-game kick-off;
   - the data audit: ten added stints, the Jaguars source fix, and the short-stint trait fix.
 
-  Write-ups are in `docs/m66/`. Still to do: the drive-long stamina model (the traits that wait on it), and the play-calling items from Playtest 2 (ten suggested plays, audibles, the 12-route grid, readable play action, squeezing the slants).
+  Write-ups are in `docs/m66/`. Since then (below): hold-to-sprint, the drive-long stamina model, and all five Playtest 2 play-calling items (ten suggested plays, audibles, the 12-route grid, readable play action, the slant squeeze and the on-time slant).
 - **One-button catch and move** (owner's request, 2026-09-28): Space / A is the only action in the air and with the ball. On the catch the game picks leap, secure or catch-and-run (`autoCatch`, passing.ts). With the ball it picks juke, spin, stiff arm, truck, a dive for the sticks or the goal line, or protect with two tacklers converging (`autoMove`, moves.ts). The word under the carrier is the move it would make now. Settings v9 takes A off secure and dive.
 - **Hold-to-sprint** (Playtest 1 #2): hold Shift or RT. Only the carrier you control changes (a scrambling QB too, who can also keep the scramble button down); AI carriers keep the context pace, so every AI play hashes as before and only the user-scripted golden cases re-pinned (72 of 800).
   - Unheld, he runs 90% of his top speed in space and the controlled pace near a tackler. That's a run, not a jog, and it sits under the 90% effort line, so his stamina comes back.
@@ -30,7 +30,7 @@
   - `tests/sprint.test.ts`: unheld tops out at 0.84–0.92 of top speed, held tops out above 0.97, a spent carrier can't sprint, and the AI is unchanged. The browser still reproduces the Node hashes.
   - Honest limits:
     - A long sprint costs 0.02–0.04 stamina a second, so a 40-yard breakaway loses ~10–15% of the bar and ~2% of top speed. That's visible on the bar but subtle in the legs. The drive-long model (stamina carried from play to play, Workhorse and the rest) is what gives it teeth.
-    - Not yet watched on video.
+    - Watched on the recorded broken-tackle clip (below, "Sprint watched").
 - **Playtest 2 play calling** (2026-10-01, on `claude/m66-polish`):
   - *Hot-route grid*: twelve routes in three rows of four, by depth (go, post, corner, wheel / in, out, curl, comeback / slant, drag, flat, hitch). Each cell draws the route's shape from the sim's own `ROUTES`, mirrored to the receiver's side. Arrows, D-pad or left stick move around the grid; the number row (1–0, -, =) calls a route directly. Watched in the browser: the shapes read; curl and comeback needed their hook exaggerated to stand off the stem.
   - *Suggested tab*: ten plays, numbered in rank order, with at least three runs and three passes (one run, the draw, on third and long; none in the two-minute drill). The same concept from a second formation is penalised, so the list doesn't read as repeats. Ten fit on screen.
