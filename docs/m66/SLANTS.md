@@ -87,3 +87,73 @@ Per call (before | after; cmp, int+pbu, ypa, YAC, separation at the catch):
 - **The late slant is closed, but not shut.** Late throws are now ~45–49% complete with a third of them picked or broken up, against ~55% and a fifth before, and the man is rarely clear as the ball leaves. But they still go for 9–15 yd an attempt, because a completion is a 40–50 yd throw caught 15–25 yd down the far sideline. Two things outside coverage make that throw exist: the QB backs straight up 11–13 yd for 2–3 s and is sacked on 0–7% of them (the rush and its blockers retreat with him; a real pocket can't), and an uncaught slant runs on across the whole field and up the far sideline at full speed (the route's continuation past its last point), where no zone can stay on a receiver for 40 yd.
 - **On time it is still not the high-percentage throw it should be** (~53% vs zone, ~50% vs man; NFL ~65–70%), and the squeeze took ~5 points (zone) and ~9 (man) off it. Two offense-side causes found on the way, both left alone here: (1) `clearLoft` (`src/sim/passing.ts`) counts a rusher locked up with a blocker as a defender in the throwing lane, so 72–87% of on-time slants go up as touch passes hanging ~1.0–1.1 s instead of ~0.7, the receiver waits, and the defense closes (the AI's own read, `openness`, already ignores engaged linemen); (2) with that fixed, `lead()` puts the driven slant ~1.1–1.4 yd ahead of where the receiver really is on the route's flattening second leg, so a quarter of them land where nobody catches them. Both made on-time worse when fixed alone, so neither is in.
 - Watched only in the numbers and in per-tick dumps, not on screen: the plaster, the undercut and the break need watching in the browser before this is called done.
+
+# Second pass: the on-time slant (M6.6)
+
+> On time, the slant is the high-percentage throw it is in football. The late one stays clearly worse.
+
+Before this pass, on-time slants (thrown on the break, `ON_TIME`) completed 45% against zone and 37% against man on the called Slants concept (n 600 / 400; 56% / 59% hot-routed), with 44–58% of them picked or broken up, for 3–4 yd an attempt.
+
+## What was wrong (per-tick dumps: `tools/sim/slantdump.ts`)
+
+1. **Touch passes that couldn't clear anyone.** `clearLoft` counted rushers locked in blocks as throwing-lane defenders, and 72–93% of on-time slants went up as touch passes (~1.0–1.1 s in the air instead of ~0.74). With engaged rushers skipped, the ones left were still lofted: every one was a linebacker within a yard of the last tenth of the path, on the catch point, where the ball comes down to the hands whatever its arc. After four 12% steps it was still "blocked", and the code threw it into him anyway, 57% slower.
+2. **The ball was led to a route he doesn't run.** `lead()` ran the route's straight legs; the receiver runs them on the movement model, and a bend he takes at speed (the slant flattening at 7 yd, ~25°, under the plant threshold) he rounds a yard wide, by his Agility. On the driven slant the meant point was 0.76 yd ahead of him and 0.79 across his run at the arrival, and a fifth of the balls landed out of his reach. It wasn't only the slant: every route with a bend (drags, crossers, digs, the in, the leak) had it, which is why the AI's drags completed 60% and its slants 46%.
+3. **0.05 s of extra lead** (`T = hang + 0.05` since M5, no reason given): the ball half a yard in front of him on top of 2.
+4. **Batted balls.** With the loft gone, the driven slant passes over the engaged tackle and end at their hand height, and `batAtLine` let an engaged rusher bat it as if he were free: 14% of on-time slants batted, 5.8% of the AI's attempts (the NFL runs ~1.5–2%).
+
+## The fix
+
+- `src/sim/passing.ts` `leadRun` (behind `lead`, ~l.49) runs his route forward tick by tick on a copy of him, with the code he runs on (`src/sim/ai.ts` `routeWant` / `stepRoute`, ~l.253 / l.327, factored out of `runRoute`, which plays exactly as before): the stem, braking into breaks, the plant, the bend rounded at his Agility, a jam held. The meant point is now within ~0.2 yd of him across his run (was 0.8). `leadFor` (~l.294): no extra 0.05 s; placement (lead, back shoulder) goes along the way he'll be running at the catch, not the way he's running at the release.
+- `clearLoft` (~l.126): an engaged rusher isn't a lane defender unless he's in the QB's lap (`LAP_R`, 1.5 yd); air that doesn't clear the man after four steps isn't put on it (`return T0`): the ball is thrown on a line.
+- `src/sim/play.ts` `batAtLine` (~l.513): an engaged rusher (outside `LAP_R`) bats 15% (`BAT_ENGAGED`) of what a free one would. The AI pass game now has 2.2% of its attempts batted (4.2% before, 5.8% with engaged rushers batting freely).
+- `src/sim/play.ts` `runToBall` (~l.1598): once he's found the ball, a receiver paces to it: a ball a step behind his run he gathers for, instead of running on past the spot.
+- **Timing** (`timingSigma`, passing.ts ~l.204). With the lead right, the only thing between the ball and the man was the QB's cone, and the AI pass game went to 74% and 9.5 yd an attempt, open men catching 95% of their targets (PFF ~80%: `tests/outcomes.test.ts`). The ~1 yd of error every bend route used to have, whoever threw it or ran it, was standing in for something real: where a running receiver is when the ball gets there. Now there's an error along his run (a step early or late): 1σ = 0.4 × (1 − 0.6 × route running) × (1 − 0.5 × chemistry) × his speed × the horizon × min(1, horizon / 2 s), the horizon being the flight plus however long he'll have been past the end of his route (running on, freelancing). Route running is the depth's (short or deep) or the all-round figure if better. On a slant on rhythm that's ~0.45 yd for Jerry Rice (97 short routes) and ~0.6 for John Taylor (74); on a 2-s deep ball, or a slant thrown a second after the route ran out, a couple of yards. Calibrated (0.4) on the AI pass game's bands. It shows in the reticle (`previewThrow`, folded into the circle) and in the throw's error data (`timing`).
+
+## Figures
+
+`node tools/run-ts.mjs tools/sim/slants.ts 100 --how` (called Slants, n 600 zone / 400 man a script) and `67 --hot` (n 1206 / 804). Completion, int+pbu (int), ypa, YAC, separation at the catch, hang.
+
+| | before | after |
+|---|---|---|
+| zone, on time (called) | 45%, 44% (8%), 4.2, 1.6, 0.92, 1.01 s (73% touch) | **62%**, 24% (3%), 7.3, 3.7, 1.39, 0.74 s (no touch) |
+| man, on time (called) | 37%, 58% (14%), 3.0, 0.8, 0.69, 1.10 s (93% touch) | **66%**, 24% (2%), 6.6, 2.4, 1.54, 0.73 s |
+| zone, on time (hot) | 56%, 31% (6%), 5.6, 2.3, 1.45, 1.02 s | **72%**, 16% (2%), 8.4, 3.7, 1.88 |
+| man, on time (hot) | 59%, 33% (5%), 4.9, 0.9, 1.14, 1.10 s | **67%**, 23% (2%), 6.3, 1.9, 1.52 |
+| zone, late 2.0 (called) | 45%, 33% (5%), 11.1, 8.1, 1.64, 1.72 s | 34%, 29% (6%), 6.8, 5.4, 1.59, 1.68 s |
+| man, late 2.0 (called) | 43%, 40% (5%), 8.9, 3.9, 1.08, 1.76 s | 27%, 36% (8%), 5.2, 3.6, 0.84, 1.72 s |
+| zone, late 2.5 (called) | 51%, 35% (7%), 15.8, 6.8, 1.44, 2.26 s | 35%, 32% (6%), 9.4, 5.9, 1.47, 2.20 s |
+| man, late 2.5 (called) | 36%, 50% (9%), 10.0, 3.8, 0.79, 2.31 s | 28%, 33% (7%), 7.0, 1.8, 0.89, 2.26 s |
+| zone / man, late 2.0 (hot) | 51% / 50%, 30% / 36%, 9.9 / 9.0 | 36% / 33%, 31% / 34% (8% / 8%), 6.7 / 5.8 |
+| zone / man, late 2.5 (hot) | 48% / 43%, 28% / 41%, 13.6 / 10.8 | 34% / 26%, 24% / 35% (7% / 9%), 7.5 / 5.5 |
+
+Called and hot pooled, on time: ~69% against zone, ~67% against man, 6.5–8 yd an attempt. Against zone it's now the hook and curl defenders' read that decides it: of the called on-time slants, 11% are broken up, 9% tipped by a linebacker who jumped the windup, 5% dropped, 10% off (the QB's cone and the timing, not the lead). The linebackers matter more than before: in `tests/slants.test.ts`' check (on time and late, zone), Ray Lewis, Kuechly and Brooks allow ~47% against Banks, Bart Scott and Millen's ~54%; on time alone ~62% against ~74%.
+
+Per call, called Slants (before → after; completion, int+pbu, ypa):
+
+| call | on time | late 2.0 | late 2.5 |
+|---|---|---|---|
+| cover3 | 31% 53% 2.9 → 56% 31% 6.1 | 33% 37% 7.0 → 29% 37% 5.3 | 54% 32% 16.0 → 31% 35% 7.8 |
+| cover1 | 32% 58% 2.4 → 65% 26% 6.1 | 38% 49% 8.8 → 26% 42% 5.3 | 34% 49% 10.6 → 25% 41% 6.5 |
+| cover2 | 48% 39% 4.2 → 60% 24% 7.7 | 58% 13% 14.5 → 40% 20% 9.7 | 65% 22% 21.4 → 39% 25% 11.3 |
+| cover4 | 56% 40% 5.5 → 68% 16% 8.4 | 40% 43% 9.4 → 24% 39% 4.3 | 39% 47% 11.8 → 36% 31% 9.9 |
+| cover2man | 38% 60% 3.3 → 63% 22% 6.5 | 45% 37% 9.3 → 25% 34% 4.3 | 35% 53% 8.9 → 32% 33% 7.8 |
+| cover1blitz | 41% 57% 3.1 → 69% 20% 6.9 | 49% 33% 9.8 → 26% 40% 5.4 | 39% 47% 11.3 → 31% 27% 7.9 |
+| cover1off | 35% 57% 3.0 → 65% 29% 6.8 | 41% 42% 7.8 → 32% 29% 5.9 | 34% 51% 9.4 → 24% 32% 5.7 |
+| tampa2 | 43% 45% 4.1 → 65% 24% 8.0 | 65% 17% 19.7 → 41% 18% 9.9 | 57% 25% 19.5 → 39% 23% 10.7 |
+| firezone | 55% 36% 5.2 → 66% 23% 7.7 | 38% 47% 8.3 → 39% 24% 6.1 | 34% 49% 10.3 → 29% 40% 7.6 |
+| simpressure | 39% 53% 3.5 → 55% 25% 5.6 | 38% 44% 7.5 → 31% 38% 5.6 | 53% 36% 15.2 → 33% 38% 9.2 |
+
+**The AI pass game** (`tools/sim/outcomes.ts`, 60 a cell), before → after: completion 66.8% → 69.3%, 8.1 → 8.3 yd an attempt, interceptions 1.7% → 2.0%, 20+ yd completions 17.5% → 16.7%, YAC 7.2 → 6.8, open men (2+ yd) catching 87.8% → 89.6%, contested (< 1 yd) 18.6% → 22.4%. Sacks 4.9% → 6.4% of dropbacks and pressure 18.2% → 20.0%: the AI's read (`openness`) uses the lead and now sees where its receivers really will be (with the old lead in its read only, sacks went back down and nothing else moved). By route (`tools/sim/batted.ts`, 12 a cell, before the timing): drags 60% → 80%, slants 46% → 61%, crossers 54% → 65%, digs 67% → 76%: the bend routes are what the lead bug held down. Without the timing error it was 74% and 9.5 yd an attempt; the timing brings it back inside the bands.
+
+**The identity harness** (default reps): 17 → 16 of 20. DeSean/Boldin (traffic catch), Gronk/Gonzalez (YAC +0.68 against +0.8) and Gates/Lewis (top speed, as before; separation at the break now 0.19 against 0.25) fail as before. Lost at six reps: **Revis/Law**, completions allowed 60.8% against 63.7% (it needs a 6-point gap). It's the sample: at 14 reps 57.3% against 67.0%, at 20 reps 58.6% against 67.2% (the base at 20 reps: 49.1% against 57.2%, the same gap); both corners give up ~9 points more now the ball arrives on the man. Ed Reed/Kam failed one six-rep run (tackles finished) and passed the final one; at 14 reps 67.0% against 79.7%.
+
+**Clips.** Every scripted throw plays differently now (the timing is a new draw on the throw's stream), so every recorded video with a throw needs re-recording. Re-found (`src/game/clips.ts`, the same play, call and throw): completion-rac 51 → 18 (a juke and 42 after the catch), broken-tackle 71 → 5, the slant concept 1 → 3 (11 yd, 2.9 yd of separation), go 19 → 17, post 40 → 9, back-shoulder 2 → 4, the speed pair 7 → 6, accuracy 16 → 60, coverage 20 → 67 (no seed in 1–80 has Deion's pick now: he breaks it up). The determinism golden is re-pinned. `tests/results.test.ts`' box-score check now allows for a ball thrown away (an attempt, nobody's target), which its sample now has.
+
+## What is still wrong
+
+- **On time against zone, the called concept is 62%**, under the 65–75% asked for (hot-routed 72%, pooled ~69%). Every slant into a hook or curl defender sitting under it is thrown (the harness doesn't read him), and the timing error costs ~3 points on time: without it the called slant was 65% against zone and 71% against man, and the AI game was out of its bands. The two pull against each other: with the ball on the man the AI completes 85% against zone (checkdowns, flats, quick outs and hitches at 89–96%), so what holds it to its band costs the slant too. The real fix for that is on the AI side (its read, its YAC) and in zone defense against its easy throws, not in the slant.
+- **Man is 66–67%**, a little over 55–65. Cover 2 man is no harder on the slant than Cover 1 (63% against 65%): its corners play man with a step over the top like Cover 1's, not trail technique under it with the half safeties over, which is what makes 2-man the quick game's problem.
+- **The late slant is now a throw that dies** (27–36% complete, 6–8% picked, 5–9 yd an attempt), harder than the first pass's 40–49%. The off-script horizon is most of it: a man a second past the end of his route gets ~2–3 yd of timing error. If it reads on screen as a QB who can't throw, `OFF_SCRIPT` and the horizon term are the knob; the AI pass game needs some of it (its off-script throws were 82% complete with the lead right).
+- The meant point still sits ~0.3–0.45 yd ahead of him along his run at the arrival (tick order, and the chord he runs to the ball once he's found it): inside his hands, left alone.
+- Not done (optional): the uncaught slant still runs on at full speed past its last point, and a backed-up QB is still rarely sacked.
+- Watched only in numbers and per-tick dumps, not on screen. The bend, the ball on him and the late throw dying need watching in the browser.
