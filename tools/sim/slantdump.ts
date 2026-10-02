@@ -91,7 +91,7 @@ for (const def of DEF_CALLS) {
     row.how = complete ? 'catch' : res.pass?.intercepted ? 'int' : !first ? 'miss' : first.type === 'drop' ? 'drop' : res.pass?.sep !== undefined ? 'pbu' : 'tip';
     row.ok = complete;
     if (row.how === 'tip' || row.how === 'int' || row.how === 'pbu') {
-      const by = first?.who[0] ?? -1;
+      const by = first?.who?.[0] ?? -1;
       const at = defAtRel.find((x) => x.i === by);
       const ag = by >= 0 ? s.agents[by]! : null;
       const as = ag ? (sd.def.assign as Record<string, { kind: string; zone?: string }>)[ag.slot] : null;
