@@ -599,6 +599,23 @@ export function autoCatch(s: PlayState): CatchType {
   if (contested || FIELD_HALF_W - Math.abs(at.y) < AUTO_SIDELINE) return 'possession';
   return 'rac';
 }
+/**
+ * Body position in the 50/50 ball (Playtest 2, identity harness): the
+ * contested-catch chance per unit of the receiver's share of the pair's mass
+ * (2·m/(m + m_d) − 1, about ±0.1 between a 175-lb and a 215-lb man against a
+ * 205-lb corner) and per unit of Strength over the defender's. Catch in
+ * Traffic and the high point alone had Anquan Boldin (217 lb, Strength 56)
+ * winning the ball in a crowd ~7 points more often than DeSean Jackson
+ * (175 lb, 43), with the box-out that made Boldin who he was not counted at
+ * all. Owner-feel numbers, sized so body alone is ~5 points of contested
+ * catch rate between those two (PFF's charting has the big possession
+ * receivers ~15–25 points over the light speed men in contested catches;
+ * Catch in Traffic and reach carry the rest). A wide receiver against a
+ * corner averages out (201 and 200 lb, Strength 51 and 50 across the
+ * snapshot); a tight end on a safety gains, a back on a linebacker loses.
+ */
+const BOX_MASS = 0.4;
+const BOX_STR = 0.25;
 /** A defender within this of the catch point (yd) makes it a contested ball for the one-button catch. */
 const AUTO_CONTEST = 2;
 /** Within this of the sideline (yd) the one-button catch secures it for the toe tap. */
@@ -746,6 +763,10 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
       // first (up to ±0.06 for a head's height of reach).
       const high = cz > 0.35 ? 1 : 0.4;
       cont += 0.06 * high * Math.max(-1, Math.min(1, (reach(a).top - reach(by).top) / 0.4));
+      // Body position: the hand fight for the spot at the catch point. The
+      // man with more of the pair's mass and the stronger one holds his
+      // ground and keeps the defender's hands off the ball (see BOX_MASS).
+      cont += BOX_MASS * ((2 * a.fx.mass) / (a.fx.mass + by.fx.mass) - 1) + BOX_STR * (a.fx.a('strength') - by.fx.a('strength'));
       // Mismatch: against a smaller man at the high point, +10%.
       if (cz > 0.35 && by.fx.height < a.fx.height && has(a, 'mismatch')) cont *= 1.1;
       // Big Body: boxing him out, the ball in front of the defender, +10%.
