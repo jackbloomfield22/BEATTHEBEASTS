@@ -25,18 +25,23 @@ export class SimRunner {
     this.cur = capture(state, emptySnapshot(state.agents.length));
   }
 
-  /** Advance by a frame's real time. Returns the number of ticks stepped. */
-  advance(dt: number, sample: (s: PlayState) => InputFrame): number {
+  /**
+   * Advance by a frame's real time. Returns the number of ticks stepped.
+   * `limit`: stop once this many ticks have been stepped in all (a replay
+   * ends on its last recorded input, never past it).
+   */
+  advance(dt: number, sample: (s: PlayState) => InputFrame, limit = Infinity): number {
     if (this.paused) return 0;
     this.acc += Math.min(dt, 0.25) * this.timeScale;
     let n = 0;
-    while (this.acc >= TICK && n < MAX_STEPS) {
+    while (this.acc >= TICK && n < MAX_STEPS && this.frames.length < limit) {
       this.acc -= TICK;
       this.step(sample(this.state));
       n++;
     }
     // Too far behind (a hitch, a background tab): drop the backlog rather than spiral.
     if (n === MAX_STEPS) this.acc = Math.min(this.acc, TICK);
+    if (this.frames.length >= limit) this.acc = Math.min(this.acc, TICK);
     return n;
   }
 
@@ -45,6 +50,11 @@ export class SimRunner {
     stepPlay(this.state, inp);
     this.frames.push(inp);
     capture(this.state, this.cur);
+  }
+
+  /** After ticks stepped by hand (a replay's scrub): draw the latest one as it is, not part-way from the one before. */
+  showLatest(): void {
+    this.acc = TICK * 0.999;
   }
 
   /** Interpolation factor between prev and cur. */

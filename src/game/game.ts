@@ -34,7 +34,8 @@ import { applyBeastsDrive, applyKick, applyPlay, applyPunt, beastsPossession, ca
 import { kickFlight, puntFlight, type KickResult } from './kick';
 import { urlFlags } from '@/app/platform';
 import { practice, usePractice } from './practice';
-import { buildRecord, encodeFrames, keyMatchups, type GameRecord, type RecordMeta, type ReplayCapsule } from './record';
+import { capsuleOf } from './replay';
+import { buildRecord, keyMatchups, type GameRecord, type RecordMeta, type ReplayCapsule } from './record';
 import type { Situation } from './situation';
 import { emptyGameBox, pickPlayOfGame, sampleShadow, tallySnap, type GameBox, type PlayLog } from './stats';
 
@@ -536,12 +537,8 @@ class GameSession {
       clock: at.clock,
     });
     const run = practice.runner;
-    const st = s.setup;
-    this.capsules.push(
-      run && run.state === s
-        ? { seed: st.seed, playId: st.play.id, def: st.def, los: st.los, ballY: st.ballY ?? 0, toGo: st.toGo, down: before.down, difficulty: st.difficulty, tapMax: st.tapMax, flip: st.flip, fatigue: st.fatigue as Record<string, number> | undefined, legs: st.legs as Record<string, number> | undefined, frames: encodeFrames(run.frames) }
-        : null,
-    );
+    // The replay's capsule (replay.ts): the setup, the eleven on each side, the inputs and the state hash.
+    this.capsules.push(run && run.state === s ? capsuleOf(s, run.frames, before.down) : null);
     // Keep the inputs of the snaps that could still be the play of the game (memory: a game is ~60 snaps).
     const keep = pickPlayOfGame(this.plays);
     this.capsules = this.capsules.map((c, i) => (i === keep || i === this.capsules.length - 1 ? c : null));
