@@ -136,6 +136,7 @@ describe('box score', () => {
     const box = emptyGameBox(R.offense.QB.name);
     let runs = 0;
     let reps = 0;
+    let away = 0;
     for (const play of PLAYS) {
       for (const [k, def] of DEF_CALLS.entries()) {
         if (k % 3) continue;
@@ -146,12 +147,14 @@ describe('box score', () => {
           runs++;
           reps += runBlockReps(s).length;
         }
+        // A ball thrown away is an attempt but nobody's target (stats.ts tallySnap).
+        if (s.result.pass?.attempted && !s.result.sack && s.result.pass.target < 0) away++;
         tallySnap(box, s, s.result, { los: 30, ballY: 0, down: 1, toGo: 10 }, R.offense.QB.name);
       }
     }
     const sum = <T>(o: Record<string, T>, f: (x: T) => number) => Object.values(o).reduce((a, x) => a + f(x), 0);
     expect(box.plays).toBeGreaterThan(40);
-    expect(sum(box.rec, (r) => r.tgt)).toBe(box.pass.att);
+    expect(sum(box.rec, (r) => r.tgt) + away).toBe(box.pass.att);
     expect(sum(box.rec, (r) => r.rec)).toBe(box.pass.cmp);
     expect(Math.round(sum(box.rec, (r) => r.yds))).toBe(Math.round(box.pass.yds));
     expect(box.plays).toBe(box.pass.att + box.pass.sacks + sum(box.rush, (r) => r.car));
