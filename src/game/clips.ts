@@ -156,12 +156,12 @@ export function holdIt(s: PlayState): InputFrame {
 
 // Seeds found by tools/sim/findclips.ts (re-found for M6's sim).
 export const CLIPS: Clip[] = [
-  // Four verticals against Cover 2: the slot's seam caught in stride, then 16 more after the catch with a juke (re-found for M6.6's ratings: seed 51).
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 51, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'juke') },
+  // Four verticals against Cover 2: the slot's seam caught in stride, then a juke and 42 more after the catch to the end zone (re-found for M6.6's ratings: seed 51; for the second slant pass, the lead on the path he really runs and timing: seed 18).
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 18, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
-  // A stiff arm sheds the first tackler and he takes it the distance (36 after the catch; re-found for M6.5: the slot against Cover 2, seed 71).
-  { id: 'broken-tackle', title: 'Broken tackle', seed: 71, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'stiffArm') },
+  // A stiff arm sheds the first tackler and he takes it the distance (43 after the catch; re-found for M6.5: the slot against Cover 2, seed 71; for the second slant pass: seed 5).
+  { id: 'broken-tackle', title: 'Broken tackle', seed: 5, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'stiffArm') },
   // M6.5 #11: inside zone steered by the arrows, a 102° plant-and-cut across and a 45° one back upfield, a burst, and a tackler closing (tools/sim/findcarry.ts: 11.8 yd).
   { id: 'cut-run', title: 'Cut and burst on a designed run', seed: 17, play: 'singleback-inside-zone', def: 'cover2', los: 30, script: runAndCut(1.5, 3.5) },
 ];
@@ -169,17 +169,17 @@ export const CLIPS: Clip[] = [
 // The ten broadcast concepts (M6.5): found by tools/sim/findconcepts.ts, the
 // throw on time off the break, open, a real gain. Each note says what it shows.
 export const CONCEPTS: Clip[] = [
-  // Slants against quarters: the X's slant, the ball on him as he clears the linebacker (12 yd).
-  { id: 'slant', title: 'Slant', seed: 1, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 30 }) },
+  // Slants against quarters: the X's slant, the ball on him as he clears the linebacker (11 yd, 2.9 yd of separation; seed 1 → 3 for the second slant pass, the same play, call and throw).
+  { id: 'slant', title: 'Slant', seed: 3, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 30 }) },
   // The quick out against man: the break at 5, the ball out on it, the sideline (9 yd).
   { id: 'out', title: 'Quick out', seed: 8, play: 'doubles-quick-outs', def: 'cover1', los: 30, script: concept({ icon: 1, at: 30 }) },
   // Curl against man: settles at 10 facing the QB, SECURE on the catch (10 yd).
   { id: 'curl', title: 'Curl', seed: 5, play: 'doubles-curls', def: 'cover1', los: 30, script: concept({ icon: 1, at: 60, call: 'possession' }) },
-  // Four verticals against the fire zone: the blitz comes, the ball goes at 1.5 s, the Z up the sideline over the rotated corner (37 yd; re-found for the identity pass's sim).
-  { id: 'go', title: 'Go', seed: 19, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
+  // Four verticals against the fire zone: the blitz comes, the ball goes at 1.5 s, the Z up the sideline over the rotated corner (38 yd, 2 yd of separation; re-found for the identity pass's sim, and for the second slant pass: seed 19 → 17, the same play, call and throw).
+  { id: 'go', title: 'Go', seed: 17, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
   // Play-action post against man: the fake, the post behind it, the ball led into the middle (25 yd).
-  // Seed 13 → 40 for the slant squeeze (docs/m66/SLANTS.md): a half safety now breaks on the ball at the pace that gets him there, and on seed 13 he got a hand to it. Seed 40 is the same play, coverage and throw: 24.8 yd, 1.5 yd of separation.
-  { id: 'post', title: 'Post', seed: 40, play: 'singleback-pa-post', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 80, hold: 10 }) },
+  // Seed 13 → 40 for the slant squeeze (docs/m66/SLANTS.md): a half safety now breaks on the ball at the pace that gets him there, and on seed 13 he got a hand to it. Seed 40 → 9 for the second slant pass (the lead on his real path, timing), the same play, coverage and throw: 24 yd, 1.5 yd of separation.
+  { id: 'post', title: 'Post', seed: 9, play: 'singleback-pa-post', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 80, hold: 10 }) },
   // Snag's corner against man: the Z's corner from the bunch, the ball over the outside shoulder (36 yd).
   { id: 'corner', title: 'Corner', seed: 6, play: 'bunch-snag', def: 'cover2man', los: 30, script: concept({ icon: 3, at: 60, hold: 14 }) },
   // PA crossers against the fire zone: the blitz bites on the fake, the X's deep cross comes open behind it, caught running (14 yd; re-found for the identity pass's sim).
@@ -187,8 +187,8 @@ export const CONCEPTS: Clip[] = [
   // RB screen against man: the back slips out behind the rush, the linemen release in front of him (11 yd).
   // Seed 4 → 60 in M6.6: the added stints (docs/m66/DATA_AUDIT.md) move the practice roster's ratings a point here and there, and seed 4 became a 2.9-yd loss. Seed 60 is the same play, coverage and throw time: 11.6 yd, 2.9 yd of separation.
   { id: 'screen', title: 'Screen', seed: 60, play: 'doubles-rb-screen', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 76 }) },
-  // Back shoulder against man: the corner on top of the Z's go, the ball thrown away from him, GO UP (19 yd).
-  { id: 'back-shoulder', title: 'Back shoulder', seed: 2, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 3, at: 48, aim: { x: -1, y: -0.2 }, call: 'aggressive' }) },
+  // Back shoulder against man: the corner on top of the Z's go, the ball thrown away from him, GO UP (17 yd; seed 2 → 4 for the second slant pass, the same play, call and throw).
+  { id: 'back-shoulder', title: 'Back shoulder', seed: 4, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 3, at: 48, aim: { x: -1, y: -0.2 }, call: 'aggressive' }) },
   // The scramble drill: the QB escapes right, the Y breaks off his cross and works back to him in the open grass (10 yd).
   // Re-found for the slant squeeze (docs/m66/SLANTS.md: the underneath zones now plaster when the QB leaves the pocket; on cover 3 seed 9 the ball was picked):
   // tools/sim/findconcepts.ts --only=scramble-drill, the same escape and throw time.
@@ -204,15 +204,15 @@ const pair = (id: string, title: string, base: Omit<Clip, 'id' | 'title' | 'swap
   { ...base, id: `${id}-b`, title: `${title}: ${b.name}`, swap: b },
 ];
 export const IDENTITY: Clip[] = [
-  // Speed: the play-action post against Cover 2. Hill is behind the safety and gone (70 yd); Welker's ball is broken up (sep 2.4 against 1.2 at the catch point).
-  ...pair('speed', 'Speed', { seed: 7, play: 'singleback-pa-post', def: 'cover2', los: 30, script: concept({ icon: 1, at: 90, hold: 16 }) }, { off: 'X', name: 'Tyreek Hill', pos: 'WR' }, { off: 'X', name: 'Wes Welker', pos: 'WR' }),
+  // Speed: the play-action post against Cover 2. Hill is behind the safety, open by 2.5 yd, for 45; Welker's ball falls incomplete with a man on him (1.4 yd). (Seed 7 → 6 for the second slant pass, the same play, call and throw.)
+  ...pair('speed', 'Speed', { seed: 6, play: 'singleback-pa-post', def: 'cover2', los: 30, script: concept({ icon: 1, at: 90, hold: 16 }) }, { off: 'X', name: 'Tyreek Hill', pos: 'WR' }, { off: 'X', name: 'Wes Welker', pos: 'WR' }),
   // Elusive against power: I-form power against Cover 1, the AI carrying. Barry makes the man miss and goes 70; Bettis breaks two and is down at 6.5.
   ...pair('elusive', 'Make a man miss', { seed: 11, play: 'iform-power', def: 'cover1', los: 30, user: false, script: () => NEUTRAL }, { off: 'RB', name: 'Barry Sanders', pos: 'RB' }, { off: 'RB', name: 'Jerome Bettis', pos: 'RB' }),
-  // Accuracy: the curl against Cover 3, thrown the same beat. Montana's is 0.6 yd off and caught for 11; Namath's is 1.8 off and falls incomplete.
-  ...pair('accuracy', 'On the hands', { seed: 16, play: 'doubles-curls', def: 'cover3', los: 30, script: concept({ icon: 1, at: 60 }) }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }, { off: 'QB', name: 'Joe Namath', pos: 'QB' }),
+  // Accuracy: the curl against Cover 3, thrown the same beat. Montana's is 0.2 yd off and caught for 10; Namath's is 1.9 off and falls incomplete (seed 16 → 60 for the second slant pass, the same play, call and throw).
+  ...pair('accuracy', 'On the hands', { seed: 60, play: 'doubles-curls', def: 'cover3', los: 30, script: concept({ icon: 1, at: 60 }) }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }, { off: 'QB', name: 'Joe Namath', pos: 'QB' }),
   // The rush: the QB holds it against Cover 1. White sheds the tackle at 2.35 s and has the sack at 3.18; Aaron Smith never gets off his block.
   ...pair('rush', 'Through the tackle', { seed: 19, play: 'doubles-dagger', def: 'cover1', los: 30, script: holdIt }, { def: 'LE', name: 'Reggie White', pos: 'DE' }, { def: 'LE', name: 'Aaron Smith', pos: 'DE' }),
-  // Coverage: four verticals against Cover 1, the ball to the X on his man. Deion picks it; Kam, out of place at corner, gives up 70.
-  // (Seed 15 → 20 for the slant squeeze, docs/m66/SLANTS.md; tools/sim/findidentity.ts --only=coverage: the same play and call, Deion's pick, Kam's 70 yd at 2.1 yd of separation.)
-  ...pair('coverage', 'Half the field', { seed: 20, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
+  // Coverage: four verticals against Cover 1, the ball to the X on his man. Deion gets a hand to it; Kam, out of place at corner, gives up 70.
+  // (Seed 15 → 20 for the slant squeeze, docs/m66/SLANTS.md; 20 → 67 for the second slant pass, tools/sim/findidentity.ts --only=coverage: the same play and call, Deion's breakup at 1.3 yd, Kam's 70 yd at 2.8 yd of separation. No seed in 1–80 has Deion's pick now.)
+  ...pair('coverage', 'Half the field', { seed: 67, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
 ];
