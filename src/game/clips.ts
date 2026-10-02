@@ -160,8 +160,9 @@ export const CLIPS: Clip[] = [
   { id: 'completion-rac', title: 'Completion and run after the catch', seed: 18, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
-  // A stiff arm sheds the first tackler and he takes it the distance (43 after the catch; re-found for M6.5: the slot against Cover 2, seed 71; for the second slant pass: seed 5).
-  { id: 'broken-tackle', title: 'Broken tackle', seed: 5, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'stiffArm') },
+  // Stick against Cover 1: the short catch, a stiff arm sheds the first tackler a second later, down 15 yd on (11 after the catch).
+  // A different play from the completion clip, so the broken tackle is the moment, not a second long run (2026-10-02; was Four Verticals seed 5).
+  { id: 'broken-tackle', title: 'Broken tackle', seed: 13, play: 'trips-stick', def: 'cover1', los: 30, script: throwAndRun(2, 84, 'stiffArm') },
   // M6.5 #11: inside zone steered by the arrows, a 102° plant-and-cut across and a 45° one back upfield, a burst, and a tackler closing (tools/sim/findcarry.ts: 11.8 yd).
   { id: 'cut-run', title: 'Cut and burst on a designed run', seed: 17, play: 'singleback-inside-zone', def: 'cover2', los: 30, script: runAndCut(1.5, 3.5) },
 ];
