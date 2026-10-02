@@ -324,10 +324,10 @@ export function routeWant(a: Agent): V2 | null {
 }
 
 /** Run one tick of his route (routeWant, steered inside the boundary); false once he's settled on a sit route. */
-export function stepRoute(a: Agent, extra?: V2): boolean {
+export function stepRoute(a: Agent): boolean {
   const want = routeWant(a);
   if (!want) return false;
-  steer(a, boundaryGovern(a, extra ? { x: want.x + extra.x, y: want.y + extra.y } : want, ROUTE_ROOM - 0.3), {});
+  steer(a, boundaryGovern(a, want, ROUTE_ROOM - 0.3), {});
   return true;
 }
 
