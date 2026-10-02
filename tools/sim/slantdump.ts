@@ -2,12 +2,11 @@
 // where the ball was meant and aimed, where lead() said he'd be, and where he
 // really was when it arrived, in his run's frame (along / across). With
 // --ticks, every tick of the flight for the first few throws.
-//   node tools/run-ts.mjs tools/sim/slantdump.ts [reps=20] [--man] [--ticks=N] [--def=cover3]
+//   node tools/run-ts.mjs tools/sim/slantdump.ts [reps=20] [--man] [--ticks=N] [--def=cover3] [--late=ticks] [--tips]
 import { readFileSync } from 'node:fs';
 import { createPlay, DEF_CALLS, playById, practiceRosters, stepPlay, type SnapshotLike } from '../../src/sim/index.ts';
 import { cellSeed, sidesFor } from '../../src/sim/outcomes.ts';
-import { lead, LOFT_DBG } from '../../src/sim/passing.ts';
-LOFT_DBG.on = process.argv.includes('--loft');
+import { lead } from '../../src/sim/passing.ts';
 import { dist } from '../../src/sim/vec.ts';
 import { CALLED, isMan, ON_TIME, slantInput, type SlantScript } from './slants.ts';
 
@@ -120,13 +119,5 @@ for (const kind of ['driven', 'touch']) {
 for (const how of ['catch', 'miss', 'tip', 'pbu', 'drop', 'int']) {
   const xs = rows.filter((r) => r.how === how);
   if (xs.length) console.log(`  ${how.padEnd(5)} ${String(xs.length).padStart(3)} meant along ${avg(xs.map((r) => r.meantAlong)).toFixed(2)} |across| ${avg(xs.map((r) => Math.abs(r.meantAcross))).toFixed(2)}  aim off ${avg(xs.map((r) => Math.hypot(r.along, r.across))).toFixed(2)} hang ${avg(xs.map((r) => r.hang)).toFixed(2)}`);
-}
-if (LOFT_DBG.on) {
-  const c: Record<string, number> = {};
-  for (const r of LOFT_DBG.rows) {
-    const k = r.step === 9 ? `end ${r.slot}` : `step${r.step} ${r.slot} u${r.u}`;
-    c[k] = (c[k] ?? 0) + 1;
-  }
-  for (const [k, v] of Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 40)) console.log(`  ${k.padEnd(28)} ${v}`);
 }
 if (process.argv.includes('--tips')) for (const t of tips) console.log(t);
