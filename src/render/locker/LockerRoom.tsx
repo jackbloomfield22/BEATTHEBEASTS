@@ -7,7 +7,7 @@ import type { Slot } from '@data/legacy/types';
 import { traitInfo } from '@/engine/ratings/traits';
 import { threatTier } from '@/engine';
 import { loadAnimLibrary } from '@/anim/library';
-import { urlFlags } from '@/app/platform';
+import { urlFlags, videoTime } from '@/app/platform';
 import { REVEAL_LEAD, REVEAL_STAGGER, useDraft } from '@/app/draftStore';
 import type { Catalog, DraftPick } from '@/game/draft';
 import { unitPool, unitWord } from '@/game/draftView';
@@ -223,7 +223,7 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
 
   useFrame(({ camera }, delta) => {
     if (!active) return;
-    const dt = urlFlags.video ? 1 / urlFlags.video : urlFlags.shot !== null ? 1 / 60 : Math.min(delta, 0.1);
+    const dt = urlFlags.video ? videoTime.step() : urlFlags.shot !== null ? 1 / 60 : Math.min(delta, 0.1);
     clock.current += dt;
     // A pick's dressing starts once the camera has arrived.
     const pd = pending.current;

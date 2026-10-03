@@ -19,7 +19,7 @@ import { guessQuality } from './quality';
 import { useApp } from '@/app/appStore';
 import { perfStats, recordFrame } from '@/dev/perfStats';
 import { DynamicResolution, FirstLaunchBenchmark } from './perf/Adaptive';
-import { urlFlags } from '@/app/platform';
+import { urlFlags, videoGate, videoTime } from '@/app/platform';
 import { view } from './view';
 import { LockerRoom } from './locker/LockerRoom';
 import { LockerCamera } from './locker/LockerCamera';
@@ -142,7 +142,19 @@ function FrameDriver({ cap }: { cap: number }) {
       // Video recording: draw a frame only when the recorder asks for one
       // (tools/shots/video.spec.ts), so no time goes on frames nobody keeps.
       setFrameloop('never');
-      Object.assign(window, { __btbRenderFrame: () => advance(performance.now()) });
+      Object.assign(window, {
+        __btbRenderFrame: () => {
+          videoGate.open = true;
+          try {
+            // R3F's clock runs on the recording's frames, in seconds (World's shader and crowd clocks
+            // read it), not on wall time: a frame here takes seconds to draw (platform.ts videoTime).
+            videoTime.frames++;
+            advance(videoTime.t);
+          } finally {
+            videoGate.open = false;
+          }
+        },
+      });
       return;
     }
     if (!cap) {
@@ -209,6 +221,9 @@ export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasEl
     <Canvas
       className="stage"
       flat
+      // A recording draws only when the recorder asks (FrameDriver). Held here too: the canvas
+      // re-applies this prop on every Stage render, which put R3F's own loop back on mid-recording.
+      frameloop={urlFlags.video ? 'never' : 'always'}
       dpr={dpr}
       shadows={{ type: THREE.PCFShadowMap }}
       gl={{ antialias: false, powerPreference: 'high-performance', stencil: false, alpha: false, preserveDrawingBuffer: urlFlags.shot !== null || urlFlags.video !== null }}

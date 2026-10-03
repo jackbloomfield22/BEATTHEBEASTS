@@ -5,7 +5,7 @@ import { loadAnimLibrary, type AnimLibrary } from '@/anim/library';
 import { PlayerAnimator } from '@/anim/animator';
 import { Ragdoll } from '@/anim/ragdoll';
 import { skinHexFor } from '@/app/characterization';
-import { urlFlags } from '@/app/platform';
+import { urlFlags, videoTime } from '@/app/platform';
 import { practice, usePractice } from '@/game/practice';
 import { Input } from '@/input/InputManager';
 import { createRouteArt } from './routeArt';
@@ -286,7 +286,7 @@ export function GameScene() {
   }, [scene, gl, camera, marks, ball, routeArt]);
 
   useFrame(({ camera, gl, clock }, dt) => {
-    const step = urlFlags.video ? 1 / urlFlags.video : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    const step = urlFlags.video ? videoTime.step() : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
     latency.frame++;
     practice.frame(step);
     const r = practice.runner;
