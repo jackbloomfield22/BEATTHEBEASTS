@@ -641,15 +641,26 @@ export function readEndStep(s: PlayState, d: Agent): boolean {
   const qb = s.agents[s.qb]!;
   const run = s.setup.play.run;
   if (run?.scheme !== 'zoneRead' || (qb.mem.readEnd !== d.i && qb.mem.scraper !== d.i)) return false;
-  const keepT = qb.mem.keepT as number | undefined;
-  const decided = keepT ?? (s.carrier >= 0 && s.carrier !== s.qb ? s.runReadT : undefined);
-  if (decided !== undefined && s.t >= decided + reaction(s, d) + (keepT !== undefined && has(qb, 'run-pass-nightmare') ? RPN_FREEZE : 0)) return false;
+  if (s.t >= readUntil(s, d)) return false;
   const side = run.aim >= 0 ? 1 : -1;
   const by = s.setup.ballY ?? 0;
   if (qb.mem.scraper === d.i) steer(d, arrive(d, v2(s.setup.los + 1.5, by - side * KEEP_AIM), 1), {});
   else if (d.mem.crash) steer(d, arrive(d, v2(s.setup.los - 0.5, by + side * 0.5), 1), {});
   else steer(d, arrive(d, v2(s.setup.los + 0.8, d.mem.readFrom as number), 0.5, 1), {});
   return true;
+}
+
+/**
+ * Until when (play time) a zone-read defender plays his read: a reaction
+ * time past the mesh's decision, and on a Run-Pass Nightmare's keep the read
+ * end RPN_FREEZE longer. Infinity before the decision.
+ */
+export function readUntil(s: PlayState, d: Agent): number {
+  const qb = s.agents[s.qb]!;
+  const keepT = qb.mem.keepT as number | undefined;
+  const decided = keepT ?? (s.carrier >= 0 && s.carrier !== s.qb ? s.runReadT : undefined);
+  if (decided === undefined) return Infinity;
+  return decided + reaction(s, d) + (keepT !== undefined && qb.mem.readEnd === d.i && has(qb, 'run-pass-nightmare') ? RPN_FREEZE : 0);
 }
 
 /** A zone-read keep this defender hasn't registered yet (a reaction time; the read end RPN_FREEZE longer against a Run-Pass Nightmare): he still plays the back. */

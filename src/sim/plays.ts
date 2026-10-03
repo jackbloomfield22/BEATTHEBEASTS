@@ -97,8 +97,8 @@ export const ROUTES: Record<RouteName, RoutePoint[]> = {
   qin: [{ d: 5, o: 0 }, { d: 5, o: -9 }],
   // Leak: the tight end shows his block (ROUTE_DELAY), then slips across the formation to the far flat behind the flow.
   leak: [{ d: 1, o: -1.5 }, { d: 3.5, o: -8 }, { d: 5, o: -16 }],
-  // Angle (the back's "Texas" route): out of the backfield toward the flat, then a hard break back inside under the linebackers.
-  angle: [{ d: 1, o: 2.5 }, { d: 2.5, o: 4 }, { d: 6, o: -2 }, { d: 7, o: -12 }],
+  // Angle (the back's "Texas" route): out of the backfield toward the flat, then a hard break back inside under the linebackers, settling in the hole.
+  angle: [{ d: 1, o: 2.5 }, { d: 2.5, o: 4 }, { d: 6, o: -2 }, { d: 7, o: -7, sit: true }],
   // Option: a stem to six yards, then a break away from the nearest defender's leverage (in, out, or sit down in a zone's
   // window: ai.ts optionBreak). Drawn breaking in, the way it's run against nobody; from the backfield the stem starts outside the tackle.
   option: [{ d: 2, o: 1.5 }, { d: 6, o: 1.5 }, { d: 6.5, o: -3, sit: true }],
@@ -107,7 +107,7 @@ export const ROUTES: Record<RouteName, RoutePoint[]> = {
 };
 
 /** Routes that start late (s after the snap): the slip screen's back shows pass protection first. */
-export const ROUTE_DELAY: Partial<Record<RouteName, number>> = { slip: 0.9, leak: 0.7, chip: 0.6 };
+export const ROUTE_DELAY: Partial<Record<RouteName, number>> = { slip: 0.9, leak: 0.7, chip: 0.8 };
 
 /**
  * The routes a receiver can be hot-routed to at the line (Playtest 2: twelve,

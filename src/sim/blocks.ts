@@ -206,9 +206,14 @@ function rushHeadStart(b: Agent, d: Agent, blk: Block): number {
  * longer"): on his designed run, while he's still behind the line, a block
  * on the backside of the aiming point (the blocks that make the cutback
  * lane) starts PATIENT_T to the good: the leverage the defender would gain
- * in that time at this matchup's rate, so it holds that much longer.
+ * in that time at this matchup's rate, so it holds that much longer. The
+ * catalog doesn't size "longer"; 0.1 s, half its lane figure, is ours, and
+ * it's worth ~+0.3 yd a carry to Roger Craig (tools/sim/usagefx.ts). The
+ * game has no running-lane highlight to show 0.2 s earlier, and reading the
+ * blocks 0.2 s ahead in the back's own lane choice measured as nothing
+ * (4.36 yd a carry against 4.48 without), so that half isn't in.
  */
-const PATIENT_T = 0.2;
+const PATIENT_T = 0.1;
 function patientHeadStart(s: PlayState, b: Agent, d: Agent, blk: Block): number {
   const run = s.setup.play.run;
   if (!run || QB_RUNS.includes(run.scheme)) return 0;

@@ -199,73 +199,96 @@ const BLANKET_SOONER = 0.2;
 const OUTLETS: readonly RouteName[] = ['checkdown', 'option', 'angle', 'swing', 'flat', 'arrow', 'wheel'];
 /**
  * A Third-Down Back's blitz read (s): he sets beside the QB with his eyes on
- * the second level this long before he releases. A linebacker blitzing from
- * 5 yd is at the line ~0.5 s after the snap, so by then he's shown it. Ours.
+ * the second level this long before he picks up or releases. A linebacker
+ * blitzing from 5 yd is at the line ~0.5 s after the snap, so by then he's
+ * shown it. Ours.
  */
 const CHECK_T = 0.55;
 
 /**
  * Third-Down Back (the trait catalog: "blitz pickup and a checkdown release
  * on the same snap: picks up the rusher, then leaks out if nobody comes"):
- * on a drop-back where the book gives him an outlet, he checks for a blitzer
- * the line hasn't got (a rusher off the second level or the edge with no
- * blocker on him) and picks him up; nobody comes, and he releases on his
- * route. True while he's checking or blocking (the caller skips the route).
+ * on a drop-back (not the quick game) where the book gives him an outlet, he sets beside the QB
+ * and reads the second level for CHECK_T. A blitzer still coming free then
+ * (a rusher off the second level or the edge that no blocker has his hands
+ * on) is his: he picks him up and stays in, and the lineman who'd have had
+ * to slide to that man helps instead. Nobody comes: he leaks out on his
+ * route. True while he's reading or blocking (the caller skips the route).
  */
 function checkRelease(s: PlayState, a: Agent, name: RouteName | null): boolean {
   if (a.slot !== 'RB' || !name || !OUTLETS.includes(name) || !has(a, 'third-down-back')) return false;
   const play = s.setup.play;
-  if (play.run || play.pa || play.screen || s.hot.RB) return false;
-  let pick = (a.mem.pickup as number | undefined) ?? -1;
+  // (Not in the quick game: the ball's out before a check would end.)
+  if (play.run || play.pa || play.screen || play.type === 'quick' || s.hot.RB || a.mem.released) return false;
   const since = s.t - s.snapT;
-  if (pick < 0 && since < CHECK_T && s.phase !== 'air') {
-    const qb = s.agents[s.qb]!;
-    let bd = Infinity;
-    for (const i of s.def) {
-      const d = s.agents[i]!;
-      if (d.down || blockOf(s, i) || d.p.pos === 'DE' || d.p.pos === 'DT') continue;
-      if (s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign].kind !== 'rush') continue;
-      if (s.off.some((j) => j !== a.i && s.agents[j]!.mem.man === i && !s.agents[j]!.mem.help)) continue;
-      const k = dist(d.pos, qb.pos);
-      if (k < bd) {
-        bd = k;
-        pick = i;
-      }
-    }
-    if (pick >= 0) a.mem.pickup = pick;
-  }
-  if (pick >= 0) {
-    a.mem.man = pick;
-    passBlock(s, a);
-    return true;
-  }
-  if (since < CHECK_T) {
-    const qb = s.agents[s.qb]!;
+  const qb = s.agents[s.qb]!;
+  if (a.mem.pickup === undefined && since < CHECK_T) {
     steer(a, arrive(a, v2(qb.pos.x + 0.8, a.pos.y), 0.4, 1), { face: 0 });
     a.anim = 'block';
     return true;
   }
-  return false;
+  if (a.mem.pickup === undefined) {
+    let pick = -1;
+    let bd = Infinity;
+    if (s.phase !== 'air') {
+      for (const i of s.def) {
+        const d = s.agents[i]!;
+        if (d.down || blockOf(s, i) || d.p.pos === 'DE' || d.p.pos === 'DT') continue;
+        if (s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign].kind !== 'rush') continue;
+        const k = dist(d.pos, qb.pos);
+        if (k < bd) {
+          bd = k;
+          pick = i;
+        }
+      }
+    }
+    if (pick < 0) {
+      a.mem.released = true;
+      return false;
+    }
+    a.mem.pickup = pick;
+    for (const j of s.off) {
+      const b = s.agents[j]!;
+      if (j !== a.i && b.mem.man === pick) b.mem.help = true;
+    }
+  }
+  a.mem.man = a.mem.pickup as number;
+  passBlock(s, a);
+  return true;
 }
 
-/** An H-back's chip reaches a rusher this close (yd: a step and his hands), and costs him this long (s) off his rush. Ours. */
+/** An H-back's chip: he looks for the nearest rusher within CHIP_SEE (yd) and hits him from CHIP_REACH (a step and his hands). Ours. */
+const CHIP_SEE = 7;
 const CHIP_REACH = 1.6;
+/**
+ * What the chip costs the rusher: a man the tackle has is knocked back
+ * CHIP_LEV of leverage (about 0.4 s of an even pass rush's gain: blocks.ts
+ * PASS_BASE 0.45/s), a free one is stood up for CHIP_T (s). Ours.
+ */
+const CHIP_LEV = 0.2;
 const CHIP_T = 0.25;
 
-/** The H-back's chip (route 'chip'): a step to the nearest free rusher and a shot that knocks him off his line, once; then he releases. */
+/**
+ * The H-back's chip (route 'chip', in ROUTE_DELAY): a step to the nearest
+ * rusher and a shot that knocks him off his line (helping the tackle who
+ * has him, or standing up a free one), once; then he releases to the flat.
+ */
 function chip(s: PlayState, a: Agent): void {
   if (a.mem.chipped) {
     steer(a, { x: 0, y: 0 }, { face: 0 });
     return;
   }
+  // The edge rusher on his side: the widest man coming within CHIP_SEE.
+  const by = s.setup.ballY ?? 0;
+  const side = Math.sign(a.pos.y - by) || 1;
   let near: Agent | null = null;
-  let nd = 4.5;
+  let wide = -Infinity;
   for (const i of s.def) {
     const d = s.agents[i]!;
-    if (d.down || blockOf(s, i) || s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign].kind !== 'rush') continue;
-    const k = dist(d.pos, a.pos);
-    if (k < nd) {
-      nd = k;
+    if (d.down || s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign].kind !== 'rush' || dist(d.pos, a.pos) > CHIP_SEE) continue;
+    const w = (d.pos.y - by) * side;
+    if (w > wide) {
+      wide = w;
       near = d;
     }
   }
@@ -273,30 +296,36 @@ function chip(s: PlayState, a: Agent): void {
     steer(a, { x: 0, y: 0 }, { face: 0 });
     return;
   }
-  if (nd < CHIP_REACH) {
-    near.busy = Math.max(near.busy, Math.round(CHIP_T * 60));
+  const nd = dist(near.pos, a.pos);
+  if (nd < CHIP_REACH + near.fx.radius) {
+    const blk = blockOf(s, near.i);
+    if (blk) blk.lev -= CHIP_LEV;
+    else near.busy = Math.max(near.busy, Math.round(CHIP_T * 60));
     a.mem.chipped = true;
-    s.events.push({ t: s.t, type: 'chip', who: [a.i, near.i] });
+    s.events.push({ t: s.t, type: 'chip', who: [a.i, near.i], data: { held: !!blk } });
     return;
   }
-  steer(a, arrive(a, near.pos, 0.8), { face: atan2(near.pos.y - a.pos.y, near.pos.x - a.pos.x) });
+  steer(a, arrive(a, near.pos, 1), { face: atan2(near.pos.y - a.pos.y, near.pos.x - a.pos.x) });
 }
 
-/** The short breaking routes a Slot Weapon runs as option routes from the slot (break away from the man's leverage, sit down against a zone). */
+/** The short breaking routes a Slot Weapon runs as option routes from the slot (break away from the man's leverage, or from a zone defender sitting on the break). */
 const SLOT_OPTIONS: readonly RouteName[] = ['stick', 'hitch', 'qout', 'qin', 'spot'];
-/** He reads it this far (yd) short of the top of his stem, and breaks this far across (yd). */
+/** He reads it this far (yd) short of the top of his stem, and breaks this far across (yd; a settle route slides this far into the window). */
 const OPTION_READ = 1.5;
 const OPTION_BREAK = 6;
-/** He reads the nearest defender within this (yd). */
+const OPTION_SLIDE = 2.5;
+/** He reads the nearest defender within this (yd); a zone defender this close is sitting on his break. */
 const OPTION_SEE = 7;
+const OPTION_ZONE = 3.5;
 
 /**
  * An option route's read at the top of the stem: against man, break away
  * from the defender's leverage (out if he's inside, in if he's outside);
- * against a zone (or nobody near), sit down in the window. Every option
- * route reads it (the back's option); a Slot Weapon's short routes from
- * the slot read it too ("from the slot, option routes read the leverage of
- * the nearest defender automatically"); anyone else runs them as drawn.
+ * against a zone, away from a defender sitting on the break, and as drawn
+ * when nobody is (he's open where the route takes him). Every option route
+ * reads it (the back's option); a Slot Weapon's short routes from the slot
+ * read it too ("from the slot, option routes read the leverage of the
+ * nearest defender automatically"); anyone else runs them as drawn.
  */
 function optionRead(s: PlayState, a: Agent, name: RouteName | null): void {
   const rt = a.route;
@@ -320,18 +349,16 @@ function optionRead(s: PlayState, a: Agent, name: RouteName | null): void {
   }
   const out = Math.sign(q.y - (s.setup.ballY ?? 0)) || 1;
   const man = !!near && s.setup.def.assign[near.slot as keyof typeof s.setup.def.assign].kind === 'man' && s.man[near.slot as keyof typeof s.man] === a.slot;
-  const lim = FIELD_HALF_W - ROUTE_ROOM;
-  let to: V2;
-  let sit = false;
-  if (!near || !man) {
-    to = v2(q.x - 0.3, q.y);
-    sit = true;
-  } else {
-    // Inside leverage (he's between me and the ball's side of the field): out; outside leverage: in.
-    const dir = (near.pos.y - a.pos.y) * out < 0 ? out : -out;
-    to = v2(q.x + 0.5, Math.max(-lim, Math.min(lim, q.y + dir * OPTION_BREAK)));
+  if (!near || (!man && nd > OPTION_ZONE)) {
+    a.mem.optBreak = 'drawn';
+    return;
   }
-  a.mem.optBreak = sit ? 'sit' : (to.y - q.y) * out > 0 ? 'out' : 'in';
+  // Away from him: out if he's inside (between me and the ball's side of the field), in if he's outside.
+  const dir = (near.pos.y - a.pos.y) * out < 0 ? out : -out;
+  const sit = rt.sit[rt.sit.length - 1] === true;
+  const lim = FIELD_HALF_W - ROUTE_ROOM;
+  const to = v2(q.x + (sit ? 0 : 0.5), Math.max(-lim, Math.min(lim, q.y + dir * (sit ? OPTION_SLIDE : OPTION_BREAK))));
+  a.mem.optBreak = dir === out ? 'out' : 'in';
   rt.pts = [...rt.pts.slice(0, stem + 1), to];
   rt.sit = [...rt.sit.slice(0, stem + 1), sit];
 }
