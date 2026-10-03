@@ -270,7 +270,8 @@ class ReplaySession {
     if (replayDom.head) replayDom.head.style.left = pct;
     if (replayDom.time) {
       // The play clock from the snap: −0:00.8 before it, 0:03.2 after.
-      const s = (at - Math.max(0, p.snapTick)) * TICK;
+      const s0 = (at - Math.max(0, p.snapTick)) * TICK;
+      const s = Math.abs(s0) < 0.05 ? 0 : s0;
       const a = Math.abs(s);
       const txt = `${s < 0 ? '−' : ''}${Math.floor(a / 60)}:${(a % 60).toFixed(1).padStart(4, '0')}`;
       if (replayDom.time.textContent !== txt) replayDom.time.textContent = txt;

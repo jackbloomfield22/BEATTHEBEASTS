@@ -331,6 +331,8 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
   const reduceShake = useSettings((s) => s.settings.accessibility.reduceShake);
   const springs = useRef<Spring[] | null>(null);
   const shake = useRef({ amp: 0, t: 0 });
+  const seenEpoch = useRef(-1);
+  const pendingCut = useRef(false);
 
   // A replay's orbit: drag the field with the mouse, zoom on the wheel (the canvas's own events; the HUD above it takes its own clicks).
   const gl = useThree((s) => s.gl);
@@ -393,6 +395,21 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       step = Math.max(0, Math.min(0.1, now - videoClock.t));
       videoClock.t = now;
       if (!springs.current) step = 0;
+      // A replay's camera answers in the frame's time (it moves while the replay is paused or slowed, as it would in play).
+      if (replay.active) step = 1 / urlFlags.video;
+    }
+    // A replay rebuilt for a scrub back (or a new replay): the camera holds while the scene catches it up,
+    // then cuts to where it lands, as a broadcast would; never a glide across the field through the fast-forward.
+    if (replay.active) {
+      if (replay.epoch !== seenEpoch.current) {
+        seenEpoch.current = replay.epoch;
+        pendingCut.current = true;
+      }
+      if (replay.player!.seeking && pendingCut.current) return;
+      if (pendingCut.current) {
+        pendingCut.current = false;
+        replayCam.cut = true;
+      }
     }
     stepBreakaway(step, urlFlags.shot !== null && !urlFlags.video);
     // A replay: the free orbit (the user's), the broadcast angle or the end zone.
