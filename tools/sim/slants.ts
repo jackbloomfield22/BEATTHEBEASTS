@@ -5,7 +5,7 @@
 // attempt, yards after the catch, separation at the catch and as the ball
 // leaves (what the player sees when he lets it go).
 //   node tools/run-ts.mjs tools/sim/slants.ts [repsPerPlay=67] [--hot] [--pick] [--how]
-//     [--lbs=WLB,MLB,SLB] [--at=ticks --ontime] [--json=out.json]
+//     [--lbs=WLB,MLB,SLB] [--at=ticks --ontime] [--def=cover1,cover2man] [--json=out.json]
 // --hot: slants hot-routed onto three other plays (instead of the Slants
 // concept); --pick: the player throws to whichever slant looks most open;
 // --how: what decided each throw; --lbs: other linebackers in the Beasts
@@ -250,7 +250,9 @@ if (process.argv[1]?.includes('slants')) {
   const all: Record<string, Record<string, SlantCell>> = {};
   const pooled: Record<string, { zone: SlantSample[]; man: SlantSample[] }> = {};
   for (const sc of scripts) pooled[sc.id] = { zone: [], man: [] };
+  const only = process.argv.find((a) => a.startsWith('--def='))?.slice(6).split(',');
   for (const def of DEF_CALLS) {
+    if (only && !only.includes(def.id)) continue;
     all[def.id] = {};
     for (const sc of scripts) {
       const xs = runCell(rosters, calls, def, sc, N);
