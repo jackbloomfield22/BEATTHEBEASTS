@@ -6,7 +6,10 @@ import { test, type Page } from '@playwright/test';
 // the Practice Field from the broadcast camera and recorded frame by frame.
 // Every rendered frame is exactly 1/30 s of game time (?video=30): the sim
 // steps two ticks, the animation and the cameras step 1/30 s, so the video
-// runs at real speed however slowly this machine renders it. The frames are
+// runs at real speed however slowly this machine renders it (and nothing
+// steps in the screenshots' own redraws: platform.ts videoTime; each
+// recording checks it, and logs its snap-to-whistle sim time against its
+// video time). BTB_PORT runs it on another dev server. The frames are
 // encoded with ffmpeg (on the PATH, $FFMPEG, or `pip install imageio-ffmpeg`).
 // The pop meter's log (?pops) goes next to each video.
 //   BTB_VIDEO=1 npm run shots                 all three clips
