@@ -15,7 +15,6 @@
 .mt-bug > .mt-bug-tag { background: #c8102e; color: #fff; font-family: var(--font-display); letter-spacing: .08em; font-size: .9rem; }
 .mt-bug-sit { color: #fff; }
 .mt-bug-spot { color: var(--ink-2); border-left: 1px solid rgba(255,255,255,.1); }
-.mt-bug-clock { color: var(--ink-3); border-left: 1px solid rgba(255,255,255,.1); font-variant-numeric: tabular-nums; }
 
 /* The call on the reaction shot: big, low left, a slash of color beside it. */
 .mt-call { position: absolute; left: 3.5rem; bottom: 7rem; padding: .2rem 1.2rem .35rem; font-family: var(--font-display); font-size: 3.4rem; line-height: 1.05; text-transform: uppercase; color: #fff; background: linear-gradient(90deg, rgba(5,5,6,.88), rgba(5,5,6,.35)); border-left: 6px solid #ff2a4d; text-shadow: 0 .2rem 1.2rem rgba(0,0,0,.6); animation: mt-call-in 360ms cubic-bezier(.2,.9,.3,1.15) both; }

@@ -78,7 +78,6 @@ export function MontageHud() {
             {DOWN[p.down - 1]} &amp; {p.los + p.toGo >= 100 ? 'Goal' : p.toGo}
           </span>
           <span className="mt-bug-spot">{spotOf(p.los)}</span>
-          <span className="mt-bug-clock">{info.clock}</span>
         </div>
       ) : null}
       {shot === 'reaction' && p ? (
