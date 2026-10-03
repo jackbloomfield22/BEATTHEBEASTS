@@ -44,6 +44,7 @@ import { InputGlyph, TabKey, useBindings } from "../components/Glyph";
 import { PlayArt, RouteGlyph } from "../game/PlayArt";
 import { BLITZ_TAGS, hudDom, RING_LEN } from "../game/hudDom";
 import { ReplayCue, ReplayHud, useReplayKey } from "../game/ReplayHud";
+import { CelebrationPrompt, useCelebrating } from "../game/CelebrationPrompt";
 import "../styles/game.css";
 
 // The Practice Field (GDD §4): free play against the Beasts. The play call is
@@ -56,6 +57,8 @@ export function PracticeScreen() {
   const error = usePractice((s) => s.error);
   // The instant replay (M7) runs over the result: its own HUD, the play's off.
   const replayOpen = useReplay((s) => s.open);
+  // A touchdown's celebration (M7) comes before the result card.
+  const celebrating = useCelebrating();
   const difficulty = useSettings((s) => s.settings.gameplay.difficulty);
 
   useEffect(() => {
@@ -86,7 +89,8 @@ export function PracticeScreen() {
       {stage === "presnap" || stage === "live" || (stage === "result" && !replayOpen) ? (
         <PlayHud />
       ) : null}
-      {stage === "result" && !replayOpen ? <ResultPanel /> : null}
+      {stage === "result" && !replayOpen && !celebrating ? <ResultPanel /> : null}
+      {!replayOpen && stage !== "paused" ? <CelebrationPrompt /> : null}
       {replayOpen ? <ReplayHud /> : null}
       {stage === "paused" ? <PauseMenu /> : null}
     </>

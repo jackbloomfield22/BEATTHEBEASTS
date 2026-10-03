@@ -6,11 +6,13 @@
 
 import { urlFlags } from '@/app/platform';
 
-export type CrowdEvent = 'bigPlay' | 'touchdown' | 'turnover' | 'defensiveStop' | 'kickoff' | 'groan';
+export type CrowdEvent = 'bigPlay' | 'touchdown' | 'turnover' | 'defensiveStop' | 'kickoff' | 'groan' | 'celebration';
 
 /** Peak energy each event lifts the crowd to, and how long it holds before decaying (s). */
 export const REACTIONS: Record<CrowdEvent, { peak: number; hold: number; decay: number }> = {
   touchdown: { peak: 1, hold: 4, decay: 6 },
+  // The scorer's celebration (M7) brings the bowl back up and holds it through the clip.
+  celebration: { peak: 1, hold: 4.5, decay: 6 },
   turnover: { peak: 0.9, hold: 3, decay: 5 },
   bigPlay: { peak: 0.75, hold: 1.5, decay: 4 },
   defensiveStop: { peak: 0.65, hold: 1.2, decay: 3.5 },
@@ -22,10 +24,15 @@ export const REACTIONS: Record<CrowdEvent, { peak: number; hold: number; decay: 
 export class CrowdEnergy {
   private start = -Infinity;
   private ev: CrowdEvent | null = null;
+  /** Where the energy stood when this event came in: the rise starts from there, never dips back to ambient first. */
+  private from = 0;
 
-  constructor(public ambient = 0.3) {}
+  constructor(public ambient = 0.3) {
+    this.from = ambient;
+  }
 
   trigger(ev: CrowdEvent, now: number): void {
+    this.from = this.value(now);
     this.ev = ev;
     this.start = now;
   }
@@ -35,11 +42,13 @@ export class CrowdEnergy {
     if (!this.ev) return this.ambient;
     const r = REACTIONS[this.ev];
     const t = now - this.start;
-    if (t < 0) return this.ambient;
-    // Rise over 0.4 s (a crowd reacts within a beat), hold, then ease back.
+    if (t < 0) return this.from;
+    // Rise over 0.4 s (a crowd reacts within a beat) from where it stood, hold, then ease back to ambient.
     const rise = Math.min(1, t / 0.4);
-    const fall = t <= r.hold ? 1 : Math.max(0, 1 - (t - r.hold) / r.decay);
-    const k = rise * fall * fall * (3 - 2 * fall);
+    const top = this.from + (r.peak - this.from) * rise;
+    if (t <= r.hold) return top;
+    const fall = Math.max(0, 1 - (t - r.hold) / r.decay);
+    const k = fall * fall * (3 - 2 * fall);
     return this.ambient + (r.peak - this.ambient) * k;
   }
 }

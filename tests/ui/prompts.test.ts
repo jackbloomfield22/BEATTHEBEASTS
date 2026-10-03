@@ -57,6 +57,11 @@ const PROMPTED = [
   // The Beasts' drive montage (M7): skipped with the confirm or back binding (and Start, global.pause).
   'menu.confirm',
   'menu.back',
+  // Touchdown celebrations (M7): the three choices and the skip.
+  'celebrate.pick1',
+  'celebrate.pick2',
+  'celebrate.pick3',
+  'celebrate.skip',
 ];
 
 describe('prompt labels per device', () => {
@@ -82,6 +87,11 @@ describe('prompt labels per device', () => {
     expect(promptCode('menu.confirm', 'kb', kb, pad)).toBe('Enter');
     expect(promptCode('menu.back', 'kb', kb, pad)).toBe('Escape');
     expect(promptCode('global.pause', 'pad', kb, pad)).toBe('Pad:Menu');
+  });
+
+  it('draws the celebration choices as 1, 2, 3 on the keys and A, B, X on a pad', () => {
+    expect(['celebrate.pick1', 'celebrate.pick2', 'celebrate.pick3'].map((a) => promptText(a, 'kb', kb, pad))).toEqual(['1', '2', '3']);
+    expect(['celebrate.pick1', 'celebrate.pick2', 'celebrate.pick3'].map((a) => promptCode(a, 'pad', kb, pad))).toEqual(['Pad:A', 'Pad:B', 'Pad:X']);
   });
 
   it('follows a rebinding', () => {

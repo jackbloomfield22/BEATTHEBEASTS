@@ -43,6 +43,8 @@ import { createFieldMarks } from './fieldMarks';
 import { frameEvents } from './frameEvents';
 import { ballInHands, catchMagnet, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
 import { Officials } from './officials';
+import { celebrate } from './celebrate';
+import { celebration } from '@/game/celebration';
 import { kickView } from './kickView';
 
 // The live play (TECH_PLAN §4.3): one top-priority frame callback advances
@@ -321,6 +323,8 @@ export function GameScene() {
     const { prev, cur } = r;
     contests(bs, s, simT, contactPairs);
     bs.forEach((b, i) => {
+      // A touchdown celebration (M7) drives the scorer and the team-mates coming over itself.
+      if (live && celebrate.owns(i)) return;
       const p0 = prev.agents[i]!;
       const p1 = cur.agents[i]!;
       tmp.x = p0.x + (p1.x - p0.x) * alpha;
@@ -517,6 +521,7 @@ export function GameScene() {
       } else {
         shownPlay.current = showing;
         snapped.current = false;
+        if (!rp) celebrate.reset(practice.playId);
         const s0 = r.state;
         const cur0 = r.cur;
         bodies.forEach((b, i) => {
@@ -576,6 +581,13 @@ export function GameScene() {
     const controlled = rp ? -1 : ph === 'carrier' ? (userCarrier ? cur.carrier : -1) : ph === 'snap' || ph === 'dropback' || ph === 'pocket' ? s.qb : -1;
     if (controlled < 0 && !rp) latency.motion(null);
     animate(bodies, rr, alpha, simT, animDt, controlled, true, camera, viewportPx);
+    // The touchdown celebration (M7): after a user score's whistle, render-only, in frame time (the dead ball's sim stops a few seconds on).
+    if (rp) celebrate.release();
+    else {
+      const paused = usePractice.getState().stage === 'paused';
+      celebration.frame(s, practice.playId, step, paused);
+      celebrate.update(bodies, s, practice.playId, paused ? 0 : step, officials.current);
+    }
 
     placeBall(rr, s.snapT, s.t);
     placeMarks(s.setup.los, s.setup.toGo);
@@ -602,6 +614,7 @@ export function GameScene() {
     const b1 = cur.ball;
     const held = b1.mode === 'held' && b1.holder >= 0;
     const inSnap = cur.phase === 'presnap' || (snapT >= 0 && t - snapT < 0.34);
+    if (r === practice.runner && !replay.active && celebrate.placeBall(ball)) return;
     if (held && !inSnap && bodies && ballInHands(bodies[b1.holder]!, r.state, ball)) return;
     ball.position.set(worldX(b0.y + (b1.y - b0.y) * a), worldY(b0.z + (b1.z - b0.z) * a), worldZ(b0.x + (b1.x - b0.x) * a));
     if (cur.phase === 'presnap') {

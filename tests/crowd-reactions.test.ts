@@ -35,6 +35,16 @@ describe('crowd reactions', () => {
     expect(c.value(2)).toBeCloseTo(1);
   });
 
+  it('a celebration on top of a touchdown lifts from where the bowl stands, never back down to ambient first', () => {
+    const c = new CrowdEnergy(0.3);
+    c.trigger('touchdown', 0);
+    const before = c.value(5);
+    c.trigger('celebration', 5);
+    expect(c.value(5)).toBeCloseTo(before);
+    for (let t = 5; t < 5.5; t += 0.05) expect(c.value(t)).toBeGreaterThanOrEqual(before - 1e-9);
+    expect(c.value(9)).toBeCloseTo(REACTIONS.celebration.peak);
+  });
+
   it('is monotone non-increasing after the hold', () => {
     const c = new CrowdEnergy(0.3);
     c.trigger('bigPlay', 0);

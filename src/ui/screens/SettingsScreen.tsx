@@ -69,7 +69,7 @@ function buildTabs(nav: { openEditor: () => void; applyPreset: (p: QualityPreset
         { kind: 'slider', label: 'Touch pass hold', desc: 'How long to hold a receiver key before a driven ball becomes a touch pass.', min: 120, max: 400, step: 10, fmt: (v) => `${v} ms`, get: (s) => s.controls.bulletHoldMs, set: (d, v) => { d.controls.bulletHoldMs = v; } },
         { kind: 'choice', label: 'Ball-in-air control', desc: 'Off: catches are automatic. Assist: switch to the target with Tab. Full: you always take over the target.', options: [{ value: 'off', label: 'Off' }, { value: 'assist', label: 'Assist' }, { value: 'full', label: 'Full' }], get: (s) => s.controls.ballInAir, set: (d, v) => { d.controls.ballInAir = v as Settings['controls']['ballInAir']; } },
         { kind: 'action', label: 'Reset all bindings', desc: 'Restore every keyboard and gamepad binding.', run: nav.resetBinds },
-        ...(['preSnap', 'pocket', 'ballInAir', 'carrier', 'kick', 'replay', 'global', 'playCall', 'menu'] as InputContext[]).flatMap((ctx): Row[] => [
+        ...(['preSnap', 'pocket', 'ballInAir', 'carrier', 'kick', 'replay', 'celebrate', 'global', 'playCall', 'menu'] as InputContext[]).flatMap((ctx): Row[] => [
           { kind: 'header', label: CONTEXT_LABELS[ctx] },
           ...ACTIONS.filter((a) => a.context === ctx).map((a): Row => ({ kind: 'bind', actionId: a.id })),
         ]),

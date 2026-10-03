@@ -172,5 +172,42 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `ovl_dip_r` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `def_contest_l` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `def_contest_r` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `cel_spike` | transition | 87 | 0.0 | 0.00 | 0.00 | 23.1 | — | pass |
+| `cel_spin_spike` | transition | 93 | 0.0 | 0.01 | 0.00 | 12.1 | — | pass |
+| `cel_flip_official` | transition | 78 | 0.0 | 0.00 | 0.00 | 23.1 | — | pass |
+| `cel_point_crowd` | transition | 96 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `cel_leap_wall` | transition | 99 | 0.0 | 0.00 | 0.00 | 18.7 | — | pass |
+| `cel_flex` | transition | 90 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `cel_salute` | transition | 87 | 0.0 | 0.00 | 0.00 | 9.0 | — | pass |
+| `cel_kneel` | transition | 114 | 0.0 | 0.01 | 0.00 | 23.6 | — | pass |
+| `cel_ball_high` | transition | 120 | 0.0 | 0.24 | 0.00 | 19.8 | — | pass |
+| `cel_chest_bump` | transition | 60 | 0.0 | 0.00 | 0.00 | 19.6 | — | pass |
+| `cel_jump_fist` | transition | 69 | 0.0 | 0.00 | 0.00 | 19.6 | — | pass |
+| `cel_shrug` | transition | 78 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `cel_mate_point` | transition | 66 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `cel_five_r` | transition | 48 | 0.0 | 0.00 | 0.00 | 23.0 | — | pass |
+| `cel_five_l` | transition | 48 | 0.0 | 0.00 | 0.00 | 23.0 | — | pass |
 
-**166 of 166 clips pass.**
+**181 of 181 clips pass.**
+
+## Joint limits (M7 celebrations)
+
+Peak knee flexion ≤ 150°, peak elbow flexion ≤ 150°, every IK foot target reached within 1.5 cm.
+
+| Clip | Knee (°) | Elbow (°) | Foot reach (cm) | Result |
+|---|---|---|---|---|
+| `cel_spike` | 88.8 | 115.6 | 0.01 | pass |
+| `cel_spin_spike` | 93.9 | 125.0 | 0.01 | pass |
+| `cel_flip_official` | 55.8 | 115.9 | 0.00 | pass |
+| `cel_point_crowd` | 55.3 | 117.3 | 0.00 | pass |
+| `cel_leap_wall` | 103.4 | 117.3 | 0.01 | pass |
+| `cel_flex` | 67.7 | 132.0 | 0.00 | pass |
+| `cel_salute` | 42.2 | 118.8 | 0.00 | pass |
+| `cel_kneel` | 124.1 | 115.6 | 0.01 | pass |
+| `cel_ball_high` | 63.7 | 115.7 | 0.01 | pass |
+| `cel_chest_bump` | 78.1 | 128.0 | 0.01 | pass |
+| `cel_jump_fist` | 95.7 | 144.1 | 0.01 | pass |
+| `cel_shrug` | 44.5 | 115.6 | 0.00 | pass |
+| `cel_mate_point` | 64.8 | 99.8 | 0.00 | pass |
+| `cel_five_r` | 56.4 | 69.9 | 0.00 | pass |
+| `cel_five_l` | 56.4 | 69.9 | 0.00 | pass |

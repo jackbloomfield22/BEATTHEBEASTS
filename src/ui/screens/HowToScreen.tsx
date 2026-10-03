@@ -199,7 +199,7 @@ function ControlsPage() {
     ) : (
       <kbd>—</kbd>
     );
-  const contexts: InputContext[] = ['preSnap', 'hotRoute', 'pocket', 'ballInAir', 'carrier', 'kick', 'replay', 'global'];
+  const contexts: InputContext[] = ['preSnap', 'hotRoute', 'pocket', 'ballInAir', 'carrier', 'kick', 'replay', 'celebrate', 'global'];
   return (
     <div className="controls-ref">
       {contexts.map((ctx) => (

@@ -13,6 +13,7 @@ import { fieldDir, worldX, worldZ } from '@/game/coords';
 import { frameEvents } from './frameEvents';
 import { montage } from '@/game/montageSession';
 import { montagePose, montageRates } from './montageCam';
+import { celebView } from './celebrate';
 
 // The play cameras (GDD §11.1, TECH_PLAN §8), driven from the sim snapshot
 // through critically damped springs so every cut is a glide:
@@ -115,6 +116,7 @@ function targetPose(mode: Mode): Pose | null {
     return { ex: sx - 11 + bx * 0.55, ey: by * 0.4, eh: 4.4 + bz * 0.25, lx: sx + bx + 4, ly: by, lh: bz * 0.9144 * 0.8, fov: 52 };
   }
   if (kickView.active && !replay.active) return { ex: kickView.spotX - 12, ey: 0, eh: 3.6, lx: 110, ly: 0, lh: 2.4, fov: 36 };
+  if (celebView.on && !replay.active) return celebPose();
   const r = activeRunner();
   if (!r) {
     // Before the first snap (the play call): the field from behind the line.
@@ -182,6 +184,68 @@ function targetPose(mode: Mode): Pose | null {
     };
   }
   return base;
+}
+
+// ---- Touchdown celebration (M7) --------------------------------------------------------------
+
+/** Where the shot is from (field angle from the scorer to the camera) and which way it arcs, set at each cut. */
+const celebCam = { az: 0, arc: 1, done: false };
+/**
+ * Where the celebration camera may stand (field yd): the playing surface and
+ * its apron (the turf runs ~17 yd past each end line and ~12 yd outside
+ * each sideline, render/stadium/props.ts), short of the walls and benches.
+ */
+const celebFits = (ex: number, ey: number) => ex < 121 && ex > -11 && Math.abs(ey) < 30;
+/** Offsets tried in turn (rad off his facing): in front a little to one side, then wider round, so the camera never ends up in the stands. */
+const CELEB_SIDES = [0.35, -0.35, 0.9, -0.9, 1.6, -1.6, 2.4, -2.4];
+/** Two men facing each other (the chest bump, the high five): from the side, square to the line between them, so neither hides the other. */
+const CELEB_SIDES_PAIR = [1.57, -1.57, 1.2, -1.2, 1.95, -1.95];
+const CELEB_DIST = { from: 7.4, to: 5.0, card: 9.6 };
+
+/**
+ * The celebration: low (chest height, a little under), tight, in front of
+ * the scorer and to one side, the field or the stands behind him. It cuts
+ * in with the prompt and again as the celebration starts (in front of the
+ * way he plays it: the stands, the official, his team-mate); between cuts
+ * it holds its own bearing like an operator on the field (he turns, the
+ * shot doesn't swing round with him), arcs ~30° and pushes in from ~7.4 m
+ * to 5 m as the lens closes a few degrees. Under the result card it eases
+ * back and up so the card and the end zone share the frame.
+ * (GDD §11: the camera sells the moment.)
+ */
+function celebPose(): Pose {
+  const v = celebView;
+  const ease = (k: number) => smooth(Math.min(1, Math.max(0, k)));
+  const k = ease(v.t / 7);
+  if (v.cut) {
+    // In the field of play and the end zone, off the bench areas: the first side that fits for the whole push.
+    // Of the sides that fit, the one farthest round from where his team-mates are (they'd walk through the shot).
+    const far = CELEB_DIST.from / YARD;
+    const fits = (v.pair ? CELEB_SIDES_PAIR : CELEB_SIDES).filter((a) => celebFits(v.x + Math.cos(v.face + a) * far, v.y + Math.sin(v.face + a) * far));
+    const front = fits.slice(0, 2);
+    const away = (a: number) => (Number.isFinite(v.mates) ? Math.abs(Math.atan2(Math.sin(v.face + a - v.mates), Math.cos(v.face + a - v.mates))) : 0);
+    const side = front.length ? front.reduce((b, a) => (away(a) > away(b) + 0.2 ? a : b)) : (fits[0] ?? Math.PI);
+    celebCam.az = v.face + side;
+    celebCam.arc = side >= 0 ? 1 : -1;
+  }
+  // Under the card it backs off: round to where that distance still fits, gliding there.
+  if (v.done && !celebCam.done) {
+    const far = CELEB_DIST.card / YARD;
+    const base = celebCam.az - celebCam.arc * 0.5 * k;
+    const d = [0, 0.5, -0.5, 1, -1, 1.5, -1.5, 2.2, -2.2, Math.PI].find((o) => celebFits(v.x + Math.cos(base + o) * far, v.y + Math.sin(base + o) * far)) ?? 0;
+    celebCam.az += d;
+  }
+  celebCam.done = v.done;
+  // The arc swings toward his front as it pushes in.
+  const a = celebCam.az - celebCam.arc * 0.5 * k;
+  const back = v.done ? 1 : 0;
+  const dist = (CELEB_DIST.from + (CELEB_DIST.to - CELEB_DIST.from) * k + (CELEB_DIST.card - CELEB_DIST.to) * back) / YARD;
+  // A pair: framed on the point between them, a touch higher so the far man's head clears the near one's shoulder.
+  const lx = v.x + (v.pair ? Math.cos(v.face) * v.pair * 0.5 : 0);
+  const ly = v.y + (v.pair ? Math.sin(v.face) * v.pair * 0.5 : 0);
+  const up = v.pair ? 0.35 : 0;
+  // Under the card (it covers the top of the screen): back, up, and looking over their heads, so they stand in the lower half.
+  return { ex: lx + Math.cos(a) * dist, ey: ly + Math.sin(a) * dist, eh: 1.35 + up - 0.15 * k + 1.5 * back, lx, ly, lh: 1.15 + 1.2 * back, fov: 34 - 5 * k + 8 * back + (v.pair ? 4 : 0) };
 }
 
 // ---- Replay cameras (M7) ------------------------------------------------------------------
@@ -397,9 +461,10 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       step = Math.max(0, Math.min(0.1, now - videoClock.t));
       videoClock.t = now;
       if (!springs.current) step = 0;
-      // A replay's camera answers in the frame's time (it moves while the replay is paused or slowed, as it would in play).
-      // Both step only in the frames the recorder asked for (platform.ts videoTime).
-      if (replay.active || montage.active) step = videoTime.step();
+      // A replay's camera answers in the frame's time (it moves while the replay is paused or slowed, as it would in play);
+      // so does the celebration's (the dead ball's sim stops a few seconds after the whistle). They, and the montage's,
+      // step only in the frames the recorder asked for (platform.ts videoTime).
+      if (replay.active || montage.active || celebView.on) step = videoTime.step();
     }
     // A replay rebuilt for a scrub back (or a new replay): the camera holds while the scene catches it up,
     // then cuts to where it lands, as a broadcast would; never a glide across the field through the fast-forward.
@@ -437,7 +502,8 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       springs.current = [camera.position.x, camera.position.y, camera.position.z, look.x, look.y, look.z, camera.fov].map((v) => new Spring(v));
     }
     // Screenshots and browser tests cut straight to the pose every frame; so does a replay's camera change.
-    const cut = (urlFlags.shot !== null && !urlFlags.video) || (rmode !== null && replayCam.cut) || (mshot !== null && montage.cut);
+    const cut = (urlFlags.shot !== null && !urlFlags.video) || (rmode !== null && replayCam.cut) || (mshot !== null && montage.cut) || (!rmode && !mshot && celebView.on && celebView.cut);
+    if (!rmode) celebView.cut = false;
     if (cut) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
     replayCam.cut = false;
     if (mshot) montage.cut = false;
@@ -446,7 +512,9 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     // In the air the whole rig tightens up so it keeps pace with the ball.
     // The replay's orbit is the user's hand on it: tight, so it answers at once.
     const air = activeRunner()?.cur.phase === 'air' && (mshot ? 'broadcast' : (rmode ?? modeSetting)) === 'broadcast';
-    const w = (mshot && montageRates(mshot)) || (rmode === 'orbit' ? [9, 9, 9, 7, 7, 7, 6] : rmode === 'endzone' ? [3, 3, 3, 5, 5, 5, 3] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3]);
+    // The celebration's: the dolly slow and smooth (the push), the lens keeping him framed as he moves.
+    const celeb = !rmode && !mshot && celebView.on;
+    const w = (mshot && montageRates(mshot)) || (rmode === 'orbit' ? [9, 9, 9, 7, 7, 7, 6] : rmode === 'endzone' ? [3, 3, 3, 5, 5, 5, 3] : celeb ? [2.2, 2.2, 2.2, 5, 5, 5, 3] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3]);
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));
     // Shake: hits kick it, it rings down in ~0.3 s.
     for (const e of frameEvents) {
