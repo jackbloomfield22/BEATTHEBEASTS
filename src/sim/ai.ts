@@ -1820,6 +1820,39 @@ const ALLEY_LOOK = 0.4;
  * the corner had ten yards of grass (the bubble against Cover 2 12 yd a
  * throw once the stalks went to the right men, tools/sim/screens.ts).
  */
+/** The run-support depth a deep corner comes up to on his #1's stalk (yd past the line): a flat-footed 5, where the force is played from. Ours. */
+const SUPPORT_D = 5;
+
+/**
+ * A deep corner's key is #1, the widest man on his side: #1 blocking him
+ * (a stalk, no release) is run or screen, and he stops bailing and comes up
+ * to run support at his own read of it, before he's found the bubble (the
+ * Cover 3 and quarters corner's rule). Waiting to see the bubble itself, he
+ * had bailed to ten yards before he came back.
+ */
+function stalkRead(s: PlayState, d: Agent, mine: number): boolean {
+  const by = s.setup.ballY ?? 0;
+  if (d.mem.stalkSeen === undefined) {
+    let w = -1;
+    let k = -1;
+    for (const i of s.off) {
+      const a = s.agents[i]!;
+      const dy = s.setup.play.formation.align[a.slot as OffSlot].dy;
+      if (a.slot === 'RB' || Math.abs(dy) < 5 || (Math.sign(a.pos.y - by) || 1) !== mine) continue;
+      if (Math.abs(a.pos.y - by) > w) {
+        w = Math.abs(a.pos.y - by);
+        k = i;
+      }
+    }
+    if (k < 0 || s.setup.play.assign[s.agents[k]!.slot as OffSlot].kind !== 'stalk' || s.t - s.snapT < 0.1) return false;
+    d.mem.stalkSeen = s.t;
+  }
+  if (s.t - (d.mem.stalkSeen as number) < reaction(s, d)) return false;
+  steer(d, boundaryGovern(d, arrive(d, v2(s.setup.los + SUPPORT_D, d.pos.y), 1, 1.5), 1), { face: Math.PI });
+  d.anim = d.vel.x > 0.8 ? 'backpedal' : 'run';
+  return true;
+}
+
 function bubbleRead(s: PlayState, d: Agent, role: ZoneRole): boolean {
   if (s.phase === 'carrier') return false;
   const corner = d.slot === 'LCB' || d.slot === 'RCB';
@@ -1839,16 +1872,17 @@ function bubbleRead(s: PlayState, d: Agent, role: ZoneRole): boolean {
       if ((mine !== 0 && side !== mine) || a.pos.x > los + BUBBLE_DEPTH || a.vel.x > 1 || a.vel.y * side < BUBBLE_OUT || dist(a.pos, d.pos) > BUBBLE_SEE) continue;
       r = i;
     }
-    if (r < 0) return false;
     // A deep corner with a man going vertical on his side keeps his third.
-    if (role === 'deep' && s.off.some((i) => {
+    const vertical = role === 'deep' && s.off.some((i) => {
       const a = s.agents[i]!;
       return !!a.route && (Math.sign(a.pos.y - by) || 1) === mine && a.pos.x > los + 3 && a.vel.x > 3;
-    })) return false;
+    });
+    if (r < 0) return role === 'deep' && corner && !vertical && stalkRead(s, d, mine);
+    if (vertical) return false;
     d.mem.bubble = r;
     d.mem.bubbleAt = s.t;
   }
-  if (s.t - (d.mem.bubbleAt as number) < reaction(s, d)) return false;
+  if (s.t - (d.mem.bubbleAt as number) < reaction(s, d)) return role === 'deep' && corner && d.mem.stalkSeen !== undefined && stalkRead(s, d, mine);
   const a = s.agents[r]!;
   const v = seen(a, reaction(s, d) * 0.5);
   const side = Math.sign(v.pos.y - by) || 1;
