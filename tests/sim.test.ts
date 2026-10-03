@@ -168,8 +168,10 @@ describe('sim: pass protection follows the linemen', () => {
       const offense = { ...rosters.offense };
       OL.forEach((k, j) => (offense[k] = simPlayer(snap.entries.find((e) => e.id === ids[j])!, 70 + j)));
       const ts: number[] = [];
+      // (Not the screens: their line sets, then lets the rush in by design, the same for any five.)
+      const book = BOOK.filter((p) => p.type !== 'screen');
       for (let k = 0; k < 60; k++) {
-        const s = createPlay({ seed: 9000 + k * 7919, offense, defense: rosters.defense, play: BOOK[k % BOOK.length]!, def: DEF_CALLS[k % DEF_CALLS.length]!, los: 35, toGo: 10, user: true });
+        const s = createPlay({ seed: 9000 + k * 7919, offense, defense: rosters.defense, play: book[k % book.length]!, def: DEF_CALLS[k % DEF_CALLS.length]!, los: 35, toGo: 10, user: true });
         runToWhistle(s, (st) => input({ snap: st.tick === 0 }));
         ts.push(s.t);
       }

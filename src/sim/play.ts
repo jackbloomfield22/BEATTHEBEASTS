@@ -1502,6 +1502,12 @@ function ballStep(s: PlayState): void {
   }
 }
 
+/** The rushers a screen lets in: past the line and on their way to the QB, they aren't the releasing linemen's (the second level is). */
+const screenLetIn = (d: Agent): boolean => d.side === 'def' && d.mem.screenLetIn === true;
+
+/** The punch before a screen release (ticks, ~0.2 s): his hands on the rusher, then off him and out. Ours. */
+const SCREEN_PUNCH = 12;
+
 function offenseRoles(s: PlayState, inp: InputFrame): void {
   const play = s.setup.play;
   const carrier = s.carrier >= 0 ? s.agents[s.carrier]! : null;
@@ -1554,10 +1560,30 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
       }
       continue;
     }
-    // Screens: the line pass-sets, then releases to lead the screen.
+    // Screens: the line pass-sets, then releases to lead the screen. Set,
+    // punch, let him go: a lineman with a rusher on him lets him run on at
+    // the QB (the ball goes over him) and releases, a beat later, for the
+    // second level: the linebacker and the defensive backs flowing to the
+    // ball, never the rushers he let in (they're past the play). The man
+    // who has the back runs into the release (M6.6 trait pass: the
+    // linemen stayed on their pass blocks and the man on the back came
+    // down untouched; RB screens against man fell to ~6 yd a throw).
     if (play.screen && as.kind === 'passBlock' && a.p.pos === 'OL' && s.t - s.snapT >= play.screen.release) {
       const to = s.agents[s.icons[0]!]!;
-      if (s.phase === 'air' || s.ball.mode === 'held') runBlock(s, a, to.pos, true, s.phase !== 'air');
+      if (!a.mem.screenRel) {
+        a.mem.screenRel = true;
+        const k = s.blocks.findIndex((q) => q.b === i && q.kind === 'pass');
+        if (k >= 0) {
+          const d = s.agents[s.blocks[k]!.d]!;
+          s.blocks.splice(k, 1);
+          d.mem.shedAt = s.t;
+          d.mem.screenLetIn = true;
+          d.anim = 'rush';
+          a.anim = 'run';
+          a.busy = Math.max(a.busy, SCREEN_PUNCH);
+        }
+      }
+      if (s.phase === 'air' || s.ball.mode === 'held') runBlock(s, a, to.pos, true, s.phase !== 'air', screenLetIn);
       continue;
     }
     switch (as.kind) {
@@ -1845,7 +1871,9 @@ function defenseRoles(s: PlayState): void {
     const as = call[d.slot as keyof typeof call];
     switch (as.kind) {
       case 'rush':
-        if (s.phase === 'air') pursueTackle(s, d, s.agents[Math.max(0, s.ball.target)]!);
+        // A rusher has his eyes on the QB: he turns to the ball once he's read the throw (his reaction), not as it leaves the hand
+        // (a screen is built on that beat: the rush runs on past the back it's thrown to).
+        if (s.phase === 'air' && (s.ball.target < 0 || s.t - s.ball.releaseT >= reaction(s, d))) pursueTackle(s, d, s.agents[Math.max(0, s.ball.target)]!);
         else rush(s, d);
         break;
       case 'man':

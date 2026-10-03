@@ -97,8 +97,10 @@ export const ROUTES: Record<RouteName, RoutePoint[]> = {
   qin: [{ d: 5, o: 0 }, { d: 5, o: -9 }],
   // Leak: the tight end shows his block (ROUTE_DELAY), then slips across the formation to the far flat behind the flow.
   leak: [{ d: 1, o: -1.5 }, { d: 3.5, o: -8 }, { d: 5, o: -16 }],
-  // Angle (the back's "Texas" route): out of the backfield toward the flat, then a hard break back inside under the linebackers, settling in the hole.
-  angle: [{ d: 1, o: 2.5 }, { d: 2.5, o: 4 }, { d: 6, o: -2 }, { d: 7, o: -7, sit: true }],
+  // Angle (the back's "Texas" route): out of the backfield flat toward the flat like a swing, then a hard break back inside and up
+  // under the linebackers, settling in the hole between the hooks ~4–5 yd past the line from a gun set (a man on him and he
+  // runs on across, away from him: ai.ts angleRead). It settled at 2 yd, caught 51% for 2.9 yd (tools/sim/outcomes.ts --routes).
+  angle: [{ d: 1, o: 2.5 }, { d: 2.5, o: 4.5 }, { d: 7.5, o: -0.5 }, { d: 9.5, o: -5, sit: true }],
   // Option: a stem to six yards, then a break away from the nearest defender's leverage (in, out, or sit down in a zone's
   // window: ai.ts optionBreak). Drawn breaking in, the way it's run against nobody; from the backfield the stem starts outside the tackle.
   option: [{ d: 2, o: 1.5 }, { d: 6, o: 1.5 }, { d: 6.5, o: -3, sit: true }],
