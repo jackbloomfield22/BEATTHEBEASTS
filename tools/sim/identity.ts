@@ -117,8 +117,8 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
   if (!e) throw new Error(`identity: ${name} (${pos}) not in the snapshot`);
   const r = with_(side, slot, simPlayer(e, 99));
   const out: Partial<Record<Metric, number>> = {};
-  const passPlays = PLAYS.filter((p) => !p.run && !p.hailMary);
-  const runPlays = PLAYS.filter((p) => p.run && p.run.scheme !== 'sneak');
+  const passPlays = PLAYS.filter((p) => !p.run && !p.hailMary && !p.unlock);
+  const runPlays = PLAYS.filter((p) => p.run && p.run.scheme !== 'sneak' && !p.unlock);
   const covers = ['cover1', 'cover2', 'cover3', 'cover4', 'cover2man'].map(defById);
   const mk = (play: (typeof PLAYS)[number], def: (typeof covers)[number], k: number, user: boolean) => createPlay({ seed: cellSeed(play, def, k), offense: r.offense, defense: r.defense, play, def, los: 35, toGo: 10, user });
 

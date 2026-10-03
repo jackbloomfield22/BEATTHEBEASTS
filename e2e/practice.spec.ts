@@ -131,7 +131,8 @@ test('an audible at the line: the offense re-sets in the run against the same lo
   });
   await expect(page.locator('.snap-call')).toContainText('Audible');
   await page.keyboard.press('KeyZ');
-  await expect(page.locator('.audible-item')).toHaveCount(4);
+  // Four checks, and Montana (a Field General) gets the fifth, a drop-back (src/game/audible.ts).
+  await expect(page.locator('.audible-item')).toHaveCount(5);
   await page.screenshot({ path: 'test-results/audible-picker.png' });
   await page.keyboard.press('Digit2'); // Run
   await expect(page.locator('.audible-picker')).toHaveCount(0);

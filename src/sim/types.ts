@@ -159,6 +159,8 @@ export interface SimEvent {
     | 'outOfBounds'
     | 'catchOutOfBounds'
     | 'hotRoute'
+    /** An H-back's chip on a rusher (ai.ts chip): [the H-back, the rusher]. */
+    | 'chip'
     | 'whistle';
   /** Agents involved (actor first). */
   who?: number[];

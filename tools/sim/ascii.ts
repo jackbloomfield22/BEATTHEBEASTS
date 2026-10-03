@@ -3,9 +3,13 @@
 import { readFileSync } from 'node:fs';
 import { createPlay, defById, NEUTRAL, playById, practiceRosters, stepPlay, type SnapshotLike } from '../../src/sim/index.ts';
 import { sidesFor } from '../../src/sim/outcomes.ts';
+import { findStint, simPlayer } from '../../src/sim/roster.ts';
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const r = practiceRosters(snap);
-const [play = 'trips-inside-zone', def = 'cover1', seed = '1000', every = '15'] = process.argv.slice(2);
+const [play = 'trips-inside-zone', def = 'cover1', seed = '1000', every = '15'] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+// --qb=Name: another quarterback in the practice roster (a Designed Runner's plays).
+const qbName = process.argv.find((a) => a.startsWith('--qb='))?.slice(5);
+if (qbName) r.team = { ...r.team, QB: simPlayer(findStint(snap, qbName, 'QB')!, 7) };
 const sd = sidesFor(r, playById(play), defById(def));
 const s = createPlay({ seed: Number(seed), offense: sd.offense, defense: sd.defense, play: playById(play), def: sd.def, los: 35, toGo: 10, user: false });
 const code = (slot: string, side: string) => {

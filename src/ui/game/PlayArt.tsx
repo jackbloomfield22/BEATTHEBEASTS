@@ -1,4 +1,4 @@
-import { blockRoles, ROUTES, type BlockRole, type OffPlay, type OffSlot } from '@/sim';
+import { blockRoles, PERSONNEL, ROUTES, type BlockRole, type OffPlay, type OffSlot } from '@/sim';
 import { padGlyph, promptCode } from '@/input/prompts';
 import { useBindings, usePromptDevice } from '../components/Glyph';
 
@@ -94,6 +94,11 @@ function blockPath(role: BlockRole, at: P, side: number, hole: number, screenY: 
 
 export function PlayArt({ play }: { play: OffPlay }) {
   const align = play.formation.align;
+  // Who fills a skill slot in this grouping (personnel.ts): the second tight end in 12 (the H-back too), the fullback in 21 and 22.
+  const posOf = (k: OffSlot): string => {
+    const who = (PERSONNEL[play.formation.personnel] as Partial<Record<OffSlot, string>>)[k];
+    return who ? (who.startsWith('WR') ? 'WR' : who.startsWith('TE') ? 'TE' : 'RB') : SLOT_POS[k];
+  };
   const roles = blockRoles(play);
   const run = play.run;
   const side = (run?.aim ?? play.pa?.aim ?? -1) >= 0 ? 1 : -1;
@@ -119,7 +124,7 @@ export function PlayArt({ play }: { play: OffPlay }) {
   });
 
   // The back's path on a run: to the mesh, through the aiming point, and upfield (counter: the jab first; draw: he waits).
-  const rbPath: P[] | null = run
+  const rbPath: P[] | null = run && play.assign.RB.kind === 'carry'
     ? (() => {
         const rb = { d: align.RB.dx, y: align.RB.dy };
         const mesh = { d: qb.dx + 0.3, y: qb.dy + run.aim * 0.25 };
@@ -127,6 +132,13 @@ export function PlayArt({ play }: { play: OffPlay }) {
         return [rb, ...jab, mesh, { d: 1, y: run.aim }, { d: 6, y: run.aim * (run.scheme === 'outsideZone' ? 1.3 : 1.05) }];
       })()
     : null;
+  // A Designed Runner's own runs: the QB draw up the middle after his show, the zone read's keep round the read end (dashed: his option).
+  const qbPath: P[] | null =
+    run?.scheme === 'qbDraw'
+      ? [{ d: qb.dx, y: qb.dy }, { d: qb.dx - 1, y: qb.dy }, { d: 1, y: run.aim }, { d: 6, y: run.aim }]
+      : run?.scheme === 'zoneRead'
+        ? [{ d: qb.dx, y: qb.dy }, { d: qb.dx + 0.5, y: -side * 2.5 }, { d: -0.5, y: -side * 6.6 }, { d: 5, y: -side * 7.2 }]
+        : null;
 
   return (
     <svg className="play-art" viewBox={`0 0 ${W} ${H}`} aria-label={`${play.name} play art`}>
@@ -142,11 +154,12 @@ export function PlayArt({ play }: { play: OffPlay }) {
       <line x1={0} x2={W} y1={sy(0)} y2={sy(0)} className="art-los" />
       {(Object.keys(roles) as OffSlot[]).map((k) => {
         const r = blockPath(roles[k]!, { d: align[k].dx, y: align[k].dy }, side, hole, screenY);
-        return r ? <Block key={`b-${k}`} pts={r.pts} color={POS_COLOR[SLOT_POS[k]]!} dashed={r.dashed} /> : null;
+        return r ? <Block key={`b-${k}`} pts={r.pts} color={POS_COLOR[posOf(k)]!} dashed={r.dashed} /> : null;
       })}
       {rbPath ? <path d={path(rbPath)} fill="none" stroke={POS_COLOR.RB} strokeWidth={2.6} strokeLinejoin="round" strokeDasharray={run?.scheme === 'draw' ? '6 3' : undefined} markerEnd="url(#arrow)" /> : null}
+      {qbPath ? <path d={path(qbPath)} fill="none" stroke={POS_COLOR.QB} strokeWidth={2.6} strokeLinejoin="round" strokeDasharray={run?.scheme === 'zoneRead' ? '6 3' : undefined} markerEnd="url(#arrow)" /> : null}
       {routes.map((r) => {
-        const color = POS_COLOR[SLOT_POS[r.slot]]!;
+        const color = POS_COLOR[posOf(r.slot)]!;
         const end = r.pts[r.pts.length - 1]!;
         return (
           <g key={r.slot}>
@@ -159,7 +172,7 @@ export function PlayArt({ play }: { play: OffPlay }) {
       {play.pa ? <path d={path([{ d: qb.dx, y: qb.dy }, { d: -3.2, y: play.pa.aim * 0.3 }, { d: -play.drop.depth, y: 0 }])} fill="none" stroke={POS_COLOR.QB} strokeWidth={1.8} strokeDasharray="3 3" /> : null}
       {(Object.keys(align) as OffSlot[]).map((k) => {
         const a = align[k];
-        const pos = SLOT_POS[k];
+        const pos = posOf(k);
         const color = POS_COLOR[pos]!;
         const as = play.assign[k];
         const x = sx(a.dy);

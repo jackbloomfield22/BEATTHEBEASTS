@@ -3,6 +3,7 @@
 
 import { deriveStream } from '@/engine/rng';
 import { effects } from './effects';
+import { personalize } from './usage';
 import type { RushMove } from './blocks';
 import { type Streams, streams } from './rand';
 import { defById, DEF_SLOTS, mirrorPlay, OFF_SLOTS, type DefCall, type OffPlay, type RouteName, type ZoneName, ZONES } from './plays';
@@ -290,8 +291,11 @@ function defensiveAlignment(s: PlaySetup, offPos: Record<OffSlot, V2>, bracketY:
 }
 
 export function createPlay(setup: PlaySetup): PlayState {
-  // A flipped call runs the mirror image (the setup the play keeps is the one it runs).
-  const s: PlaySetup = setup.flip ? { ...setup, play: mirrorPlay(setup.play), flip: false } : setup;
+  // The play as these eleven run it (usage.ts: a Volume TE first in the
+  // progression, a Receiving Back's routes), and a flipped call runs the
+  // mirror image (the setup the play keeps is the one it runs).
+  const own = personalize(setup.play, setup.offense);
+  const s: PlaySetup = setup.flip ? { ...setup, play: mirrorPlay(own), flip: false } : own === setup.play ? setup : { ...setup, play: own };
   const by = s.ballY ?? 0;
   const agents: Agent[] = [];
   const slot: Record<string, number> = {};

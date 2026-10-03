@@ -11,7 +11,8 @@ import { replay, snapFlag, useReplay } from '@/game/replaySession';
 import { downLabel, spotLabel } from '@/game/situation';
 import { aimFor, powerNeeded, PUNT_DEPTH } from '@/game/kick';
 import { KickControl, METER, METER_MAX, strikeWord, type Strike } from '@/game/kickMeter';
-import { PLAY_TYPE_LABEL, PLAYS, playById, suggestPlays, type DefSlot, type PlayType } from '@/sim';
+import { offenseFor, personalize, PLAY_TYPE_LABEL, PLAYS, playById, playUnlocked, runNote, suggestPlays, type DefSlot, type PlayType } from '@/sim';
+import { SHELL_LABEL, shellFor } from '@/game/presnap';
 import { Input } from '@/input/InputManager';
 import { contactFor, kickView } from '@/render/game/kickView';
 import { useMenuNav } from '../nav';
@@ -437,14 +438,18 @@ function GamePlayCall() {
   const sugg = useMemo(() => {
     const team = practice.teams?.team;
     const opts = { twoMinute: rush, clockRunning: m.lastWhistle === 'runs' };
-    const ids = team ? suggestPlays({ down: sit.down, toGo: sit.toGo, los: sit.los, secondsLeft: m.clock.live ? halfSecs(m) : undefined, scoreDiff: m.score.user - m.score.beasts }, team) : [];
+    const ids = team ? suggestPlays({ down: sit.down, toGo: sit.toGo, los: sit.los, secondsLeft: m.clock.live ? halfSecs(m) : undefined, scoreDiff: m.score.user - m.score.beasts }, team, undefined, practice.teams?.beasts) : [];
     return ids.map((id) => playById(id)).map((play) => ({ play, why: reasonFor(sit, opts, play) }));
     // The clock's seconds only matter to the suggestions in the hurry-up; re-reading every tick would reshuffle the list under the cursor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sit, m.clock.live, m.lastWhistle, m.score.user, m.score.beasts, m.clock.quarter, rush]);
   const [group, setGroup] = useState(0);
   const g = GROUPS[group]!;
-  const plays = g === 'suggested' ? sugg.map((s) => s.play) : PLAYS.filter((p) => p.type === g && (p.situ !== 'short' || sit.toGo <= 1) && (!p.hailMary || (m.clock.live && halfSecs(m) <= 10)));
+  // (A play a trait unlocks is listed only when the roster has him: a Designed Runner's QB runs, an H-back's set.)
+  const plays = g === 'suggested' ? sugg.map((s) => s.play) : PLAYS.filter((p) => p.type === g && (p.situ !== 'short' || sit.toGo <= 1) && (!p.hailMary || (m.clock.live && halfSecs(m) <= 10)) && playUnlocked(p, practice.teams?.team));
+  // A Field General sees the Beasts' shell before he calls it (presnap.ts). Their call is made once a snap (game.ts defCall): a new situation is a new call.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const shell = useMemo(() => shellFor(game.qb, game.nextCall()), [sit]);
   const [focus, setFocus] = useState(0);
   const cur = plays[Math.min(focus, plays.length - 1)]!;
   const why = g === 'suggested' ? sugg[Math.min(focus, sugg.length - 1)]?.why : null;
@@ -491,6 +496,7 @@ function GamePlayCall() {
             {clockLabel(m)}
             {live ? ` · ${m.clock.timeouts} ${m.clock.timeouts === 1 ? 'timeout' : 'timeouts'}` : ''}
           </span>
+          {shell ? <span className="call-spot call-shell">{SHELL_LABEL[shell]}</span> : null}
         </div>
       </header>
       <div className="call-body">
@@ -511,8 +517,8 @@ function GamePlayCall() {
         <aside className="call-art" key={cur.id}>
           <div className="detail-kicker">{cur.formation.name}</div>
           <h2 className="detail-title">{cur.name}</h2>
-          <PlayArt play={cur} />
-          <p className="call-note">{why ?? (cur.run ? 'A designed run: the back takes the handoff; you run it from there.' : readsNote(pad))}</p>
+          <PlayArt play={practice.teams ? personalize(cur, offenseFor(cur, practice.teams.team)) : cur} />
+          <p className="call-note">{why ?? (cur.run ? runNote(cur) : readsNote(pad))}</p>
         </aside>
       </div>
       {note ? <div className="clock-note">{note}</div> : null}

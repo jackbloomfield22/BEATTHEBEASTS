@@ -8,7 +8,7 @@ import { promptCode } from "@/input/prompts";
 import { practice, usePractice } from "@/game/practice";
 import { replay, snapFlag, useReplay } from "@/game/replaySession";
 import { Input } from "@/input/InputManager";
-import { AUDIBLES } from "@/game/audible";
+import { audiblesFor } from "@/game/audible";
 import { latency } from "@/game/latency";
 import {
   downLabel,
@@ -22,9 +22,13 @@ import {
   HOT_COLS,
   HOT_ROUTES,
   PLAY_TYPE_LABEL,
+  offenseFor,
+  personalize,
   playById,
   PLAYS,
+  playUnlocked,
   ROUTE_LABEL,
+  runNote,
   type PlayType,
 } from "@/sim";
 import { routeOf } from "@/sim/ai";
@@ -38,7 +42,7 @@ import {
 } from "../components/controls";
 import { InputGlyph, TabKey, useBindings } from "../components/Glyph";
 import { PlayArt, RouteGlyph } from "../game/PlayArt";
-import { hudDom, RING_LEN } from "../game/hudDom";
+import { BLITZ_TAGS, hudDom, RING_LEN } from "../game/hudDom";
 import { ReplayCue, ReplayHud, useReplayKey } from "../game/ReplayHud";
 import "../styles/game.css";
 
@@ -111,7 +115,8 @@ function PlayCall() {
   const back = useApp((s) => s.back);
   const current = playById(ui.playId);
   const [group, setGroup] = useState(Math.max(0, GROUPS.indexOf(current.type)));
-  const plays = PLAYS.filter((p) => p.type === GROUPS[group]);
+  // (A play a trait unlocks is listed only when the roster has him: a Designed Runner's QB runs, an H-back's set.)
+  const plays = PLAYS.filter((p) => p.type === GROUPS[group] && playUnlocked(p, practice.teams?.team));
   const n = plays.length;
   const [focus, setFocus] = useState(
     Math.max(
@@ -129,7 +134,7 @@ function PlayCall() {
     Audio.uiTick();
     const g = (group + d + GROUPS.length) % GROUPS.length;
     setGroup(g);
-    const first = PLAYS.find((p) => p.type === GROUPS[g]);
+    const first = PLAYS.find((p) => p.type === GROUPS[g] && playUnlocked(p, practice.teams?.team));
     setFocus(0);
     if (first) setArtPlay(first.id);
   };
@@ -265,9 +270,9 @@ function PlayCall() {
         <aside className="call-art" key={play.id}>
           <div className="detail-kicker">{play.formation.name}</div>
           <h2 className="detail-title">{play.name}</h2>
-          <PlayArt play={play} />
+          <PlayArt play={practice.teams ? personalize(play, offenseFor(play, practice.teams.team)) : play} />
           <p className="call-note">
-            {play.run ? "A designed run: the back takes the handoff; you run it from there." : readsNote(padCall)}
+            {play.run ? runNote(play) : readsNote(padCall)}
           </p>
         </aside>
       </div>
@@ -436,6 +441,12 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
             {screenTarget === a.i ? <span className="rec-screen">Screen</span> : null}
           </div>
         ))}
+        {/* A Pre-Snap Wizard sees the blitz coming: a tag over each Beast who'll rush from off the line (GameScene places them). */}
+        {Array.from({ length: BLITZ_TAGS }, (_, k) => (
+          <div key={`blitz${k}`} className="blitz-tag" ref={(el) => void (hudDom.blitz[k] = el)}>
+            <span>Blitz</span>
+          </div>
+        ))}
         <div className="aim-reticle" ref={(el) => void (hudDom.reticle = el)} />
         {/* Under the ball carrier, the whole time he has it: his stamina and his three move options. */}
         <div
@@ -567,10 +578,12 @@ function Tutorial() {
  * number, or up/down and confirm; on a gamepad the D-pad and A). The route
  * art on the field previews the focused route.
  */
-/** Audibles at the line (Playtest 2): four checks, each naming the play it goes to, greyed when this personnel has none. */
+/** Audibles at the line (Playtest 2): four checks (a Field General's fifth), each naming the play it goes to, greyed when this personnel has none. */
 function AudiblePicker() {
   const key = useKey();
   usePractice((s) => s.playId);
+  const st = practice.runner?.state;
+  const AUDIBLES = audiblesFor(st ? st.agents[st.qb]!.p : null);
   return (
     <div className="hot-picker audible-picker">
       <div className="hot-head">Audible</div>

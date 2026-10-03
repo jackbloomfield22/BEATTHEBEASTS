@@ -19,6 +19,7 @@ import { latency } from '@/game/latency';
 import { view } from '@/game/view';
 import { fieldX, fieldY, worldX, worldY, worldZ, yawOf } from '@/game/coords';
 import { PUNT_DEPTH } from '@/game/kick';
+import { blitzersShown } from '@/game/presnap';
 import { LOFT_CHARGE, DEF_SLOTS, HOT_ROUTES, OFF_SLOTS, TAP_MAX, TICK, type PlayState, type SimPlayer } from '@/sim';
 import { openness } from '@/sim/ai';
 import { previewThrow } from '@/sim/passing';
@@ -692,6 +693,21 @@ export function GameScene() {
         ring.style.opacity = held ? '1' : '0';
         if (held) latency.respond('throwHold');
       }
+    }
+    // A Pre-Snap Wizard's blitz tags: over each Beast who'll blitz, at the line only.
+    const blitz = cur.phase === 'presnap' && bodies ? blitzersShown(s) : [];
+    for (let k = 0; k < hudDom.blitz.length; k++) {
+      const el = hudDom.blitz[k];
+      if (!el) continue;
+      const idx = blitz[k];
+      if (idx === undefined || !bodies) {
+        if (el.style.visibility !== 'hidden') el.style.visibility = 'hidden';
+        continue;
+      }
+      const root = bodies[idx]!.player.root;
+      _p.set(root.position.x, 2.35 * bodies[idx]!.player.shape.scale, root.position.z).project(camera);
+      el.style.visibility = _p.z > 1 ? 'hidden' : 'visible';
+      el.style.transform = `translate(${(rect.left + ((_p.x + 1) / 2) * rect.width).toFixed(1)}px, ${(rect.top + ((1 - _p.y) / 2) * rect.height).toFixed(1)}px)`;
     }
     // Where the held throw would land (the error cone's size), on the turf.
     const land = marks.land;

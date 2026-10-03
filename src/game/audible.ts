@@ -6,9 +6,9 @@
 // the situation picks between candidates. A call the personnel has no play
 // for is offered greyed out with the reason.
 
-import { PLAYS, suggestPlays, type ContendersRoster, type OffPlay, type OffSituation } from '@/sim';
+import { holds, PLAYS, playUnlocked, suggestPlays, type ContendersRoster, type OffPlay, type OffSituation, type SimPlayer } from '@/sim';
 
-export type AudibleKind = 'quick' | 'run' | 'paShot' | 'screen';
+export type AudibleKind = 'quick' | 'run' | 'paShot' | 'screen' | 'dropback';
 
 /** The picker's order (keys 1–4; on a pad A, B, X, Y). */
 export const AUDIBLES: { kind: AudibleKind; label: string }[] = [
@@ -18,17 +18,26 @@ export const AUDIBLES: { kind: AudibleKind; label: string }[] = [
   { kind: 'screen', label: 'Screen' },
 ];
 
+/** A Field General's fifth slot (the trait catalog's line): a drop-back concept (key 5; on a pad RB). */
+const FIFTH: { kind: AudibleKind; label: string } = { kind: 'dropback', label: 'Drop-back' };
+
+/** The audibles this quarterback has at the line: four, five for a Field General. */
+export function audiblesFor(qb: SimPlayer | null | undefined): { kind: AudibleKind; label: string }[] {
+  return holds(qb ?? undefined, 'field-general') ? [...AUDIBLES, FIFTH] : AUDIBLES;
+}
+
 const fits = (p: OffPlay, kind: AudibleKind): boolean => {
   if (p.situ || p.hailMary) return false;
   if (kind === 'quick') return p.type === 'quick';
   if (kind === 'run') return p.type === 'run';
   if (kind === 'screen') return p.type === 'screen';
+  if (kind === 'dropback') return p.type === 'dropback';
   return p.type === 'playAction';
 };
 
 /** The play an audible of `kind` checks to from `current`, or null when this personnel has none. */
 export function audiblePlay(current: OffPlay, kind: AudibleKind, sit: OffSituation, team: ContendersRoster | null): OffPlay | null {
-  const pool = PLAYS.filter((p) => p.id !== current.id && fits(p, kind) && p.formation.personnel === current.formation.personnel);
+  const pool = PLAYS.filter((p) => p.id !== current.id && fits(p, kind) && p.formation.personnel === current.formation.personnel && playUnlocked(p, team));
   if (!pool.length) return null;
   const rank = team ? suggestPlays(sit, team, PLAYS.length) : [];
   const at = (p: OffPlay) => {
