@@ -65,7 +65,7 @@ export function leadRun(r: Agent, T: number): { pos: V2; vel: V2; offScript: num
   // really swings a yard wide of, so the second-pass slant dumps had the
   // driven ball arriving ~1.1 yd off him, mostly across his run, and a
   // third of them where nobody could reach (tools/sim/slantdump.ts).
-  const g: Agent = { ...r, pos: { x: r.pos.x, y: r.pos.y }, vel: { x: r.vel.x, y: r.vel.y }, route: { pts: rt.pts, sit: rt.sit, idx: rt.idx }, mem: { room: r.mem.room ?? null } };
+  const g: Agent = { ...r, pos: { x: r.pos.x, y: r.pos.y }, vel: { x: r.vel.x, y: r.vel.y }, route: { pts: rt.pts, sit: rt.sit, idx: rt.idx }, mem: { room: r.mem.room ?? null, window: r.mem.window ?? null } };
   const n = Math.min(LEAD_TICKS, Math.floor(T / TICK));
   // When he runs past the route's last point (s from now; 0 if he's past it already, T if he never is).
   let ends = rt.idx >= rt.pts.length ? 0 : T;

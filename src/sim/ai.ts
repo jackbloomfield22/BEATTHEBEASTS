@@ -524,6 +524,12 @@ export function runRoute(s: PlayState, a: Agent): void {
   }
   optionRead(s, a, name);
   angleRead(s, a, name);
+  // A late slant against zone works the window (routeWant, WINDOW_PACE). Once
+  // he's in it he stays in it (the throw is led to what he's doing).
+  if (!a.mem.window && name === 'slant' && rt.idx >= rt.pts.length - 1 && !manOn(s, a)) {
+    const late = offScheduleT(s);
+    if (late >= 0 && s.t >= late) a.mem.window = true;
+  }
   if (stepRoute(a)) return;
   // Settled on a sit route: face the QB and work to the open window. He
   // slides a step or two across, away from the nearest defender, never more
@@ -625,6 +631,8 @@ export function routeWant(a: Agent): V2 | null {
       const cap = Math.sqrt(vb * vb + 2 * a.fx.cutAccel * 0.8 * dist(a.pos, q));
       pace = Math.min(pace, cap / a.fx.vmax);
     }
+    // (Working the window on his last leg: throttled down.)
+    if (a.mem.window && rt.idx === rt.pts.length - 1) pace *= WINDOW_PACE;
     return sit ? arrive(a, q, 1, 1) : arrive(a, q, pace);
   }
   if (rt.sit[rt.pts.length - 1]) return null;
@@ -633,8 +641,32 @@ export function routeWant(a: Agent): V2 | null {
   const p0 = n > 1 ? rt.pts[n - 2]! : a.pos;
   const p1 = rt.pts[n - 1]!;
   const dir = continueDir(a.pos, p0, p1);
+  // Working the window (runRoute): throttled down, across at his depth.
+  if (a.mem.window) {
+    const w = FIELD_HALF_W - Math.abs(a.pos.y) > WINDOW_ROOM ? norm({ x: dir.x * WINDOW_CLIMB, y: dir.y }) : dir;
+    return { x: w.x * a.fx.vmax * WINDOW_PACE, y: w.y * a.fx.vmax * WINDOW_PACE };
+  }
   return { x: dir.x * a.fx.vmax, y: dir.y * a.fx.vmax };
 }
+
+/**
+ * A slant the ball hasn't come to on time, against zone (no man on him) and
+ * with the QB off schedule (offScheduleT): from his last leg he throttles
+ * down and works on across the window under the second level, at his depth,
+ * at this share of his top speed, instead of running on flat out across the
+ * field and up the far sideline, where a late ball was a 30–40 yd throw at a
+ * man at full speed: a third of them landed where nobody could get them
+ * (tools/sim/slants.ts --how). Sat down in the window instead (an earlier
+ * try), the hook defender plastering him was on top of him and a late ball
+ * was picked 12–14% of the time; still moving, the ball is led on ahead of
+ * the man on his hip. The called late slant against zone 34% → ~45%, picked
+ * ~5% (0.55 took it to ~50% and 8% picked, 0.8 to ~44% and 5%). Ours.
+ */
+const WINDOW_PACE = 0.75;
+/** ...keeping this share of the leg's climb (he stays under the second level, ~10 yd deep). Ours. */
+const WINDOW_CLIMB = 0.15;
+/** ...until he's this close to the far sideline (yd): then the route's turn up it (continueDir), at the same pace. Ours. */
+const WINDOW_ROOM = 6;
 
 /** Run one tick of his route (routeWant, steered inside the boundary); false once he's settled on a sit route. */
 export function stepRoute(a: Agent): boolean {
