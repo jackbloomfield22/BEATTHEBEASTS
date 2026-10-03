@@ -7,7 +7,9 @@
 // fails when a difference it should show is small or goes the wrong way.
 //   node tools/run-ts.mjs tools/sim/identity.ts [reps] [--only=Tyreek]
 // Runs every milestone; tests/identity.test.ts holds the fastest pairs to it.
+import { fork } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 import { createPlay, defById, input, NEUTRAL, PLAYS, practiceRosters, runToWhistle, stepPlay, type SnapshotLike } from '../../src/sim/index.ts';
 import { findStint, simPlayer } from '../../src/sim/roster.ts';
 import { cellSeed } from '../../src/sim/outcomes.ts';
@@ -276,18 +278,67 @@ export function runPair(p: Pair): PairResult {
   return { pair: p, a, b, checks };
 }
 
-if (process.argv[1]?.endsWith('identity.ts')) {
-  let pass = 0;
-  const fmt = (m: Metric, v: number | undefined) => (v === undefined || Number.isNaN(v) ? '—' : `${v.toFixed(LABEL[m][1] === '%' || LABEL[m][1] === 'mph' ? 1 : 2)}${LABEL[m][1] === '%' ? '%' : LABEL[m][1] ? ' ' + LABEL[m][1] : ''}`);
-  for (const p of PAIRS.filter((x) => !ONLY || x.a[0].includes(ONLY) || x.b[0].includes(ONLY))) {
-    const r = runPair(p);
-    const ok = r.checks.every((c) => c.ok);
-    pass += ok ? 1 : 0;
-    console.log(`\n${ok ? 'PASS' : 'FAIL'}  ${p.a[0]} vs ${p.b[0]} (${p.slot}): ${p.why}`);
-    for (const m of Object.keys({ ...r.a, ...r.b }) as Metric[]) {
-      const c = r.checks.find((x) => x.m === m);
-      console.log(`   ${LABEL[m][0].padEnd(32)} ${fmt(m, r.a[m]).padStart(10)}  ${fmt(m, r.b[m]).padStart(10)}${c ? `   ${c.ok ? 'ok' : 'FAILS'} (needs ${p.expect[m]! > 0 ? '+' : '−'}${LABEL[m][2]})` : ''}`);
-    }
+type Numbers = Pick<PairResult, 'a' | 'b' | 'checks'>;
+
+/** One pair's result as the harness reports it; true if it passes. */
+function report(p: Pair, r: Numbers): boolean {
+  // (A metric with no sample is NaN, or null once it's crossed from a worker.)
+  const fmt = (m: Metric, v: number | null | undefined) => (v === undefined || v === null || Number.isNaN(v) ? '—' : `${v.toFixed(LABEL[m][1] === '%' || LABEL[m][1] === 'mph' ? 1 : 2)}${LABEL[m][1] === '%' ? '%' : LABEL[m][1] ? ' ' + LABEL[m][1] : ''}`);
+  const ok = r.checks.every((c) => c.ok);
+  console.log(`\n${ok ? 'PASS' : 'FAIL'}  ${p.a[0]} vs ${p.b[0]} (${p.slot}): ${p.why}`);
+  for (const m of Object.keys({ ...r.a, ...r.b }) as Metric[]) {
+    const c = r.checks.find((x) => x.m === m);
+    console.log(`   ${LABEL[m][0].padEnd(32)} ${fmt(m, r.a[m]).padStart(10)}  ${fmt(m, r.b[m]).padStart(10)}${c ? `   ${c.ok ? 'ok' : 'FAILS'} (needs ${p.expect[m]! > 0 ? '+' : '−'}${LABEL[m][2]})` : ''}`);
   }
-  console.log(`\n${pass} of ${ONLY ? 'the selected' : PAIRS.length} pairs pass`);
+  return ok;
+}
+
+/** The pairs on `jobs` child processes (this bundle again, as a worker), the long ones first; the numbers by pair index. */
+async function runParallel(bundle: string, picked: number[], jobs: number): Promise<Map<number, Numbers>> {
+  const results = new Map<number, Numbers>();
+  const long = (j: number) => (PAIRS[j]!.slot === 'X' || PAIRS[j]!.slot === 'TE' ? 1 : 0);
+  const queue = [...picked].sort((x, y) => long(y) - long(x));
+  await Promise.all(
+    Array.from(
+      { length: jobs },
+      () =>
+        new Promise<void>((done, fail) => {
+          const child = fork(bundle, process.argv.slice(2), { env: { ...process.env, IDENTITY_WORKER: '1' } });
+          const next = () => {
+            const j = queue.shift();
+            if (j === undefined) child.disconnect();
+            else child.send(j);
+          };
+          child.on('message', (m: { j: number } & Numbers) => {
+            results.set(m.j, m);
+            next();
+          });
+          child.on('exit', (code) => (code ? fail(new Error(`identity: a worker exited with ${code}`)) : done()));
+          next();
+        }),
+    ),
+  );
+  return results;
+}
+
+// The command line. The pairs are independent and the sim is pure and
+// seeded, so they run on child processes, each pair to whichever is free,
+// with the same numbers one process gets running them in order (--jobs=1
+// does that). A child is this bundle again (tools/run-ts.mjs names it in
+// RUN_TS_OUTFILE) with IDENTITY_WORKER set: it runs the pairs it's sent.
+if (process.env.IDENTITY_WORKER) {
+  process.on('message', (j: number) => {
+    const r = runPair(PAIRS[j]!);
+    process.send!({ j, a: r.a, b: r.b, checks: r.checks });
+  });
+} else if (process.argv[1]?.endsWith('identity.ts')) {
+  void (async () => {
+    const picked = PAIRS.flatMap((p, j) => (!ONLY || p.a[0].includes(ONLY) || p.b[0].includes(ONLY) ? [j] : []));
+    const bundle = process.env.RUN_TS_OUTFILE;
+    const jobs = Math.min(picked.length, Math.max(1, Number(process.argv.find((a) => a.startsWith('--jobs='))?.slice(7) ?? availableParallelism())));
+    const results = bundle && jobs > 1 ? await runParallel(bundle, picked, jobs) : new Map(picked.map((j) => [j, runPair(PAIRS[j]!)]));
+    let pass = 0;
+    for (const j of picked) pass += report(PAIRS[j]!, results.get(j)!) ? 1 : 0;
+    console.log(`\n${pass} of ${ONLY ? 'the selected' : PAIRS.length} pairs pass`);
+  })();
 }
