@@ -158,6 +158,7 @@ export class CelebrateScene {
       }
       m.tyaw = yawTo(m.tx, m.tz, sx, sz);
     });
+    if (ui.phase === 'done' && this.doneAt < 0) this.cut();
     for (const a of this.actors.values()) this.step(a, dt);
     if (this.scorer) this.direct(dt);
     // The camera's subject.
@@ -329,7 +330,7 @@ export class CelebrateScene {
         m.tyaw = ang + Math.PI;
         sc.tyaw = ang;
         this.setMode(m, 'run');
-      } else if (!m && (sc.since >= 2.5 || this.mates.length === 0)) this.end();
+      } else if (sc.since >= 2.5 || this.mates.length === 0) this.end();
       return;
     }
     const f = this.fiver;
@@ -341,6 +342,21 @@ export class CelebrateScene {
       return;
     }
     if (sc.since > 3) this.end();
+  }
+
+  /** Skipped: everyone stands where he is (the card comes straight up over them). */
+  private cut(): void {
+    this.doneAt = this.t;
+    for (const a of this.actors.values()) {
+      const anim = a.b.animator;
+      anim.reset();
+      anim.setStance('stance_idle');
+      if (a === this.scorer && this.ball.mode === 'hand_r') anim.setHold('ovl_carry_r');
+      anim.update(10, { speed: 0 });
+      a.speed = 0;
+      a.clip = '';
+      this.setMode(a, 'idle');
+    }
   }
 
   private end(): void {
@@ -472,3 +488,5 @@ export class CelebrateScene {
 }
 
 export const celebrate = new CelebrateScene();
+
+if (import.meta.env.DEV) Object.assign(globalThis, { __btbCelebScene: celebrate });
