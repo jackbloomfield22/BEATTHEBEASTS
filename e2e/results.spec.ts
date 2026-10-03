@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { trackErrors, waitReady } from './helpers';
+import { noAutoReplay, trackErrors, waitReady } from './helpers';
 
 // Every game ends on its results (the bug: a Classic game could end with no
 // results screen and no way back to it). A full Classic game from the real
@@ -118,6 +118,7 @@ test('Classic: the real draft, a full game, the results and box score, the Locke
   const t0 = Date.now();
   await page.goto('/?screen=main&nointro&quality=low&autokick');
   await waitReady(page);
+  await noAutoReplay(page);
   // Play (Classic) from the main menu, Auto-Draft in the locker room, walk out.
   await expect(page.locator('.menu-item.is-focused')).toContainText('New Draft');
   await expect(page.locator('.menu-item.is-focused')).toContainText('Classic');
@@ -182,6 +183,7 @@ test('every other ending reaches the results: overtime, the two-minute drill run
   const errors = trackErrors(page);
   await page.goto('/?screen=main&nointro&quality=low&autokick');
   await waitReady(page);
+  await noAutoReplay(page);
   await ev(page, (w) => w.__btbSettings.getState().set((d) => void (d.gameplay.gameLength = 4)));
   // The Classic draft (Auto-Draft), saved as the Locker Room's roster.
   await page.keyboard.press('Enter');
