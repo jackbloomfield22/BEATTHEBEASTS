@@ -1295,12 +1295,17 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   // a linebacker in man came downhill after the back's flare, ran past his
   // depth and was 5 yd behind him up the sideline when the ball came out:
   // the wheel was caught 70% of the time for 17.8 yd a throw against 2-man.)
-  // A screen is the exception: once the line releases to lead it he's read
-  // it, and comes downhill for the back. (A receiver on the line is within
-  // ~1.3 yd of it: BACKFIELD.)
+  // Once the back is up near the line (a checkdown settling a yard or two
+  // behind it, the slip screen's catch) he's played man-up as before: that's
+  // the outlet, and the man on him sits on it. A screen is the exception
+  // too: once the line releases to lead it he's read it, and comes downhill
+  // for the back. (A back is a man aligned BACKFIELD or more off the ball:
+  // the formations' ends, flankers and bunch align 0.6–1.8 yd off it, the
+  // backs and H-backs 4–7; a bubble's step back doesn't make a receiver one.)
   let vel = v.vel;
   const screen = !!s.setup.play.screen && s.t - s.snapT >= s.setup.play.screen.release;
-  if (!screen && v.pos.x < s.setup.los - BACKFIELD && aim.x < s.setup.los) {
+  const deep = s.setup.play.formation.align[r.slot as OffSlot].dx < -BACKFIELD && v.pos.x < s.setup.los - DEEP_BACK;
+  if (!screen && deep && aim.x < s.setup.los) {
     aim = v2(s.setup.los, aim.y);
     vel = { x: Math.max(0, vel.x), y: vel.y };
   }
@@ -1328,8 +1333,10 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   d.anim = r.pos.x < d.pos.x - 1 && len(d.vel) < 5 ? 'backpedal' : 'run';
 }
 
-/** In the backfield: this far (yd) behind the line or more (the formations' ends and flankers align 0.6–1.3 yd off it). */
-const BACKFIELD = 2;
+/** Aligned in the backfield: this far (yd) off the ball or more. */
+const BACKFIELD = 2.5;
+/** Still deep in it: this far (yd) behind the line or more (a checkdown settles ~1.5 behind it, ROUTES.checkdown from a 5-yd set). */
+const DEEP_BACK = 2;
 
 /**
  * Trail technique (man under two deep halves, 2-man): no step over the top,
