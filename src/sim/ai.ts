@@ -1820,6 +1820,22 @@ const ALLEY_LOOK = 0.4;
  * the corner had ten yards of grass (the bubble against Cover 2 12 yd a
  * throw once the stalks went to the right men, tools/sim/screens.ts).
  */
+/**
+ * A safety in quarters: a half zone with the corner on his side playing deep
+ * outside him (Cover 4's two-deep look with four deep). He's a run-support
+ * player who reads #2 (the Saban/Belichick quarters rule): #2 going to the
+ * flat or behind the line puts him in the alley. A Cover 2 or Tampa 2 half
+ * safety, with a squat corner under him, stays deep. He reads it from his
+ * depth (13 yd), this much further off than the men underneath (yd). Ours.
+ */
+const QUARTERS_SEE = 6;
+function quartersSafety(s: PlayState, d: Agent): boolean {
+  const a = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
+  if (a.kind !== 'zone' || (a.zone !== 'halfL' && a.zone !== 'halfR')) return false;
+  const cb = s.setup.def.assign[a.zone === 'halfL' ? 'LCB' : 'RCB'];
+  return cb.kind === 'zone' && ZONES[cb.zone].deep;
+}
+
 /** The run-support depth a deep corner comes up to on his #1's stalk (yd past the line): a flat-footed 5, where the force is played from. Ours. */
 const SUPPORT_D = 5;
 
@@ -1856,7 +1872,9 @@ function stalkRead(s: PlayState, d: Agent, mine: number): boolean {
 function bubbleRead(s: PlayState, d: Agent, role: ZoneRole): boolean {
   if (s.phase === 'carrier') return false;
   const corner = d.slot === 'LCB' || d.slot === 'RCB';
-  if (role === 'tampa' || (role === 'deep' && !corner)) return false;
+  // A quarters safety (a half with the corner outside him deep too) reads #2: #2 to the flat or behind the line is his alley.
+  const quarters = role === 'deep' && !corner && quartersSafety(s, d);
+  if (role === 'tampa' || (role === 'deep' && !corner && !quarters)) return false;
   const los = s.setup.los;
   const by = s.setup.ballY ?? 0;
   // (A hook defender over the ball reads it to either side.)
@@ -1869,7 +1887,7 @@ function bubbleRead(s: PlayState, d: Agent, role: ZoneRole): boolean {
       const a = s.agents[i]!;
       if (!a.route || a.down || a.slot === 'RB' || Math.abs(s.setup.play.formation.align[a.slot as OffSlot].dy) < 5) continue;
       const side = Math.sign(a.pos.y - by) || 1;
-      if ((mine !== 0 && side !== mine) || a.pos.x > los + BUBBLE_DEPTH || a.vel.x > 1 || a.vel.y * side < BUBBLE_OUT || dist(a.pos, d.pos) > BUBBLE_SEE) continue;
+      if ((mine !== 0 && side !== mine) || a.pos.x > los + BUBBLE_DEPTH || a.vel.x > 1 || a.vel.y * side < BUBBLE_OUT || dist(a.pos, d.pos) > BUBBLE_SEE + (quarters ? QUARTERS_SEE : 0)) continue;
       r = i;
     }
     // A deep corner with a man going vertical on his side keeps his third.
