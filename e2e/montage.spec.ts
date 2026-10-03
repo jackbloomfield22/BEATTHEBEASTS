@@ -1,14 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
-import { noAutoReplay, trackErrors, waitReady } from './helpers';
+import { noAutoReplay, trackErrors } from './helpers';
 
-// M7, Playtest 1 #4: the Beasts' possession as a broadcast montage. A Quick
-// Play game is kicked off; the Beasts' first drive stages its key play and
+// M7, Playtest 1 #4: the Beasts' possession as a broadcast montage. A game
+// is kicked off; the Beasts' first drive stages its key play and
 // plays it in the stadium (the establishing shot, then the play), and Enter
 // skips it at once: the drive is scored and your drive comes up. With the
 // setting on "Meanwhile card", the card shows instead.
 
 type W = {
-  __btbDraft: { getState(): { begin(mode: string, o?: { seed?: number }): Promise<void> } };
+  __btbDraft: { getState(): { phase: string; finishWalkout(go: (s: string) => void): void } };
   __btbApp: { getState(): { screen: string; go(s: string): void } };
   __btbGameUi: { getState(): { stage: string; match: { beastsDrives: unknown[]; score: { beasts: number } } | null; meanwhile: { points: number } | null } };
   __btbMontage: { busy: boolean; active: boolean; player: { tick: number; snapTick: number } | null; staged: { kind: string; label: string } | null };
@@ -28,14 +28,14 @@ const read = (page: Page) =>
 test('the Beasts drive montage plays in the stadium and Enter skips it', async ({ page }) => {
   test.setTimeout(1_200_000);
   const errors = trackErrors(page);
-  await page.goto('/?screen=main&nointro&quality=low');
-  await waitReady(page);
+  // A full draft (seed 5: the Beasts' opening drive is a touchdown), straight to the game (the walk-out has its own tests).
+  await page.goto('/?screen=draft&nointro&quality=low&seed=5&fill=9');
+  await page.waitForFunction(() => (window as unknown as W).__btbDraft?.getState().phase === 'complete', null, { timeout: 600_000 });
   await noAutoReplay(page);
   await page.evaluate(() => {
     const w = window as unknown as W;
     w.__btbSettings.getState().set((d) => void (d.gameplay.beastsDrives = 'montage'));
-    void w.__btbDraft.getState().begin('quick', { seed: 5 });
-    w.__btbApp.getState().go('draft');
+    w.__btbDraft.getState().finishWalkout(w.__btbApp.getState().go);
   });
   await page.waitForFunction(() => (window as unknown as W).__btbApp.getState().screen === 'game', null, { timeout: 300_000 });
   await page.waitForFunction(() => (window as unknown as W).__btbGameUi.getState().stage === 'pregame', null, { timeout: 300_000 });
