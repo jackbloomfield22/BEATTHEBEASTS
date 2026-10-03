@@ -11,6 +11,7 @@ import type { Block, PlayState } from './state';
 import { TICK, type Agent } from './types';
 import { dist, norm, sub, type V2 } from './vec';
 import { has } from './traits';
+import { QB_RUNS } from './plays';
 
 /** Start of an engagement: the blocker is set, a small edge. */
 const LEV0 = -0.35;
@@ -199,6 +200,25 @@ function rushHeadStart(b: Agent, d: Agent, blk: Block): number {
   return dt * (PASS_BASE + DRIFT * 2 * Math.max(0, edge(b, d, blk) + blk.bias));
 }
 
+/**
+ * Patient Runner (the trait catalog: "blocks develop for him: the running
+ * lane highlight appears 0.2 s earlier and cutback lanes stay open
+ * longer"): on his designed run, while he's still behind the line, a block
+ * on the backside of the aiming point (the blocks that make the cutback
+ * lane) starts PATIENT_T to the good: the leverage the defender would gain
+ * in that time at this matchup's rate, so it holds that much longer.
+ */
+const PATIENT_T = 0.2;
+function patientHeadStart(s: PlayState, b: Agent, d: Agent, blk: Block): number {
+  const run = s.setup.play.run;
+  if (!run || QB_RUNS.includes(run.scheme)) return 0;
+  const rb = s.agents[s.slot.RB!];
+  if (!rb || !has(rb, 'patient-runner') || (s.carrier >= 0 && s.carrier !== rb.i) || rb.pos.x > s.setup.los) return 0;
+  const side = run.aim >= 0 ? 1 : -1;
+  if ((d.pos.y - ((s.setup.ballY ?? 0) + run.aim)) * side >= 0) return 0;
+  return PATIENT_T * (BASE * 2 + DRIFT * 2 * Math.max(0, edge(b, d, blk) + blk.bias));
+}
+
 export function engage(s: PlayState, b: Agent, d: Agent, kind: Block['kind']): Block {
   // A lineman's block starts with him set; a stalk block in space starts even.
   // A rusher picked up again right after beating his man (help, the back) comes in with his momentum: half a step ahead.
@@ -210,6 +230,7 @@ export function engage(s: PlayState, b: Agent, d: Agent, kind: Block['kind']): B
   const bias = kind === 'run' ? gauss(s.rng.block) * RUN_BIAS : gauss(s.rng.block) * PASS_BIAS;
   const blk: Block = { b: b.i, d: d.i, lev: lev0, kind, move: kind === 'run' ? 'drive' : pickMove(s, d), t: 0, bias, next: 0.9 + 0.4 * s.rng.block(), tries: 0 };
   if (kind === 'pass') blk.lev += rushHeadStart(b, d, blk);
+  else blk.lev -= patientHeadStart(s, b, d, blk);
   s.blocks.push(blk);
   b.anim = 'block';
   d.anim = 'engaged';

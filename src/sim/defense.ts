@@ -219,6 +219,13 @@ function weights(sit: DefSituation, difficulty: Difficulty, t: Tendencies | unde
 
 const DIFFICULTY_LEARN = (d: Difficulty): number => LEARNING[d].rate;
 
+/** The odds of each call in a situation (the weights normalised; no tendencies): what a staff that has studied the Beasts expects. */
+export function callOdds(sit: DefSituation, difficulty: Difficulty = 'pro'): Record<string, number> {
+  const w = weights(sit, difficulty, undefined);
+  const total = Object.values(w).reduce((a, b) => a + b, 0) || 1;
+  return Object.fromEntries(Object.entries(w).map(([k, v]) => [k, v / total]));
+}
+
 /** Pick by weight (one uniform draw). */
 function pick(w: Record<string, number>, u: number): string {
   const keys = Object.keys(w).filter((k) => w[k]! > 0);

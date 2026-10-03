@@ -11,6 +11,14 @@
 // fatigue), which lowers his top speed (movement.ts: 0.86 + 0.14·stamina)
 // and how much sprint and burst he has. A new drive resets both: the
 // sideline is the rest. Pure: the game layer holds it between snaps.
+//
+// The Beasts' front (their linemen and linebackers) wears the same way on
+// your drives: what a play took out of them, and a toll on every designed
+// run (they take on the blocks). A Ground and Pound line's runs drain them
+// 10% more (the trait catalog's line), so a long drive on the ground leaves
+// their front a step slower than the same drive behind another line.
+
+import { holds, type PlayState } from '@/sim';
 
 export interface DriveFatigue {
   fresh: Record<string, number>;
@@ -34,6 +42,10 @@ export interface Snap {
   traits: readonly string[];
   /** A big hit's toll on him (0 if none). */
   hit: number;
+  /** A Beasts front defender (a lineman or linebacker) on a designed run: he took on its blocks. */
+  front?: boolean;
+  /** The run came behind a Ground and Pound line: everything the snap took from him is 10% more. */
+  groundPound?: boolean;
 }
 
 export const emptyFatigue = (): DriveFatigue => ({ fresh: {}, load: {}, touches: {} });
@@ -52,6 +64,10 @@ const CARRY_TOLL = 0.03;
 const DROPBACK_TOLL = 0.008;
 /** The most a player starts a snap without. */
 const MAX = 0.6;
+/** A designed run's toll on a front defender (taking on a block or a double team): half a carry's. Ours. */
+const FRONT_TOLL = 0.015;
+/** Ground and Pound: the Beasts' front's stamina drain against the run +10% (the trait catalog's line). */
+const GROUND_AND_POUND = 1.1;
 
 const has = (s: Snap, id: string) => s.traits.includes(id);
 
@@ -61,7 +77,8 @@ export function afterSnap(f: DriveFatigue, snaps: readonly Snap[], newDrive: boo
   const out: DriveFatigue = { fresh: {}, load: {}, touches: { ...f.touches } };
   for (const [id, v] of Object.entries(f.load)) if (v * LOAD_KEEP > 0.005) out.load[id] = v * LOAD_KEEP;
   for (const s of snaps) {
-    const used = Math.max(0, s.start - s.end);
+    const gp = s.groundPound ? GROUND_AND_POUND : 1;
+    const used = Math.max(0, s.start - s.end) * gp;
     const fresh = ((f.fresh[s.id] ?? 0) + used) * keepFast(s.staminaAttr) + s.hit;
     if (fresh > 0.005) out.fresh[s.id] = fresh;
     let toll = 0;
@@ -72,6 +89,7 @@ export function afterSnap(f: DriveFatigue, snaps: readonly Snap[], newDrive: boo
     }
     // Volume Passer: no stamina drop late in drives.
     if (s.dropback && !has(s, 'volume-passer')) toll += DROPBACK_TOLL;
+    if (s.front) toll += FRONT_TOLL * gp;
     if (toll > 0) out.load[s.id] = (out.load[s.id] ?? 0) + toll;
   }
   return out;
@@ -82,3 +100,25 @@ export const fatigueOf = (f: DriveFatigue, id: string): number => Math.min(MAX, 
 
 /** Change of Pace: a back on one of his first two touches of the drive has fresh legs (+3% top speed). */
 export const freshLegs = (f: DriveFatigue, id: string, traits: readonly string[]): boolean => traits.includes('committee-back') && (f.touches[id] ?? 0) < 2;
+
+/** The Beasts' front on a snap (their linemen and linebackers on a designed run), for afterSnap: the drain a Ground and Pound line adds. */
+export function defenseSnaps(st: PlayState): Snap[] {
+  const run = !!st.setup.play.run;
+  const gp = run && st.off.some((i) => holds(st.agents[i]!.p, 'ground-and-pound'));
+  return st.def.map((i) => {
+    const a = st.agents[i]!;
+    return {
+      id: a.p.id,
+      start: Math.max(0.2, 1 - (st.setup.fatigue?.[a.slot] ?? 0)),
+      end: a.stamina,
+      staminaAttr: a.fx.a('stamina'),
+      touched: false,
+      dropback: false,
+      traits: a.p.traits ?? [],
+      hit: 0,
+      front: run && FRONT.includes(a.p.pos),
+      groundPound: gp,
+    };
+  });
+}
+const FRONT = ['DE', 'DT', 'LB'];

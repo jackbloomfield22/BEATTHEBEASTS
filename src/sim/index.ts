@@ -12,3 +12,4 @@ export * from './personnel';
 export * from './defense';
 export * from './coordinator';
 export { holds } from './traits';
+export { personalize, receivingBackRoute } from './usage';

@@ -3,9 +3,12 @@
 // position, the clock and the score) and the roster's strengths. Pure and
 // deterministic: the same situation and roster give the same list.
 
-import { playUnlocked, type ContendersRoster } from './personnel';
+import { callOdds, type BeastsDefense } from './defense';
+import { FILM } from './film';
+import { offenseFor, playUnlocked, type ContendersRoster } from './personnel';
 import { DRAWS, PLAYS, type OffPlay, type PlayType } from './plays';
-import type { SimPlayer } from './types';
+import { holds } from './traits';
+import type { OffSlot, SimPlayer } from './types';
 
 export interface OffSituation {
   down: number;
@@ -74,8 +77,10 @@ const SIDELINE = new Set(['doubles-quick-outs', 'doubles-curls', 'bunch-flood', 
 /** The Suggested tab's length (Playtest 2: ten, ranked). */
 export const SUGGESTED = 10;
 
-export function suggestPlays(sit: OffSituation, team: ContendersRoster, n = SUGGESTED): string[] {
+export function suggestPlays(sit: OffSituation, team: ContendersRoster, n = SUGGESTED, beasts?: BeastsDefense): string[] {
   const st = strengths(team);
+  // Efficiency King: the coordinator reads how each play matches up against what these Beasts call here (film.ts).
+  const ek = beasts && holds(team.QB, 'efficiency-king') ? filmReader(sit) : null;
   const toGoal = 100 - sit.los;
   const late = (sit.secondsLeft ?? 999) <= 120 && (sit.scoreDiff ?? 0) <= 0;
   const redZone = toGoal <= 20;
@@ -111,6 +116,12 @@ export function suggestPlays(sit: OffSituation, team: ContendersRoster, n = SUGG
     if (Object.entries(p.assign).some(([k, a]) => k === 'TE' && a.kind === 'route' && a.read === 1)) s += 1.5 * st.te;
     if (p.formation.personnel === '21' || p.formation.personnel === '22') s += 1.2 * st.fb - 0.4;
     if (p.drop.boot) s += 1.2 * st.mobile;
+    // The traits that change who gets the ball (usage.ts personalize): a
+    // Volume TE is the first read wherever he runs a route, so the plays
+    // with him out on one are the ones to call (the trait catalog: "first
+    // read on the coordinator AI's suggested plays").
+    if (t !== 'run' && volumeTeOut(p, team)) s += VOLUME_TE;
+    if (ek) s += EK_WEIGHT * ek(p);
     return s;
   };
   // Only this roster's book: a play a trait unlocks needs the man who holds it (personnel.ts playUnlocked).
@@ -155,3 +166,52 @@ export function suggestPlays(sit: OffSituation, team: ContendersRoster, n = SUGG
 }
 /** The least share of a suggested list that runs (and that passes): 3 of 10, a coordinator's call sheet for a down rarely leans further. */
 const MIX_SHARE = 0.3;
+
+/** A Volume TE out on a route on this play: what that's worth to the call (a point and a half: about a down-and-distance preference, so he's in most of the passes on the list). */
+const VOLUME_TE = 1.5;
+
+function volumeTeOut(p: OffPlay, team: ContendersRoster): boolean {
+  const off = offenseFor(p, team);
+  return (['TE', 'SLOT', 'Z', 'X'] as OffSlot[]).some((k) => p.assign[k].kind === 'route' && off[k].pos === 'TE' && holds(off[k], 'volume-te'));
+}
+
+/**
+ * Efficiency King (the trait catalog: "the coordinator AI's suggested play
+ * for him is right 10% more often (it reads his best matchups)"). Reading
+ * matchups man by man (a receiver's routes, hands and speed against the
+ * coverage ratings of the man the Beasts' looks put on him) didn't predict
+ * what works in this sim: across the book it ran against success
+ * (correlation −0.29, tools/sim/coordfx.ts), because what decides a snap
+ * here is how a concept matches up with the coverage called. So his
+ * coordinator reads that: the film (film.ts, every play against every
+ * Beasts call) gives the odds each play makes the yards this down and
+ * distance needs (the standard success rate: 40% of the distance on 1st
+ * down, 60% on 2nd, all of it on 3rd and 4th) against the calls these
+ * Beasts make here (defense.ts callOdds), and the plays with the better odds
+ * than the rest of the book rank higher.
+ */
+export function filmReader(sit: OffSituation): (p: OffPlay) => number {
+  const odds = callOdds(sit);
+  const need = sit.toGo * (sit.down <= 1 ? 0.4 : sit.down === 2 ? 0.6 : 1);
+  const rate = (id: string): number | null => {
+    const f = FILM[id];
+    if (!f) return null;
+    let p = 0;
+    let w = 0;
+    for (const [call, q] of Object.entries(odds)) {
+      const ys = f[call];
+      if (!ys || q <= 0) continue;
+      p += q * (ys.filter((y) => y >= need).length / ys.length);
+      w += q;
+    }
+    return w > 0 ? p / w : null;
+  };
+  const rates = PLAYS.map((p) => rate(p.id)).filter((x): x is number => x !== null);
+  const mean = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+  return (p) => {
+    const r = rate(p.id);
+    return r === null ? 0 : r - mean;
+  };
+}
+/** Points per unit of success odds over the book (ten points of success rate is a point: about a down-and-distance preference). Tuned with tools/sim/coordfx.ts. */
+const EK_WEIGHT = 10;

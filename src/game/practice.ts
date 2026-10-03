@@ -16,7 +16,7 @@ import { loadPracticeRosters, loadSnapshot } from './rosters';
 import { SimRunner } from './runner';
 import { withSwap, type Clip } from './clips';
 import { AUDIBLES, audiblePlay, type AudibleKind } from './audible';
-import { afterSnap, emptyFatigue, fatigueOf, freshLegs, type DriveFatigue, type Snap } from './fatigue';
+import { afterSnap, defenseSnaps, emptyFatigue, fatigueOf, freshLegs, type DriveFatigue, type Snap } from './fatigue';
 import { routeOf } from '@/sim/ai';
 import type { OffPlay } from '@/sim/plays';
 import { detectSynergies } from '@/engine/ratings/traits/synergies';
@@ -394,17 +394,20 @@ class PracticeSession {
     const play = playById(playId);
     const offense = this.teams ? offenseFor(play, this.squadFor(play, sit)) : this.rosters.offense;
     // The drive so far: what each man starts without, and a Change of Pace back's fresh legs.
-    const fatigue: Partial<Record<OffSlot, number>> = {};
+    const fatigue: Partial<Record<OffSlot | DefSlot, number>> = {};
     const legs: Partial<Record<OffSlot, number>> = {};
     for (const [k, p] of Object.entries(offense) as [OffSlot, SimPlayer][]) {
       const f = fatigueOf(this.drive, p.id);
       if (f > 0) fatigue[k] = f;
       if (freshLegs(this.drive, p.id, p.traits ?? [])) legs[k] = FRESH_LEGS;
     }
+    // (The Beasts wear through your drive too: fatigue.ts, Ground and Pound.)
+    const defense = this.teams ? defenseFor(def, this.teams.beasts) : this.rosters.defense;
+    for (const [k, p] of Object.entries(defense) as [DefSlot, SimPlayer][]) if (fatigueOf(this.drive, p.id) > 0) fatigue[k] = fatigueOf(this.drive, p.id);
     const state = createPlay({
       seed,
       offense,
-      defense: this.teams ? defenseFor(def, this.teams.beasts) : this.rosters.defense,
+      defense,
       play,
       // The Touch pass hold setting: how long a receiver key is held before a driven ball becomes touch.
       tapMax: clip ? undefined : getSettings().controls.bulletHoldMs / 1000,
@@ -700,6 +703,7 @@ class PracticeSession {
         hit: bh && bh.on === a.i ? hitToll(bh.force) : 0,
       };
     });
+    snaps.push(...defenseSnaps(s));
     this.drive = afterSnap(this.drive, snaps, next === null || (driveBefore !== undefined && this.game?.driveKey?.() !== driveBefore));
     // Chemistry: every throw to a receiver counts toward his timing with the QB.
     const tgt = s.ball.target;
