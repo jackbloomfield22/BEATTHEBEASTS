@@ -31,11 +31,16 @@
   until the clip lets it go: a spike comes back up off the turf end over end
   and rolls; a flip carries to the official's chest and he has it; a drop
   rolls away. Then the result card, and the automatic replay after it.
-- **Camera**: the celebration camera comes on with the prompt: low (chest
+- **Camera**: the celebration camera cuts in with the prompt: low (chest
   height, 1.35 m), tight (7.4 m out, a 34° lens), in front of him and to one
-  side; over the celebration it arcs ~30° toward his front and pushes in to
-  5 m as the lens closes to 29°. It picks the side that keeps it on the
-  field (never in the stands or the bench area).
+  side, on the side away from his team-mates; it cuts again as the
+  celebration starts (in front of the way he plays it), and goes side-on to
+  the two men for the chest bump and the five. Between cuts it holds its
+  own bearing like an operator on the field, arcs ~30° toward his front and
+  pushes in to 5 m as the lens closes to 29°. Under the result card it
+  backs off and up to ~9.6 m, looking over their heads so they stand clear
+  of the card. It stays on the turf and its apron (never in the stands or
+  the bench area).
 - **Crowd**: the touchdown lifts the bowl at the score; the clip starting
   lifts it again (a new `celebration` reaction, which rises from where the
   energy stands instead of dipping to ambient first) and a long synthesized
