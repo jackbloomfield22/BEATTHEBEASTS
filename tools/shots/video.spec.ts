@@ -40,7 +40,15 @@ type Win = {
   __btbGameReady?: boolean;
   __btbClips(): Promise<(Clip & { script(s: unknown): unknown })[]>;
   __btbPops: { frames: number; spikes: unknown[]; worst: number; rates: number[] };
+  __btbLatency: { frame: number };
 };
+
+/** What the scene has stepped so far: its frames (GameScene's count) and the sim's ticks. */
+const clocks = (page: Page) =>
+  page.evaluate(() => {
+    const w = window as unknown as Win;
+    return { frames: w.__btbLatency.frame, tick: w.__btbPractice.runner!.state.tick };
+  });
 
 function ffmpeg(): string {
   if (process.env.FFMPEG) return process.env.FFMPEG;
@@ -79,6 +87,7 @@ async function record(page: Page, clip: Clip) {
   await pump('window.__btbGameReady === true');
   await page.evaluate(() => void ((window as unknown as Win).__btbPractice.runner!.paused = true));
   let n = 0;
+  const start = await clocks(page);
   const shot = async () => {
     await frame(page);
     await page.screenshot({ path: `${dir}/${String(n++).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 88 });
@@ -88,6 +97,7 @@ async function record(page: Page, clip: Clip) {
   // before the snap changes the play).
   for (let k = 0; k < LEAD_IN; k++) await shot();
   let tail = -1;
+  let whistle = { frames: 0, ticks: 0 };
   for (let guard = 0; guard < 60 * 20 && tail < TAIL; guard++) {
     const done = await page.evaluate(
       async ({ id, k }) => {
@@ -102,7 +112,11 @@ async function record(page: Page, clip: Clip) {
       },
       { id: clip.id, k: TICKS_PER_FRAME },
     );
-    if (done && tail < 0) tail = 0;
+    if (done && tail < 0) {
+      tail = 0;
+      // The snap to the whistle: frames LEAD_IN .. n (this one included), the sim's ticks to here.
+      whistle = { frames: n + 1 - LEAD_IN, ticks: (await clocks(page)).tick - start.tick };
+    }
     if (tail >= 0) {
       // After the whistle the dead ball plays on in the render (the pull-up, the get-up): advance it by ticks too.
       await page.evaluate((k) => {
@@ -113,6 +127,14 @@ async function record(page: Page, clip: Clip) {
     }
     await shot();
   }
+  // The recording's own check: one scene step per recorded frame, none in the screenshots'
+  // redraws (platform.ts videoTime; a recording that ran fast: docs/m7/MONTAGE.md).
+  const end = await clocks(page);
+  if (end.frames - start.frames !== n) throw new Error(`${clip.id}: the scene stepped ${end.frames - start.frames} times for ${n} recorded frames`);
+  console.log(
+    `${clip.id}: snap to whistle ${whistle.ticks} sim ticks = ${(whistle.ticks / 60).toFixed(3)} s, on ${whistle.frames} frames = ${(whistle.frames / FPS).toFixed(3)} s of video; ` +
+      `whole clip ${n} frames = ${(n / FPS).toFixed(2)} s (${(LEAD_IN / FPS).toFixed(1)} s before the snap, ${(TAIL / FPS).toFixed(1)} s after the whistle), ${end.tick - start.tick} ticks, ${end.frames - start.frames} scene steps`,
+  );
   const pops = await page.evaluate(() => {
     const p = (window as unknown as Win).__btbPops;
     const sorted = [...p.rates].sort((a, b) => a - b);
