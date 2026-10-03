@@ -607,8 +607,9 @@ export function autoCatch(s: PlayState): CatchType {
  * Traffic and the high point alone had Anquan Boldin (217 lb, Strength 56)
  * winning the ball in a crowd ~7 points more often than DeSean Jackson
  * (175 lb, 43), with the box-out that made Boldin who he was not counted at
- * all. Owner-feel numbers, sized so body alone is ~5 points of contested
- * catch rate between those two (PFF's charting has the big possession
+ * all. Owner-feel numbers, sized so body alone is ~4 points of contested
+ * catch rate between those two (×0.8 on a ball at the chest, ×0.5 above
+ * the shoulders, where the high point decides more; PFF's charting has the big possession
  * receivers ~15–25 points over the light speed men in contested catches;
  * Catch in Traffic and reach carry the rest). A wide receiver against a
  * corner averages out (201 and 200 lb, Strength 51 and 50 across the
@@ -764,9 +765,10 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
       const high = cz > 0.35 ? 1 : 0.4;
       cont += 0.06 * high * Math.max(-1, Math.min(1, (reach(a).top - reach(by).top) / 0.4));
       // Body position: the hand fight for the spot at the catch point. The
-      // man with more of the pair's mass and the stronger one holds his
-      // ground and keeps the defender's hands off the ball (see BOX_MASS).
-      cont += BOX_MASS * ((2 * a.fx.mass) / (a.fx.mass + by.fx.mass) - 1) + BOX_STR * (a.fx.a('strength') - by.fx.a('strength'));
+      // bigger, stronger man holds his spot and keeps the other's hands off
+      // the ball; above the shoulders it's more the high point than the body
+      // (see BOX_MASS).
+      cont += (1 - 0.5 * high) * (BOX_MASS * ((2 * a.fx.mass) / (a.fx.mass + by.fx.mass) - 1) + BOX_STR * (a.fx.a('strength') - by.fx.a('strength')));
       // Mismatch: against a smaller man at the high point, +10%.
       if (cz > 0.35 && by.fx.height < a.fx.height && has(a, 'mismatch')) cont *= 1.1;
       // Big Body: boxing him out, the ball in front of the defender, +10%.
