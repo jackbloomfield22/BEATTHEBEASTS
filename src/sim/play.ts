@@ -10,6 +10,8 @@ import {
   breakOnBall,
   carrierAI,
   manCover,
+  onRhythm,
+  RHYTHM_READ,
   boundaryGovern,
   numberReceivers,
   passBlock,
@@ -1691,7 +1693,8 @@ function jumpThrow(s: PlayState, d: Agent): boolean {
   if (as.kind !== 'zone') return false;
   const hawk = has(d, 'ballhawk') ? 0.67 : 1;
   // A Zone Reader breaks on the QB's eyes: 0.08 s sooner (the trait catalog's line).
-  if (s.t - w.from < reaction(s, d) * hawk - (has(d, 'zone-reader') ? 0.08 : 0)) return false;
+  // On rhythm the motion is compact and the eyes move: he reads it later (ai.ts RHYTHM_READ).
+  if (s.t - w.from < reaction(s, d) * hawk - (has(d, 'zone-reader') ? 0.08 : 0) + (onRhythm(s) ? RHYTHM_READ : 0)) return false;
   const r = s.agents[s.icons[w.icon]!]!;
   // A Center Fielder in a deep zone covers 3 yd more (the trait catalog's line).
   const deepZone = as.zone === 'deepM' || as.zone === 'deepL' || as.zone === 'deepR';

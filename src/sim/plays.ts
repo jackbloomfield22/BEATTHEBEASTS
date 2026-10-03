@@ -447,8 +447,13 @@ export const ZONES: Record<ZoneName, { d: number; y: number; deep: boolean }> = 
 export type DefAssign =
   | { kind: 'rush' }
   | { kind: 'zone'; zone: ZoneName }
-  /** Man on the receiver in that offensive slot: pressed at the line, or off (a 6–7 yd cushion, bailing with him). */
-  | { kind: 'man'; on: OffSlot; press?: boolean };
+  /**
+   * Man on the receiver in that offensive slot: pressed at the line, or off
+   * (a 6–7 yd cushion, bailing with him). `trail`: trail technique, man under
+   * two deep halves (2-man): inside and underneath him, in his hip pocket,
+   * with the halves over the top, instead of a step over the top himself.
+   */
+  | { kind: 'man'; on: OffSlot; press?: boolean; trail?: boolean };
 
 /** Who's on the field: base 4-3, nickel (the sub corner for a linebacker), dime (the sub safety for another). */
 export type Package = 'base' | 'nickel' | 'dime';
@@ -480,6 +485,8 @@ export interface DefCall {
 const RUSH4 = { LE: { kind: 'rush' }, LDT: { kind: 'rush' }, RDT: { kind: 'rush' }, RE: { kind: 'rush' } } as const;
 const Zn = (zone: ZoneName): DefAssign => ({ kind: 'zone', zone });
 const Man = (on: OffSlot, press = false): DefAssign => ({ kind: 'man', on, ...(press ? { press } : {}) });
+/** Man in trail technique (man under two deep halves). */
+const Trail = (on: OffSlot, press = false): DefAssign => ({ kind: 'man', on, trail: true, ...(press ? { press } : {}) });
 const Rush: DefAssign = { kind: 'rush' };
 
 /**
@@ -498,13 +505,15 @@ export const DEF_CALLS: DefCall[] = [
  * M5.5 additions (feedback item 7: the book above is built to beat three
  * base coverages; an NFL defense mixes in quarters, man-under and pressure).
  * Quarters: four deep (the corners and safeties each a quarter), three under.
- * Two-man: two deep halves, man underneath with the corners pressing.
+ * Two-man: two deep halves, man underneath with the corners pressing, every
+ * man defender in trail technique (inside and underneath, the halves over
+ * the top: the quick game's problem, the deep ball its answer).
  * Cover 1 blitz: the middle linebacker rushes (five-man pressure), man
  * behind it with a single high safety.
  */
 DEF_CALLS.push(
   { id: 'cover4', name: 'Cover 4', package: 'base', nickel: 'SLB', dime: 'WLB', assign: { ...RUSH4, LCB: Zn('deepL'), RCB: Zn('deepR'), FS: Zn('halfL'), SS: Zn('halfR'), SLB: Zn('curlL'), WLB: Zn('curlR'), MLB: Zn('middle') } },
-  { id: 'cover2man', name: 'Cover 2 Man', package: 'base', nickel: 'WLB', dime: 'MLB', assign: { ...RUSH4, LCB: Man('X', true), RCB: Man('Z', true), FS: Zn('halfL'), SS: Zn('halfR'), WLB: Man('SLOT'), SLB: Man('RB'), MLB: Man('TE') } },
+  { id: 'cover2man', name: 'Cover 2 Man', package: 'base', nickel: 'WLB', dime: 'MLB', assign: { ...RUSH4, LCB: Trail('X', true), RCB: Trail('Z', true), FS: Zn('halfL'), SS: Zn('halfR'), WLB: Trail('SLOT'), SLB: Trail('RB'), MLB: Trail('TE') } },
   { id: 'cover1blitz', name: 'Cover 1 Blitz', package: 'base', nickel: 'WLB', dime: 'SLB', show: ['MLB'], assign: { ...RUSH4, MLB: Rush, LCB: Man('X', true), RCB: Man('Z', true), SS: Man('TE'), WLB: Man('SLOT'), SLB: Man('RB'), FS: Zn('deepM') } },
 );
 

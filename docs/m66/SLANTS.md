@@ -157,3 +157,67 @@ Per call, called Slants (before → after; completion, int+pbu, ypa):
 - The meant point still sits ~0.3–0.45 yd ahead of him along his run at the arrival (tick order, and the chord he runs to the ball once he's found it): inside his hands, left alone.
 - Not done (optional): the uncaught slant still runs on at full speed past its last point, and a backed-up QB is still rarely sacked.
 - Watched only in numbers and per-tick dumps, not on screen. The bend, the ball on him and the late throw dying need watching in the browser.
+
+# Third pass: the calls play like the calls (M6.6)
+
+> Cover 2 man is the quick game's problem; on time against zone the window between the zones is the offense's; the late throw is closed but not dead.
+
+Measured with `node tools/run-ts.mjs tools/sim/slants.ts 100 --how` (the called Slants, 300 throws a call and script; `--def=cover1,cover2man` runs only those calls), `tools/sim/slantdump.ts --tips` (who got a hand to it), the AI pass game (`tools/sim/outcomes.ts`, 60 a cell) and the identity harness.
+
+## What was wrong
+
+1. **Cover 2 man played Cover 1's man.** Every man defender plays a step over the top and 0.7 yd inside (`manCover`), so 2-man's corners, with two halves already over them, played the same technique as Cover 1's with one: the called slant completed 63% against 2-man, 65% against Cover 1 (Cover 1 has a hole player robbing the slant; 2-man doesn't, and its corners gave nothing back for it).
+2. **On time, the curl defenders jumped the windup.** Of the 600 called on-time slants against zone, a defender got a hand to 141; 68 of those were curl defenders who had jumped the windup (`play.ts jumpThrow`), breaking ~0.1 s before the release. A throw on rhythm and a QB who'd held it and stared his man down read the same.
+3. **The late throw is mostly misses, not coverage.** Late (2.0 / 2.5 s), a third of the throws land where nobody gets them (`--how`: miss 31–35%), the rest split between catches and the defense. See "The late throw" below.
+
+## The fix
+
+- **Trail technique** (`src/sim/plays.ts` `Trail`, l.489, Cover 2 man's five man defenders; `src/sim/ai.ts` `manCover` l.1055 and `trailAim` l.1096, `lateFor` l.1565; `src/sim/state.ts` l.239). A trail man aligns inside (a pressed corner on the receiver's inside shade instead of his outside) and lives in the hip pocket: a step (`TRAIL_BACK`, 0.8 yd) behind the receiver along his run, on the QB's side of him (inside on the stem, `TRAIL_INSIDE` 0.9 yd). When the man breaks in he drives under the break into the throwing lane by his Play Recognition (`TRAIL_LANE`: ~1 yd for a 95, ~0.7 for a 60). Deep, he closes to half a step (in phase) with the half safety over the top. A pressed corner is in it from the release; an underneath man (the nickel on the slot, the linebackers on the tight end and the back) once his man is 4 yd up the field, so the back's checkdown and the flat are still played man-up (with trail from the line, the AI's checkdowns and flats against 2-man were picked 19% and 35% of the time). Once he's seen the QB go off schedule (judged at the release if the ball is up) he plays his man the ordinary way: the leverage game is about the route's timing.
+- **The rhythm read** (`src/sim/ai.ts` `onRhythm`, `RHYTHM_READ` l.1534 / l.1552; `play.ts jumpThrow` l.1697). A zone defender reads the windup of a throw on rhythm 0.06 s later: the compact motion off the top of the drop, eyes moving. That moves the average linebacker's read to the release, where he breaks with everyone else; a quick reader (Play Recognition, a Ballhawk, a Zone Reader) still jumps it. Off schedule nothing changes, so the late-throw squeeze stays. (0.15 s took the on-time slant against zone to 77%.)
+
+Tried and not kept: a hip pocket squarer to the QB (in the lane on the stem as well as on the break) took the corners to 15–30% completions with a quarter of the throws picked (a defender in the ball's path picks it a third of the time, `resolveCatch`); a hip pocket level with the man on the break did the same; a tighter, further-inside nickel (3.5 yd, 1.2 yd inside) held the slot to 60% in the harness but made the AI's slants against 2-man *better* (47% → 58%).
+
+## Figures
+
+Called Slants, 100 a call (300 throws), before → after: completion, int+pbu, yd/att.
+
+| call | on time | late 2.0 | late 2.5 |
+|---|---|---|---|
+| cover3 | 56% 31% 6.1 → **69% 21% 7.4** | 29% 37% 5.3 (same) | 31% 35% 7.8 (same) |
+| **cover1** | 65% 26% 6.1 → **66% 23% 6.3** | 26% 42% 5.3 (same) | 25% 41% 6.5 (same) |
+| cover2 | 60% 24% 7.7 → **67% 25% 9.2** | 40% 20% 9.7 (same) | 39% 25% 11.3 (same) |
+| cover4 | 68% 16% 8.4 → **72% 14% 9.0** | 24% 39% 4.3 (same) | 36% 31% 9.9 (same) |
+| **cover2man** | 63% 22% 6.5 → **51% 38% (int 7%) 6.6** | 25% 34% 4.3 → 16% 47% 2.8 | 32% 33% 7.8 → 26% 44% 6.5 |
+| cover1blitz | 69% 20% 6.9 → 69% 20% 6.9 | 26% 40% 5.4 (same) | 31% 27% 7.9 (same) |
+| cover1off | 65% 29% 6.8 → 67% 26% 7.2 | 32% 29% 5.9 (same) | 24% 32% 5.7 (same) |
+| tampa2 | 65% 24% 8.0 → **68% 23% 9.0** | 41% 18% 9.9 (same) | 39% 23% 10.7 (same) |
+| firezone | 66% 23% 7.7 → **74% 13% 9.9** | 39% 24% 6.1 (same) | 29% 40% 7.6 (same) |
+| simpressure | 55% 25% 5.6 → **66% 20% 7.0** | 31% 38% 5.6 (same) | 33% 38% 9.2 (same) |
+
+Pooled: zone on time 62% → **69%** (int+pbu 24% → 19%, 7.3 → 8.6 yd/att, YAC 3.7 → 4.3; `--how`: tipped 9% → 6%, broken up 11% → 10%); man on time 66% → 63%. Late, zone 34% / 35% (2.0 / 2.5) unchanged; man 27% / 28% → 25% / 26%. Hot-routed slants (`--hot`, 67 a cell): zone on time 72% → 72%, man 67% → 63%, late unchanged but man 2.5 (26% → 27%).
+
+**Every corner is himself in 2-man.** The X slant on time, 200 throws, the left corner swapped (Cover 2 man / Cover 1): Deion Sanders (97 Man Coverage, 97 Play Recognition) 45% / 69%, Ty Law (78 / 77) 66% / 73%, Dave Whitsell (70) 64% / 82%, Kam Chancellor at corner (50) 70% / 82%. Trail technique is where a great corner shows (21 points between Deion and Law, 4 in Cover 1); below ~80 the 2-man numbers flatten (Law, Whitsell, Kam within 6 points), because a trail man who's lost the hip is beaten by the same amount whoever he is. Deion picks 15% of the slants thrown blind at him (Ball Skills 94, a Ballhawk), Revis ~7%. The slot (Rod Woodson as the nickel, aligned 5 yd off) still gives up ~70% in 2-man as before: the slant breaks at 2 yd, under an off defender, before the trail starts.
+
+**The AI pass game** (`tools/sim/outcomes.ts`, 60 a cell), before → after: completion 69.3% → 69.5%, 8.3 → 8.4 yd an attempt, interceptions 2.0% → 2.1%, 20+ yd completions 16.7% → 16.8%, sacks 6.4% → 6.3% of dropbacks, open men caught 89.6% → 89.6%. Against 2-man alone (120 a cell): 50.5% → 50.1%, 8.5 → 8.1 yd an attempt, interceptions 4.9% → 5.2%; its deep balls (aDOT 15+) 38% → 39% complete for 13.1 → 14.4 yd an attempt (the answer to 2-man, and sane); its slants 47% → 42%.
+
+**The identity harness.** 6 reps: 16 → 18 of 20 (Gates/Lewis fails as before; DeSean/Boldin and Gronk/Gonzalez pass this time). Revis/Law still fails at 6 reps, but closer: 57.6% against 62.7% allowed (60.8% / 63.7% before; it needs 6 points). Deion/Kam (55.5% / 71.2%) and Reed/Kam (tackles 62.8% / 78.2%) pass. 14 reps: 18 of 20 (DeSean/Boldin and Gates/Lewis fail); Revis/Law passes, 58.2% / 64.7% (57.3% / 67.0% after the second pass); Deion/Kam 58.4% / 70.9%; Reed/Kam 65.2% / 77.9% tackles finished.
+
+**Clips.** Three scripted plays changed outcome and were re-found (`src/game/clips.ts`, the same play, call and throw): completion-rac 18 → 16 (a juke and 41 after the catch to the end zone), post 9 → 108 (2-man's corner was 0.9 yd off him on 9; now 26 yd at 1.4 yd), the speed pair 6 → 67 (Hill 70 yd at 2.1 yd, Welker's incomplete at 1.1). Others play differently but still show what they're named for: go (the fire zone) is now 70 yd instead of 38, corner (2-man) 34 instead of 30, screen 5.3 instead of 5.7, and the accuracy pair's Montana side 10.6 instead of 10.5 (a hair after the catch). Unchanged: sack, broken tackle, slant, out, curl, crosser, back shoulder, scramble drill, and the elusive, rush and coverage pairs. Videos to re-record: **completion-rac, post, speed (both sides), go, corner, screen**, and accuracy-a if it's to match frame for frame. The determinism golden is re-pinned.
+
+## The late throw
+
+The previous pass named `OFF_SCRIPT` and the horizon term of `timingSigma` (`src/sim/passing.ts`) as the knob. Measured, neither is the right place on its own:
+
+- `OFF_SCRIPT` (the second a receiver already past his route counts for) at 0: zone late 2.0 31% → 38%, 2.5 unchanged, man +2–5 points. It's small because the flight itself is the horizon: a 40-yd cross-field ball hangs 1.7–2.2 s, and with it the error along a running man's path is 1.5–3 yd whoever's past his route.
+- No timing error at all: zone late 49% / 42%, man 44% / 29% (2.0 / 2.5), but 11.6 / 12.0 yd an attempt against zone: the completions are 40-yd throws caught 17–30 yd downfield at the far sideline (Cover 2's sideline hole after the slant has run on across the field and turned up it), so completion % comes with yards the ≤ 8 target doesn't allow.
+- Capping the horizon at 1.6 s (past that the receiver has found the ball and adjusts) put zone late at 41% / 37% and man at 30% / 23%, but took the AI pass game to 70.6% (over its 70% ceiling, `tests/outcomes.test.ts`) and its deep balls against Cover 3 / 4 to 69% / 66% complete: the long-horizon error is also what holds the AI's deep game against zone down. Not kept.
+- What's left after timing: ~15–20% of late throws still miss with no timing error (the cone at 40+ yd off a retreating QB, and the lead on a man who's turned up the sideline), and against man the defense is legitimately on the ball (int+pbu 37–44%: a 2-s ball thrown at a man with a defender on his hip).
+
+So the late slant stays at ~34–35% against zone (int+pbu ~30%, 6.8–9.4 yd an attempt) and ~25% against man (int+pbu ~40%). Getting it to 40–50% without the yards needs two things outside coverage: the uncaught slant not running on across the field and up the far sideline at full speed (it is the reason a completion is a 20+ yd gain), and the AI's deep game against zone brought down some other way (its read), so the timing horizon can relax for everybody.
+
+## What is still wrong
+
+- **2-man picks a lot**: 7% of on-time slants thrown at it blind, 12–14% late (Deion 15% on time). A trail man under the break is in the ball's path, and a defender in the path picks a third of what he reaches (`resolveCatch`, not touched here). The AI, which reads the coverage, is picked 5.2% against 2-man (4.9% before).
+- **The 2-man late slant got harder** (25% / 32% → 16% / 26% at 2.0 / 2.5 s, n = 100; at n = 150, 29% / 31% → 21% / 28%), although the trail is off by then; it's the positions the trail leaves the defenders in when the QB goes off schedule.
+- **The slot against the nickel in 2-man** (~70%) and the flat bottom of the corner scale below ~80 (above).
+- Watched only in numbers and per-tick dumps, not on screen. The trail (the corner's inside shade at the line, the hip pocket on the stem, the drive under the slant) and the linebackers breaking on the release instead of the windup need watching in the browser.
