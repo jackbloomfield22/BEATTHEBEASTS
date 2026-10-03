@@ -17,5 +17,5 @@ describe('sim: determinism golden', () => {
     expect(got).toEqual(want);
     // Every case reached a whistle.
     for (const g of got) expect(g.reason, g.key).not.toBe('none');
-  });
+  }, 600_000); // 900 cases: ~2 min alone, much longer when the machine is loaded
 });
