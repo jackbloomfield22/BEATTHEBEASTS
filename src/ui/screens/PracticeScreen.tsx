@@ -699,7 +699,6 @@ function ResultPanel() {
   const items = [
     { label: "Next play", run: () => practice.nextPlay() },
     { label: "Run it back", run: () => practice.runItBack() },
-    { label: "Replay", run: watch },
     { label: "Leave practice", run: () => back() },
   ];
   const confirm = (i: number) => {
