@@ -1288,6 +1288,22 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   const over = Math.max(depth > 12 ? 1.2 : 0.4, off ? 5.5 + (has(r, 'burner') ? 2 : 0) - 0.42 * Math.max(0, depth) : 0);
   // He mirrors what he saw `delay` ago, projected to now.
   let aim = v2(v.pos.x + v.vel.x * delay + over, v.pos.y + v.vel.y * delay + inside);
+  // A man still in the backfield (a back, an H-back) is played from over
+  // the top: he mirrors him across the field from the line, and doesn't
+  // chase him into the backfield, where a back who turns it up the sideline
+  // is behind him at once. (The trait pass's wheel found it: off play action
+  // a linebacker in man came downhill after the back's flare, ran past his
+  // depth and was 5 yd behind him up the sideline when the ball came out:
+  // the wheel was caught 70% of the time for 17.8 yd a throw against 2-man.)
+  // A screen is the exception: once the line releases to lead it he's read
+  // it, and comes downhill for the back. (A receiver on the line is within
+  // ~1.3 yd of it: BACKFIELD.)
+  let vel = v.vel;
+  const screen = !!s.setup.play.screen && s.t - s.snapT >= s.setup.play.screen.release;
+  if (!screen && v.pos.x < s.setup.los - BACKFIELD && aim.x < s.setup.los) {
+    aim = v2(s.setup.los, aim.y);
+    vel = { x: Math.max(0, vel.x), y: vel.y };
+  }
   // Trail technique (2-man): he blends into it as his man gets past the
   // line (a pressed corner from the release; an underneath man once his man
   // is TRAIL_FROM_OFF yd up the field, so the back's checkdown, the flat and
@@ -1302,7 +1318,7 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
       aim = v2(aim.x + (t.x - aim.x) * w, aim.y + (t.y - aim.y) * w);
     }
   }
-  const want = boundaryGovern(d, track(d, aim, v.vel, 2.2), 1);
+  const want = boundaryGovern(d, track(d, aim, vel, 2.2), 1);
   // Backpedal while he's in front, turn and run when he's even.
   const face = r.pos.x > d.pos.x - 0.5 ? atan2(v.vel.y, v.vel.x) : Math.PI;
   coverPlant(s, d, want);
@@ -1311,6 +1327,9 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   steer(d, { x: want.x * closeK, y: want.y * closeK }, { face, mult: closeK });
   d.anim = r.pos.x < d.pos.x - 1 && len(d.vel) < 5 ? 'backpedal' : 'run';
 }
+
+/** In the backfield: this far (yd) behind the line or more (the formations' ends and flankers align 0.6–1.3 yd off it). */
+const BACKFIELD = 2;
 
 /**
  * Trail technique (man under two deep halves, 2-man): no step over the top,
