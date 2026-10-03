@@ -11,7 +11,7 @@
 //   node tools/run-ts.mjs tools/sim/coordfx.ts [reps] [top]
 import { readFileSync } from 'node:fs';
 import { deriveStream } from '../../src/engine/rng/index.ts';
-import { callDefense, createPlay, defenseFor, NEUTRAL, offenseFor, playById, practiceRosters, runToWhistle, suggestPlays, type ContendersRoster, type SnapshotLike } from '../../src/sim/index.ts';
+import { callDefense, createPlay, defenseFor, NEUTRAL, offenseFor, personalize, playById, practiceRosters, runToWhistle, suggestPlays, type ContendersRoster, type SnapshotLike } from '../../src/sim/index.ts';
 import { findStint, simPlayer } from '../../src/sim/roster.ts';
 import type { SimPlayer } from '../../src/sim/types.ts';
 
@@ -63,8 +63,28 @@ const team = base.team;
 console.log(`Efficiency King (the coordinator's top ${TOP}, ${REPS} reps each)`);
 run({ ...team, QB: without(team.QB, 'efficiency-king') }, 'Montana without Efficiency King', true);
 run(team, 'Montana (Efficiency King): reads the matchups', true);
+// Volume TE: how much of the coordinator's list sends him out (the AI QB's share of throws to him is usagefx.ts).
 const kelce = simPlayer(findStint(snap, 'Travis Kelce', 'TE')!, 87);
-console.log(`\nVolume TE`);
-run({ ...team, TE: without(kelce, 'volume-te') }, 'Kelce without Volume TE', false);
-run({ ...team, TE: kelce }, 'Kelce (Volume TE)', false);
+console.log(`\nVolume TE (Travis Kelce): the suggested passes that send him out, and how many of those have him first`);
+for (const [label, te] of [['Kelce without Volume TE', without(kelce, 'volume-te')], ['Kelce (Volume TE)', kelce]] as const) {
+  let passes = 0;
+  let out = 0;
+  let first = 0;
+  for (const sit of SITS) {
+    const t = { ...team, TE: te };
+    for (const id of suggestPlays(sit, t)) {
+      const play = playById(id);
+      if (play.run) continue;
+      passes++;
+      const own = personalize(play, offenseFor(play, t));
+      const a = own.assign.TE;
+      if (a.kind === 'route') {
+        out++;
+        if (a.read === 1) first++;
+      }
+    }
+  }
+  console.log(`  ${label.padEnd(44)} out on ${((100 * out) / passes).toFixed(0)}% of the suggested passes, the first read on ${((100 * first) / passes).toFixed(0)}%`);
+}
 void withT;
+void run;

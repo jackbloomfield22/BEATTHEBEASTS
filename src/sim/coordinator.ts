@@ -180,9 +180,11 @@ function volumeTeOut(p: OffPlay, team: ContendersRoster): boolean {
  * for him is right 10% more often (it reads his best matchups)"). Reading
  * matchups man by man (a receiver's routes, hands and speed against the
  * coverage ratings of the man the Beasts' looks put on him) didn't predict
- * what works in this sim: across the book it ran against success
- * (correlation −0.29, tools/sim/coordfx.ts), because what decides a snap
- * here is how a concept matches up with the coverage called. So his
+ * what works in this sim: tried first, its play-by-play edge ran against
+ * each pass play's success rate across 18 situations (correlation −0.29),
+ * and it made his lists worse (47.2% → 44.6% success), because what
+ * decides a snap here is how a concept matches up with the coverage
+ * called. So his
  * coordinator reads that: the film (film.ts, every play against every
  * Beasts call) gives the odds each play makes the yards this down and
  * distance needs (the standard success rate: 40% of the distance on 1st
@@ -213,5 +215,13 @@ export function filmReader(sit: OffSituation): (p: OffPlay) => number {
     return r === null ? 0 : r - mean;
   };
 }
-/** Points per unit of success odds over the book (ten points of success rate is a point: about a down-and-distance preference). Tuned with tools/sim/coordfx.ts. */
-const EK_WEIGHT = 10;
+/**
+ * Points per unit of success odds over the book: a play the film has making
+ * its yards 10 points more often than the book's average gains a tenth of a
+ * point, a nudge among plays the situation already likes. Set to the
+ * catalog's "10% more often": the coordinator's top three for the 1980s
+ * 49ers against the all-time Beasts made their yards on 43.1% of snaps
+ * without the trait and 47.6% with it (tools/sim/coordfx.ts, 18 situations,
+ * 30 snaps each, seeds the film never saw); at 2 it was 49.3%, at 10 64.9%.
+ */
+const EK_WEIGHT = 1;
