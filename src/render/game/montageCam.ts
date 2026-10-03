@@ -37,9 +37,9 @@ export function montagePose(shot: ShotId, broadcast: () => MontagePose | null): 
   const los = s.setup.los;
   const t = montage.shotT;
   if (shot === 'establish') {
-    // 46 yd off the ball on the offense's left sideline, 19 m up: the formation and both wideouts across the frame.
-    const drift = Math.min(1.6, t) * 1.1;
-    return { ex: los + 1 + drift, ey: 46, eh: 19, lx: los + 4 + drift, ly: 0, lh: 0, fov: 30 };
+    // 42 yd off the ball on the offense's left sideline, 15 m up: the formation and both wideouts across the frame.
+    const drift = Math.min(2, t) * 1.1;
+    return { ex: los + 1 + drift, ey: 42, eh: 15, lx: los + 4 + drift, ly: 0, lh: 0, fov: 25 };
   }
   if (shot === 'play') return broadcast();
   if (shot === 'reaction') {

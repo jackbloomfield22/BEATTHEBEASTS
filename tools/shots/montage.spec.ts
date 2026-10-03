@@ -14,7 +14,7 @@ import { test, type Page } from '@playwright/test';
 // the match's own resolver plays the Contenders' drives out quickly).
 // Output: docs/m7/montage-<seed>-<n>.mp4 and docs/m7/shots/montage-*.png.
 
-const FPS = 30;
+const FPS = Number(process.env.BTB_MONTAGE_FPS ?? 30);
 const W = Number(process.env.BTB_MONTAGE_W ?? 960);
 const H = Math.round((W * 9) / 16);
 const QUALITY = process.env.BTB_MONTAGE_QUALITY ?? 'low';
@@ -85,7 +85,7 @@ test('the Beasts drive montage', async ({ page }) => {
       // A still a few frames into each shot (the camera has cut and the graphic is up).
       if (u.shot !== last) {
         last = u.shot ?? '';
-        stillAt[last] = i + (last === 'play' ? 40 : 8);
+        stillAt[last] = i + Math.round(FPS * (last === 'play' ? 1.3 : 0.3));
       }
       for (const [shot, f] of Object.entries(stillAt)) if (f === i) await page.screenshot({ path: `${OUT}/shots/montage-${SEED}-${n}-${shot}.png` });
     }

@@ -84,6 +84,7 @@ class MontageSession {
   private off: (() => void) | null = null;
   private search: Generator<void, StagedPlay | null, void> | null = null;
   private pending: MontageInfo | null = null;
+  private ready: { staged: StagedPlay; info: MontageInfo } | null = null;
 
   /** A montage is on screen (its play drawn). */
   get active(): boolean {
@@ -92,7 +93,7 @@ class MontageSession {
 
   /** The key play is being staged, or the montage is on: the game waits on it. */
   get busy(): boolean {
-    return this.player !== null || this.search !== null;
+    return this.player !== null || this.search !== null || this.ready !== null;
   }
 
   /** Most of a frame the search takes (ms): a try runs whole, so a frame can go over by one. */
@@ -117,6 +118,13 @@ class MontageSession {
   /** Run the search to its end now (the browser tests and the capture harness, whose frames are slow). */
   settle(): void {
     while (this.search) this.searchStep(Infinity);
+    this.build();
+  }
+
+  private build(): void {
+    const r = this.ready;
+    this.ready = null;
+    if (r) this.start(r.staged, r.info);
   }
 
   private searchStep(budgetMs: number): void {
@@ -128,7 +136,8 @@ class MontageSession {
         this.search = null;
         const info = this.pending!;
         this.pending = null;
-        if (n.value) this.start(n.value, info);
+        // Built on the next frame: the replay player runs the snap once more to check it (~10–30 ms), so not on top of the last try.
+        if (n.value) this.ready = { staged: n.value, info };
         else {
           const none = this.onNone;
           this.onDone = this.onNone = null;
@@ -170,7 +179,8 @@ class MontageSession {
 
   /** Every frame of the play screens (GameScene, before it draws), by the frame's step (s). */
   frame(step: number): void {
-    if (this.search) this.searchStep(MontageSession.SLICE_MS);
+    if (this.ready) this.build();
+    else if (this.search) this.searchStep(MontageSession.SLICE_MS);
     const p = this.player;
     const st = this.staged;
     if (!p || !st) return;
@@ -210,6 +220,7 @@ class MontageSession {
   private finish(): void {
     const done = this.onDone;
     this.search = null;
+    this.ready = null;
     this.pending = null;
     this.onNone = null;
     this.player = null;
