@@ -54,6 +54,8 @@ export interface BeastsDrive {
   twoPoint?: { tried: true; good: boolean };
   /** Where your next drive starts (yards from your goal line). */
   nextStart: number;
+  /** Where the drive started (yards from the Beasts' goal line): presentation only (the montage stages its key play from it). */
+  start?: number;
 }
 
 export interface UserDrive {
@@ -491,6 +493,8 @@ export function beastsPossession(m: Match): BeastsDrive {
     else d = { result: 'Safety', points: 0, plays: p, yards: -Math.round(r() * 3), top: top(p), nextStart: 35 };
   }
   if (m.ot) d.nextStart = 75; // OT: you start at their 25
+  // Presentation only (no draw): where it started, for the montage. Overtime starts at your 25.
+  d.start = m.ot ? 75 : start;
   if (timed) {
     d.secs = secs;
     fitHalf(m, d, r);

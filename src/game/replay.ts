@@ -214,7 +214,8 @@ export class ReplayPlayer {
   /** The director's slow motion through the key moment is on (until the user takes the speed or the scrub). */
   director = false;
 
-  constructor(src: ReplaySource) {
+  /** `lead`: ticks of the window before the snap (the Beasts' drive montage opens on a longer look at the offense set). */
+  constructor(src: ReplaySource, lead = LEAD_TICKS) {
     this.setup = src.setup;
     this.frames = src.frames;
     const a = analyze(src);
@@ -224,7 +225,7 @@ export class ReplayPlayer {
     this.hash = a.hash;
     this.verified = src.hash === undefined || src.hash === a.hash;
     this.end = src.frames.length;
-    this.start = a.snap >= 0 ? Math.max(0, a.snap - LEAD_TICKS) : 0;
+    this.start = a.snap >= 0 ? Math.max(0, a.snap - lead) : 0;
     this.runner = this.build(this.start);
   }
 
