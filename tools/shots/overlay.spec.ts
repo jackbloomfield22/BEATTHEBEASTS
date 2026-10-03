@@ -129,14 +129,15 @@ test('broadcast overlay', async ({ page }) => {
       for (let k = 0; k < 60 * 30 && !w.__btbPractice.runner!.state.result; k++) w.__btbPractice.tickWith(c.script(w.__btbPractice.runner!.state));
       w.__btbPractice.runner!.paused = false;
     });
-    const outcome = await ev(page, (w) => w.__btbGameUi.getState().outcome);
-    console.log(`  clip ${id}: ${outcome}`);
-    if (outcome === 'touchdown') {
+    // The whistle has blown; the game hears the result after the dead-ball hold (a touchdown's prompt comes sooner).
+    await until(page, (w) => w.__btbCelebUi.getState().phase === 'choose' || w.__btbPracticeUi.getState().stage === 'result', 600);
+    const td = (await ev(page, (w) => w.__btbCelebUi.getState().phase)) === 'choose';
+    console.log(`  clip ${id}: ${td ? 'touchdown' : await ev(page, (w) => w.__btbGameUi.getState().outcome)}`);
+    if (td) {
       scored = true;
       break;
     }
     // Not a score: its result card (a big gain still gets the lower third), then on.
-    await until(page, (w) => w.__btbPracticeUi.getState().stage === 'result', 300);
     await frames(page, 10);
     await still(page, `06-result-${id}`);
     await page.keyboard.press('Enter');

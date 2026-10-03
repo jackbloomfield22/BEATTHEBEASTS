@@ -65,9 +65,9 @@
 
 /* ---- Lower thirds and the caption bar --------------------------------------------------- */
 
-.onair { position: absolute; left: 0; bottom: 0; pointer-events: none; }
+.onair { position: absolute; inset: 0; pointer-events: none; }
 .onair > .bc { position: absolute; left: 3.5rem; bottom: 3.2rem; }
-.lt { --c: var(--ink-3); display: flex; flex-direction: column; align-items: flex-start; max-width: 36em; animation: lt-wipe 340ms cubic-bezier(.2, .7, .2, 1) both; }
+.lt { --c: var(--ink-3); display: flex; flex-direction: column; align-items: flex-start; width: max-content; max-width: 36em; animation: lt-wipe 340ms cubic-bezier(.2, .7, .2, 1) both; }
 .lt.con { --c: var(--con); --on-c: #0b0b0d; }
 .lt.bst { --c: var(--bst); --on-c: #fff; }
 .lt-tag { padding: .2em .6em .18em; font-family: var(--font-num); font-weight: 700; font-size: .8em; letter-spacing: .2em; text-transform: uppercase; color: var(--on-c, #fff); background: var(--c); }
@@ -75,7 +75,7 @@
 .lt-block { display: grid; place-items: center; min-width: 2.9em; padding: 0 .45em; font-family: var(--font-display); font-size: 1.7em; line-height: 1; color: var(--on-c, #fff); background: color-mix(in srgb, var(--c) 88%, #000); }
 .lt-block.small { font-size: 1.05em; letter-spacing: .06em; }
 .lt-id { display: flex; flex-direction: column; justify-content: center; gap: .18em; padding: .5em 1.1em .55em .85em; }
-.lt-title { font-family: var(--font-display); font-size: 1.5em; line-height: 1.05; letter-spacing: .02em; color: #fff; white-space: nowrap; text-transform: uppercase; }
+.lt-title { font-family: var(--font-display); font-size: 1.65em; line-height: 1.05; letter-spacing: .02em; color: #fff; white-space: nowrap; text-transform: uppercase; }
 .lt-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0 .9em; font-family: var(--font-num); font-weight: 700; font-size: .84em; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
 .lt-meta > span + span::before { content: ''; display: inline-block; width: 1px; height: .8em; margin-right: .9em; background: rgba(255, 255, 255, .22); vertical-align: -.05em; }
 .lt-trait { color: var(--c); }
@@ -88,7 +88,7 @@
 @keyframes line-in { from { opacity: 0; transform: translateY(.4em); } to { opacity: 1; transform: none; } }
 
 /* The caption bar alone (no one to name): the line on its plate. */
-.cap { --c: rgba(255, 255, 255, .35); max-width: 40em; padding: .5em 1.1em .55em .85em; font-family: var(--font-ui); font-weight: 600; line-height: 1.3; color: var(--ink); background: var(--plate); border-left: .22em solid var(--c); animation: line-in 260ms cubic-bezier(.2, .7, .2, 1) both; }
+.cap { --c: rgba(255, 255, 255, .35); width: max-content; max-width: 40em; padding: .5em 1.1em .55em .85em; font-family: var(--font-ui); font-weight: 600; line-height: 1.3; color: var(--ink); background: var(--plate); border-left: .22em solid var(--c); animation: line-in 260ms cubic-bezier(.2, .7, .2, 1) both; }
 .cap.con { --c: var(--con); }
 .cap.bst { --c: var(--bst); }
 /* Commentary caption size (Settings, Accessibility). */
