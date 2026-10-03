@@ -38,6 +38,8 @@ import { CLIPS, CONCEPTS } from '@/game/clips';
 
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const rosters = practiceRosters(snap);
+/** The book these tests sample by index (k % length): the everyday plays and the situational ones, as written; the plays a trait unlocks are tests/traits-usage.test.ts's. */
+const BOOK = PLAYS.filter((p) => !p.unlock);
 const setup = (seed: number, play = PLAYS[0]!, def = DEF_CALLS[0]!, user = false) =>
   createPlay({ seed, offense: rosters.offense, defense: rosters.defense, play, def, los: 35, toGo: 10, user });
 
@@ -116,7 +118,8 @@ describe('sim: a play snap to whistle', () => {
         }
       }
     }
-  });
+    // (The whole book, the plays a trait unlocks too: under a minute alone, longer beside the rest of the suite.)
+  }, 240_000);
 
   it('a user throw goes where the icon says: snap, throw, catch or incomplete', () => {
     const s = setup(7, playById('trips-stick'), defById('cover3'), true);
@@ -166,7 +169,7 @@ describe('sim: pass protection follows the linemen', () => {
       OL.forEach((k, j) => (offense[k] = simPlayer(snap.entries.find((e) => e.id === ids[j])!, 70 + j)));
       const ts: number[] = [];
       for (let k = 0; k < 60; k++) {
-        const s = createPlay({ seed: 9000 + k * 7919, offense, defense: rosters.defense, play: PLAYS[k % PLAYS.length]!, def: DEF_CALLS[k % DEF_CALLS.length]!, los: 35, toGo: 10, user: true });
+        const s = createPlay({ seed: 9000 + k * 7919, offense, defense: rosters.defense, play: BOOK[k % BOOK.length]!, def: DEF_CALLS[k % DEF_CALLS.length]!, los: 35, toGo: 10, user: true });
         runToWhistle(s, (st) => input({ snap: st.tick === 0 }));
         ts.push(s.t);
       }
@@ -236,7 +239,7 @@ describe('sim: a 10-point attribute gap is measurable (GDD §18 sensitivity)', (
       for (let k = 0; k < 30; k++) {
         const def = { ...rosters.defense };
         for (const slot of ['LE', 'RE', 'LDT', 'RDT'] as const) def[slot] = clone(def[slot], { powerMoves: moves, finesseMoves: moves, blockShed: moves });
-        const s = createPlay({ seed: 700 + k, offense: rosters.offense, defense: def, play: PLAYS[k % PLAYS.length]!, def: defById('cover3'), los: 35, toGo: 10, user: true });
+        const s = createPlay({ seed: 700 + k, offense: rosters.offense, defense: def, play: BOOK[k % BOOK.length]!, def: defById('cover3'), los: 35, toGo: 10, user: true });
         while (!s.result && s.t < 8) {
           stepPlay(s, input({ snap: s.tick === 0 }));
           const shed = s.events.find((e) => e.type === 'shed');
@@ -355,7 +358,7 @@ describe('sim: the field has edges (M5.5)', () => {
     expect(s.result).toBeDefined();
     return s;
   };
-  const at = (seed: number, los: number, play = PLAYS[seed % PLAYS.length]!, def = DEF_CALLS[seed % DEF_CALLS.length]!, user = false) =>
+  const at = (seed: number, los: number, play = BOOK[seed % BOOK.length]!, def = DEF_CALLS[seed % DEF_CALLS.length]!, user = false) =>
     createPlay({ seed, offense: rosters.offense, defense: rosters.defense, play, def, los, ballY: ((seed % 3) - 1) * 6, toGo: 10, user });
 
   it('AI plays from their own goal line to the opponent 5 stay on the field', () => {
@@ -365,7 +368,7 @@ describe('sim: the field has edges (M5.5)', () => {
   it('a user carrier who runs for the sideline or the end line is dead there, never past it', () => {
     for (let k = 0; k < 30; k++) {
       const side = k % 2 ? 1 : -1;
-      const s = live(at(900 + k, [30, 70, 92][k % 3]!, PLAYS[k % PLAYS.length], DEF_CALLS[k % DEF_CALLS.length], true), (st) =>
+      const s = live(at(900 + k, [30, 70, 92][k % 3]!, BOOK[k % BOOK.length], DEF_CALLS[k % DEF_CALLS.length], true), (st) =>
         input({ snap: st.tick === 0, throwHeld: st.tick >= 70 && st.tick < 74 ? 1 : 0, move: st.phase === 'carrier' ? { x: k % 3 === 2 ? 1 : 0.3, y: k % 3 === 2 ? 0 : side } : { x: 0, y: 0 } }),
       );
       const r = s.result!;

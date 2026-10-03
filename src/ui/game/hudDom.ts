@@ -15,7 +15,12 @@ export const hudDom = {
   opts: [] as (HTMLElement | null)[],
   /** The sprint cue: lit while he's sprinting (the sim's mem.sprint). */
   sprint: null as HTMLElement | null,
+  /** A Pre-Snap Wizard's blitz tags over the Beasts who'll blitz (presnap.ts blitzersShown), at the line. */
+  blitz: [] as (HTMLElement | null)[],
 };
+
+/** How many blitz tags the HUD mounts (the most rushers a call sends from off the line). */
+export const BLITZ_TAGS = 4;
 
 /** Circumference of the power ring's circle (r = 17). */
 export const RING_LEN = 2 * Math.PI * 17;

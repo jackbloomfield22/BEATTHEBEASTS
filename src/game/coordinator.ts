@@ -103,7 +103,8 @@ function pick(plan: [PlayType, string][], down: number, los: number): Suggestion
   // Two plays from the first idea, one each from the others, rotated by the spot so it doesn't repeat itself.
   const out: Suggestion[] = [];
   const seen = new Set<string>();
-  const byType = (t: PlayType) => PLAYS.filter((p) => p.type === t);
+  // (The plays a trait unlocks are the roster-aware coordinator's: sim/coordinator.ts.)
+  const byType = (t: PlayType) => PLAYS.filter((p) => p.type === t && !p.unlock);
   for (let pass = 0; pass < 2 && out.length < 5; pass++) {
     plan.forEach(([t, why], k) => {
       if (out.length >= 5 || (pass === 1 && k > 1)) return;

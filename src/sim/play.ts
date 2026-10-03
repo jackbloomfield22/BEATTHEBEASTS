@@ -4,7 +4,7 @@
 // appended to `state.events` for the render, audio and commentary layers.
 
 import { atan2, cos, sin } from '@/engine/math/detmath';
-import { assignRunBlocks, assignRunFits, backToMesh, belief, qbMesh, runFit, schemeBlock, stalk } from './runs';
+import { assignRunBlocks, assignRunFits, backToMesh, belief, keepIt, qbMesh, qbRunner, readEndStep, readKeep, runFit, schemeBlock, setZoneRead, stalk } from './runs';
 import {
   assignProtection,
   breakOnBall,
@@ -39,7 +39,7 @@ import { gauss } from './rand';
 import { has } from './traits';
 import { manOf, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
-import { HOT_ROUTES } from './plays';
+import { DRAWS, HOT_ROUTES } from './plays';
 import { dist, len, norm, sub, v2, type V2 } from './vec';
 import { routePoints } from './ai';
 
@@ -73,6 +73,10 @@ const PULL_UP = 0.35;
 
 /** A toss's flight, s: a 4–5 yd underhand pitch at ~15 yd/s (about 0.3 s). */
 const PITCH_T = 0.3;
+/** A zone-read keep: the back carries out his fake into the line this long (s) before he blocks. */
+const KEEP_FAKE = 0.6;
+/** The QB draw's show (s): a step back as the line sets, then he sits in the pocket until he takes off (the play's mesh). */
+const QB_DRAW_SHOW = 0.3;
 
 /** Seconds the play keeps animating after the whistle. */
 export const DEAD_HOLD = 1.6;
@@ -113,6 +117,7 @@ function doSnap(s: PlayState): void {
   setRoutes(s);
   numberReceivers(s);
   assignProtection(s);
+  setZoneRead(s);
   assignRunBlocks(s);
   assignRunFits(s);
   // What the offense shows the defense, and when (runs.ts belief): a run
@@ -120,7 +125,7 @@ function doSnap(s: PlayState): void {
   // handoff); play action shows run, then pass when the ball comes out of
   // the fake; everything else is a pass from the first step.
   const play = s.setup.play;
-  if (play.run && play.run.scheme !== 'draw') s.runShow = s.t + 0.05;
+  if (play.run && !DRAWS.includes(play.run.scheme)) s.runShow = s.t + 0.05;
   else if (play.pa) {
     s.runShow = s.t + 0.05;
     s.passShow = s.t + 0.25 + play.pa.fake;
@@ -277,14 +282,40 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
         s.phase = 'carrier';
         s.runReadT = s.t;
         if (s.runShow < 0) s.runShow = s.t;
-        qb.mem.designed = true;
+        qbRunner(qb);
         qb.anim = 'carry';
       } else steer(qb, { x: qb.fx.vmax * 0.3, y: 0 }, { face: 0 });
+      return;
+    }
+    if (play.run.scheme === 'qbDraw') {
+      // The QB draw (a Designed Runner's play): he shows his drop as the line
+      // sets, then takes it himself up the middle as the rush runs past.
+      if (since >= play.run.mesh && s.phase !== 'carrier') {
+        s.carrier = qb.i;
+        s.phase = 'carrier';
+        s.runReadT = s.t;
+        if (s.runShow < 0) s.runShow = s.t;
+        qbRunner(qb);
+        qb.anim = 'carry';
+        s.events.push({ t: s.t, type: 'move', who: [qb.i], data: { move: 'tuck', run: 'draw' } });
+      } else if (since < QB_DRAW_SHOW) {
+        // The show: a step back as if to throw (from the gun he's already at 5 yd: a deep drop would put him behind the rush he's about to run past).
+        steer(qb, { x: -qb.fx.vmax * 0.35, y: 0 }, { face: 0 });
+        qb.anim = 'drop';
+      } else steer(qb, { x: 0, y: 0 }, { face: 0 });
       return;
     }
     // Mesh: the reverse pivot or the slide to the back, and the handoff (the toss: a pitch, up to ~5 yd).
     const rb = off(s, 'RB');
     qbMesh(s, qb, rb);
+    // The zone read: at the mesh he reads the backside end, and keeps it if the end has crashed on the back.
+    if (play.run.scheme === 'zoneRead' && since >= play.run.mesh && s.phase !== 'carrier' && qb.mem.keep === undefined && dist(qb.pos, rb.pos) < 1.8) {
+      qb.mem.keep = readKeep(s, qb, rb);
+      if (qb.mem.keep) {
+        keepIt(s, qb);
+        return;
+      }
+    }
     const toss = play.run.scheme === 'toss';
     if (since >= play.run.mesh && s.phase !== 'carrier' && dist(qb.pos, rb.pos) < (toss ? 5.5 : 1.8)) {
       if (toss) s.pitch = { t: s.t, from: { x: qb.pos.x, y: qb.pos.y } };
@@ -1487,6 +1518,13 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
       continue;
     }
     const as = play.assign[a.slot as keyof typeof play.assign];
+    // A zone-read keep: the back carries out his fake into the line, holding the linebackers who key him.
+    const keepT = s.agents[s.qb]!.mem.keepT as number | undefined;
+    if (play.run && a.slot === 'RB' && keepT !== undefined && s.carrier === s.qb && s.t < keepT + KEEP_FAKE) {
+      steer(a, arrive(a, v2(s.setup.los + 0.5, (s.setup.ballY ?? 0) + play.run.aim), 0.8), {});
+      a.anim = 'carry';
+      continue;
+    }
     if (carrier && carrier.side === 'off') {
       // Blocking for the ball carrier. Linemen keep driving at the point of
       // attack; everyone else, receivers included the moment the ball is
@@ -1546,7 +1584,7 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
         break;
       case 'runBlock':
         // The draw's line shows pass until the handoff.
-        if (play.run?.scheme === 'draw' && a.p.pos === 'OL') passBlock(s, a);
+        if (play.run && DRAWS.includes(play.run.scheme) && a.p.pos === 'OL') passBlock(s, a);
         else schemeBlock(s, a);
         break;
       case 'carry':
@@ -1566,10 +1604,15 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
     // fullback, the toss to the edge, the sneak); zone presses for a beat, then reads.
     const sc = play.run?.scheme;
     const gapRun = sc === 'power' || sc === 'counter' || sc === 'iso' || sc === 'toss' || sc === 'sneak';
-    const designed = carrier.slot === 'RB' || (sc === 'sneak' && carrier.i === s.qb);
-    if (play.run && designed && carrier.pos.x < s.setup.los - (sc === 'sneak' ? 0 : 0.8) && (gapRun || s.t - s.runReadT < 0.35) && !freeNear) {
-      // The toss gets to the edge first (outside the tight end's block, still behind the line), then turns it up.
-      const aim = sc === 'toss' && Math.abs(carrier.pos.y - (s.setup.ballY ?? 0) - play.run.aim * 1.2) > 1.5 ? v2(s.setup.los - 0.5, (s.setup.ballY ?? 0) + play.run.aim * 1.2) : v2(s.setup.los + 1, (s.setup.ballY ?? 0) + play.run.aim * (sc === 'toss' ? 1.2 : 1));
+    // A Designed Runner's QB draw and zone-read keep are designed runs too (the sneak is its own: a dive behind the wedge).
+    const qbRun = carrier.i === s.qb && carrier.mem.designed === true && sc !== 'sneak';
+    const keeper = qbRun && sc === 'zoneRead';
+    const designed = carrier.slot === 'RB' || (sc === 'sneak' && carrier.i === s.qb) || qbRun;
+    const aimY = (carrier.mem.runAim as number | undefined) ?? play.run?.aim ?? 0;
+    const edgeFirst = sc === 'toss' || keeper;
+    if (play.run && designed && carrier.pos.x < s.setup.los - (sc === 'sneak' ? 0 : 0.8) && (gapRun || keeper || s.t - s.runReadT < 0.35) && !freeNear) {
+      // The toss (and the keeper round the read end) gets to the edge first (outside the tight end's block, still behind the line), then turns it up.
+      const aim = edgeFirst && Math.abs(carrier.pos.y - (s.setup.ballY ?? 0) - aimY * 1.2) > 1.5 ? v2(s.setup.los - 0.5, (s.setup.ballY ?? 0) + aimY * 1.2) : v2(s.setup.los + 1, (s.setup.ballY ?? 0) + aimY * (edgeFirst ? 1.2 : 1));
       steer(carrier, { x: (aim.x - carrier.pos.x) * 3, y: (aim.y - carrier.pos.y) * 3 });
       carrier.anim = 'carry';
     } else carrierStep(s, inp);
@@ -1754,6 +1797,8 @@ function defenseRoles(s: PlayState): void {
       pursueTackle(s, d, carrier);
       continue;
     }
+    // The zone read's read end plays his read (crash or sit) until he's seen the mesh.
+    if (readEndStep(s, d)) continue;
     // A run (or a run fake) he has read: his fit. Until he reads it he plays pass.
     if ((s.setup.play.run || (s.setup.play.pa && s.phase !== 'air')) && belief(s, d) === 'run') {
       runFit(s, d);

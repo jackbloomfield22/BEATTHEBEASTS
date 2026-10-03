@@ -27,6 +27,7 @@ import type { Catalog, DraftMode, Roster } from './draft';
 import { draftedTeam } from './draft';
 import { depthChart } from './depth';
 import { squadFor } from './rotation';
+import { hotRouteHoldsClock } from './presnap';
 import type { RatedBeasts } from './beasts';
 import type { NewDaily } from './daily';
 import { describe } from './describe';
@@ -172,11 +173,31 @@ class GameSession {
   tendencies: Tendencies = emptyTendencies();
   private dcRng: Rng = deriveStream(0, 'dc');
   private difficulty: Difficulty = 'pro';
-  /** The Beasts' call: package, coverage and pressure from the situation, the difficulty and what they've charted (sim/defense.ts). */
+  /**
+   * The Beasts' call: package, coverage and pressure from the situation, the
+   * difficulty and what they've charted (sim/defense.ts). Made once a snap
+   * (the first ask: the play call, where a Field General reads its shell, or
+   * the snap) and kept for that snap, the same down, distance and spot.
+   */
   defCall = (sit: Situation): DefCall => {
     const m = this.m!;
-    return callDefense({ down: sit.down, toGo: sit.toGo, los: sit.los, secondsLeft: m.clock.live ? halfSecs(m) : undefined, scoreDiff: m.score.user - m.score.beasts }, this.difficulty, this.tendencies, this.dcRng, this.alphaId());
+    const key = `${m.userDrives.length}:${m.drive?.plays ?? 0}:${sit.down}:${sit.toGo}:${sit.los}`;
+    if (this.callFor?.key === key) return this.callFor.call;
+    const call = callDefense({ down: sit.down, toGo: sit.toGo, los: sit.los, secondsLeft: m.clock.live ? halfSecs(m) : undefined, scoreDiff: m.score.user - m.score.beasts }, this.difficulty, this.tendencies, this.dcRng, this.alphaId());
+    this.callFor = { key, call };
+    return call;
   };
+  private callFor: { key: string; call: DefCall } | null = null;
+
+  /** The call the Beasts have in for the next snap (a Field General reads its shell on the play call: presnap.ts). */
+  nextCall(): DefCall | null {
+    return this.m ? this.defCall(this.m.sit) : null;
+  }
+
+  /** Your quarterback (the pre-snap traits read him). */
+  get qb(): SimPlayer | null {
+    return this.team?.QB ?? null;
+  }
 
   /** The Contenders' Alpha receiver, if they have one (the Beasts roll coverage to him). */
   private alphaId(): string | undefined {
@@ -202,6 +223,7 @@ class GameSession {
     this.capsules = [];
     this.shadowed = -1;
     this.tendencies = emptyTendencies();
+    this.callFor = null;
     this.dcRng = deriveStream(o.seed, 'beasts-dc');
     this.difficulty = o.difficulty;
     const m = createMatch({ drives: o.drives, quarterSecs: o.quarterSecs ?? null, seed: o.seed, beastsRating: o.beasts.rating.rating, diffAdj: o.diffAdj, kickerRange: KICKER_RANGE[o.difficulty] }, o.windScale ?? 1);
@@ -248,7 +270,8 @@ class GameSession {
     if (!m || m.playClock === null || get().paused) return false;
     const st = get().stage;
     if (st === 'call' || st === 'fourth') return true;
-    return st === 'play' && usePractice.getState().stage === 'presnap' && !practice.runner?.paused;
+    // (A Pre-Snap Wizard's hot route costs no play-clock time: the clock holds while his picker is open.)
+    return st === 'play' && usePractice.getState().stage === 'presnap' && !practice.runner?.paused && !(usePractice.getState().hot && hotRouteHoldsClock(this.team?.QB));
   }
 
   /** Each frame: real time onto the play clock, a whole second at a time. */

@@ -41,9 +41,9 @@ export function sidesFor(r: HarnessRosters, play: OffPlay, def: DefCall): { offe
   return { offense, defense: defenseFor(call, r.beasts), def: call };
 }
 
-/** The harness's book: the everyday plays (situational calls, the sneak and the Hail Mary, are left out). */
-const PASS_BASE = PASS_PLAYS.filter((p) => !p.situ);
-const RUN_BASE = RUN_PLAYS.filter((p) => !p.situ);
+/** The harness's book: the everyday plays (situational calls, the sneak and the Hail Mary, are left out, and so are the plays a trait unlocks: they're tools/sim/qbruns.ts's and usagefx.ts's). */
+const PASS_BASE = PASS_PLAYS.filter((p) => !p.situ && !p.unlock);
+const RUN_BASE = RUN_PLAYS.filter((p) => !p.situ && !p.unlock);
 import { dist, type V2 } from './vec';
 
 /**
@@ -476,7 +476,9 @@ export function routeFidelity(rosters: HarnessRosters, n: number, plays: OffPlay
           for (const [i, r] of art) {
             const a = s.agents[i]!;
             const rt = a.route;
-            if (rt !== r.ref) r.rec.switched = true;
+            // A new route (an option read's break, a blitz pickup): the art was the old one, so the check stops there.
+            if (rt !== r.ref || a.mem.pickup !== undefined) r.rec.switched = true;
+            if (r.rec.switched) continue;
             const pastEnd = !!rt && rt.idx >= rt.pts.length;
             const dv = pastEnd && FIELD_HALF_W - Math.abs(a.pos.y) < 6 ? 0 : strayFrom(a.pos, r.pts, r.sitEnd);
             if (dv > r.rec.maxDev) {

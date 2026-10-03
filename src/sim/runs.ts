@@ -12,7 +12,7 @@ import { atan2 } from '@/engine/math/detmath';
 import { blockOf } from './blocks';
 import { arrive, steer } from './movement';
 import { pursue, reaction, runBlock } from './ai';
-import { fullbackSlot, inLine, ZONES, type OffPlay } from './plays';
+import { DRAWS, fullbackSlot, inLine, ZONES, type OffPlay } from './plays';
 import { manOf, type PlayState } from './state';
 import { FIELD_HALF_W, type Agent, type OffSlot } from './types';
 import { dist, v2, type V2 } from './vec';
@@ -50,7 +50,7 @@ const OL = ['LT', 'LG', 'C', 'RG', 'RT'];
 export type BlockRole = 'zone' | 'reach' | 'down' | 'hinge' | 'kick' | 'lead' | 'climb' | 'stalk' | 'pass' | 'release';
 
 /** Schemes the line blocks like zone (a play-side step, the man in the gap): the iso's base blocks and the sneak's wedge too. */
-const ZONE_LIKE = ['insideZone', 'iso', 'sneak'];
+const ZONE_LIKE = ['insideZone', 'iso', 'sneak', 'zoneRead'];
 /** Schemes the line reaches on (outside zone and the toss). */
 const REACH = ['outsideZone', 'toss'];
 
@@ -68,7 +68,7 @@ export function blockRoles(play: OffPlay): Partial<Record<OffSlot, BlockRole>> {
       const te = inLine(play.formation, k);
       const side = (run?.aim ?? -1) >= 0 ? 1 : -1;
       const dy = play.formation.align[k].dy * side;
-      if (!run || run.scheme === 'draw') out[k] = lineman ? 'pass' : 'stalk';
+      if (!run || DRAWS.includes(run.scheme)) out[k] = lineman ? 'pass' : 'stalk';
       else if (k === pulls.kick) out[k] = 'kick';
       else if (k === pulls.lead) out[k] = 'lead';
       // The fullback leads through the hole (iso, the dive, zone) or around the edge (toss).
@@ -128,7 +128,7 @@ function nearestFree(s: PlayState, pool: number[], at: V2, taken: Set<number>, w
  */
 export function assignRunBlocks(s: PlayState): void {
   const run = s.setup.play.run;
-  if (!run || run.scheme === 'draw') return;
+  if (!run || DRAWS.includes(run.scheme)) return;
   const side = run.aim >= 0 ? 1 : -1;
   const by = s.setup.ballY ?? 0;
   const los = s.setup.los;
@@ -138,6 +138,9 @@ export function assignRunBlocks(s: PlayState): void {
     return d.pos.x >= los + 2.5 && d.pos.x < los + 8;
   });
   const taken = new Set<number>();
+  // The zone read leaves the backside end alone: he's the QB's read (setZoneRead).
+  const readEnd = run.scheme === 'zoneRead' ? ((s.agents[s.qb]!.mem.readEnd as number | undefined) ?? -1) : -1;
+  if (readEnd >= 0) taken.add(readEnd);
   // Play side first (the pullers come from the far end).
   const line = OL.map((k) => s.agents[s.slot[k]!]!).sort((p, q) => (q.pos.y - p.pos.y) * side);
   const gap = run.scheme === 'power' || run.scheme === 'counter';
@@ -471,7 +474,8 @@ export function runFit(s: PlayState, d: Agent): void {
   // line, not the quarterback 3 yd deep. He fits off the back and triggers
   // downhill with him until he reads pass (belief), the bite a fan sees.
   const fake = !c && s.setup.play.pa ? s.agents.find((a) => a.side === 'off' && a.slot === 'RB') : undefined;
-  const ball = c ?? fake ?? s.agents[s.qb]!;
+  // A zone-read keep he hasn't seen yet: he's still on the back carrying the fake.
+  const ball = keepUnseen(s, d) ?? c ?? fake ?? s.agents[s.qb]!;
   const committed = c !== null && (c.pos.x > los - 0.5 || s.t - s.runReadT > 0.9);
   if (committed || (!fake && dist(d.pos, ball.pos) < 3)) {
     // Contain: pursue, but never let him outside me.
@@ -522,4 +526,149 @@ export function runFit(s: PlayState, d: Agent): void {
 /** Receivers' stalk blocks on a screen: the man over me, driven away from the ball. */
 export function stalk(s: PlayState, b: Agent, toward: V2): void {
   runBlock(s, b, toward, true);
+}
+
+// ---- The zone read (a Designed Runner's play) ----------------------------------
+
+/**
+ * How often the read end crashes on the back rather than sitting on the
+ * quarterback: the defense's call, mixed so the read is a real read (a
+ * coin flip: coordinators mix "squeeze" and "sit" calls against the read
+ * option, and a tendency is what the QB would exploit).
+ */
+const CRASH = 0.5;
+/** The read end's inside squeeze that reads as a crash: yd off his alignment toward the ball, or within this of the back. */
+const CRASH_SEEN = 1.0;
+const CRASH_NEAR = 2.5;
+/** A misread at the mesh: up to this share of reads for a 0 Decision Making (a 99 reads it right every time). Our number. */
+const MISREAD = 0.2;
+/** A Run-Pass Nightmare's keeper freezes the edge defender this much longer (s; the trait catalog's combination line). */
+const RPN_FREEZE = 0.1;
+/** The keeper's aiming point: outside the read end, this far from the ball (yd; the end aligns ~4–5 yd out). */
+const KEEP_AIM = 5.5;
+
+/** At the snap: the zone read's read man (the backside end, left unblocked) and his call (crash or sit). */
+export function setZoneRead(s: PlayState): void {
+  const run = s.setup.play.run;
+  if (run?.scheme !== 'zoneRead') return;
+  const side = run.aim >= 0 ? 1 : -1;
+  const by = s.setup.ballY ?? 0;
+  let end = -1;
+  let w = -Infinity;
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (d.pos.x > s.setup.los + 2.5) continue;
+    const y = (d.pos.y - by) * -side;
+    if (y > w) {
+      w = y;
+      end = i;
+    }
+  }
+  const qb = s.agents[s.qb]!;
+  qb.mem.readEnd = end;
+  if (end < 0) return;
+  const e = s.agents[end]!;
+  e.mem.crash = s.rng.ai() < CRASH;
+  e.mem.readFrom = e.pos.y;
+  // The scrape exchange: when the end crashes, the backside linebacker
+  // scrapes over the top to take the quarterback (what makes the crash a
+  // sound call, not a gift).
+  if (!e.mem.crash) return;
+  let scr = -1;
+  let sd = Infinity;
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (d.pos.x < s.setup.los + 2.5 || d.pos.x > s.setup.los + 8) continue;
+    const k = dist(d.pos, v2(s.setup.los + 4, by - side * 3));
+    if (k < sd) {
+      sd = k;
+      scr = i;
+    }
+  }
+  if (scr >= 0) qb.mem.scraper = scr;
+}
+
+/** The QB's read at the mesh: keep it if the end has crashed on the back (a poor decision maker misreads now and then). */
+export function readKeep(s: PlayState, qb: Agent, rb: Agent): boolean {
+  const end = (qb.mem.readEnd as number | undefined) ?? -1;
+  if (end < 0) return false;
+  const e = s.agents[end]!;
+  const by = s.setup.ballY ?? 0;
+  const inside = Math.abs((e.mem.readFrom as number) - by) - Math.abs(e.pos.y - by);
+  const crashed = inside > CRASH_SEEN || dist(e.pos, rb.pos) < CRASH_NEAR;
+  const wrong = s.rng.ai() < MISREAD * (1 - qb.fx.a('decision'));
+  return crashed !== wrong;
+}
+
+/**
+ * The QB is the runner by design (the sneak, the QB draw, a zone-read keep):
+ * no slide. QBs carry no Ball Security rating, so the sim reads its 50
+ * default for every one of them; a Designed Runner carries it the way a back
+ * does (the trait catalog: "ball security on QB runs uses his full rating"):
+ * RUNNER_SECURITY, on the run only (a sack's strip still reads the default).
+ */
+export function qbRunner(qb: Agent): void {
+  qb.mem.designed = true;
+  if (!has(qb, 'designed-runner') || qb.p.attrs.ballSecurity !== undefined || qb.mem.runnerSecurity) return;
+  qb.mem.runnerSecurity = true;
+  const a = qb.fx.a;
+  qb.fx = { ...qb.fx, a: (k: string) => (k === 'ballSecurity' ? RUNNER_SECURITY / 99 : a(k)) };
+}
+/** A back's Ball Security: 72, the mean of the 824 backs in the ratings snapshot (and the RB formula's base). */
+const RUNNER_SECURITY = 72;
+
+/** He keeps it: the QB is the runner (a designed run: no slide), round the read end to the backside edge. */
+export function keepIt(s: PlayState, qb: Agent): void {
+  const run = s.setup.play.run!;
+  const side = run.aim >= 0 ? 1 : -1;
+  s.carrier = qb.i;
+  s.phase = 'carrier';
+  s.runReadT = s.t;
+  qbRunner(qb);
+  qb.mem.runAim = -side * KEEP_AIM;
+  qb.mem.keepT = s.t;
+  qb.anim = 'carry';
+  s.events.push({ t: s.t, type: 'move', who: [qb.i], data: { move: 'tuck', run: 'keep' } });
+}
+
+/**
+ * The read end before he's seen the decision: a crash squeezes flat down the
+ * line at the back's track; a sit shuffles, square, on the QB. He's seen it
+ * a reaction time after the mesh (a Run-Pass Nightmare's keep freezes him
+ * RPN_FREEZE longer). True while he's still playing his read.
+ */
+export function readEndStep(s: PlayState, d: Agent): boolean {
+  const qb = s.agents[s.qb]!;
+  const run = s.setup.play.run;
+  if (run?.scheme !== 'zoneRead' || (qb.mem.readEnd !== d.i && qb.mem.scraper !== d.i)) return false;
+  if (s.t >= readUntil(s, d)) return false;
+  const side = run.aim >= 0 ? 1 : -1;
+  const by = s.setup.ballY ?? 0;
+  if (qb.mem.scraper === d.i) steer(d, arrive(d, v2(s.setup.los + 1.5, by - side * KEEP_AIM), 1), {});
+  else if (d.mem.crash) steer(d, arrive(d, v2(s.setup.los - 0.5, by + side * 0.5), 1), {});
+  else steer(d, arrive(d, v2(s.setup.los + 0.8, d.mem.readFrom as number), 0.5, 1), {});
+  return true;
+}
+
+/**
+ * Until when (play time) a zone-read defender plays his read: a reaction
+ * time past the mesh's decision, and on a Run-Pass Nightmare's keep the read
+ * end RPN_FREEZE longer. Infinity before the decision.
+ */
+export function readUntil(s: PlayState, d: Agent): number {
+  const qb = s.agents[s.qb]!;
+  const keepT = qb.mem.keepT as number | undefined;
+  const decided = keepT ?? (s.carrier >= 0 && s.carrier !== s.qb ? s.runReadT : undefined);
+  if (decided === undefined) return Infinity;
+  return decided + reaction(s, d) + (keepT !== undefined && qb.mem.readEnd === d.i && has(qb, 'run-pass-nightmare') ? RPN_FREEZE : 0);
+}
+
+/** A zone-read keep this defender hasn't registered yet (a reaction time; the read end RPN_FREEZE longer against a Run-Pass Nightmare): he still plays the back. */
+function keepUnseen(s: PlayState, d: Agent): Agent | null {
+  const qb = s.agents[s.qb]!;
+  const keepT = qb.mem.keepT as number | undefined;
+  if (keepT === undefined || s.carrier !== s.qb) return null;
+  const freeze = qb.mem.readEnd === d.i && has(qb, 'run-pass-nightmare') ? RPN_FREEZE : 0;
+  if (s.t >= keepT + reaction(s, d) + freeze) return null;
+  return s.agents.find((a) => a.side === 'off' && a.slot === 'RB') ?? null;
 }

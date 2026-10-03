@@ -49,7 +49,10 @@ export type RouteName =
   | 'spot'
   | 'arrow'
   | 'qin'
-  | 'leak';
+  | 'leak'
+  | 'angle'
+  | 'option'
+  | 'chip';
 
 export const ROUTES: Record<RouteName, RoutePoint[]> = {
   go: [{ d: 45, o: 1 }],
@@ -94,10 +97,17 @@ export const ROUTES: Record<RouteName, RoutePoint[]> = {
   qin: [{ d: 5, o: 0 }, { d: 5, o: -9 }],
   // Leak: the tight end shows his block (ROUTE_DELAY), then slips across the formation to the far flat behind the flow.
   leak: [{ d: 1, o: -1.5 }, { d: 3.5, o: -8 }, { d: 5, o: -16 }],
+  // Angle (the back's "Texas" route): out of the backfield toward the flat, then a hard break back inside under the linebackers, settling in the hole.
+  angle: [{ d: 1, o: 2.5 }, { d: 2.5, o: 4 }, { d: 6, o: -2 }, { d: 7, o: -7, sit: true }],
+  // Option: a stem to six yards, then a break away from the nearest defender's leverage (in, out, or sit down in a zone's
+  // window: ai.ts optionBreak). Drawn breaking in, the way it's run against nobody; from the backfield the stem starts outside the tackle.
+  option: [{ d: 2, o: 1.5 }, { d: 6, o: 1.5 }, { d: 6.5, o: -3, sit: true }],
+  // Chip (the H-back): he steps to the edge rusher and knocks him off his line (ai.ts chip), then releases to the flat.
+  chip: [{ d: 1, o: 2.5 }, { d: 3, o: 7 }, { d: 3.5, o: 9, sit: true }],
 };
 
 /** Routes that start late (s after the snap): the slip screen's back shows pass protection first. */
-export const ROUTE_DELAY: Partial<Record<RouteName, number>> = { slip: 0.9, leak: 0.7 };
+export const ROUTE_DELAY: Partial<Record<RouteName, number>> = { slip: 0.9, leak: 0.7, chip: 0.8 };
 
 /**
  * The routes a receiver can be hot-routed to at the line (Playtest 2: twelve,
@@ -138,6 +148,9 @@ export const ROUTE_LABEL: Record<RouteName, string> = {
   arrow: 'Arrow',
   qin: 'Quick in',
   leak: 'Leak',
+  angle: 'Angle',
+  option: 'Option',
+  chip: 'Chip and flat',
 };
 
 export type Assignment =
@@ -162,6 +175,8 @@ export interface Formation {
   /** The QB under center (a quick exchange, a drop, a reverse pivot to hand off); else shotgun (or pistol). */
   center?: boolean;
   align: Record<OffSlot, { dx: number; dy: number }>;
+  /** The slot an H-back aligns in (off the line, in the backfield): personnel.ts puts the tight end who holds the trait there. */
+  hBack?: OffSlot;
 }
 
 /** Drop depth (yd behind the ball) and time (s) the QB takes before he can throw. */
@@ -193,7 +208,12 @@ export type PlayType = 'quick' | 'dropback' | 'shot' | 'playAction' | 'screen' |
  * reaches and the fullback leads around the edge. Sneak: the QB keeps it
  * behind a wedge (the line fires straight ahead).
  */
-export type RunScheme = 'insideZone' | 'outsideZone' | 'power' | 'counter' | 'draw' | 'iso' | 'toss' | 'sneak';
+export type RunScheme = 'insideZone' | 'outsideZone' | 'power' | 'counter' | 'draw' | 'iso' | 'toss' | 'sneak' | 'qbDraw' | 'zoneRead';
+
+/** Schemes where the QB is the runner by design (the sneak, the QB draw; the zone read when he keeps it). */
+export const QB_RUNS: readonly RunScheme[] = ['sneak', 'qbDraw', 'zoneRead'];
+/** Schemes whose line shows pass first (the draws). */
+export const DRAWS: readonly RunScheme[] = ['draw', 'qbDraw'];
 
 export interface OffPlay {
   id: string;
@@ -216,6 +236,13 @@ export interface OffPlay {
   situ?: 'short' | 'endOfHalf';
   /** A Hail Mary: every receiver to the end zone, the ball lofted to where they gather. */
   hailMary?: boolean;
+  /**
+   * A play only a player with this trait opens up (the trait catalog's
+   * lines: a Designed Runner's QB draw and zone read, an H-Back's set). The
+   * play call lists it only when the roster has him (personnel.ts
+   * playUnlocked), and the harness's everyday book leaves it out.
+   */
+  unlock?: string;
 }
 
 /** The labels for the play call's groups, in order. */
@@ -287,6 +314,15 @@ export const FORMATIONS: Record<string, Formation> = {
     center: true,
     align: { ...OL, QB: { dx: -1.25, dy: 0 }, SLOT: { dx: -4.3, dy: -0.2 }, RB: { dx: -7, dy: 0 }, X: { dx: -0.6, dy: -9.5 }, TE: { dx: -0.9, dy: -4.1 }, Z: { dx: -0.9, dy: 4.1 } },
   },
+  // Singleback H (12): the tight end in-line right, the H-back off the line and offset left in the backfield
+  // (4 yd deep, over the guard: where he can lead through the hole, chip the edge or swing to the flat).
+  singlebackH: {
+    name: 'Singleback H',
+    personnel: '12',
+    center: true,
+    hBack: 'SLOT',
+    align: { ...OL, QB: { dx: -1.25, dy: 0 }, SLOT: { dx: -4.2, dy: 1.6 }, RB: { dx: -7, dy: 0 }, X: { dx: -0.6, dy: 14 }, TE: { dx: -0.9, dy: -4.1 }, Z: { dx: -1.2, dy: -13.5 } },
+  },
 };
 
 const OL_SLOTS: OffSlot[] = ['LT', 'LG', 'C', 'RG', 'RT'];
@@ -319,7 +355,7 @@ const G5 = (set: number): Drop => ({ kind: 'gun5', depth: 8, set });
 const UC5 = (set: number): Drop => ({ kind: 'uc5', depth: 7, set });
 const QB = { QB: { kind: 'qb' } } as const;
 const pb: Assignment = { kind: 'passBlock' };
-const F = FORMATIONS as Record<'gunTrips' | 'gunDoubles' | 'singleback' | 'gunBunch' | 'gunEmpty' | 'singlebackAce' | 'iForm' | 'pistol' | 'heavy', Formation>;
+const F = FORMATIONS as Record<'gunTrips' | 'gunDoubles' | 'singleback' | 'gunBunch' | 'gunEmpty' | 'singlebackAce' | 'iForm' | 'pistol' | 'heavy' | 'singlebackH', Formation>;
 
 /** The passing book: the quick game, dropback, shots, play action and screens (M5.5's 16, then M6's). */
 export const PASS_PLAYS: OffPlay[] = [
@@ -360,6 +396,10 @@ export const PASS_PLAYS: OffPlay[] = [
   { id: 'iform-fb-flat', name: 'Fullback Flat', type: 'playAction', formation: F.iForm, drop: UC5(1.3), pa: { aim: -1.5, fake: 0.45 }, assign: { ...PASS_PRO, ...QB, SLOT: route('flat', 1), TE: route('corner', 2), Z: route('go', 3), X: route('dig', 4), RB: pb } },
   { id: 'pistol-pa-boot', name: 'PA Boot', type: 'playAction', formation: F.pistol, drop: { kind: 'gun5', depth: 6, set: 1.45, boot: 7 }, pa: { aim: -1.5, fake: 0.45 }, assign: { ...PASS_PRO, ...QB, SLOT: route('sail', 1), TE: route('drag', 2), Z: route('cross', 3), X: route('go', 4), RB: pb } },
   { id: 'heavy-pa-te-leak', name: 'PA TE Leak', type: 'playAction', formation: F.heavy, drop: UC5(1.45), pa: { aim: -2.8, fake: 0.55 }, assign: { ...PASS_PRO, ...QB, TE: route('leak', 1), Z: route('corner', 2), X: route('post', 3), SLOT: route('flat', 4), RB: pb } },
+  // ---- Unlocked by an H-Back (the trait catalog: he aligns in the backfield and can lead-block, chip or run swing routes from there) ----
+  // Play action away from him, the H swinging to the open flat behind the flow; the chip: he knocks the edge rusher off his line, then releases to the flat as the outlet.
+  { id: 'h-pa-swing', name: 'PA H Swing', type: 'playAction', formation: F.singlebackH, drop: UC5(1.35), pa: { aim: -1.5, fake: 0.45 }, unlock: 'h-back', assign: { ...PASS_PRO, ...QB, SLOT: route('swing', 1), Z: route('post', 2), X: route('go', 3), TE: route('drag', 4), RB: pb } },
+  { id: 'h-chip-flat', name: 'H Chip', type: 'dropback', formation: F.singlebackH, drop: UC5(1.25), unlock: 'h-back', assign: { ...PASS_PRO, ...QB, X: route('dig', 1), Z: route('curl', 2), SLOT: route('chip', 3), TE: route('seam', 4), RB: route('checkdown', 5) } },
 ];
 
 const HANDOFF = (set: number): Drop => ({ kind: 'handoff', depth: 5, set });
@@ -391,7 +431,21 @@ export const RUN_PLAYS: OffPlay[] = [
   { id: 'heavy-dive', name: 'Dive', type: 'run', formation: F.heavy, drop: HANDOFF(0.6), assign: RUN_PERSONNEL, run: { scheme: 'iso', aim: -0.8, mesh: 0.6 } },
   { id: 'heavy-power', name: 'Power', type: 'run', formation: F.heavy, drop: HANDOFF(0.85), assign: RUN_PERSONNEL, run: { scheme: 'power', aim: -2.8, mesh: 0.85 } },
   { id: 'heavy-sneak', name: 'QB Sneak', type: 'run', formation: F.heavy, drop: HANDOFF(0.1), situ: 'short', assign: RUN_PERSONNEL, run: { scheme: 'sneak', aim: -0.4, mesh: 0.1 } },
+  // ---- Unlocked by a Designed Runner (the trait catalog's line) ----
+  // QB draw: the line and the back show pass protection, the QB shows his drop, then runs it up the A gap himself as the rush runs past.
+  { id: 'doubles-qb-draw', name: 'QB Draw', type: 'run', formation: F.gunDoubles, drop: HANDOFF(0.85), unlock: 'designed-runner', assign: { ...RUN_PERSONNEL, RB: pb, X: route('go', 1), Z: route('go', 2), SLOT: route('seam', 3) }, run: { scheme: 'qbDraw', aim: 0.7, mesh: 0.85 } },
+  // Zone read: inside zone to the left with the back crossing the QB's face; the right end is left unblocked and read. He crashes on the back: the QB pulls it and keeps it round him. He sits: the back has it.
+  { id: 'doubles-zone-read', name: 'Zone Read', type: 'run', formation: F.gunDoubles, drop: HANDOFF(0.65), unlock: 'designed-runner', assign: RUN_PERSONNEL, run: { scheme: 'zoneRead', aim: 1.5, mesh: 0.6 } },
+  // ---- Unlocked by an H-Back: he leads through the hole from his offset spot ----
+  { id: 'h-iso', name: 'H Iso', type: 'run', formation: F.singlebackH, drop: HANDOFF(0.8), unlock: 'h-back', assign: RUN_PERSONNEL, run: { scheme: 'iso', aim: 1.6, mesh: 0.8 } },
 ];
+
+/** The play call's line under a designed run: who carries it. */
+export function runNote(p: OffPlay): string {
+  if (p.run?.scheme === 'qbDraw') return 'A QB draw: show pass, then take it up the middle yourself as the rush runs past.';
+  if (p.run?.scheme === 'zoneRead') return 'Zone read: the backside end is left for you to read. He crashes on the back, you keep it round him; he sits, the back has it.';
+  return 'A designed run: the back takes the handoff; you run it from there.';
+}
 
 /** The whole book, as the play call lists it (passes first, then runs). */
 export const PLAYS: OffPlay[] = [...PASS_PLAYS, ...RUN_PLAYS];
@@ -415,8 +469,8 @@ export function mirrorPlay(p: OffPlay): OffPlay {
   };
 }
 
-/** The base book: every play but the situational ones (the harness's distribution, the coordinator's everyday calls). */
-export const BASE_PLAYS: OffPlay[] = PLAYS.filter((p) => !p.situ);
+/** The base book: every play but the situational ones and the ones a trait unlocks (the harness's distribution, the coordinator's everyday calls). */
+export const BASE_PLAYS: OffPlay[] = PLAYS.filter((p) => !p.situ && !p.unlock);
 
 // ---- Defense (base 4-3 with nickel and dime packages, GDD §10.4) ------------
 

@@ -11,3 +11,5 @@ export { blockRoles, pullers, type BlockRole } from './runs';
 export * from './personnel';
 export * from './defense';
 export * from './coordinator';
+export { holds } from './traits';
+export { personalize, receivingBackRoute } from './usage';

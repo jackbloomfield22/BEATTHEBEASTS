@@ -36,3 +36,8 @@ export function has(a: { p: SimPlayer }, id: string): boolean {
 export function more(a: { p: SimPlayer }, id: string, by: number): number {
   return has(a, id) ? 1 + by : 1;
 }
+
+/** Does this player hold the trait (directly or as part of a combination)? The roster-level form of `has`, for the coordinator and the game layer. */
+export function holds(p: SimPlayer | undefined, id: string): boolean {
+  return !!p && held(p).has(id);
+}

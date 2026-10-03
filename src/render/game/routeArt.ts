@@ -92,15 +92,21 @@ export function createRouteArt(): RouteArt {
       const by = s.setup.ballY ?? 0;
       const side = run.aim >= 0 ? 1 : -1;
       const jab = run.scheme === 'counter' ? [{ x: rb.pos.x + 0.4, y: rb.pos.y - side * 1.1 }] : [];
-      const path = [rb.pos, ...jab, { x: qb.pos.x + 0.3, y: qb.pos.y + run.aim * 0.25 }, { x: los + 1, y: by + run.aim }, { x: los + 6, y: by + run.aim * (run.scheme === 'outsideZone' ? 1.3 : 1.05) }];
-      const pts = path.map(toWorld);
-      const mat = new THREE.MeshBasicMaterial({ color: POS_COLOR.RB, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, toneMapped: false });
-      mat.userData.base = 0.9;
-      mats.push(mat);
-      const line = new THREE.Mesh(ribbon(pts, WIDTH * 1.2), mat);
-      const head = new THREE.Mesh(cap(pts[pts.length - 1]!, pts[pts.length - 2]!, false), mat);
-      line.renderOrder = head.renderOrder = 3;
-      group.add(line, head);
+      const paths: { path: { x: number; y: number }[]; color: number }[] = [];
+      // A Designed Runner's QB draw is his own path; the zone read draws the back's and the QB's keep round the read end.
+      if (run.scheme === 'qbDraw') paths.push({ path: [qb.pos, { x: qb.pos.x - 1, y: qb.pos.y }, { x: los + 1, y: by + run.aim }, { x: los + 6, y: by + run.aim }], color: POS_COLOR.QB! });
+      else paths.push({ path: [rb.pos, ...jab, { x: qb.pos.x + 0.3, y: qb.pos.y + run.aim * 0.25 }, { x: los + 1, y: by + run.aim }, { x: los + 6, y: by + run.aim * (run.scheme === 'outsideZone' ? 1.3 : 1.05) }], color: POS_COLOR.RB! });
+      if (run.scheme === 'zoneRead') paths.push({ path: [qb.pos, { x: qb.pos.x + 0.5, y: by - side * 2.5 }, { x: los - 0.5, y: by - side * 6.6 }, { x: los + 5, y: by - side * 7.2 }], color: POS_COLOR.QB! });
+      for (const { path, color } of paths) {
+        const pts = path.map(toWorld);
+        const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, toneMapped: false });
+        mat.userData.base = 0.9;
+        mats.push(mat);
+        const line = new THREE.Mesh(ribbon(pts, WIDTH * 1.2), mat);
+        const head = new THREE.Mesh(cap(pts[pts.length - 1]!, pts[pts.length - 2]!, false), mat);
+        line.renderOrder = head.renderOrder = 3;
+        group.add(line, head);
+      }
     }
     s.icons.forEach((i, k) => {
       const a = s.agents[i]!;
