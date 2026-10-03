@@ -57,3 +57,5 @@ export function jsHeapMB(): { used: number; total: number; limit: number } | nul
   if (!m) return null;
   return { used: m.usedJSHeapSize / 1048576, total: m.totalJSHeapSize / 1048576, limit: m.jsHeapSizeLimit / 1048576 };
 }
+
+if (import.meta.env.DEV) Object.assign(globalThis, { __btbPerfStats: perfStats });

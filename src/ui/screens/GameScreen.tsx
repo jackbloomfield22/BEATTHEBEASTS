@@ -87,7 +87,13 @@ export function GameScreen() {
   useEffect(() => () => replay.abort(), []);
   // The tunnel reveal (M7) runs over the pre-game: its own graphics, then the card.
   const revealOpen = useReveal((s) => s.open);
-  useEffect(() => () => reveal.abort(), []);
+  // (Only when the screen really goes: React's dev double mount runs this cleanup straight away.)
+  useEffect(
+    () => () => {
+      if (useApp.getState().screen !== 'game') reveal.abort();
+    },
+    [],
+  );
   return (
     <div className="game-screen">
       {stage === 'loading' && !revealOpen ? <div className="practice-loading">Kickoff…</div> : null}

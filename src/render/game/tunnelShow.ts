@@ -34,7 +34,10 @@ const TEAM_Z = -18.5;
 const BEASTS_Z = 5.5;
 /** Spacing along each line (m) and the pack's rows (front to back, world z) and columns (x off the tunnel's line). */
 const LINE_GAP = 3;
-const PACK_ROWS = [TUNNEL.mouth - 1.4, TUNNEL.mouth - 2.9, TUNNEL.mouth - 4.4, TUNNEL.mouth - 5.9];
+/** The Beasts stand closer: shoulder pads a stride apart, a wall on the long lens. */
+const BEASTS_GAP = 2.2;
+/** Tight to the mouth, so the Steadicam has room behind the last row. */
+const PACK_ROWS = [TUNNEL.mouth - 0.8, TUNNEL.mouth - 2.0, TUNNEL.mouth - 3.2, TUNNEL.mouth - 4.4];
 const PACK_COLS = [-1.55, 0, 1.55];
 /** Jog-out pace as a share of his top speed (a run, not a sprint: the stride reads as the run gait). */
 const PACE = 0.64;
@@ -148,7 +151,7 @@ function setUp(bodies: Body[], roster: SimPlayer[], nOff: number): void {
   show.star = line[mid]?.i ?? -1;
   line.forEach((x, k) => {
     // Seen from the north, left of frame is +x.
-    const wx = ((line.length - 1) / 2 - k) * LINE_GAP;
+    const wx = ((line.length - 1) / 2 - k) * BEASTS_GAP;
     const b = bodies[x.i]!;
     // Facing the tunnel (north, −z: a half turn), each a touch off square.
     const yaw = Math.PI + (((x.i * 41) % 9) / 9 - 0.5) * 0.24;
@@ -165,8 +168,24 @@ function setUp(bodies: Body[], roster: SimPlayer[], nOff: number): void {
  * One frame of the reveal's bodies (GameScene, in place of the play):
  * the run-out on the run-out's clock, the Beasts breathing in their line.
  */
+/** What the reveal's per-frame body pass costs (dev: the perf numbers in docs/m7/TUNNEL.md). */
+export const revealStats = { frames: 0, ms: 0, worstMs: 0, setUpMs: 0 };
+if (import.meta.env.DEV) Object.assign(globalThis, { __btbRevealStats: revealStats });
+
 export function revealBodies(bodies: Body[], roster: SimPlayer[], nOff: number, dt: number, now: number, camera: THREE.Camera, viewportPx: number): void {
-  if (show.epoch !== reveal.epoch) setUp(bodies, roster, nOff);
+  const t0 = performance.now();
+  if (show.epoch !== reveal.epoch) {
+    setUp(bodies, roster, nOff);
+    revealStats.setUpMs = performance.now() - t0;
+  }
+  runOut(bodies, nOff, dt, now, camera, viewportPx);
+  const ms = performance.now() - t0;
+  revealStats.frames++;
+  revealStats.ms += ms;
+  revealStats.worstMs = Math.max(revealStats.worstMs, ms);
+}
+
+function runOut(bodies: Body[], nOff: number, dt: number, now: number, camera: THREE.Camera, viewportPx: number): void {
   show.bodies = bodies;
   const t = reveal.t;
   for (const r of show.runners) {
@@ -220,11 +239,12 @@ function stage(dt: number, now: number): void {
   const st = reveal.shotT;
   if (shot === 'tunnel') {
     // Smoke rolling out of the mouth as the team comes through it.
-    if (vfx && st > 0.2 && st < 3) {
+    if (vfx && st < 2.2) {
       show.smokeAcc += dt;
-      while (show.smokeAcc > 0.22) {
-        show.smokeAcc -= 0.22;
-        vfx.emit('smoke', [TUNNEL.x + (Math.sin(st * 7.3) * TUNNEL.width) / 3, 0.25, TUNNEL.mouth + 0.6], { dir: [0, 0.15, 1], scale: 1 });
+      while (show.smokeAcc > 0.3) {
+        show.smokeAcc -= 0.3;
+        const side = Math.sin(st * 9.1) > 0 ? 1 : -1;
+        vfx.emit('smoke', [TUNNEL.x + side * (TUNNEL.width / 2 + 0.6), 0.15, TUNNEL.mouth + 0.5], { dir: [side * 0.5, 0, 1], scale: 0.5 });
       }
     }
     // Two gerbs either side of the mouth as the front of the pack comes out.
@@ -263,9 +283,9 @@ const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const TX = TUNNEL.x;
 /** The tunnel shot's Steadicam-to-skycam path (t, world x y z), on the normal timing: behind the pack, out of the mouth, up and over. */
 const TUNNEL_KEYS: [number, THREE.Vector3][] = [
-  [0, v3(TX + 0.45, 1.6, TUNNEL.back + 0.7)],
-  [1.2, v3(TX + 0.42, 1.62, TUNNEL.back + 1.5)],
-  [2.6, v3(TX + 0.3, 1.66, TUNNEL.back + 5.4)],
+  [0, v3(TX + 0.9, 1.78, TUNNEL.back + 0.7)],
+  [1.2, v3(TX + 0.85, 1.76, TUNNEL.back + 1.4)],
+  [2.6, v3(TX + 0.5, 1.72, TUNNEL.back + 5.2)],
   [3.8, v3(TX - 0.3, 2.4, TUNNEL.mouth + 0.9)],
   [5.5, v3(TX - 2.6, 6.2, TUNNEL.mouth + 6.6)],
   [7.4, v3(TX - 5.6, 11.5, TUNNEL.mouth + 12.4)],
@@ -319,25 +339,29 @@ export function revealPose(out: RevealPose): RevealPose {
     const near = v3(front.x * 0.7 + TX * 0.3, 1.25, front.z + 9);
     const far = v3(1.5, 0.6, BEASTS_Z - 4);
     out.look.copy(near).lerp(far, smooth(2.4, 6.4, tk));
-    out.fov = 54 - 8 * smooth(3, 7.4, tk);
+    out.fov = 58 - 12 * smooth(2.4, 7.4, tk);
     return out;
   }
   if (shot === 'beasts') {
-    // Low and long down the line, from his right, ending square on the best man; a slow push in.
+    // Low and long across the line from the north-west, the sun off the camera's right shoulder
+    // (straight on, they're silhouettes against it): a dolly that tracks down the wall of black
+    // jerseys to the best man and settles with him right of center, clear of his lower third.
     const k = ease(st / REVEAL_SECS.normal.beasts);
     const sx = show.starX;
-    const x = sx + 9.5 - 8.4 * k;
-    out.pos.set(x, 1.32, BEASTS_Z - 9.6 + 1.6 * k);
-    out.look.set(sx + (x - sx) * 0.55 - 0.4 * (1 - k), 1.55, BEASTS_Z);
-    out.fov = 27 - 3 * k;
+    // (Seen from the north-west, east of him is left of frame: look a little east of him to sit him right.)
+    // It ends as a full-length portrait of him (~5 m on a 22° lens) with his neighbours either side.
+    out.pos.set(sx - 9.5 + 6.6 * k, 1.3, BEASTS_Z - 8.8 + 3.7 * k);
+    out.look.set(sx + 6 - 5.2 * k, 1.35, BEASTS_Z);
+    out.fov = 26 - 4 * k;
     return out;
   }
-  // The face-off: high from the north-west corner, both lines across the frame, the sea past the Beasts; a slow push.
+  // The face-off: over the Contenders' shoulders from behind their line, the Beasts facing them
+  // across midfield and the sea past them, the sun going down over it; a slow push in.
   const total = reveal.info?.fast ? REVEAL_SECS.fast.faceoff : REVEAL_SECS.normal.faceoff;
   const k = ease(st / total);
-  out.pos.set(-31 + 3 * k, 15.5 - 1.5 * k, -45 + 4 * k);
-  out.look.set(3, 0.6, -6.5 + k);
-  out.fov = 44 - 2 * k;
+  out.pos.set(-3 + 1.5 * k, 5.6 - 0.8 * k, TEAM_Z - 14 + 2.5 * k);
+  out.look.set(-0.5, 1.3, BEASTS_Z - 6);
+  out.fov = 44 - 3 * k;
   return out;
 }
 
@@ -351,7 +375,7 @@ export function revealExposure(): number {
     const tk = fast ? st * (REVEAL_SECS.normal.tunnel / REVEAL_SECS.fast.tunnel) : st;
     return 1 + 7 * Math.exp(-tk / 0.32) + 0.9 * (1 - smooth(2.6, 4.2, tk));
   }
-  return shot === 'beasts' ? 1.18 : 1;
+  return shot === 'beasts' ? 1.35 : 1;
 }
 
 /** Apply the reveal's exposure (and give it back when it's over). */

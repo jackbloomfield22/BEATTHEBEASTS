@@ -85,9 +85,9 @@ export const EFFECTS: Record<EffectId, EffectSpec> = {
     // pushes cool smoke at ~1-2 m/s; it spreads to puffs of a few meters,
     // hangs, and thins out over ~3 s.
     count: 12, spread: 1.2, speed: R(0.4, 1.4), push: 1.1, jitter: 0.9, life: R(2.4, 3.8),
-    size: [R(0.7, 1.1), R(2.4, 3.4)],
+    size: [R(0.5, 0.8), R(1.6, 2.4)],
     colors: [[0.8, 0.8, 0.82], [0.72, 0.72, 0.75]],
-    alpha: 0.2, gravity: -0.12, drag: 1.1, spin: R(-0.4, 0.4), emissive: 0,
+    alpha: 0.09, gravity: -0.12, drag: 1.1, spin: R(-0.4, 0.4), emissive: 0,
   },
 };
 
