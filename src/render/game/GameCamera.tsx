@@ -192,7 +192,7 @@ const celebCam = { az: 0, arc: 1 };
 const CELEB_SIDES = [0.35, -0.35, 0.9, -0.9, 1.6, -1.6, 2.4, -2.4];
 /** Two men facing each other (the chest bump, the high five): from the side, square to the line between them, so neither hides the other. */
 const CELEB_SIDES_PAIR = [1.57, -1.57, 1.2, -1.2, 1.95, -1.95];
-const CELEB_DIST = { from: 7.4, to: 5.0, card: 8.6 };
+const CELEB_DIST = { from: 7.4, to: 5.0, card: 9.6 };
 
 /**
  * The celebration: low (chest height, a little under), tight, in front of
@@ -232,7 +232,8 @@ function celebPose(): Pose {
   const lx = v.x + (v.pair ? Math.cos(v.face) * v.pair * 0.5 : 0);
   const ly = v.y + (v.pair ? Math.sin(v.face) * v.pair * 0.5 : 0);
   const up = v.pair ? 0.35 : 0;
-  return { ex: lx + Math.cos(a) * dist, ey: ly + Math.sin(a) * dist, eh: 1.35 + up - 0.15 * k + 0.7 * back, lx, ly, lh: 1.15 - 0.2 * back, fov: 34 - 5 * k + 6 * back + (v.pair ? 4 : 0) };
+  // Under the card (it covers the top of the screen): back, up, and looking over their heads, so they stand in the lower half.
+  return { ex: lx + Math.cos(a) * dist, ey: ly + Math.sin(a) * dist, eh: 1.35 + up - 0.15 * k + 1.5 * back, lx, ly, lh: 1.15 + 1.2 * back, fov: 34 - 5 * k + 8 * back + (v.pair ? 4 : 0) };
 }
 
 // ---- Replay cameras (M7) ------------------------------------------------------------------
