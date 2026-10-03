@@ -9,6 +9,9 @@ import {
   assignProtection,
   breakOnBall,
   carrierAI,
+  convoySide,
+  convoySpot,
+  screenConvoy,
   manCover,
   onRhythm,
   RHYTHM_READ,
@@ -386,7 +389,10 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
     // collapses (the trait catalog's line): up, not out.
     if (has(qb, 'climber') && (push.x !== 0 || push.y !== 0)) push = { x: Math.abs(push.x) + 0.5 * Math.abs(push.y), y: push.y * 0.4 };
     const esc = (qb.mem.escape as number | undefined) ?? 0;
-    steer(qb, { x: push.x * (0.6 + pp), y: push.y * (0.6 + pp) * 0.8 + esc * 5 }, { face: 0, pace: esc ? 0.9 : 0.6 });
+    // A slow screen: once his line lets the rush go he drifts back, drawing
+    // it up the field and buying the beat the convoy needs to get out.
+    const drift = play.screen && since >= play.screen.release && qb.pos.x > dropX - SCREEN_DRIFT ? SCREEN_DRIFT_V : 0;
+    steer(qb, { x: push.x * (0.6 + pp) - drift, y: push.y * (0.6 + pp) * 0.8 + esc * 5 }, { face: 0, pace: esc ? 0.9 : 0.6 });
   } else {
     steer(qb, { x: 0, y: 0 }, { face: 0 });
   }
@@ -1507,6 +1513,11 @@ const screenLetIn = (d: Agent): boolean => d.side === 'def' && d.mem.screenLetIn
 
 /** The punch before a screen release (ticks, ~0.2 s): his hands on the rusher, then off him and out. Ours. */
 const SCREEN_PUNCH = 12;
+/** ...and the rusher it lands on is stood up for this long (ticks, ~0.13 s) before he's off to the QB again. Ours. */
+const PUNCH_STUN = 8;
+/** The QB's drift on a slow screen: up to this much further back than his drop (yd), at this rate (yd/s, before the pocket pace). Ours. */
+const SCREEN_DRIFT = 2.5;
+const SCREEN_DRIFT_V = 4;
 
 function offenseRoles(s: PlayState, inp: InputFrame): void {
   const play = s.setup.play;
@@ -1535,7 +1546,10 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
       // Blocking for the ball carrier. Linemen keep driving at the point of
       // attack; everyone else, receivers included the moment the ball is
       // caught, blocks downfield (feedback item 7: YAC comes from the blocks).
-      runBlock(s, a, carrier.pos, !(as.kind === 'runBlock' && (a.slot === 'LT' || a.slot === 'LG' || a.slot === 'C' || a.slot === 'RG' || a.slot === 'RT')));
+      // A screen's convoy keeps to its lanes in front of him.
+      const lane = a.mem.convoy ? convoySpot(s, a, v2(a.mem.spotX as number, a.mem.spotY as number), carrier) : null;
+      if (lane) screenConvoy(s, a, lane, carrier.pos, screenLetIn);
+      else runBlock(s, a, carrier.pos, !(as.kind === 'runBlock' && (a.slot === 'LT' || a.slot === 'LG' || a.slot === 'C' || a.slot === 'RG' || a.slot === 'RT')));
       continue;
     }
     if (carrier && carrier.side === 'def') {
@@ -1561,15 +1575,33 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
       continue;
     }
     // Screens: the line pass-sets, then releases to lead the screen. Set,
-    // punch, let him go: a lineman with a rusher on him lets him run on at
-    // the QB (the ball goes over him) and releases, a beat later, for the
-    // second level: the linebacker and the defensive backs flowing to the
-    // ball, never the rushers he let in (they're past the play). The man
-    // who has the back runs into the release (M6.6 trait pass: the
-    // linemen stayed on their pass blocks and the man on the back came
-    // down untouched; RB screens against man fell to ~6 yd a throw).
+    // punch, let him go: a guard or the center with a rusher on him lets him
+    // run on at the QB (the ball goes over him) and releases, a beat later,
+    // to his landmark in the convoy (ai.ts screenConvoy): the linebackers
+    // and the defensive backs coming downhill to the ball, never the rushers
+    // he let in (they're past the play). The man who has the back runs into
+    // the release (M6.6 trait pass: the linemen stayed on their pass blocks
+    // and the man on the back came down untouched; RB screens against man
+    // fell to ~6 yd a throw).
     if (play.screen && as.kind === 'passBlock' && a.p.pos === 'OL' && s.t - s.snapT >= play.screen.release) {
       const to = s.agents[s.icons[0]!]!;
+      if (a.mem.spotX === undefined) {
+        // The catch spot the convoy is laid off: where the screen's route sets up.
+        const end = to.route?.pts[to.route.pts.length - 1] ?? to.pos;
+        a.mem.spotX = end.x;
+        a.mem.spotY = end.y;
+      }
+      const spot = v2(a.mem.spotX as number, a.mem.spotY as number);
+      const lane = convoySpot(s, a, spot);
+      // The tackles ride the ends up the field past the back (their pass sets)
+      // until the ball's out, then block what's left in front of it. Released
+      // with the rest, they picked the ends up again as run blocks four yards
+      // deep, right where the back sets up, and an end who shed made the tackle.
+      if (!lane) {
+        if (s.ball.mode === 'held') passBlock(s, a);
+        else if (s.phase === 'air') runBlock(s, a, to.pos, true, true, screenLetIn);
+        continue;
+      }
       if (!a.mem.screenRel) {
         a.mem.screenRel = true;
         const k = s.blocks.findIndex((q) => q.b === i && q.kind === 'pass');
@@ -1578,12 +1610,16 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
           s.blocks.splice(k, 1);
           d.mem.shedAt = s.t;
           d.mem.screenLetIn = true;
+          d.busy = Math.max(d.busy, PUNCH_STUN);
           d.anim = 'rush';
           a.anim = 'run';
           a.busy = Math.max(a.busy, SCREEN_PUNCH);
         }
       }
-      if (s.phase === 'air' || s.ball.mode === 'held') runBlock(s, a, to.pos, true, s.phase !== 'air', screenLetIn);
+      a.mem.convoy = true;
+      const side = convoySide(s, spot);
+      if (a.slot === side.lead) a.mem.convoyLead = side.ps;
+      if (s.phase === 'air' || s.ball.mode === 'held') screenConvoy(s, a, lane, spot, screenLetIn);
       continue;
     }
     switch (as.kind) {

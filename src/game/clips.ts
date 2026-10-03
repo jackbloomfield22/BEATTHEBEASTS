@@ -185,12 +185,15 @@ export const CONCEPTS: Clip[] = [
   { id: 'corner', title: 'Corner', seed: 6, play: 'bunch-snag', def: 'cover2man', los: 30, script: concept({ icon: 3, at: 60, hold: 14 }) },
   // PA crossers against the fire zone: the blitz bites on the fake, the X's deep cross comes open behind it, caught running (14 yd; re-found for the identity pass's sim).
   { id: 'crosser', title: 'Crosser', seed: 10, play: 'ace-pa-crossers', def: 'firezone', los: 30, script: concept({ icon: 1, at: 80 }) },
-  // RB screen against man: the back slips out behind the rush, the linemen release in front of him (11 yd).
+  // RB screen: the back slips out behind the rush, the linemen release in front of him.
   // Seed 4 → 60 in M6.6: the added stints (docs/m66/DATA_AUDIT.md) move the practice roster's ratings a point here and there, and seed 4 became a 2.9-yd loss. Seed 60 is the same play, coverage and throw time: 11.6 yd, 2.9 yd of separation.
   // Seed 60 → 64, Cover 2 man → Cover 1 Blitz, the throw at 76 → 60 ticks for the weak-spot pass (the line lets the rush in and the
   // man on the back hugs, ai.ts hugs): on 60 the back made 5 yd; on 64 against the blitz the Sam rushes, the back slips out behind
   // him and the released line leads it (11.8 yd, 2.5 yd of separation; tools/sim/findconcepts.ts --only=screen).
-  { id: 'screen', title: 'Screen', seed: 64, play: 'doubles-rb-screen', def: 'cover1blitz', los: 30, script: concept({ icon: 1, at: 60 }) },
+  // Seed 64 → 51, Cover 1 Blitz → Cover 2, the throw at 60 → 104 ticks for the screen convoy (the screens pass): the back sets
+  // before the ball comes, the guards and center release to their landmarks outside him, and against zone the linebackers
+  // come downhill into them (9.7 yd, 2.6 yd of separation; tools/sim/findconcepts.ts --only=screen).
+  { id: 'screen', title: 'Screen', seed: 51, play: 'doubles-rb-screen', def: 'cover2', los: 30, script: concept({ icon: 1, at: 104 }) },
   // Back shoulder against man: the corner on top of the Z's go, the ball thrown away from him, GO UP (17 yd; seed 2 → 4 for the second slant pass, the same play, call and throw).
   { id: 'back-shoulder', title: 'Back shoulder', seed: 4, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 3, at: 48, aim: { x: -1, y: -0.2 }, call: 'aggressive' }) },
   // The scramble drill: the QB escapes right, the Y breaks off his cross and works back to him in the open grass (10 yd).

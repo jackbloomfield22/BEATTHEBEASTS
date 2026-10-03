@@ -83,8 +83,10 @@ export const ROUTES: Record<RouteName, RoutePoint[]> = {
   qout: [{ d: 5, o: 0 }, { d: 5, o: 8 }],
   // Bubble: a step back and out, catching it behind the line with blockers in front.
   bubble: [{ d: -1, o: 1.5 }, { d: -0.8, o: 4 }, { d: 0, o: 7, sit: true }],
-  // Slip screen (the back): shows pass protection (ROUTE_DELAY), leaks out behind the line and turns to the QB.
-  slip: [{ d: 0, o: 1.5 }, { d: -1, o: 5 }, { d: -0.8, o: 6.5, sit: true }],
+  // Slip screen (the back): shows pass protection (ROUTE_DELAY), leaks out behind the line and turns to the QB,
+  // setting up ~4 yd deep a few yards outside the tackle, under the convoy's landmarks (ai.ts CONVOY). He used to
+  // set 6 yd deep and 6 outside, two yards further from the line than a screen's catch and out of the linemen's reach.
+  slip: [{ d: 0.5, o: 1.5 }, { d: 1.5, o: 3.5 }, { d: 2.5, o: 4.5, sit: true }],
   // Sail: the flood's middle level, a deep out at ~17 yd.
   sail: [{ d: 10, o: 1 }, { d: 16, o: 8 }, { d: 17, o: 13 }],
   // Deep cross: under the linebackers, climbing to ~15 yd across the field.
