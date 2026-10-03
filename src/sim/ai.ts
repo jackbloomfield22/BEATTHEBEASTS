@@ -318,12 +318,58 @@ const OPTION_SLIDE = 2.5;
 /** A break off the drawn one has to be this much more open (yd of separation at the catch) to be worth it. Ours. */
 const OPTION_EDGE = 0.3;
 
-/** Is a defender in man coverage on him (the man the option route and the wheel read)? */
-function manOn(s: PlayState, a: Agent): boolean {
-  return s.def.some((i) => {
+/** The defender in man coverage on him (the man the option route and the wheel read), or null. */
+function manDefender(s: PlayState, a: Agent): Agent | null {
+  for (const i of s.def) {
     const d = s.agents[i]!;
-    return s.man[d.slot as keyof typeof s.man] === a.slot && s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign].kind === 'man' && !d.down;
-  });
+    if (s.man[d.slot as keyof typeof s.man] === a.slot && s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign].kind === 'man' && !d.down) return d;
+  }
+  return null;
+}
+/** Is a defender in man coverage on him? */
+const manOn = (s: PlayState, a: Agent): boolean => manDefender(s, a) !== null;
+
+/**
+ * How open a break leaves him against the man on him, the way man coverage
+ * really plays it: the defender mirrors him, keeping the leverage he has now
+ * (his offset from him: inside, over the top, a step behind), a read late
+ * (manDelay). So a break away from the leverage gains the offset and the
+ * read; a break into it runs into him. Then the ball: if the defender ends up
+ * on the QB's side of the catch point he's in the throwing lane, and what
+ * counts is how far he is off the ball's line, not off the man (the quick out
+ * from the slot against an inside-leverage nickel is a long throw over his
+ * head: tools/sim/usagefx.ts --only=slot found the old read, the generic
+ * closing model, sending Welker out on every quick in, intercepted 3 of 12).
+ */
+function manBreakOpen(s: PlayState, qb: Agent, a: Agent, route: NonNullable<Agent['route']>, d: Agent): number {
+  const g: Agent = { ...a, route, mem: { ...a.mem } };
+  const power = qb.fx.r('throwPower');
+  const rel = releaseOf(qb);
+  let at = lead(g, 0.8);
+  let T = 0.8;
+  for (let k = 0; k < 3; k++) {
+    T = driveTime(dist(qb.pos, at), power) + 0.05 + rel;
+    at = lead(g, T);
+  }
+  // Where he is when the ball leaves: working to his spot on the man (manCover: a step over the top and inside, or in his hip
+  // pocket on a trail), a read late, as far as his speed gets him from where he stands; then his break on the ball once he's
+  // read the throw.
+  const lag = lead(g, Math.max(0, rel - manDelay(s, d, a)));
+  const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
+  const ins = lag.y > (s.setup.ballY ?? 0) ? -1 : 1;
+  const trail = as.kind === 'man' && !!as.trail;
+  const spot = v2(lag.x + (trail ? -TRAIL_BACK : 0.4), lag.y + ins * (trail ? TRAIL_INSIDE : 0.7));
+  const to = sub(spot, d.pos);
+  const far = len(to);
+  const reach = d.fx.vmax * rel;
+  const dAt = far > reach ? v2(d.pos.x + (to.x / far) * reach, d.pos.y + (to.y / far) * reach) : spot;
+  const toQb = sub(qb.pos, at);
+  const off = sub(dAt, at);
+  const q = len(toQb);
+  // In front of the catch point, on the QB's side: his distance off the ball's line.
+  const gap = q > 1e-6 && off.x * toQb.x + off.y * toQb.y > 0 ? Math.abs(off.x * toQb.y - off.y * toQb.x) / q : len(off);
+  const tRun = Math.max(0, T - rel - reactionPeek(s, d));
+  return gap - (d.fx.vmax * tRun - d.fx.vmax * d.fx.tau * (1 - exp(-tRun / d.fx.tau)));
 }
 
 /**
@@ -383,12 +429,17 @@ function optionRead(s: PlayState, a: Agent, name: RouteName | null): void {
   const head = rt.pts.slice(0, stem + 1);
   const heads = rt.sit.slice(0, stem + 1);
   const breakTo = (dir: number) => v2(q.x + (sit ? 0 : 0.5), Math.max(-lim, Math.min(lim, q.y + dir * (sit ? OPTION_SLIDE : OPTION_BREAK))));
-  const options: { why: 'drawn' | 'out' | 'in'; route: NonNullable<Agent['route']> }[] = [
+  const options: { why: 'drawn' | 'out' | 'in' | 'sit'; route: NonNullable<Agent['route']> }[] = [
     { why: 'drawn', route: rt },
     { why: 'out', route: { pts: [...head, breakTo(out)], sit: [...heads, sit], idx: rt.idx } },
     { why: 'in', route: { pts: [...head, breakTo(-out)], sit: [...heads, sit], idx: rt.idx } },
+    { why: 'sit', route: { pts: [...head, v2(q.x + 0.5, q.y)], sit: [...heads, true], idx: rt.idx } },
   ];
-  const open = (route: NonNullable<Agent['route']>) => openness(s, qb, { ...a, route, mem: { ...a.mem } }, true).sep;
+  // His read of the man on him (manBreakOpen), and of the zone defenders and rushers he can see (the robber in the hole, a dropping
+  // end): openness, the QB's own measure, without the men in man coverage, who go where their own men go.
+  const md = manDefender(s, a)!;
+  const inMan = (i: number) => s.setup.def.assign[s.agents[i]!.slot as keyof typeof s.setup.def.assign].kind === 'man';
+  const open = (route: NonNullable<Agent['route']>) => Math.min(manBreakOpen(s, qb, a, route, md), openness(s, qb, { ...a, route, mem: { ...a.mem } }, true, undefined, inMan).sep);
   const drawn = open(rt);
   let best = options[0]!;
   let bs = drawn + OPTION_EDGE;
@@ -402,6 +453,29 @@ function optionRead(s: PlayState, a: Agent, name: RouteName | null): void {
   a.mem.optBreak = best.why;
   // A new route from here (the read is a new path: the route-art check, outcomes.ts routeFidelity, stops at it).
   if (best.why !== 'drawn') a.route = best.route;
+}
+
+/** How far across (yd) the angle runs on past its settle point against man, and how much it climbs doing it. Ours. */
+const ANGLE_ON = 9;
+const ANGLE_CLIMB = 1.5;
+
+/**
+ * The angle's read, made at his plant back inside: against a zone he settles
+ * in the hole between the hooks as drawn; with a man on him he doesn't sit
+ * down in front of him (a linebacker who's flowed out with the swing release
+ * is on his outside hip now), he runs on across the field, away from him and
+ * on up a little, the way the route is coached against man.
+ */
+function angleRead(s: PlayState, a: Agent, name: RouteName | null): void {
+  const rt = a.route;
+  if (name !== 'angle' || !rt || a.mem.angleRead || a.mem.drill || rt.idx < 2 || rt.pts.length !== ROUTES.angle.length) return;
+  a.mem.angleRead = true;
+  if (!manOn(s, a)) return;
+  const last = rt.pts[rt.pts.length - 1]!;
+  const prev = rt.pts[rt.pts.length - 2]!;
+  const dir = Math.sign(last.y - prev.y) || 1;
+  const lim = FIELD_HALF_W - ROUTE_ROOM;
+  a.route = { pts: [...rt.pts.slice(0, -1), last, v2(last.x + ANGLE_CLIMB, Math.max(-lim, Math.min(lim, last.y + dir * ANGLE_ON)))], sit: [...rt.sit.slice(0, -1), false, false], idx: rt.idx };
 }
 
 /** Run the route: stem at pace, sharp breaks for good route runners, settle on sits. */
@@ -449,6 +523,13 @@ export function runRoute(s: PlayState, a: Agent): void {
     return;
   }
   optionRead(s, a, name);
+  angleRead(s, a, name);
+  // A late slant against zone works the window (routeWant, WINDOW_PACE). Once
+  // he's in it he stays in it (the throw is led to what he's doing).
+  if (!a.mem.window && name === 'slant' && rt.idx >= rt.pts.length - 1 && !manOn(s, a)) {
+    const late = offScheduleT(s);
+    if (late >= 0 && s.t >= late) a.mem.window = true;
+  }
   if (stepRoute(a)) return;
   // Settled on a sit route: face the QB and work to the open window. He
   // slides a step or two across, away from the nearest defender, never more
@@ -550,6 +631,8 @@ export function routeWant(a: Agent): V2 | null {
       const cap = Math.sqrt(vb * vb + 2 * a.fx.cutAccel * 0.8 * dist(a.pos, q));
       pace = Math.min(pace, cap / a.fx.vmax);
     }
+    // (Working the window on his last leg: throttled down.)
+    if (a.mem.window && rt.idx === rt.pts.length - 1) pace *= WINDOW_PACE;
     return sit ? arrive(a, q, 1, 1) : arrive(a, q, pace);
   }
   if (rt.sit[rt.pts.length - 1]) return null;
@@ -558,8 +641,32 @@ export function routeWant(a: Agent): V2 | null {
   const p0 = n > 1 ? rt.pts[n - 2]! : a.pos;
   const p1 = rt.pts[n - 1]!;
   const dir = continueDir(a.pos, p0, p1);
+  // Working the window (runRoute): throttled down, across at his depth.
+  if (a.mem.window) {
+    const w = FIELD_HALF_W - Math.abs(a.pos.y) > WINDOW_ROOM ? norm({ x: dir.x * WINDOW_CLIMB, y: dir.y }) : dir;
+    return { x: w.x * a.fx.vmax * WINDOW_PACE, y: w.y * a.fx.vmax * WINDOW_PACE };
+  }
   return { x: dir.x * a.fx.vmax, y: dir.y * a.fx.vmax };
 }
+
+/**
+ * A slant the ball hasn't come to on time, against zone (no man on him) and
+ * with the QB off schedule (offScheduleT): from his last leg he throttles
+ * down and works on across the window under the second level, at his depth,
+ * at this share of his top speed, instead of running on flat out across the
+ * field and up the far sideline, where a late ball was a 30–40 yd throw at a
+ * man at full speed: a third of them landed where nobody could get them
+ * (tools/sim/slants.ts --how). Sat down in the window instead (an earlier
+ * try), the hook defender plastering him was on top of him and a late ball
+ * was picked 12–14% of the time; still moving, the ball is led on ahead of
+ * the man on his hip. The called late slant against zone 34% → ~45%, picked
+ * ~5% (0.55 took it to ~50% and 8% picked, 0.8 to ~44% and 5%). Ours.
+ */
+const WINDOW_PACE = 0.75;
+/** ...keeping this share of the leg's climb (he stays under the second level, ~10 yd deep). Ours. */
+const WINDOW_CLIMB = 0.15;
+/** ...until he's this close to the far sideline (yd): then the route's turn up it (continueDir), at the same pace. Ours. */
+const WINDOW_ROOM = 6;
 
 /** Run one tick of his route (routeWant, steered inside the boundary); false once he's settled on a sit route. */
 export function stepRoute(a: Agent): boolean {
@@ -687,7 +794,7 @@ const ENGAGE_REACH = 0.5;
  * play and drive him. `downfield`: only defenders in front of the carrier,
  * engaged from between them and the ball.
  */
-export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, engageOk = true): void {
+export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, engageOk = true, skip?: (d: Agent) => boolean, fitAt?: V2): void {
   if (blockOf(s, b.i) || b.busy > 0) {
     if (!blockOf(s, b.i)) steer(b, { x: 0, y: 0 });
     return;
@@ -698,7 +805,7 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, 
     let bd = Infinity;
     for (const i of s.def) {
       const d = s.agents[i]!;
-      if (d.down || blockOf(s, i) || !blockable(s, d)) continue;
+      if (d.down || blockOf(s, i) || !blockable(s, d) || skip?.(d)) continue;
       // Downfield: the defenders who can still get to the play (in front of it, within ~15 yd: a pursuer's two seconds).
       if (downfield && (d.pos.x < toward.x - 1 || dist(d.pos, toward) > 15)) continue;
       // Threat: close to me, closer to the play.
@@ -722,7 +829,10 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, 
   const px = d.pos.x + d.vel.x * lead;
   const py = d.pos.y + d.vel.y * lead;
   const mid = v2(px - 0.4, py + (toward.y - py) * 0.15);
-  steer(b, arrive(b, mid, 0.95));
+  // (fitAt: a blocker in space who's got into the man's path breaks down
+  // there, square to him, and lets him come to him rather than run at him.)
+  if (fitAt) steer(b, arrive(b, fitAt, 0.95, BREAKDOWN_R), { face: atan2(d.pos.y - b.pos.y, d.pos.x - b.pos.x) });
+  else steer(b, arrive(b, mid, 0.95));
   // Downfield, a block only lands from between him and the ball (else it's a block in the back).
   const between = !downfield || (b.pos.x - d.pos.x) * (toward.x - d.pos.x) + (b.pos.y - d.pos.y) * (toward.y - d.pos.y) > 0;
   // A block lands at arm's length (hands to the chest): the bodies ~0.5 yd apart
@@ -754,6 +864,122 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, 
 }
 
 /**
+ * The screen's convoy (the slow screen as it's coached): the guards and the
+ * center release to landmarks in front of the catch and block the first
+ * defender to come into their lane, between him and the ball, rather than a
+ * man picked at the release (the linebackers are still dropping then, and a
+ * lineman locked on to one ran off after him, away from the ball). The
+ * tackles keep the defensive ends off the back. Landmarks (yd), laid off the
+ * back's spot: the playside guard 4 outside it a yard past the line (the
+ * first man to show from outside: the flat defender, the outside
+ * linebacker), the center 2 outside it two yards past (the alley), the
+ * backside guard over it (the pursuit across). After the catch they keep
+ * that far in front of the back. The wall sits outside the back because
+ * that's where the men coming downhill come from: laid on the spot and
+ * inside it, the linebackers and the flat defender came down outside the
+ * linemen and the back ran into them (RB screen against Cover 2 ~1 yd a
+ * throw; ~5 with the wall outside). Ours.
+ */
+const CONVOY = { playG: { out: 4, up: 1 }, C: { out: 2, up: 2 }, backG: { out: 0, up: 1.5 } };
+/** He picks up a man this close to his lane (yd), or to himself: the first color to show. Ours. */
+const LANE_R = 3.5;
+const LANE_ME = 2.5;
+/** He looks again for the man in his lane every this many ticks (0.2 s) until he's on one. Ours. */
+const LANE_LOOK = 12;
+
+/** The screen's playside (+1 the left, +y) and its playside guard, the convoy's lead blocker. */
+export function convoySide(s: PlayState, spot: V2): { ps: 1 | -1; lead: OffSlot } {
+  const ps = spot.y >= (s.setup.ballY ?? 0) ? 1 : -1;
+  return { ps, lead: ps > 0 ? 'LG' : 'RG' };
+}
+
+/** The landmark for a convoy lineman on this screen (null for the tackles); after the catch it leads the back upfield. */
+export function convoySpot(s: PlayState, b: Agent, spot: V2, carrier?: Agent | null): V2 | null {
+  // The playside: the side of the catch spot from the ball. (The left side of the line is +y.)
+  const { ps, lead: playG } = convoySide(s, spot);
+  const lm = b.slot === 'C' ? CONVOY.C : b.slot === playG ? CONVOY.playG : b.slot === 'LG' || b.slot === 'RG' ? CONVOY.backG : null;
+  if (!lm) return null;
+  const at = v2(s.setup.los + lm.up, spot.y + ps * lm.out);
+  if (carrier) {
+    at.x = Math.max(at.x, carrier.pos.x + lm.up + 1);
+    at.y += (carrier.pos.y - spot.y) * 0.5;
+  }
+  return at;
+}
+
+/**
+ * A convoy lineman on a screen: to his landmark, then the first man into his
+ * lane. `ball`: the catch spot before the catch, the carrier after it.
+ */
+export function screenConvoy(s: PlayState, b: Agent, lane: V2, ball: V2, skip: (d: Agent) => boolean): void {
+  if (blockOf(s, b.i) || b.busy > 0) {
+    if (!blockOf(s, b.i)) steer(b, { x: 0, y: 0 });
+    return;
+  }
+  let tgt = (b.mem.target as number | undefined) ?? -1;
+  const lost = tgt < 0 || s.agents[tgt]!.down || blockOf(s, tgt) || s.agents[tgt]!.pos.x < ball.x - 1;
+  if (lost || s.tick % LANE_LOOK === 0) {
+    // The first man into my lane, in front of the ball, that another convoy lineman isn't already on.
+    const claimed = new Set<number>();
+    for (const i of s.off) if (i !== b.i && s.agents[i]!.mem.convoy) claimed.add((s.agents[i]!.mem.target as number | undefined) ?? -1);
+    let best = -1;
+    let bd = Infinity;
+    for (const i of s.def) {
+      const d = s.agents[i]!;
+      if (d.down || blockOf(s, i) || !blockable(s, d) || skip(d) || claimed.has(i)) continue;
+      if (d.pos.x < ball.x - 1) continue;
+      if (dist(d.pos, lane) > LANE_R && dist(d.pos, b.pos) > LANE_ME) continue;
+      const score = dist(d.pos, lane) + 0.5 * dist(d.pos, ball);
+      if (score < bd) {
+        bd = score;
+        best = i;
+      }
+    }
+    if (lost || best >= 0) b.mem.target = best;
+    tgt = (b.mem.target as number | undefined) ?? -1;
+  }
+  if (tgt < 0) {
+    steer(b, arrive(b, lane, 1, 1), { face: 0 });
+    return;
+  }
+  const d = s.agents[tgt]!;
+  if (dist(b.pos, d.pos) <= CUT_IN) {
+    // Square up in his path (the way he's running, or to the ball if he's
+    // standing: the spot on it nearest me, a step on) and let him come.
+    const v = len(d.vel);
+    const gap = v > 1 ? 6 : dist(d.pos, ball);
+    const ux = v > 1 ? d.vel.x / v : (ball.x - d.pos.x) / Math.max(1e-6, gap);
+    const uy = v > 1 ? d.vel.y / v : (ball.y - d.pos.y) / Math.max(1e-6, gap);
+    const f = Math.max(0, Math.min(gap, (b.pos.x - d.pos.x) * ux + (b.pos.y - d.pos.y) * uy + 0.3));
+    runBlock(s, b, ball, true, true, skip, { x: d.pos.x + ux * f, y: d.pos.y + uy * f });
+    return;
+  }
+  {
+    // Into his path: the first spot on his line to the ball I can get to before
+    // he does (a lineman leading a flowing linebacker by his run alone ran up
+    // behind him; one sitting on his landmark watched him go by).
+    const gap = dist(d.pos, ball);
+    const ux = (ball.x - d.pos.x) / Math.max(1e-6, gap);
+    const uy = (ball.y - d.pos.y) / Math.max(1e-6, gap);
+    let at = ball;
+    for (let k = 1; k <= 24; k++) {
+      const f = Math.min(gap, k * 0.5);
+      const p = { x: d.pos.x + ux * f, y: d.pos.y + uy * f };
+      if (dist(b.pos, p) / b.fx.vmax <= f / d.fx.vmax + 0.1 || f >= gap) {
+        at = p;
+        break;
+      }
+    }
+    steer(b, arrive(b, at, 1), { face: atan2(d.pos.y - b.pos.y, d.pos.x - b.pos.x) });
+    return;
+  }
+}
+/** Within this (yd) of his man a convoy lineman squares up in his path and blocks him (runBlock); further out he runs to cut him off. Ours. */
+const CUT_IN = 2;
+/** ...breaking down as he gets there (movement.ts arrive's slowing radius, yd): the screen blocker's fit in space. Ours. */
+const BREAKDOWN_R = 1;
+
+/**
  * Openness of a receiver for a throw now: the catch point for that kind of
  * throw, the ball's flight time, and the margin in yards by which the ball
  * beats the nearest defender there (his time to the spot against the ball's).
@@ -765,7 +991,7 @@ export function runBlock(s: PlayState, b: Agent, toward: V2, downfield = false, 
  * calls it every frame): a defender whose read jitter hasn't been rolled
  * yet counts as zero rather than rolling it.
  */
-export function openness(s: PlayState, qb: Agent, r: Agent, peek = false, why?: string[]): { sep: number; at: V2; T: number } {
+export function openness(s: PlayState, qb: Agent, r: Agent, peek = false, why?: string[], skip?: (i: number) => boolean): { sep: number; at: V2; T: number } {
   const react = (d: Agent) => (peek ? reactionPeek(s, d) : reaction(s, d));
   const power = qb.fx.r('throwPower');
   const rel = releaseOf(qb);
@@ -800,7 +1026,7 @@ export function openness(s: PlayState, qb: Agent, r: Agent, peek = false, why?: 
   let sep = 99;
   for (const i of s.def) {
     const d = s.agents[i]!;
-    if (d.down) continue;
+    if (d.down || skip?.(i)) continue;
     const { gap, closing } = run(d, at, T);
     if (why && gap - closing < sep) why.push(`${d.slot} ${gap.toFixed(1)}-${closing.toFixed(1)}`);
     sep = Math.min(sep, gap - closing);
@@ -816,7 +1042,7 @@ export function openness(s: PlayState, qb: Agent, r: Agent, peek = false, why?: 
   let lane = 0;
   for (const i of s.def) {
     const d = s.agents[i]!;
-    if (d.down || blockOf(s, i)) continue;
+    if (d.down || skip?.(i) || blockOf(s, i)) continue;
     const top = d.fx.height * 1.28 + d.fx.a('jumping') * 0.35 + 0.15;
     for (const f of [0.4, 0.6, 0.8]) {
       // The ball's height there (the driven arc, vacuum: G ≈ 10.7 yd/s²).
@@ -856,10 +1082,17 @@ const DEEP = 0.01;
  * waiting half a second later has seen it isn't there.
  */
 const BREAK_WAIT = 0.5;
+/** A slow screen goes before the back has set if the rush is this close to getting home (pressureOn). Ours. */
+const SCREEN_HOT = 0.5;
 /** A zone defender this close to the man the QB turns to reads the wind-up (play.ts jumpThrow's JUMP_R). */
 const JUMP_READ = 8;
 /** Behind the line, how much a yard off the run's aiming point costs a lane (carrierAI). */
 const AIM_PULL = 0.35;
+/** A screen's back follows his convoy until he's this far past the line (yd): through the second level's first wave. Ours. */
+const CONVOY_PAST = 2;
+/** A screen's back rides this far behind his lead blocker (yd) and this far to his outside: a step off his hip. Ours. */
+const RIDE_GAP = 1.2;
+const RIDE_OUT = 0.8;
 /** How far the window he'll take comes down as he holds it (yd, from a second after the set at 0.6 yd/s): a QB with nothing on schedule takes a tighter window rather than a sack. */
 const LATE_MAX = 1.5;
 /** How far (yd) an underneath zone defender walls or matches off his landmark before the man is someone else's. */
@@ -909,11 +1142,18 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
   const risk = deepRisk(s, o.at) * (late ? 2.5 : 1);
   // A screen goes to its man on schedule unless a defender is on him (it's
   // built on blockers in front of him, not on separation).
-  const screen = s.setup.play.type === 'screen' && cur === 0 && s.t - s.snapT >= s.setup.play.drop.set;
+  // A slow screen (the line releasing in front of it) waits for the back to
+  // set: he's on the last leg of his route, turning to the QB, and the convoy
+  // is out in front of him. Thrown on the back's first step out, it beat the
+  // line to the spot and he caught it running for the sideline alone.
+  const slow = !!s.setup.play.screen && cur === 0;
+  // (With the rush on him already he doesn't wait: the back is his hot.)
+  const set = !slow || (!!r.route && r.route.idx >= r.route.pts.length - 1) || pressure > SCREEN_HOT;
+  const screen = s.setup.play.type === 'screen' && cur === 0 && s.t - s.snapT >= s.setup.play.drop.set && set;
   // The concept is built for the first reads: he'll put those into a tighter
   // window on time (anticipation) than he'd want for the outlet.
   const primary = cur === 0 ? 0.45 : cur === 1 ? 0.2 : 0;
-  if (screen ? o.sep + noise > -0.5 : o.sep + noise > need + risk - primary) return cur;
+  if (!(slow && !set) && (screen ? o.sep + noise > -0.5 : o.sep + noise > need + risk - primary)) return cur;
   // He stays on a read until the route declares itself (the receiver's
   // break: the ball comes out as he comes out of it), up to half a second
   // past his read time; then he moves on. A progression ahead of its routes
@@ -921,7 +1161,7 @@ export function qbRead(s: PlayState, qb: Agent, pressure: number): number {
   const rt = r.route;
   const breaking = !!rt && rt.idx === 0 && (rt.pts.length > 1 ? true : r.pos.x - s.setup.los < 12);
   const rtime = readTime + (deepRead && has(qb, 'checkdown-charlie') ? 0.2 : 0);
-  if (since > rtime && !(breaking && since < rtime + BREAK_WAIT && !late)) {
+  if (since > rtime && !(breaking && since < rtime + BREAK_WAIT && !late) && !(slow && !set)) {
     s.read.idx++;
     s.read.since = s.t;
   }
@@ -973,6 +1213,22 @@ export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
   const goalX = attack > 0 ? GOAL_X : 0;
   let best: V2 = { x: attack, y: 0 };
   let bestScore = -Infinity;
+  // A screen's back gets behind his convoy (catch, get vertical, stay
+  // behind your blockers): until he's past the line he rides the outside hip
+  // of his lead blocker, the playside guard, while the guard is still out in
+  // front of him looking for a man, then reads the guard's block and cuts off
+  // it. Read on his own, a screen's back saw the whole defense upfield (every
+  // zone defender facing him) and ran for the sideline, five yards behind
+  // the line, with his convoy inside him.
+  if (s.setup.play.screen && c.side === 'off' && (c.pos.x - s.setup.los) * attack < CONVOY_PAST) {
+    let lead: Agent | null = null;
+    for (const i of s.off) if (s.agents[i]!.mem.convoyLead && !s.agents[i]!.down) lead = s.agents[i]!;
+    if (lead && !blockOf(s, lead.i) && (lead.pos.x - c.pos.x) * attack > RIDE_GAP) {
+      const at = { x: lead.pos.x - attack * RIDE_GAP, y: lead.pos.y + (lead.mem.convoyLead as number) * RIDE_OUT };
+      const to = norm(sub(at, c.pos));
+      return { x: to.x * c.fx.vmax, y: to.y * c.fx.vmax };
+    }
+  }
   for (let k = -6; k <= 6; k++) {
     const ang = (k / 6) * 1.25;
     const dir = { x: attack * cos(ang), y: sin(ang) };
@@ -991,6 +1247,7 @@ export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
       const off = Math.abs(c.pos.y + dir.y * 3 - aimY) - wide;
       if (off > 0) score -= off * 2.5;
     }
+
     let threats = 0;
     for (const i of attack > 0 ? s.def : s.off) {
       const d = s.agents[i]!;
@@ -1244,6 +1501,18 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
     spy(s, d);
     return;
   }
+  // The hug (a green dog): his man is a back in the backfield showing pass
+  // protection (the slip screen's set, a chip, a check-release), so he adds
+  // to the rush once he's read it, the way man under is coached: a free
+  // rusher on the back's side, picked up by the protection. When the back
+  // releases he turns and plays him from wherever the rush took him: caught
+  // in the rush lane, behind the back's release (M6.6: playing him from the
+  // line instead took the RB screen against man from ~10 to ~6 yd a throw).
+  if (hugs(s, d, r)) {
+    d.mem.hug = true;
+    rush(s, d);
+    return;
+  }
   // The QB tucks it: an underneath man defender (within 8 yd of the line,
   // his eyes can find the QB) peels off his man and comes for him once he's
   // seen it (Playtest 2, scramble contain: in man every defender trailed his
@@ -1264,19 +1533,7 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   // Linebacker 0.05 s tighter on one; Stiff Hips 0.08 s on an in-breaker;
   // a Seam Stretcher gets 0.15 s on a linebacker up the seam; a Head Fake's
   // double move (a second break) freezes him 0.1 s, a Gambler 20% more.
-  const back = r.p.pos === 'RB' || r.p.pos === 'TE';
-  const leg = r.route && r.route.idx < r.route.pts.length ? r.route.pts[r.route.idx]! : null;
-  const inBreak = !!leg && Math.abs(leg.y - (s.setup.ballY ?? 0)) < Math.abs(r.pos.y - (s.setup.ballY ?? 0)) - 0.5;
-  const seam = !!leg && leg.x - r.pos.x > 5 && d.p.pos === 'LB';
-  const second = !!r.route && r.route.idx >= 2;
-  const trait =
-    (has(d, 'shutdown-corner') ? -0.04 : 0) +
-    (back && has(d, 'liability-space') ? 0.1 : 0) +
-    (back && has(d, 'coverage-linebacker') ? -0.05 : 0) +
-    (inBreak && has(d, 'stiff-hips') ? 0.08 : 0) +
-    (seam && has(r, 'seam-stretcher') ? 0.15 : 0) +
-    (second && has(r, 'head-fake') ? 0.1 * (has(d, 'gambler') ? 1.2 : 1) : 0);
-  const delay = Math.max(0.04, 0.14 + 0.5 * (0.8 - d.fx.a('manCov')) + trait) + latency(s) * 0.5;
+  const delay = manDelay(s, d, r);
   const v = seen(r, delay);
   const by = s.setup.ballY ?? 0;
   const inside = r.pos.y > by ? -0.7 : 0.7;
@@ -1331,6 +1588,30 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   const closeK = r.pos.x > d.pos.x && depth > 10 && has(d, 'track-speed') ? 1.05 : 1;
   steer(d, { x: want.x * closeK, y: want.y * closeK }, { face, mult: closeK });
   d.anim = r.pos.x < d.pos.x - 1 && len(d.vel) < 5 ? 'backpedal' : 'run';
+}
+
+/** A man defender's read of his man's route (s): his Man Coverage, the traits on the trail, the difficulty (manCover). */
+export function manDelay(s: PlayState, d: Agent, r: Agent): number {
+  const back = r.p.pos === 'RB' || r.p.pos === 'TE';
+  const leg = r.route && r.route.idx < r.route.pts.length ? r.route.pts[r.route.idx]! : null;
+  const inBreak = !!leg && Math.abs(leg.y - (s.setup.ballY ?? 0)) < Math.abs(r.pos.y - (s.setup.ballY ?? 0)) - 0.5;
+  const seam = !!leg && leg.x - r.pos.x > 5 && d.p.pos === 'LB';
+  const second = !!r.route && r.route.idx >= 2;
+  const trait =
+    (has(d, 'shutdown-corner') ? -0.04 : 0) +
+    (back && has(d, 'liability-space') ? 0.1 : 0) +
+    (back && has(d, 'coverage-linebacker') ? -0.05 : 0) +
+    (inBreak && has(d, 'stiff-hips') ? 0.08 : 0) +
+    (seam && has(r, 'seam-stretcher') ? 0.15 : 0) +
+    (second && has(r, 'head-fake') ? 0.1 * (has(d, 'gambler') ? 1.2 : 1) : 0);
+  return Math.max(0.04, 0.14 + 0.5 * (0.8 - d.fx.a('manCov')) + trait) + latency(s) * 0.5;
+}
+
+/** A man defender hugs (adds to the rush) while his man, a back in the backfield, shows pass protection (manCover); a linebacker or a safety, not a corner. */
+function hugs(s: PlayState, d: Agent, r: Agent): boolean {
+  if (s.phase !== 'snap' && s.phase !== 'dropback' && s.phase !== 'pocket') return false;
+  if (r.anim !== 'block' || d.p.pos === 'CB' || s.setup.play.formation.align[r.slot as OffSlot].dx >= -BACKFIELD) return false;
+  return d.mem.hug === true || s.t - s.snapT >= reaction(s, d);
 }
 
 /** Aligned in the backfield: this far (yd) off the ball or more. */
@@ -1627,13 +1908,27 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
   // match is read again every tick (a curl-to-flat defender walling #1 still
   // expands when #2 breaks to the flat), keeping his man unless another
   // clearly outranks him.
-  const keep = match && mode === 'carry';
+  // A flat or curl-to-flat defender carrying #1 or #2 up the field comes off him the moment a man threatens the flat on his side:
+  // Cover 2's corner sinks with #1 only until #2 shows the flat, then squeezes up on him; Cover 3's curl-flat player carries #2
+  // until #3 or the back gets to the flat. And a man he handed on as he crossed the area early is his again once he's out in
+  // the flat. (M6.6: carrying regardless, and the slot handed on at his release, left the flat empty: Curl Flat's slot in the
+  // flat was caught 100% against Cover 2 and Tampa 2 for ~10 yd with 7 yd of grass round him; the flat was thrown 297 times
+  // against zone in a 20-a-cell book and 199 after, tools/sim/outcomes.ts.)
+  const expands = role === 'flat' || (role === 'curl' && !flatHelp);
+  const inMyFlat = (r: Agent): boolean => {
+    if (!expands || (r.mem.rside as number | undefined) !== side) return false;
+    const v = now(r);
+    const lat = (v.pos.y - by) * (side || 1);
+    return depthOf(v.pos) < 7 && v.vel.x < 5 && (v.vel.y * (side || 1) > 1.5 || len(v.vel) < 2) && lat > (role === 'flat' ? 6 : Math.abs(ZONES[zone].y) - 3);
+  };
+  const flatThreat = match && mode === 'carry' && receivers.some((r) => r !== match && inMyFlat(r));
+  const keep = match && mode === 'carry' && !flatThreat;
   if (!keep) {
     const held = match;
     // Pick by the zone's rules.
     let best = -Infinity;
     for (const r of receivers) {
-      if (passed(r)) continue;
+      if (passed(r) && !inMyFlat(r)) continue;
       const v = now(r);
       const depth = depthOf(v.pos);
       const lat = (v.pos.y - by) * (side || 1);
@@ -1652,7 +1947,7 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
         if (mySide && toFlat && lat > 6) {
           sc = 30 - dist(v.pos, spot);
           m = 'expand';
-        } else if (mySide && num === 1 && vertical && depth < 15) {
+        } else if (mySide && num === 1 && vertical && depth > FLAT_SINK && depth < 15) {
           sc = 10;
           m = 'carry';
         } else if (mySide && num === 1 && depth < 13 && inArea) {
@@ -1763,6 +2058,15 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
   steer(d, want, { face });
   d.anim = d.vel.x > 0.8 ? 'backpedal' : 'run';
 }
+/**
+ * A flat defender (Cover 2's squat corner) sinks with #1 only once he's
+ * past the quick game's depth (yd): the hitch, the quick out and the stick
+ * break at 5–6, and a corner who'd already turned to carry them as
+ * verticals gave the quick out 90% for 8 yd against Cover 2 and Tampa 2
+ * (tools/sim/outcomes.ts --cells), the throw the squat corner is there to
+ * take away. Until then he sits in his flat, eyes on #1 and #2.
+ */
+const FLAT_SINK = 7;
 /** A receiver within this of straight upfield (|vy| / vx, tan ~35°) is running a vertical; a slant (45°) or a crosser isn't. */
 const VERTICAL_TAN = 0.7;
 /**

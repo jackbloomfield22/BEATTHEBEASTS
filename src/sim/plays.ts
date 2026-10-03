@@ -83,8 +83,10 @@ export const ROUTES: Record<RouteName, RoutePoint[]> = {
   qout: [{ d: 5, o: 0 }, { d: 5, o: 8 }],
   // Bubble: a step back and out, catching it behind the line with blockers in front.
   bubble: [{ d: -1, o: 1.5 }, { d: -0.8, o: 4 }, { d: 0, o: 7, sit: true }],
-  // Slip screen (the back): shows pass protection (ROUTE_DELAY), leaks out behind the line and turns to the QB.
-  slip: [{ d: 0, o: 1.5 }, { d: -1, o: 5 }, { d: -0.8, o: 6.5, sit: true }],
+  // Slip screen (the back): shows pass protection (ROUTE_DELAY), leaks out behind the line and turns to the QB,
+  // setting up ~4 yd deep a few yards outside the tackle, under the convoy's landmarks (ai.ts CONVOY). He used to
+  // set 6 yd deep and 6 outside, two yards further from the line than a screen's catch and out of the linemen's reach.
+  slip: [{ d: 0.5, o: 1.5 }, { d: 1.5, o: 3.5 }, { d: 2.5, o: 4.5, sit: true }],
   // Sail: the flood's middle level, a deep out at ~17 yd.
   sail: [{ d: 10, o: 1 }, { d: 16, o: 8 }, { d: 17, o: 13 }],
   // Deep cross: under the linebackers, climbing to ~15 yd across the field.
@@ -97,8 +99,10 @@ export const ROUTES: Record<RouteName, RoutePoint[]> = {
   qin: [{ d: 5, o: 0 }, { d: 5, o: -9 }],
   // Leak: the tight end shows his block (ROUTE_DELAY), then slips across the formation to the far flat behind the flow.
   leak: [{ d: 1, o: -1.5 }, { d: 3.5, o: -8 }, { d: 5, o: -16 }],
-  // Angle (the back's "Texas" route): out of the backfield toward the flat, then a hard break back inside under the linebackers, settling in the hole.
-  angle: [{ d: 1, o: 2.5 }, { d: 2.5, o: 4 }, { d: 6, o: -2 }, { d: 7, o: -7, sit: true }],
+  // Angle (the back's "Texas" route): out of the backfield flat toward the flat like a swing, then a hard break back inside and up
+  // under the linebackers, settling in the hole between the hooks ~4–5 yd past the line from a gun set (a man on him and he
+  // runs on across, away from him: ai.ts angleRead). It settled at 2 yd, caught 51% for 2.9 yd (tools/sim/outcomes.ts --routes).
+  angle: [{ d: 1, o: 2.5 }, { d: 2.5, o: 4.5 }, { d: 7.5, o: -0.5 }, { d: 9.5, o: -5, sit: true }],
   // Option: a stem to six yards, then a break away from the nearest defender's leverage (in, out, or sit down in a zone's
   // window: ai.ts optionBreak). Drawn breaking in, the way it's run against nobody; from the backfield the stem starts outside the tackle.
   option: [{ d: 2, o: 1.5 }, { d: 6, o: 1.5 }, { d: 6.5, o: -3, sit: true }],

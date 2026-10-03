@@ -47,8 +47,12 @@ function book(team: ContendersRoster, plays: OffPlay[], calls = DEF_CALLS, hot?:
   }
   return out;
 }
-const target = (s: PlayState) => (s.pass?.attempted && s.ball.target >= 0 ? s.agents[s.ball.target]! : null);
-const caught = (s: PlayState) => s.events.some((e) => e.type === 'catch' && e.who?.[0] === s.ball.target);
+/** Who the pass went to, from the throw (a deflection or a drop clears the ball's own target). */
+const target = (s: PlayState) => {
+  const e = s.pass?.attempted ? s.events.find((q) => q.type === 'throw') : undefined;
+  return e?.who?.[1] !== undefined ? s.agents[e.who[1]]! : null;
+};
+const caught = (s: PlayState) => s.events.some((e) => e.type === 'catch' && e.who?.[0] === target(s)?.i);
 const yards = (s: PlayState) => (s.result!.offenseBall ? s.result!.yards : 0);
 
 function receivers(label: string, snaps: Snap[], who: (s: PlayState) => boolean): void {
@@ -78,7 +82,7 @@ const team = base.team;
 if (!ONLY || ONLY === 'receiving') {
   // Receiving Back: Roger Craig (also a Third-Down Back) with and without it, the whole pass book.
   console.log('Receiving Back (Roger Craig, the pass book)');
-  for (const [label, rb] of [['Craig without Receiving Back', strip(team.RB, 'receiving-back')], ['Craig (Receiving Back)', team.RB]] as const) receivers(label, book({ ...team, RB: rb }, PASS), (s) => s.agents[s.ball.target]!.slot === 'RB');
+  for (const [label, rb] of [['Craig without Receiving Back', strip(team.RB, 'receiving-back')], ['Craig (Receiving Back)', team.RB]] as const) receivers(label, book({ ...team, RB: rb }, PASS), (s) => target(s)!.slot === 'RB');
 }
 if (!ONLY || ONLY === 'third') {
   // Third-Down Back against the blitz calls: does the pressure get home?
@@ -93,7 +97,7 @@ if (!ONLY || ONLY === 'third') {
       if (s.pressureT >= 0 && s.pressureT - s.snapT < 2.0) pressured++;
       if (s.agents[s.slot.RB!]!.mem.pickup !== undefined) picked++;
     }
-    receivers(label, snaps, (s) => s.agents[s.ball.target]!.slot === 'RB');
+    receivers(label, snaps, (s) => target(s)!.slot === 'RB');
     console.log(`    pressure inside 2 s ${pct(pressured, snaps.length)}; he picked up a blitzer on ${pct(picked, snaps.length)} of snaps`);
   }
 }
@@ -123,9 +127,12 @@ if (!ONLY || ONLY === 'slot') {
             const a = s.agents[s.slot.SLOT!]!;
             let fireAt = -1;
             let rel = -1;
+            let to = -1;
             runToWhistle(s, (st) => {
               if (st.phase === 'presnap') return input({ snap: true });
               if (st.phase === 'air') {
+                // (Who it was thrown to, at the release: a deflection clears the ball's target, and leaving those out counted only the throws that got to him.)
+                if (rel < 0) to = st.ball.target;
                 if (rel < 0) rel = Math.min(...st.def.map((i) => dist(st.agents[i]!.pos, a.pos)));
                 return input({ catchType: 'rac' });
               }
@@ -134,7 +141,7 @@ if (!ONLY || ONLY === 'slot') {
               if (fireAt < 0 && a.route && a.route.idx >= a.route.pts.length - 1) fireAt = st.tick + 6;
               return input({ throwHeld: fireAt > 0 && st.tick >= fireAt && st.tick < fireAt + 3 ? icon : 0 });
             });
-            if (rel < 0 || s.ball.target !== a.i) continue;
+            if (rel < 0 || to !== a.i) continue;
             n++;
             sepRel += rel;
             const caughtIt = s.events.some((e) => e.type === 'catch' && e.who?.[0] === a.i);
@@ -154,7 +161,7 @@ if (!ONLY || ONLY === 'slot') {
         ty += yards(s);
         if (yards(s) >= 4) ok++;
       }
-      receivers('  the AI QB:', snaps, (st) => st.agents[st.ball.target]!.slot === 'SLOT');
+      receivers('  the AI QB:', snaps, (st) => target(st)!.slot === 'SLOT');
       console.log(`      the plays: ${(ty / snaps.length).toFixed(2)} yd a snap, 4+ yd on ${pct(ok, snaps.length)}`);
     }
   }
@@ -162,7 +169,7 @@ if (!ONLY || ONLY === 'slot') {
 if (!ONLY || ONLY === 'volume') {
   console.log('Volume TE (Travis Kelce, KC 2020s, the pass book)');
   const kelce = p('Travis Kelce', 'TE');
-  for (const [label, te] of [['Kelce without Volume TE', strip(kelce, 'volume-te')], ['Kelce (Volume TE)', kelce]] as const) receivers(label, book({ ...team, TE: te }, PASS), (s) => s.agents[s.ball.target]!.p.id === kelce.id);
+  for (const [label, te] of [['Kelce without Volume TE', strip(kelce, 'volume-te')], ['Kelce (Volume TE)', kelce]] as const) receivers(label, book({ ...team, TE: te }, PASS), (s) => target(s)!.p.id === kelce.id);
 }
 if (!ONLY || ONLY === 'patient') {
   console.log('Patient Runner (Roger Craig, the run book)');

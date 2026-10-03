@@ -44,7 +44,7 @@ export const SPECS: ConceptSpec[] = [
   { id: 'post', play: 'singleback-pa-post', icon: 1, alts: [['singleback-pa-yankee', 2], ['trips-y-cross', 3]], ats: range(80, 160, 5), min: 18, timing: 1.8, plan: { hold: 10 } },
   { id: 'corner', play: 'doubles-smash', icon: 1, ats: range(60, 140, 5), min: 14, timing: 2.3, plan: { hold: 14 }, alts: [['bunch-snag', 3], ['empty-spot', 2], ['doubles-mesh', 4]] },
   { id: 'crosser', play: 'trips-y-cross', icon: 1, ats: range(80, 150, 5), min: 12, timing: 2.0, alts: [['ace-pa-crossers', 1], ['singleback-pa-yankee', 1], ['singleback-pa-post', 2]] },
-  { id: 'screen', play: 'doubles-rb-screen', icon: 1, ats: range(60, 120, 4), min: 6 },
+  { id: 'screen', play: 'doubles-rb-screen', icon: 1, ats: range(100, 140, 4), min: 6 },
   { id: 'back-shoulder', play: 'trips-four-verts', icon: 4, alts: [['trips-four-verts', 3], ['doubles-dagger', 2], ['singleback-drive', 3]], ats: range(40, 96, 4), min: 12, maxAir: 22, backShoulder: true, plan: { aim: { x: -1, y: -0.2 }, call: 'aggressive' } },
   { id: 'scramble-drill', play: 'trips-y-cross', icon: 0, ats: range(150, 230, 8), min: 8, scramble: true },
 ];
