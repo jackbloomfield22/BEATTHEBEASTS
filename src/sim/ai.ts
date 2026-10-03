@@ -1052,7 +1052,7 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   // the slot's quick break are still played inside-out as above). Once he's
   // seen the QB go off schedule the route's timing is gone and so is the
   // leverage game: he plays his man as above, wherever he runs.
-  if (as.kind === 'man' && as.trail && !offSchedule(s, d)) {
+  if (as.kind === 'man' && as.trail && !lateFor(s, d)) {
     const from = as.press ? 0 : TRAIL_FROM_OFF;
     const w = Math.max(0, Math.min(1, (v.pos.x - s.setup.los - from) / TRAIL_BLEND));
     if (w > 0) {
@@ -1556,6 +1556,16 @@ function offSchedule(s: PlayState, d: Agent): boolean {
   if (s.phase !== 'pocket' && s.phase !== 'dropback') return false;
   const t = offScheduleT(s);
   return t >= 0 && s.t >= t + reaction(s, d);
+}
+
+/**
+ * He's seen the QB go off schedule, the ball in his hands or thrown since
+ * (a ball thrown on rhythm stays on rhythm in the air).
+ */
+function lateFor(s: PlayState, d: Agent): boolean {
+  const t = offScheduleT(s);
+  const at = s.phase === 'air' ? s.ball.releaseT : s.t;
+  return t >= 0 && at >= t + reaction(s, d);
 }
 
 /** An underneath defender plasters a man within this of him (yd): his area and the next step out of it. */
