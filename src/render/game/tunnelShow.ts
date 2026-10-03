@@ -351,7 +351,7 @@ export function revealPose(out: RevealPose): RevealPose {
     // (Seen from the north-west, east of him is left of frame: look a little east of him to sit him right.)
     // It ends as a full-length portrait of him (~5 m on a 22° lens) with his neighbours either side.
     out.pos.set(sx - 9.5 + 6.6 * k, 1.3, BEASTS_Z - 8.8 + 3.7 * k);
-    out.look.set(sx + 6 - 5.2 * k, 1.35, BEASTS_Z);
+    out.look.set(sx + 6 - 5.4 * k, 1.35, BEASTS_Z);
     out.fov = 26 - 4 * k;
     return out;
   }
@@ -359,9 +359,9 @@ export function revealPose(out: RevealPose): RevealPose {
   // across midfield and the sea past them, the sun going down over it; a slow push in.
   const total = reveal.info?.fast ? REVEAL_SECS.fast.faceoff : REVEAL_SECS.normal.faceoff;
   const k = ease(st / total);
-  out.pos.set(-3 + 1.5 * k, 5.6 - 0.8 * k, TEAM_Z - 14 + 2.5 * k);
-  out.look.set(-0.5, 1.3, BEASTS_Z - 6);
-  out.fov = 44 - 3 * k;
+  out.pos.set(-2.5 + 1.5 * k, 3.1 - 0.3 * k, TEAM_Z - 9.5 + 2 * k);
+  out.look.set(-0.5, 1.5, BEASTS_Z - 4);
+  out.fov = 42 - 3 * k;
   return out;
 }
 
