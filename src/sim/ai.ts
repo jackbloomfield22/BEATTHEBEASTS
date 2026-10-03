@@ -1726,13 +1726,27 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
   // match is read again every tick (a curl-to-flat defender walling #1 still
   // expands when #2 breaks to the flat), keeping his man unless another
   // clearly outranks him.
-  const keep = match && mode === 'carry';
+  // A flat or curl-to-flat defender carrying #1 or #2 up the field comes off him the moment a man threatens the flat on his side:
+  // Cover 2's corner sinks with #1 only until #2 shows the flat, then squeezes up on him; Cover 3's curl-flat player carries #2
+  // until #3 or the back gets to the flat. And a man he handed on as he crossed the area early is his again once he's out in
+  // the flat. (M6.6: carrying regardless, and the slot handed on at his release, left the flat empty: Curl Flat's slot in the
+  // flat was caught 100% against Cover 2 and Tampa 2 for ~10 yd with 7 yd of grass round him; the flat was thrown 297 times
+  // against zone in a 20-a-cell book and 199 after, tools/sim/outcomes.ts.)
+  const expands = role === 'flat' || (role === 'curl' && !flatHelp);
+  const inMyFlat = (r: Agent): boolean => {
+    if (!expands || (r.mem.rside as number | undefined) !== side) return false;
+    const v = now(r);
+    const lat = (v.pos.y - by) * (side || 1);
+    return depthOf(v.pos) < 7 && v.vel.x < 5 && (v.vel.y * (side || 1) > 1.5 || len(v.vel) < 2) && lat > (role === 'flat' ? 6 : Math.abs(ZONES[zone].y) - 3);
+  };
+  const flatThreat = match && mode === 'carry' && receivers.some((r) => r !== match && inMyFlat(r));
+  const keep = match && mode === 'carry' && !flatThreat;
   if (!keep) {
     const held = match;
     // Pick by the zone's rules.
     let best = -Infinity;
     for (const r of receivers) {
-      if (passed(r)) continue;
+      if (passed(r) && !inMyFlat(r)) continue;
       const v = now(r);
       const depth = depthOf(v.pos);
       const lat = (v.pos.y - by) * (side || 1);
@@ -1751,7 +1765,7 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
         if (mySide && toFlat && lat > 6) {
           sc = 30 - dist(v.pos, spot);
           m = 'expand';
-        } else if (mySide && num === 1 && vertical && depth < 15) {
+        } else if (mySide && num === 1 && vertical && depth > FLAT_SINK && depth < 15) {
           sc = 10;
           m = 'carry';
         } else if (mySide && num === 1 && depth < 13 && inArea) {
@@ -1862,6 +1876,15 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
   steer(d, want, { face });
   d.anim = d.vel.x > 0.8 ? 'backpedal' : 'run';
 }
+/**
+ * A flat defender (Cover 2's squat corner) sinks with #1 only once he's
+ * past the quick game's depth (yd): the hitch, the quick out and the stick
+ * break at 5–6, and a corner who'd already turned to carry them as
+ * verticals gave the quick out 90% for 8 yd against Cover 2 and Tampa 2
+ * (tools/sim/outcomes.ts --cells), the throw the squat corner is there to
+ * take away. Until then he sits in his flat, eyes on #1 and #2.
+ */
+const FLAT_SINK = 7;
 /** A receiver within this of straight upfield (|vy| / vx, tan ~35°) is running a vertical; a slant (45°) or a crosser isn't. */
 const VERTICAL_TAN = 0.7;
 /**
