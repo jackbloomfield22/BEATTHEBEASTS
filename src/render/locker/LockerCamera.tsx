@@ -135,6 +135,8 @@ export function LockerCamera({ fovOffset = 0, onWalkoutDone }: { fovOffset?: num
     const dt = urlFlags.video ? videoTime.step() : urlFlags.shot !== null ? 1 / 60 : Math.min(delta, 0.1);
     time.current += dt;
     const c = cur.current;
+    // A skipped walk-out (DraftScreen: the game has already started) mustn't hand over a second time.
+    if (walk.current && useDraft.getState().phase !== 'walkout') walk.current = null;
     const w = walk.current;
     if (w) {
       w.t += dt;
