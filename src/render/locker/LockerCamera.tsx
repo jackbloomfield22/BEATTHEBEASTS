@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Slot } from '@data/legacy/types';
-import { urlFlags } from '@/app/platform';
+import { urlFlags, videoTime } from '@/app/platform';
 import { useDraft, type DraftPhase } from '@/app/draftStore';
 import { view } from '../view';
 import { ARC_R, DOOR, DOOR_ANGLE, LOCKER_OF, ROOM_R, WALL, WALL_ANGLE, onArc } from './layout';
@@ -128,7 +128,7 @@ export function LockerCamera({ fovOffset = 0, onWalkoutDone }: { fovOffset?: num
   );
 
   useFrame((_, delta) => {
-    const dt = urlFlags.video ? 1 / urlFlags.video : urlFlags.shot !== null ? 1 / 60 : Math.min(delta, 0.1);
+    const dt = urlFlags.video ? videoTime.step() : urlFlags.shot !== null ? 1 / 60 : Math.min(delta, 0.1);
     time.current += dt;
     const c = cur.current;
     const w = walk.current;

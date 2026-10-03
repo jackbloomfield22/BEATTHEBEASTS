@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, N8AO, SMAA } from '@react-three/postprocessing';
 import { RenderPass, type BloomEffect } from 'postprocessing';
@@ -12,6 +12,7 @@ import { GameScene } from './game/GameScene';
 import { GameCamera } from './game/GameCamera';
 import { KickBall } from './game/KickBall';
 import { KickAim } from './game/KickAim';
+import { videoTime } from '@/app/platform';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { renderDpr, useSettings, type QualityPreset } from '@/app/settings';
@@ -19,7 +20,7 @@ import { guessQuality } from './quality';
 import { useApp } from '@/app/appStore';
 import { perfStats, recordFrame } from '@/dev/perfStats';
 import { DynamicResolution, FirstLaunchBenchmark } from './perf/Adaptive';
-import { urlFlags } from '@/app/platform';
+import { urlFlags, videoGate } from '@/app/platform';
 import { view } from './view';
 import { LockerRoom } from './locker/LockerRoom';
 import { LockerCamera } from './locker/LockerCamera';
@@ -134,7 +135,19 @@ class SwitchRenderPass extends RenderPass {
 
 /** Frame cap: when set, drive R3F manually at the capped rate. */
 function FrameDriver({ cap }: { cap: number }) {
-  const advance = useThree((s) => s.advance);
+  const r3fAdvance = useThree((s) => s.advance);
+  // A recording's R3F clock runs on its frames, 1/N s each (platform.ts videoTime), whatever time
+  // it's handed: World's shader and crowd clocks read it, and a frame here takes seconds to draw.
+  const advance = useCallback(
+    (t: number) => {
+      if (urlFlags.video) {
+        videoTime.frames++;
+        t = videoTime.t;
+      }
+      r3fAdvance(t);
+    },
+    [r3fAdvance],
+  );
   const setFrameloop = useThree((s) => s.setFrameloop);
   const last = useRef(0);
   useEffect(() => {
@@ -142,7 +155,16 @@ function FrameDriver({ cap }: { cap: number }) {
       // Video recording: draw a frame only when the recorder asks for one
       // (tools/shots/video.spec.ts), so no time goes on frames nobody keeps.
       setFrameloop('never');
-      Object.assign(window, { __btbRenderFrame: () => advance(performance.now()) });
+      Object.assign(window, {
+        __btbRenderFrame: () => {
+          videoGate.open = true;
+          try {
+            advance(performance.now());
+          } finally {
+            videoGate.open = false;
+          }
+        },
+      });
       return;
     }
     if (!cap) {
@@ -209,6 +231,9 @@ export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasEl
     <Canvas
       className="stage"
       flat
+      // A recording draws only when the recorder asks (FrameDriver). Held here too: the canvas
+      // re-applies this prop on every Stage render, which put R3F's own loop back on mid-recording.
+      frameloop={urlFlags.video ? 'never' : 'always'}
       dpr={dpr}
       shadows={{ type: THREE.PCFShadowMap }}
       gl={{ antialias: false, powerPreference: 'high-performance', stencil: false, alpha: false, preserveDrawingBuffer: urlFlags.shot !== null || urlFlags.video !== null }}
