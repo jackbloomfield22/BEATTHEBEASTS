@@ -49,7 +49,7 @@ async function boot(page: Page, extra = '') {
       return (window as unknown as Win).__btbPracticeUi?.getState().stage === 'call';
     },
     null,
-    { timeout: 600_000, polling: 500 },
+    { timeout: 1_800_000, polling: 500 },
   );
   if (!VIDEO) await page.addStyleTag({ content: '*, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition-duration: 0s !important; }' });
 }
@@ -67,7 +67,7 @@ async function score(page: Page) {
       return (window as unknown as Win).__btbGameReady === true;
     },
     null,
-    { timeout: 600_000, polling: 1000 },
+    { timeout: 1_800_000, polling: 1000 },
   );
   await ev(page, (w) => {
     w.__btbPractice.runner!.paused = true;

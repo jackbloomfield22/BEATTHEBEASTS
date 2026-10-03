@@ -190,6 +190,8 @@ export class CelebrateScene {
     const r = b.player.root;
     b.animator.setHold(null);
     b.animator.stopOverlay();
+    // Standing, when he stands: the idle, not the stance he lined up in (a receiver would pull up into his two-point crouch).
+    b.animator.setStance('stance_idle');
     const a: Actor = { i, b, x: r.position.x, z: r.position.z, yaw: r.rotation.y, speed: Math.max(0, b.gaitSpeed), mode, tx: r.position.x, tz: r.position.z, tyaw: r.rotation.y, clip: '', lastT: 0, since: 0 };
     this.actors.set(i, a);
     return a;
