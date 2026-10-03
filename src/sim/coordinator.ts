@@ -220,8 +220,9 @@ export function filmReader(sit: OffSituation): (p: OffPlay) => number {
  * its yards 10 points more often than the book's average gains a tenth of a
  * point, a nudge among plays the situation already likes. Set to the
  * catalog's "10% more often": the coordinator's top three for the 1980s
- * 49ers against the all-time Beasts made their yards on 43.1% of snaps
- * without the trait and 47.6% with it (tools/sim/coordfx.ts, 18 situations,
- * 30 snaps each, seeds the film never saw); at 2 it was 49.3%, at 10 64.9%.
+ * 49ers against the all-time Beasts made their yards on 43.5% of snaps
+ * without the trait and 48.1% with it (tools/sim/coordfx.ts, 18 situations,
+ * 30 snaps each, seeds the film never saw); weighted 10, the film takes
+ * over the list (~65%), and the situational rules stop mattering.
  */
 const EK_WEIGHT = 1;
