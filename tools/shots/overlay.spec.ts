@@ -6,9 +6,10 @@ import { test, type Page } from '@playwright/test';
 // however slowly this machine renders), with a still of each state at
 // 1920×1080 and again at 2560×1440 (the viewport is resized for the second
 // still, so both are the same moment):
-//   pregame, the montage's key play and board shot, the play call, pre-snap,
+//   pregame, the Meanwhile card, the play call, pre-snap,
 //   a big play's lower third (a touchdown: the prompt, the celebration, the
-//   card), the try, the kick with its wind flag, its result, and the Meanwhile card.
+//   card), the try, the kick with its wind flag, its result, and the next Beasts
+//   possession as the montage (its key play and board shot).
 // The big play is a scripted clip (src/game/clips.ts) run inside the game, so
 // the match scores it as any snap.
 //   BTB_OVERLAY=1 BTB_PORT=5295 npx playwright test -c tools/shots/playwright.config.ts
@@ -85,19 +86,18 @@ test('broadcast overlay', async ({ page }) => {
   await page.waitForTimeout(1200);
   await still(page, '01-pregame');
 
-  // The Beasts' first possession: the montage (its key play, then the board).
+  // The Beasts' first possession as the Meanwhile card (held for the still: its 5.6 s timer is real time, these frames are slow).
+  await ev(page, (w) => w.__btbSettings.getState().set((d) => void (d.gameplay.beastsDrives = 'card')));
+  await page.evaluate(() => {
+    const st = window.setTimeout;
+    (window as unknown as { setTimeout: unknown }).setTimeout = (f: () => void, ms?: number, ...a: unknown[]) => st(f, ms === 5600 ? 1e9 : ms, ...a);
+  });
   await page.keyboard.press('Enter');
-  await until(page, (w) => w.__btbMontageUi.getState().shot === 'play' || w.__btbGameUi.getState().stage !== 'meanwhile', 3000);
-  if ((await ev(page, (w) => w.__btbMontageUi.getState().shot)) === 'play') {
-    await frames(page, 12);
-    await still(page, '02-montage-play');
+  if (await until(page, (w) => w.__btbGameUi.getState().stage === 'meanwhile', 600)) {
+    await frames(page, 4);
+    await still(page, '02-meanwhile-card');
+    await page.keyboard.press('Enter');
   }
-  await until(page, (w) => w.__btbMontageUi.getState().shot === 'board' || w.__btbGameUi.getState().stage !== 'meanwhile', 3000);
-  if ((await ev(page, (w) => w.__btbMontageUi.getState().shot)) === 'board') {
-    await frames(page, 15);
-    await still(page, '03-montage-board');
-  }
-  await until(page, (w) => w.__btbGameUi.getState().stage !== 'meanwhile', 3000);
 
   // The play call, then pre-snap.
   await until(page, (w) => w.__btbGameUi.getState().stage === 'call', 600);
@@ -172,9 +172,13 @@ test('broadcast overlay', async ({ page }) => {
     await frames(page, 3);
     await still(page, '12-kick-result');
   }
-  // The next Beasts possession as the Meanwhile card.
-  await ev(page, (w) => w.__btbSettings.getState().set((d) => void (d.gameplay.beastsDrives = 'card')));
-  if (!(await until(page, (w) => w.__btbGameUi.getState().stage === 'meanwhile', 2000))) return;
-  await frames(page, 6);
-  await still(page, '13-meanwhile-card');
+  // The next Beasts possession as the montage: its key play, then the board shot.
+  await ev(page, (w) => w.__btbSettings.getState().set((d) => void (d.gameplay.beastsDrives = 'montage')));
+  if (!(await until(page, (w) => w.__btbMontageUi.getState().shot === 'play', 4000))) return;
+  await frames(page, 12);
+  await still(page, '13-montage-play');
+  if (!(await until(page, (w) => w.__btbMontageUi.getState().shot === 'board' || w.__btbGameUi.getState().stage !== 'meanwhile', 4000))) return;
+  if ((await ev(page, (w) => w.__btbMontageUi.getState().shot)) !== 'board') return;
+  await frames(page, 15);
+  await still(page, '14-montage-board');
 });
