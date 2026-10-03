@@ -81,3 +81,11 @@ export const urlFlags = (() => {
     shotTime: p.has('t') ? Number(p.get('t')) : null, // freeze the cinematic clock (screenshots)
   };
 })();
+
+/**
+ * Video recording: true only inside the frame the recorder asked for
+ * (Stage's __btbRenderFrame). Chromium draws extra frames while it takes a
+ * screenshot; the Beasts' drive montage (M7) steps nothing in those, so a
+ * recording keeps its 1/N s a frame.
+ */
+export const videoGate = { open: false };

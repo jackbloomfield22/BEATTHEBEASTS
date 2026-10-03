@@ -18,7 +18,19 @@ export interface BoardScore {
  * back to the branding. A repaint is one 2048×820 canvas upload, done at a
  * cut, never per frame.
  */
-export const videoBoard: { show(s: BoardScore): void; reset(): void } = { show: () => undefined, reset: () => undefined };
+const boards = new Set<(s: BoardScore | null) => void>();
+let boardNow: BoardScore | null = null;
+export const videoBoard = {
+  show(s: BoardScore): void {
+    boardNow = s;
+    for (const paint of boards) paint(s);
+  },
+  reset(): void {
+    if (!boardNow) return;
+    boardNow = null;
+    for (const paint of boards) paint(null);
+  },
+};
 
 function fitText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, max: number): void {
   const w = ctx.measureText(text).width;
@@ -110,15 +122,11 @@ export function createVideoBoardTexture(): THREE.CanvasTexture {
   };
   draw();
   document.fonts?.load('100px Bungee').then(draw, () => undefined);
-  videoBoard.show = (sc) => {
+  // Every board texture built (React's dev double-render can build two; the World keeps one) takes the score.
+  boards.add((sc) => {
     score = sc;
     draw();
-  };
-  videoBoard.reset = () => {
-    if (!score) return;
-    score = null;
-    draw();
-  };
+  });
   return tex;
 }
 

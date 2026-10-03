@@ -7,8 +7,8 @@
 //   play       the live broadcast angle (GameCamera's own logic).
 //   reaction   low and tight on the man the play was about, from in front
 //              of him and off his shoulder, on a long lens.
-//   board      up at the video board over the north stands from the field,
-//              the crowd under it, a slow push in on the lens.
+//   board      from high over the south end, down the bowl to the north
+//              stands and the video board over them, a slow push in on the lens.
 
 import { montage, type ShotId } from '@/game/montageSession';
 import { YARD } from '../world/constants';
@@ -55,8 +55,8 @@ export function montagePose(shot: ShotId, broadcast: () => MontagePose | null): 
     const d = 8;
     return { ex: a.x + Math.cos(ang) * d, ey: a.y + Math.sin(ang) * d, eh: 1.55, lx: a.x, ly: a.y, lh: 1.15, fov: 26 };
   }
-  // The board: from the field near the south end zone, up over the north stands.
-  return { ex: 30, ey: 9, eh: 2.4, lx: BOARD.x, ly: 0, lh: BOARD.h - 4, fov: 25 - Math.min(1, t / 2.6) * 3 };
+  // The board: from high over the south end zone, down the length of the bowl to the north stands and the board over them.
+  return { ex: 6, ey: 4, eh: 30, lx: BOARD.x, ly: 0, lh: BOARD.h - 14, fov: 30 - Math.min(1, t / 2.6) * 3 };
 }
 
 /** Spring rates per shot (eye ×3, look ×3, fov): the wide drifts, the reaction tracks him tight, the board pushes slowly. */

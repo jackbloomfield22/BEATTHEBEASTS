@@ -5,7 +5,7 @@ import { loadAnimLibrary, type AnimLibrary } from '@/anim/library';
 import { PlayerAnimator } from '@/anim/animator';
 import { Ragdoll } from '@/anim/ragdoll';
 import { skinHexFor } from '@/app/characterization';
-import { urlFlags } from '@/app/platform';
+import { urlFlags, videoGate } from '@/app/platform';
 import { practice, usePractice } from '@/game/practice';
 import { replay, replayStats } from '@/game/replaySession';
 import { montage, useMontage, type MontageInfo } from '@/game/montageSession';
@@ -437,7 +437,8 @@ export function GameScene() {
   }
 
   useFrame(({ camera, gl, clock }, dt) => {
-    const step = urlFlags.video ? 1 / urlFlags.video : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    // (A recording's montage steps only in the frames the recorder asked for: platform.ts videoGate.)
+    const step = urlFlags.video ? (montage.busy && !videoGate.open ? 0 : 1 / urlFlags.video) : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
     latency.frame++;
     // A replay (M7) plays instead of the live snap, which holds where it stands until it hands back.
     replay.frame(step);
