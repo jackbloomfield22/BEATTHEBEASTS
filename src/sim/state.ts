@@ -215,6 +215,9 @@ export function strengthOf(offPos: Record<OffSlot, V2>, by: number): 1 | -1 {
   return right.length > left.length ? -1 : 1;
 }
 
+/** The middle linebacker's shade to a three-receiver side (yd from the ball): over the strong B gap (runs.ts GAPS: B 2.0, C 3.4). */
+const MIKE_TRIPS = 2.5;
+
 const MIRROR_ZONE: Partial<Record<ZoneName, ZoneName>> = { curlL: 'curlR', curlR: 'curlL', hookL: 'hookR', hookR: 'hookL', flatL: 'flatR', flatR: 'flatL' };
 
 /**
@@ -269,7 +272,13 @@ function defensiveAlignment(s: PlaySetup, offPos: Record<OffSlot, V2>, bracketY:
   out.RE = v2(los + 0.9, by - 3.9);
   // Linebackers at 4.5 yd, shaded toward the strength (more receivers).
   out.WLB = v2(los + 4.5, by - 3.6 * strength);
-  out.MLB = v2(los + 5, by + 0.4 * strength);
+  // Counting the receivers: against three to a side (trips, bunch, the tight
+  // end and two split), the middle linebacker walks over the strong B gap,
+  // toward #3, so the strong side has three men over three (the corner, the
+  // curl-flat or the nickel over #2, and him). Over the center he was ten
+  // yards from a bubble to the bunch and ran alongside it to the sideline.
+  const count = (side: 1 | -1) => (['X', 'Z', 'SLOT', 'TE', 'RB'] as OffSlot[]).filter((k) => (offPos[k].y - by) * side > 2 && offPos[k].x > los - 2.5).length;
+  out.MLB = v2(los + 5, by + (count(strength) >= 3 ? MIKE_TRIPS : 0.4) * strength);
   out.SLB = v2(los + 4.5, by + 3.6 * strength);
   const call = look.assign;
   const cb = (slot: 'LCB' | 'RCB', rec: { p: V2 } | undefined, sideSign: number) => {

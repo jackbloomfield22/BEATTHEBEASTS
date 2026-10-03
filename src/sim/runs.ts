@@ -538,9 +538,11 @@ const STALK_IN = 2;
 
 /**
  * The stalk blocks on a screen, counted at the snap as they're coached: the
- * blockers on the screen's side take the men off the ball on that side,
- * outside-in (the outside blocker the widest man, the corner or the force;
- * the next one the apex or curl defender inside him). Before this the
+ * blockers on the screen's side take the men off the ball on that side who
+ * can get to the catch first (as many as there are blockers), outside-in
+ * (the outside blocker the widest man, the corner or the force; the next
+ * one the apex or curl defender inside him, or in man the man over the
+ * bubble, whose own man then has to come through the bunch). Before this the
  * stalk blocker took the nearest man to him and the ball, which from a
  * bunch was the defensive end rushing past: both blockers turned back
  * inside after him and the corner came down untouched (the bubble against
@@ -556,9 +558,12 @@ export function assignStalks(s: PlayState): void {
   const end = to.route?.pts[to.route.pts.length - 1] ?? to.pos;
   const side = end.y >= by ? 1 : -1;
   const width = (p: V2) => (p.y - by) * side;
+  // The men who can get to the catch first (the nearest to it, off the ball and short of the deep man), then outside-in.
   const men = s.def
     .map((i) => s.agents[i]!)
     .filter((d) => !FRONT.includes(d.slot) && d.pos.x < los + STALK_DEEP && width(d.pos) > STALK_IN)
+    .sort((p, q) => dist(p.pos, end) - dist(q.pos, end))
+    .slice(0, blockers.length)
     .sort((p, q) => width(q.pos) - width(p.pos));
   blockers.sort((p, q) => width(q.pos) - width(p.pos)).forEach((b, j) => (b.mem.target = men[j]?.i ?? -1));
 }

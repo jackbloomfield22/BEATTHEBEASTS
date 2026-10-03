@@ -9,6 +9,7 @@ import {
   assignProtection,
   breakOnBall,
   carrierAI,
+  intercept,
   convoySide,
   convoySpot,
   screenConvoy,
@@ -1811,10 +1812,22 @@ const SCREEN_R = 28;
 const ALLEY_UP = 2.5;
 const ALLEY_IN = 1.5;
 
+/**
+ * A perimeter screen: thrown behind the line to a receiver who was split
+ * out (the bubble), the play a defense fits as a run to the edge. The back's
+ * slow screen is a different fight, linebackers getting off the convoy of
+ * linemen in front of it (ai.ts screenConvoy), and keeps its pursuit.
+ */
+function perimeterScreen(s: PlayState, target: number): boolean {
+  if (target < 0 || s.ball.aim.x > s.setup.los + SCREEN_LINE) return false;
+  const r = s.agents[target]!;
+  return r.slot !== 'RB' && Math.abs(s.setup.play.formation.align[r.slot as OffSlot].dy) > 5;
+}
+
 function rallyScreen(s: PlayState, d: Agent): boolean {
   const aim = { x: s.ball.aim.x, y: s.ball.aim.y };
   const los = s.setup.los;
-  if (aim.x > los + SCREEN_LINE || dist(d.pos, aim) > SCREEN_R) return false;
+  if (!perimeterScreen(s, s.ball.target) || dist(d.pos, aim) > SCREEN_R) return false;
   const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
   if (as.kind !== 'zone') return false;
   const by = s.setup.ballY ?? 0;
@@ -1823,6 +1836,42 @@ function rallyScreen(s: PlayState, d: Agent): boolean {
   const outside = d.slot === (bs > 0 ? 'LCB' : 'RCB') || (d.pos.y - aim.y) * bs > 0;
   const at = v2(Math.max(aim.x + ALLEY_UP, los + 0.5), aim.y + (outside ? bs : -bs) * ALLEY_IN);
   steer(d, arrive(d, at, 1, 1));
+  return true;
+}
+
+/**
+ * After the catch of a screen thrown behind the line, a zone defender in
+ * front of the carrier fits him like a perimeter run until he's on him
+ * (SCREEN_FIT_R) or the carrier's past him: downhill to a point just in
+ * front of him, on his inside shoulder (the alley) or, for the corner on
+ * that side, his outside one (the force). A pursuit angle from in front
+ * (pursue's, taken for a back already at full speed up the field) had the
+ * hook and the safeties running alongside the bubble five yards inside it
+ * until it was ten yards up the field. Until he's this far past the line
+ * (yd); the fit point this far in front of him and to his shoulder (yd). Ours.
+ */
+const SCREEN_FIT_TO = 4;
+const SCREEN_FIT_R = 3.5;
+const FIT_AHEAD = 2;
+const FIT_SHOULDER = 1;
+
+function screenFit(s: PlayState, d: Agent, c: Agent): boolean {
+  const los = s.setup.los;
+  if (!perimeterScreen(s, c.i) || c.pos.x > los + SCREEN_FIT_TO) return false;
+  const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
+  if (as.kind !== 'zone' || d.pos.x < c.pos.x + 1 || dist(d.pos, c.pos) < SCREEN_FIT_R) return false;
+  const by = s.setup.ballY ?? 0;
+  const bs = Math.sign(c.pos.y - by) || 1;
+  const force = d.slot === (bs > 0 ? 'LCB' : 'RCB') && (d.pos.y - c.pos.y) * bs > -1;
+  // Where we meet on his run as he's running it now (not the full-speed run up the field pursue() leads), a step in front of him, on my shoulder of him.
+  const meet = intercept(d.pos, d.fx.vmax, c.pos, c.vel);
+  if (!meet) return false;
+  const v = len(c.vel);
+  const ux = v > 1 ? c.vel.x / v : 1;
+  const uy = v > 1 ? c.vel.y / v : 0;
+  const at = v2(meet.x + ux * FIT_AHEAD, meet.y + uy * FIT_AHEAD + (force ? bs : -bs) * FIT_SHOULDER);
+  const k = Math.max(0.1, dist(at, d.pos));
+  steer(d, { x: ((at.x - d.pos.x) / k) * d.fx.vmax, y: ((at.y - d.pos.y) / k) * d.fx.vmax });
   return true;
 }
 
@@ -1893,7 +1942,8 @@ function defenseRoles(s: PlayState): void {
       continue;
     }
     if (carrier && carrier.side === 'off' && !s.setup.play.run) {
-      // After a catch (or a scramble) everyone pursues.
+      // After a catch (or a scramble) everyone pursues; a screen caught behind the line, the men in front of it fit it first.
+      if (d.busy === 0 && screenFit(s, d, carrier)) continue;
       pursueTackle(s, d, carrier);
       continue;
     }
