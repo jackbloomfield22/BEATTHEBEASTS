@@ -31,6 +31,19 @@
   - Honest limits:
     - A long sprint costs 0.02–0.04 stamina a second, so a 40-yard breakaway loses ~10–15% of the bar and ~2% of top speed. That's visible on the bar but subtle in the legs. The drive-long model (stamina carried from play to play, Workhorse and the rest) is what gives it teeth.
     - Watched on the recorded broken-tackle clip (below, "Sprint watched").
+- **Screens and late slants** (2026-10-03, `wip/sim-screens-slants`; agent):
+  - *The RB screen against zone:* a convoy. The guards and center release to landmarks outside the back's spot (playside guard 4 yd outside, center 2, backside guard over it, 1–2 yd past the line). Each blocks the first man into his lane, squared up in his path. They used to run off after dropping linebackers, away from the ball.
+    - The tackles ride the ends up the field until the ball is out.
+    - The QB waits for the back to set (unless the rush is on him) and drifts as the rush is let in.
+    - The slip sets 2.5 yd deep, not 6, and the back rides his playside guard until the guard is on a man.
+    - Yards a throw: Cover 2 0.7 → 5.6, Tampa 2 1.5 → 4.7, Cover 3 2.9 → 4.3, Cover 4 2.8 → 4.4. Against man the average goes 8.1 → 7.7 (Cover 1 10.2 → 5.4, 2-man and Cover 1 off up).
+  - *The late slant against zone:* off schedule, he throttles to 75% of top speed from his last leg and works across the window at his depth, instead of running to the far sideline. Still moving, the ball is led away from the hook defender on his hip. Sitting in the window had been picked 12–14% of the time. Called Slants late 34/32/34% → 40/45/46%, picked 4/5/6% → 7/4/4%. Man and on-time are unchanged.
+  - Outcomes 68.5%, 8.66 ypa, every band holds; identity 19/20; trait audit 127/127. The screen clip is re-found (Cover 2, seed 51) and needs re-recording.
+  - **Still open:**
+    - Hot-routed late slants at 2.5 s are picked 11%.
+    - The bubble against zone (0.5–1.9 yd): its stalk blockers chase the defensive end, a bug. Fixing that alone gives 12–14 yd, because nothing else is near the flat; in Cover 2 against bunch, the linebacker with the strong-side curl lines up on the weak side. It needs the corner's play against the stalk, and maybe the zone alignment against bunch and trips.
+    - None of it watched on screen.
+- **Full-game e2e fixed:** `e2e/game.spec.ts` waited for the walk-out to start by itself. The room has waited for a Walk out press since the M6.6 draft stage, so the test timed out on every branch. It now presses Enter, sees the walk-out start, and skips the camera move to its end, as `results.spec` does.
 - **Weak-spot pass** (2026-10-03, `wip/sim-weakspots`; agent):
   - *The screen against man:* the line sets, punches and lets its rushers in, then releases for the second level. A rusher turns to the ball on his read of the throw, not at the release. A linebacker whose back shows pass protection hugs (adds to the rush), and gets caught in the rush lane when the back slips out. RB screen against man 5.8 → 8.1 yd a throw (Cover 1 6.4 → 10.2).
   - *The angle:* a swing release, settling 4–5 yd past the line against zone (51% for 2.9 yd → 95% for 6.6). Against man he runs on across, away from the linebacker. It still doesn't beat a linebacker in man, so the QB rarely throws it there.
