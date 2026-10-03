@@ -97,7 +97,7 @@ describe('M6: personnel, formations and the book', () => {
       }
     }
     // (The whole book, now with the plays a trait unlocks: ~40 s alone, several minutes beside the rest of the suite.)
-  }, 480_000);
+  }, 600_000);
 
   it('the new schemes do what they say: the sneak keeps it, the toss pitches it, the fullback leads, the boot rolls out', () => {
     const sneak = runToWhistle(at(playById('heavy-sneak'), defById('cover1'), 3), () => NEUTRAL);
@@ -160,7 +160,7 @@ describe('M6: the field has edges for everyone', () => {
         }
       }
     }
-  }, 480_000);
+  }, 600_000);
 
   /** A throw to icon 1 on a stick with the receiver set out of the play first. */
   const outThen = (who: 'receiver' | 'defender') => {
