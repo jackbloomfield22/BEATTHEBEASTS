@@ -1049,8 +1049,10 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   // Trail technique (2-man): he blends into it as his man gets past the
   // line (a pressed corner from the release; an underneath man once his man
   // is TRAIL_FROM_OFF yd up the field, so the back's checkdown, the flat and
-  // the slot's quick break are still played inside-out as above).
-  if (as.kind === 'man' && as.trail) {
+  // the slot's quick break are still played inside-out as above). Once he's
+  // seen the QB go off schedule the route's timing is gone and so is the
+  // leverage game: he plays his man as above, wherever he runs.
+  if (as.kind === 'man' && as.trail && !offSchedule(s, d)) {
     const from = as.press ? 0 : TRAIL_FROM_OFF;
     const w = Math.max(0, Math.min(1, (v.pos.x - s.setup.los - from) / TRAIL_BLEND));
     if (w > 0) {
