@@ -231,9 +231,10 @@ export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasEl
     <Canvas
       className="stage"
       flat
-      // A recording draws only when the recorder asks (FrameDriver). Held here too: the canvas
-      // re-applies this prop on every Stage render, which put R3F's own loop back on mid-recording.
-      frameloop={urlFlags.video ? 'never' : 'always'}
+      // A recording, and a frame cap, draw only when FrameDriver says. Held here too: the canvas
+      // re-applies this prop on every Stage render, which put R3F's own loop back on mid-recording
+      // (and uncapped a capped game after any settings change or screen switch).
+      frameloop={urlFlags.video || display.frameCap ? 'never' : 'always'}
       dpr={dpr}
       shadows={{ type: THREE.PCFShadowMap }}
       gl={{ antialias: false, powerPreference: 'high-performance', stencil: false, alpha: false, preserveDrawingBuffer: urlFlags.shot !== null || urlFlags.video !== null }}
