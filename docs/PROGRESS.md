@@ -31,6 +31,19 @@
   - Honest limits:
     - A long sprint costs 0.02–0.04 stamina a second, so a 40-yard breakaway loses ~10–15% of the bar and ~2% of top speed. That's visible on the bar but subtle in the legs. The drive-long model (stamina carried from play to play, Workhorse and the rest) is what gives it teeth.
     - Watched on the recorded broken-tackle clip (below, "Sprint watched").
+- **The bubble against zone** (2026-10-03, `wip/sim-bubble`; agent):
+  - *Stalks counted at the snap:* the blockers take the men nearest the catch, outside-in (the corner, then the apex or the man over the bubble), never a lineman. Before, they chased the defensive end.
+  - *Zone calls played by strength:* the call sheet is written strength-left. With the strength right, the non-corner underneath zones swap sides, and the end and tackle jobs swap. Before, in Cover 2 against bunch right, the weak-side linebacker had the strong curl and ran 15 yd across to it. This hit every flipped 2x1 set, so many per-call cells moved. Against three receivers to a side, the Mike shades over the strong B gap.
+  - *The defense plays the bubble as a perimeter run:* the read before the throw (the corner forces outside-in; the apex, hook and quarters safety take the alley; a deep corner reads his #1's stalk), the corner squeezing and playing through the stalk, and the fit on the carrier's real run after the catch. This applies only to screens thrown to a split receiver; the back's screen keeps its convoy.
+  - Bubble yards a throw: Cover 3 1.9 → 5.7, Cover 2 0.7 → 4.1, Tampa 2 0.5 → 4.0, Cover 4 6.2 → 6.3, fire zone 7.0 → 8.4, sim pressure 1.8 → 6.8. Against man: Cover 1 4.8 → 5.7, Cover 1 off −0.5 → 5.5, Cover 1 blitz 4.2 → 6.7, 2-man 8.0 → −0.5 (the old figure came from the stalks bumping the trail man by accident). RB screen against zone 4.4–5.6 → 4.6–6.5 (sim pressure 5.2 → 3.0).
+  - Outcomes 68.4%, 8.57 ypa, every band holds. Runs 4.8 yd a carry. Called slants against zone on time 69% → 64% complete. Identity 19/20; trait audit 127/127. Golden re-pinned (299 of 900 cases) and film regenerated.
+  - **Still open:**
+    - The hot-routed late slant at 2.5 s is picked 9% (was 11%). It's a 1.4–1.6 s ball that anyone nearby can reach, not mainly the defender on his hip, and it's the player's own throw, so there's no believable fix.
+    - Cover 4 bubble 6.3: the quarters safety aligns at 13 yd, deeper than real quarters.
+    - Bubble against 2-man −0.5.
+    - Contact to tackle takes ~0.5 s, adding 3–4 yd to every bubble.
+    - The bubble is caught standing at the landmark, not on the run.
+    - None of it watched on screen.
 - **Screens and late slants** (2026-10-03, `wip/sim-screens-slants`; agent):
   - *The RB screen against zone:* a convoy. The guards and center release to landmarks outside the back's spot (playside guard 4 yd outside, center 2, backside guard over it, 1–2 yd past the line). Each blocks the first man into his lane, squared up in his path. They used to run off after dropping linebackers, away from the ball.
     - The tackles ride the ends up the field until the ball is out.
