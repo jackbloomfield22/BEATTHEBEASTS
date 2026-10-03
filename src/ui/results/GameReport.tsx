@@ -418,7 +418,7 @@ function BigHits({ rec }: { rec: GameRecord }) {
 }
 
 /** One line: the play of the game (flagged for the M7 replay), and the Daily's perfect-team tally. */
-export function PlayOfGameLine({ rec }: { rec: GameRecord }) {
+export function PlayOfGameLine({ rec, replay }: { rec: GameRecord; replay?: ReactNode }) {
   const p = rec.playOfGame;
   const matched = rec.perfect ? rec.perfect.filter((x) => x.same).length : 0;
   return (
@@ -429,6 +429,7 @@ export function PlayOfGameLine({ rec }: { rec: GameRecord }) {
           <b>{p.headline}</b> <span className="pog-d">{p.detail}</span> <span className="pog-w">{whenLabel(rec, p.round, p.ot, p.clock)}</span>
         </span>
       ) : null}
+      {p ? replay : null}
       {rec.perfect ? (
         <span className="pog-perfect">
           <span className="pog-k">Perfect team</span>

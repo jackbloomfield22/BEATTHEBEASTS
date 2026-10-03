@@ -41,6 +41,19 @@ const PROMPTED = [
   'menu.alt2',
   'menu.alt3',
   'global.pause',
+  // The instant replay (M7): the result card's offer, and the replay's deck.
+  'global.replay',
+  'replay.playPause',
+  'replay.slowmo',
+  'replay.scrubBack',
+  'replay.scrubForward',
+  'replay.frameBack',
+  'replay.frameForward',
+  'replay.start',
+  'replay.key',
+  'replay.camera',
+  'replay.focus',
+  'replay.close',
 ];
 
 describe('prompt labels per device', () => {

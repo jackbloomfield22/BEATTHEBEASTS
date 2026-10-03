@@ -138,13 +138,28 @@ export const ACTIONS: ActionDef[] = [
   a('kick.aimRight', 'kick', 'Aim right', ['ArrowRight', 'KeyD'], ['Pad:Right']),
   a('kick.charge', 'kick', 'Kick: hold to charge, release to strike', ['Space', 'Enter', 'Mouse0'], ['Pad:A']),
 
-  // Replay
-  a('replay.orbit', 'replay', 'Orbit camera (drag)', ['Mouse0'], ['Pad:RS'], true),
-  a('replay.scrubBack', 'replay', 'Scrub back', ['KeyA'], ['Pad:LB']),
-  a('replay.scrubForward', 'replay', 'Scrub forward', ['KeyD'], ['Pad:RB']),
-  a('replay.slowmo', 'replay', 'Slow motion', ['KeyS'], ['Pad:X']),
+  // Replay (M7): after any snap, and the play of the game on the results
+  // screen. Esc (the pause key) or B goes back; P / Backspace / View
+  // (global.replay) toggles it. The mouse drags the orbit and the wheel
+  // zooms (the canvas's own events, render/game/GameCamera.tsx).
   a('replay.playPause', 'replay', 'Play / pause', ['Space'], ['Pad:A']),
-  a('replay.dof', 'replay', 'Depth of field', ['KeyF'], ['Pad:Y']),
+  a('replay.slowmo', 'replay', 'Speed (1×, ½×, ¼×)', ['KeyS'], ['Pad:X']),
+  a('replay.scrubBack', 'replay', 'Back a second', ['KeyA'], ['Pad:LB']),
+  a('replay.scrubForward', 'replay', 'On a second', ['KeyD'], ['Pad:RB']),
+  a('replay.frameBack', 'replay', 'Back a frame', ['KeyQ'], ['Pad:LT']),
+  a('replay.frameForward', 'replay', 'On a frame', ['KeyE'], ['Pad:RT']),
+  a('replay.start', 'replay', 'To the start', ['KeyR', 'Home'], ['Pad:Left']),
+  a('replay.key', 'replay', 'To the key moment (in slow motion)', ['KeyF'], ['Pad:Y']),
+  a('replay.camera', 'replay', 'Camera: orbit / broadcast / end zone', ['KeyC'], ['Pad:Up']),
+  a('replay.focus', 'replay', 'Orbit the ball / the key player', ['Tab'], ['Pad:RS']),
+  a('replay.orbitLeft', 'replay', 'Orbit left', ['ArrowLeft'], ['Pad:RSLeft']),
+  a('replay.orbitRight', 'replay', 'Orbit right', ['ArrowRight'], ['Pad:RSRight']),
+  a('replay.orbitUp', 'replay', 'Orbit up', ['ArrowUp'], ['Pad:RSUp']),
+  a('replay.orbitDown', 'replay', 'Orbit down', ['ArrowDown'], ['Pad:RSDown']),
+  a('replay.zoomIn', 'replay', 'Zoom in', ['Equal', 'NumpadAdd'], ['Pad:LSUp']),
+  a('replay.zoomOut', 'replay', 'Zoom out', ['Minus', 'NumpadSubtract'], ['Pad:LSDown']),
+  a('replay.orbit', 'replay', 'Orbit camera (drag) / zoom (wheel)', ['Mouse0'], ['Pad:RStick'], true),
+  a('replay.close', 'replay', 'Back to the result', [], ['Pad:B']),
 
   // Global
   a('global.pause', 'global', 'Pause', ['Escape'], ['Pad:Menu']),
@@ -264,6 +279,7 @@ const KEY_NAMES: Record<string, string> = {
   Mouse0: 'Left Click', Mouse1: 'Middle Click', Mouse2: 'Right Click', WheelUp: 'Wheel Up', WheelDown: 'Wheel Down',
   'Pad:A': 'A', 'Pad:B': 'B', 'Pad:X': 'X', 'Pad:Y': 'Y', 'Pad:LB': 'LB', 'Pad:RB': 'RB', 'Pad:LT': 'LT', 'Pad:RT': 'RT',
   'Pad:View': 'View', 'Pad:Menu': 'Menu', 'Pad:LS': 'L-Stick Click', 'Pad:RS': 'R-Stick Click',
+  'Pad:LStick': 'L-Stick', 'Pad:RStick': 'R-Stick', Home: 'Home', NumpadAdd: 'Num +', NumpadSubtract: 'Num −',
   'Pad:Up': 'D-Pad ↑', 'Pad:Down': 'D-Pad ↓', 'Pad:Left': 'D-Pad ←', 'Pad:Right': 'D-Pad →',
   'Pad:LSUp': 'L-Stick ↑', 'Pad:LSDown': 'L-Stick ↓', 'Pad:LSLeft': 'L-Stick ←', 'Pad:LSRight': 'L-Stick →',
   'Pad:RSUp': 'R-Stick ↑', 'Pad:RSDown': 'R-Stick ↓', 'Pad:RSLeft': 'R-Stick ←', 'Pad:RSRight': 'R-Stick →',

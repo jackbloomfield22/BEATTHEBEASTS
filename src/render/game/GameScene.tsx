@@ -7,6 +7,8 @@ import { Ragdoll } from '@/anim/ragdoll';
 import { skinHexFor } from '@/app/characterization';
 import { urlFlags } from '@/app/platform';
 import { practice, usePractice } from '@/game/practice';
+import { replay, replayStats } from '@/game/replaySession';
+import type { SimRunner } from '@/game/runner';
 import { Input } from '@/input/InputManager';
 import { createRouteArt } from './routeArt';
 import { measure, resetPops } from './popMeter';
@@ -224,6 +226,8 @@ const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move
 const contactBodies: ContactBody[] = [];
 const contactPairs: [number, number][] = [];
 const _lean = { x: 0, z: 0 };
+/** What the scene draws: the live play's runner, or a replay's. */
+type Runner = SimRunner;
 
 /** The carrier's move options as the HUD says them (one word each). */
 const OPTION_WORD: Record<string, string> = { juke: 'Juke', stiffArm: 'Stiff arm', spin: 'Spin', truck: 'Truck', hurdle: 'Hurdle', dive: 'Dive', protect: 'Protect' };
@@ -236,7 +240,8 @@ export function GameScene() {
   const [marks] = useState(createFieldMarks);
   const [ball] = useState(createFootball);
   const [routeArt] = useState(createRouteArt);
-  const shownPlay = useRef(-1);
+  /** The play the bodies are set for: `p<playId>` live, `r<epoch>` a replay ('' none). */
+  const shownPlay = useRef('');
   const officials = useRef<Officials | null>(null);
   const kickSet = useRef<string | null>(null);
   const lastSimT = useRef(0);
@@ -247,11 +252,12 @@ export function GameScene() {
     let alive = true;
     let group: THREE.Group | null = null;
     const wait = async () => {
-      while (alive && !practice.rosters) await new Promise((r) => setTimeout(r, 100));
+      while (alive && !(replay.rosters ?? practice.rosters)) await new Promise((r) => setTimeout(r, 100));
     };
     Promise.all([loadPlayerAsset(), loadAnimLibrary(), wait()]).then(async ([asset, lib]) => {
-      if (!alive || !practice.rosters) return;
-      const R = practice.rosters;
+      // The results screen's replay brings its own two teams (the game's); otherwise the live session's.
+      const R = replay.rosters ?? practice.rosters;
+      if (!alive || !R) return;
       // Agent order in the sim: OFF_SLOTS then DEF_SLOTS (sim/plays.ts).
       // Never two dark kits on the field (Playtest 1 decision 5): the offense changes to white if its kit is as dark as the Beasts'.
       const offKit = kitAgainst(practice.offenseKit, 'beasts').id;
@@ -272,6 +278,7 @@ export function GameScene() {
       scene.add(g);
       shadowAttach.requested = true;
       setBodies(all);
+      replay.sceneReady();
       (window as unknown as { __btbGameReady?: boolean }).__btbGameReady = true;
       // Capture specs read what each body is playing (tools/shots/carriergame.spec.ts); recording only.
       if (urlFlags.video) (window as unknown as { __btbBodies?: Body[] }).__btbBodies = all;
@@ -284,110 +291,17 @@ export function GameScene() {
     };
   }, [scene, gl, camera, marks, ball, routeArt]);
 
-  useFrame(({ camera, gl, clock }, dt) => {
-    const step = urlFlags.video ? 1 / urlFlags.video : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
-    latency.frame++;
-    practice.frame(step);
-    const r = practice.runner;
-    const show = !!r && !!bodies;
-    marks.group.visible = show && r!.cur.phase !== 'dead';
-    ball.visible = show;
-    frameEvents.length = 0;
-    if (officials.current) officials.current.group.visible = show;
-    if (bodies && kickView.active) {
-      // The kick: everyone set in the field goal (or punt) look, the sim's marks and ball away.
-      if (officials.current) officials.current.group.visible = true;
-      marks.group.visible = false;
-      ball.visible = false;
-      for (const el of hudDom.icons) if (el) el.style.visibility = 'hidden';
-      if (r) routeArt.update(r.state, false, step, null);
-      const punt = kickView.kind === 'PUNT';
-      const los = kickView.spotX + (punt ? PUNT_DEPTH : 7);
-      const key = `${kickView.kind}:${kickView.spotX}`;
-      if (kickSet.current !== key) {
-        kickSet.current = key;
-        for (const b of bodies) {
-          const set = (punt ? PUNT_SET : FG_SET)[b.slot];
-          b.player.root.visible = !!set;
-          if (!set) continue;
-          const off = (OFF_SLOTS as string[]).includes(b.slot);
-          b.player.root.position.set(worldX(set.at[1]), 0, worldZ(los + set.at[0]));
-          b.player.root.rotation.set(0, yawOf(off ? 0 : Math.PI), 0);
-          resetBody(b);
-          b.animator.reset();
-          b.animator.setStance(set.stance);
-          b.animator.update(10, { speed: 0 });
-        }
-        officials.current?.place(los, 0);
-      }
-      for (const b of bodies) {
-        if (!b.player.root.visible) continue;
-        const speed = punt ? puntMotion(b, los, step) : 0;
-        b.animator.update(step, { speed });
-        b.player.updateLod(camera, gl.domElement.height);
-      }
-      officials.current?.update(step, { x: los, y: 0 }, null, 0, 10, camera, gl.domElement.height);
-      // Back from the kick, the next snapshot sets everyone again.
-      shownPlay.current = -1;
-      return;
-    }
-    kickSet.current = null;
-    if (!show) {
-      if (bodies) for (const b of bodies) b.player.root.visible = false;
-      for (const el of hudDom.icons) if (el) el.style.visibility = 'hidden';
-      shownPlay.current = -1;
-      return;
-    }
+  /**
+   * Draw the players from the sim's latest two snapshots (alpha between
+   * them), animated by animDt of sim time: the per-body pass of a frame, and
+   * of every step of a replay's catch-up. `live`: a real frame (latency
+   * probes, the pop meter, LOD and the dust a fall kicks up).
+   */
+  function animate(bs: Body[], r: Runner, alpha: number, simT: number, animDt: number, controlled: number, live: boolean, camera: THREE.Camera, viewportPx: number) {
     const s = r.state;
     const { prev, cur } = r;
-    const alpha = r.alpha;
-    for (const e of r.drainEvents()) frameEvents.push(e);
-    reactCrowd(clock.elapsedTime);
-
-    // A new play: settle everyone into his stance where he lines up.
-    if (shownPlay.current !== practice.playId) {
-      shownPlay.current = practice.playId;
-      snapped.current = false;
-      bodies.forEach((b, i) => {
-        const a = cur.agents[i]!;
-        relook(b, s.agents[i]!.p);
-        b.player.root.visible = true;
-        b.player.root.position.set(worldX(a.y), 0, worldZ(a.x));
-        b.player.root.rotation.set(0, yawOf(a.face), 0);
-        resetBody(b);
-        b.animator.reset();
-        b.animator.setStance(stanceFor(b.slot, s));
-        b.animator.update(10, { speed: 0 });
-        b.lastYaw = yawOf(a.face);
-        b.yaw = b.lastYaw;
-        b.lastSpeed = 0;
-        b.gaitSpeed = 0;
-      });
-      if (urlFlags.pops) resetPops();
-      contact.reset();
-      lastSimT.current = cur.t;
-      officials.current?.place(s.setup.los, s.setup.ballY ?? 0);
-    }
-    // The snap: everyone who has a get-off out of his stance plays it.
-    if (!snapped.current && cur.phase !== 'presnap') {
-      snapped.current = true;
-      onSnap(bodies, s, (slot) => stanceFor(slot, s));
-      latency.respond('snap');
-    }
-    onEvents(bodies, s, frameEvents);
-    // Animate by the sim time that passed (the same as the frame time in
-    // play; more when a test or a hitch stepped several ticks at once).
-    const simT = cur.t + alpha * TICK;
-    const animDt = Math.max(0, Math.min(0.5, simT - lastSimT.current));
-    lastSimT.current = simT;
-    contests(bodies, s, simT, contactPairs);
-    const viewportPx = gl.domElement.height;
-    // The player the user moves now: the QB until the ball leaves him, then his carrier.
-    const ph = cur.phase;
-    const userCarrier = cur.carrier >= 0 && s.agents[cur.carrier]!.side === 'off';
-    const controlled = ph === 'carrier' ? (userCarrier ? cur.carrier : -1) : ph === 'snap' || ph === 'dropback' || ph === 'pocket' ? s.qb : -1;
-    if (controlled < 0) latency.motion(null);
-    bodies.forEach((b, i) => {
+    contests(bs, s, simT, contactPairs);
+    bs.forEach((b, i) => {
       const p0 = prev.agents[i]!;
       const p1 = cur.agents[i]!;
       tmp.x = p0.x + (p1.x - p0.x) * alpha;
@@ -395,7 +309,7 @@ export function GameScene() {
       tmp.vx = p0.vx + (p1.vx - p0.vx) * alpha;
       tmp.vy = p0.vy + (p1.vy - p0.vy) * alpha;
       const face = lerpAngle(p0.face, p1.face, alpha);
-      if (i === controlled) latency.motion({ x: tmp.vx, y: tmp.vy });
+      if (live && i === controlled) latency.motion({ x: tmp.vx, y: tmp.vy });
       const sp = Math.hypot(tmp.vx, tmp.vy);
       const along = tmp.vx * Math.cos(face) + tmp.vy * Math.sin(face);
       const d = drive(b, i, s, simT, sp > 0.05 ? along : 0, sp);
@@ -440,13 +354,15 @@ export function GameScene() {
       const land = b.ragdoll.landing;
       if (land) {
         b.ragdoll.landing = null;
-        activeVfx()?.emit('hitDust', [land.x, land.y, land.z], { scale: 1.3 });
+        if (live) activeVfx()?.emit('hitDust', [land.x, land.y, land.z], { scale: 1.3 });
       }
-      b.player.updateLod(camera, viewportPx);
-      if (urlFlags.pops) measure(b, animDt, latency.frame, s.agents[i]!.anim, cur.phase);
+      if (live) {
+        b.player.updateLod(camera, viewportPx);
+        if (urlFlags.pops) measure(b, animDt, latency.frame, s.agents[i]!.anim, cur.phase);
+      }
     });
     // Where the trunks are drawn (less the contact offset: it must not feed back), then the contact response for next frame.
-    bodies.forEach((b, i) => {
+    bs.forEach((b, i) => {
       const cb = (contactBodies[i] ??= { x: 0, z: 0, fx: 0, fz: 1, ext: b.ext, scale: 1, free: false });
       const cc = contact.cur[i];
       const yaw = b.player.root.rotation.y;
@@ -458,16 +374,177 @@ export function GameScene() {
       cb.scale = b.player.shape.scale;
       cb.free = !b.fallen && !b.lie && !b.ragdoll.active && !s.agents[i]!.down;
     });
-    contactBodies.length = bodies.length;
+    contactBodies.length = bs.length;
     contact.update(contactBodies, contactPairs, animDt);
-
     officials.current?.update(animDt, cur.ball, s.result, s.result ? s.result.spot - s.setup.los : 0, s.setup.toGo, camera, viewportPx);
-    placeBall(s.snapT, s.t);
+  }
+
+  /**
+   * A replay's scrub (replay.ts): step the play on to the target and animate
+   * every step, so the bodies arrive with the clips, falls and catches they'd
+   * have had playing it. Coarse (8 ticks a step) far from the target, a
+   * broadcast frame (2 ticks) over its last second; at most `budgetMs` of a
+   * frame, the rest on the next (the screen shows it fast-forwarding).
+   */
+  function catchUp(bs: Body[], budgetMs: number, camera: THREE.Camera, viewportPx: number) {
+    const p = replay.player!;
+    const t0 = performance.now();
+    while (p.seeking && performance.now() - t0 < budgetMs) {
+      replayStats.ticks += p.stepTicks(p.target - p.tick > 60 ? 8 : 2);
+      replayStats.steps++;
+      const r = p.runner;
+      const s = r.state;
+      const cur = r.cur;
+      frameEvents.length = 0;
+      for (const e of r.drainEvents()) frameEvents.push(e);
+      if (!snapped.current && cur.phase !== 'presnap') {
+        snapped.current = true;
+        onSnap(bs, s, (slot) => stanceFor(slot, s));
+      }
+      onEvents(bs, s, frameEvents);
+      const simT = cur.t + TICK;
+      const animDt = Math.max(0, Math.min(0.5, simT - lastSimT.current));
+      lastSimT.current = simT;
+      animate(bs, r, 1, simT, animDt, -1, false, camera, viewportPx);
+    }
+    // The hits on the way there don't shake the camera or sound.
+    frameEvents.length = 0;
+    const ms = performance.now() - t0;
+    replayStats.ms += ms;
+    replayStats.worstFrameMs = Math.max(replayStats.worstFrameMs, ms);
+    if (!p.seeking) replayStats.seeks++;
+  }
+
+  useFrame(({ camera, gl, clock }, dt) => {
+    const step = urlFlags.video ? 1 / urlFlags.video : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    latency.frame++;
+    // A replay (M7) plays instead of the live snap, which holds where it stands until it hands back.
+    replay.frame(step);
+    if (!replay.active) practice.frame(step);
+    const rp = replay.active ? replay.player : null;
+    const r: Runner | null = rp ? rp.runner : practice.runner;
+    const show = !!r && !!bodies;
+    marks.group.visible = show && r!.cur.phase !== 'dead';
+    ball.visible = show;
+    frameEvents.length = 0;
+    if (officials.current) officials.current.group.visible = show;
+    if (bodies && kickView.active && !rp) {
+      // The kick: everyone set in the field goal (or punt) look, the sim's marks and ball away.
+      if (officials.current) officials.current.group.visible = true;
+      marks.group.visible = false;
+      ball.visible = false;
+      for (const el of hudDom.icons) if (el) el.style.visibility = 'hidden';
+      if (r) routeArt.update(r.state, false, step, null);
+      const punt = kickView.kind === 'PUNT';
+      const los = kickView.spotX + (punt ? PUNT_DEPTH : 7);
+      const key = `${kickView.kind}:${kickView.spotX}`;
+      if (kickSet.current !== key) {
+        kickSet.current = key;
+        for (const b of bodies) {
+          const set = (punt ? PUNT_SET : FG_SET)[b.slot];
+          b.player.root.visible = !!set;
+          if (!set) continue;
+          const off = (OFF_SLOTS as string[]).includes(b.slot);
+          b.player.root.position.set(worldX(set.at[1]), 0, worldZ(los + set.at[0]));
+          b.player.root.rotation.set(0, yawOf(off ? 0 : Math.PI), 0);
+          resetBody(b);
+          b.animator.reset();
+          b.animator.setStance(set.stance);
+          b.animator.update(10, { speed: 0 });
+        }
+        officials.current?.place(los, 0);
+      }
+      for (const b of bodies) {
+        if (!b.player.root.visible) continue;
+        const speed = punt ? puntMotion(b, los, step) : 0;
+        b.animator.update(step, { speed });
+        b.player.updateLod(camera, gl.domElement.height);
+      }
+      officials.current?.update(step, { x: los, y: 0 }, null, 0, 10, camera, gl.domElement.height);
+      // Back from the kick, the next snapshot sets everyone again.
+      shownPlay.current = '';
+      return;
+    }
+    kickSet.current = null;
+    if (!show) {
+      if (bodies) for (const b of bodies) b.player.root.visible = false;
+      for (const el of hudDom.icons) if (el) el.style.visibility = 'hidden';
+      shownPlay.current = '';
+      return;
+    }
+
+    // A new play (or a replay rebuilt for a scrub back): settle everyone into his stance where he lines up.
+    const showing = rp ? `r${rp.epoch}` : `p${practice.playId}`;
+    if (shownPlay.current !== showing) {
+      if (!rp && shownPlay.current.startsWith('r') && replay.handoff === practice.playId) {
+        // A snap's replay has closed on the very state the live play is in: carry on with the bodies as they are.
+        replay.handoff = -1;
+        shownPlay.current = showing;
+      } else {
+        shownPlay.current = showing;
+        snapped.current = false;
+        const s0 = r.state;
+        const cur0 = r.cur;
+        bodies.forEach((b, i) => {
+          const a = cur0.agents[i]!;
+          relook(b, s0.agents[i]!.p);
+          b.player.root.visible = true;
+          b.player.root.position.set(worldX(a.y), 0, worldZ(a.x));
+          b.player.root.rotation.set(0, yawOf(a.face), 0);
+          resetBody(b);
+          b.animator.reset();
+          b.animator.setStance(stanceFor(b.slot, s0));
+          b.animator.update(10, { speed: 0 });
+          b.lastYaw = yawOf(a.face);
+          b.yaw = b.lastYaw;
+          b.lastSpeed = 0;
+          b.gaitSpeed = 0;
+        });
+        if (urlFlags.pops) resetPops();
+        contact.reset();
+        lastSimT.current = cur0.t;
+        officials.current?.place(s0.setup.los, s0.setup.ballY ?? 0);
+      }
+    }
+    const viewportPx = gl.domElement.height;
+    // A scrub under way: step and animate toward it, a slice of each frame (closing: as fast as it goes;
+    // the capture harness and the browser tests, whose frames are slow anyway: all at once).
+    if (rp?.seeking) catchUp(bodies, urlFlags.video || urlFlags.shot !== null ? Infinity : replay.closing ? 40 : 7, camera, viewportPx);
+    if (rp && replay.closing && !rp.seeking) replay.finish();
+
+    const rr: Runner = rp ? rp.runner : r;
+    const s = rr.state;
+    const { cur } = rr;
+    const alpha = rr.alpha;
+    for (const e of rr.drainEvents()) frameEvents.push(e);
+    if (rp) reactReplay();
+    else reactCrowd(clock.elapsedTime);
+
+    // The snap: everyone who has a get-off out of his stance plays it.
+    if (!snapped.current && cur.phase !== 'presnap') {
+      snapped.current = true;
+      onSnap(bodies, s, (slot) => stanceFor(slot, s));
+      if (!rp) latency.respond('snap');
+    }
+    onEvents(bodies, s, frameEvents);
+    // Animate by the sim time that passed (the same as the frame time in
+    // play; more when a test or a hitch stepped several ticks at once).
+    const simT = cur.t + alpha * TICK;
+    const animDt = Math.max(0, Math.min(0.5, simT - lastSimT.current));
+    lastSimT.current = simT;
+    // The player the user moves now: the QB until the ball leaves him, then his carrier.
+    const ph = cur.phase;
+    const userCarrier = cur.carrier >= 0 && s.agents[cur.carrier]!.side === 'off';
+    const controlled = rp ? -1 : ph === 'carrier' ? (userCarrier ? cur.carrier : -1) : ph === 'snap' || ph === 'dropback' || ph === 'pocket' ? s.qb : -1;
+    if (controlled < 0 && !rp) latency.motion(null);
+    animate(bodies, rr, alpha, simT, animDt, controlled, true, camera, viewportPx);
+
+    placeBall(rr, s.snapT, s.t);
     placeMarks(s.setup.los, s.setup.toGo);
     // The route preview: held key, the hot-route picker, or just after a hot route is called.
     const ui = usePractice.getState();
-    const hot = ui.hot;
-    const showRoutes = cur.phase === 'presnap' && (Input.isHeld('preSnap.routes') || !!hot || performance.now() < practice.routeFlashUntil);
+    const hot = rp ? null : ui.hot;
+    const showRoutes = !rp && cur.phase === 'presnap' && (Input.isHeld('preSnap.routes') || !!hot || performance.now() < practice.routeFlashUntil);
     routeArt.update(s, showRoutes, step, hot && hot.stage === 'route' ? { icon: hot.icon, candidate: HOT_ROUTES[hot.focus]! } : null);
   }, -100);
 
@@ -475,13 +552,12 @@ export function GameScene() {
   // at -90), so the icons and the carrier's keys sit on the players as drawn,
   // not a frame behind them.
   useFrame(({ camera }) => {
-    if (!practice.runner || !bodies) return;
+    if (!practice.runner || !bodies || replay.active) return;
     camera.updateMatrixWorld();
     placeHud();
   }, -80);
 
-  function placeBall(snapT: number, t: number) {
-    const r = practice.runner!;
+  function placeBall(r: Runner, snapT: number, t: number) {
     const { prev, cur } = r;
     const a = r.alpha;
     const b0 = prev.ball;
@@ -644,6 +720,11 @@ export function GameScene() {
         hudDom.sprint?.classList.toggle('lit', live.mem.sprint === true);
       }
     }
+  }
+
+  /** A replay's hits sound again; the crowd doesn't react twice. */
+  function reactReplay() {
+    for (const e of frameEvents) if (e.type === 'hit') Audio.hit(Number(e.data?.force ?? 4), !!e.data?.big);
   }
 
   function reactCrowd(now: number) {
