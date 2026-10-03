@@ -367,7 +367,7 @@ def leap_wall() -> Clip:
     D = 3.6
     # Forward travel (m): accelerate through the steps, carry through the
     # flight, stop on the landing.
-    pts = [(0.0, 0.0, 0.0), (0.72, 2.25, 4.6), (t_land, 3.45, 2.6), (1.62, D, 0.0), (T, D, 0.0)]
+    pts = [(0.0, 0.0, 0.0), (0.72, 2.25, 4.6), (t_land, 3.45, 1.2), (1.62, D, 0.0), (T, D, 0.0)]
 
     def fwd(t):
         for (ta, xa, va), (tb, xb, vb) in zip(pts, pts[1:]):
@@ -584,12 +584,13 @@ def ball_high_walk() -> Clip:
 def chest_bump(name: str = "cel_chest_bump") -> Clip:
     """Two steps in, a two-foot gather and the jump with the chest thrown
     forward and the arms swung back: the chests meet at the top (contact,
-    frame 21), a recoil, land, and a fist pulled down. Both men play it,
-    ~1.4 m apart facing each other. Travels 0.40 m."""
+    frame 21), a recoil of the trunk, land, and a fist pulled down. Both men play it,
+    ~1.4 m apart facing each other. Travels 0.46 m (never back: the recoil
+    is the trunk's; the clip's travel only ever goes forward)."""
     T = 2.0
     t_off, t_land = 0.50, 0.98
     rise = 0.34
-    pts = [(0.0, 0.0), (0.44, 0.34), (0.70, 0.50), (0.84, 0.42), (t_land, 0.40), (T, 0.40)]
+    pts = [(0.0, 0.0), (0.44, 0.34), (0.70, 0.46), (t_land, 0.46), (T, 0.46)]
 
     def fwd(t):
         for (ta, xa), (tb, xb) in zip(pts, pts[1:]):
@@ -600,7 +601,7 @@ def chest_bump(name: str = "cel_chest_bump") -> Clip:
     def travel(t):
         return (0.0, -fwd(t))
 
-    E = 0.40
+    E = 0.46
     steps = Steps([
         Plant("r", -1, 0.06, R0, roll=10), Plant("r", 0.22, t_off, Foot(-0.15, -0.30, heel=4, out=10), roll=30), Plant("r", t_land + 0.02, math.inf, Foot(R0.x, R0.y - E, heel=R0.heel, out=R0.out)),
         Plant("l", -1, 0.18, L0, roll=10), Plant("l", 0.36, t_off, Foot(0.15, -0.40, heel=4, out=10), roll=30), Plant("l", t_land, math.inf, Foot(L0.x, L0.y - E, heel=L0.heel, out=L0.out)),

@@ -176,7 +176,7 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `cel_spin_spike` | transition | 93 | 0.0 | 0.01 | 0.00 | 12.1 | — | pass |
 | `cel_flip_official` | transition | 78 | 0.0 | 0.00 | 0.00 | 23.1 | — | pass |
 | `cel_point_crowd` | transition | 96 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `cel_leap_wall` | transition | 99 | 0.0 | 0.00 | 0.00 | 19.0 | — | pass |
+| `cel_leap_wall` | transition | 99 | 0.0 | 0.00 | 0.00 | 18.7 | — | pass |
 | `cel_flex` | transition | 90 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `cel_salute` | transition | 87 | 0.0 | 0.00 | 0.00 | 9.0 | — | pass |
 | `cel_kneel` | transition | 114 | 0.0 | 0.01 | 0.00 | 23.6 | — | pass |
@@ -200,7 +200,7 @@ Peak knee flexion ≤ 150°, peak elbow flexion ≤ 150°, every IK foot target 
 | `cel_spin_spike` | 93.9 | 125.0 | 0.01 | pass |
 | `cel_flip_official` | 55.8 | 115.9 | 0.00 | pass |
 | `cel_point_crowd` | 55.3 | 117.3 | 0.00 | pass |
-| `cel_leap_wall` | 102.9 | 117.3 | 0.01 | pass |
+| `cel_leap_wall` | 103.4 | 117.3 | 0.01 | pass |
 | `cel_flex` | 67.7 | 132.0 | 0.00 | pass |
 | `cel_salute` | 42.2 | 118.8 | 0.00 | pass |
 | `cel_kneel` | 124.1 | 115.6 | 0.01 | pass |
