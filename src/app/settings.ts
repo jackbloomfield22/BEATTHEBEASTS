@@ -64,7 +64,8 @@ export interface Settings {
   };
   accessibility: {
     colorblind: 'off' | 'deuteranopia' | 'protanopia' | 'tritanopia';
-    captionSize: 'small' | 'medium' | 'large';
+    /** The booth's lines (the caption bar and the lower thirds' line): off, or their size. */
+    captionSize: 'off' | 'small' | 'medium' | 'large';
     reduceShake: boolean;
     reduceFlashing: boolean;
     holdToToggle: boolean;

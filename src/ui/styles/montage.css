@@ -21,20 +21,8 @@
 .mt-call.us { border-left-color: var(--lime); }
 @keyframes mt-call-in { from { opacity: 0; transform: translateX(-1.5rem) skewX(-8deg); } to { opacity: 1; transform: none; } }
 
-/* The "BEASTS DRIVE" lower third on the board shot. */
-.mt-lower { position: absolute; left: 3.5rem; bottom: 6rem; min-width: 34rem; padding: 1rem 1.6rem 1.1rem; background: linear-gradient(90deg, rgba(5,5,6,.93), rgba(5,5,6,.62)); border-left: 5px solid #ff2a4d; animation: lt-in 460ms cubic-bezier(.2,.7,.2,1) both; }
-.mt-lower.stopped { border-left-color: var(--lime); }
-.mt-lower-k { display: inline-block; padding: .15rem .55rem; font-size: .74rem; font-weight: 800; letter-spacing: .24em; text-transform: uppercase; color: #fff; background: #c8102e; }
-.mt-lower-line { display: flex; align-items: baseline; gap: 1rem; margin: .35rem 0 .2rem; font-family: var(--font-display); }
-.mt-lower-r { font-size: 2.2rem; }
-.mt-lower-pts { font-size: 1.6rem; color: #ff2a4d; }
-.mt-lower-meta { color: var(--ink-2); font-weight: 600; font-variant-numeric: tabular-nums; }
-.mt-lower-next { margin-top: .45rem; color: var(--lime); font-weight: 700; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; }
+/* The "BEASTS DRIVE" lower third on the board shot is the broadcast package's plate (broadcast.css). */
 
 /* Skip, bottom right: the confirm binding's glyph (Enter, A) and the word; clickable. */
 .montage > .mt-skip { position: absolute; right: 2.4rem; bottom: 2rem; display: flex; align-items: center; gap: .55rem; padding: .4rem .8rem; background: rgba(6,6,8,.6); border: 1px solid rgba(255,255,255,.12); color: var(--ink-2); font: inherit; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: .78rem; cursor: pointer; pointer-events: auto; }
 .montage > .mt-skip:hover { color: #fff; border-color: var(--lime); }
-
-/* The score bug's scores as the board shot puts the drive's points up. */
-.sb-score.bump { color: #ff2a4d; animation: sb-bump 700ms cubic-bezier(.2,.9,.3,1.2) both; }
-@keyframes sb-bump { 0% { transform: scale(1.6); } 100% { transform: none; } }

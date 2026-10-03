@@ -313,7 +313,7 @@ export function callForSituation(c: SituationContext): Call | null {
   if (s.down === 3 && toGo >= 7) return { kind: 'thirdLong', slots: { toGo }, tags: [], hero: null, team: null };
   if (s.down === 3 && toGo <= 2) return { kind: 'thirdShort', slots: { toGo }, tags: [], hero: null, team: null };
   if (s.los >= 80 && s.los + s.toGo < 100 && once('redZone') && !c.driveStart) return { kind: 'redZone', slots: {}, tags: [], hero: null, team: null };
-  if (c.driveStart) {
+  if (c.driveStart && once('driveStart')) {
     const tags = [...(c.firstSnap ? ['firstSnap'] : []), ...(s.los >= 50 ? ['shortField'] : []), ...(s.los <= 10 ? ['backedUp'] : []), ...(diff > 0 ? ['trailing'] : [])];
     return { kind: 'driveStart', slots: { spot, deficit: diff > 0 ? diff : null }, tags, hero: null, team: null };
   }

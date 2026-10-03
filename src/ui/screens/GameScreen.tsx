@@ -4,11 +4,12 @@ import { viewRecord } from '@/app/history';
 import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
 import { game, useGame } from '@/game/game';
-import { canVictoryFormation, clockLabel, clockText, fgDistance, fgMakePct, halfSecs, hurry, isTimed, quarterName, type Match } from '@/game/match';
+import { canVictoryFormation, clockLabel, fgDistance, fgMakePct, halfSecs, hurry, isTimed, type Match } from '@/game/match';
 import { reasonFor } from '@/game/coordinator';
 import { practice, usePractice } from '@/game/practice';
 import { replay, snapFlag, useReplay } from '@/game/replaySession';
 import { downLabel, spotLabel } from '@/game/situation';
+import { broadcastSpot } from '@/game/broadcast';
 import { aimFor, powerNeeded, PUNT_DEPTH } from '@/game/kick';
 import { KickControl, METER, METER_MAX, strikeWord, type Strike } from '@/game/kickMeter';
 import { offenseFor, personalize, PLAY_TYPE_LABEL, PLAYS, playById, playUnlocked, runNote, suggestPlays, type DefSlot, type PlayType } from '@/sim';
@@ -24,12 +25,15 @@ import { ReplayCue, ReplayHud, useReplayKey } from '../game/ReplayHud';
 import { MontageHud } from '../game/MontageHud';
 import { montage, useMontage } from '@/game/montageSession';
 import { CelebrationPrompt, useCelebrating } from '../game/CelebrationPrompt';
+import { LowerPlate, OnAirLayer, ScoreBug, WindFlag, useHudScale } from '../game/Broadcast';
+import { useOnAir } from '@/game/onAir';
 import '../styles/game.css';
 import '../styles/match.css';
 import '../styles/results.css';
 
-// A full game (GDD §7) over the live stadium: the score bug (quarter, game
-// clock, play clock), the Beasts' "Meanwhile" possessions, the play call
+// A full game (GDD §7) over the live stadium: the broadcast package (the
+// score bug, the drive strip, lower thirds and the caption bar, the wind
+// flag: ../game/Broadcast.tsx), the Beasts' "Meanwhile" possessions, the play call
 // with the coordinator's Suggested tab, each snap with the Practice Field's
 // HUD, fourth-down decisions, tries, kicks (aim, then hold and release in
 // the window: PATs, field goals and punts), the clock's banners and the
@@ -42,6 +46,9 @@ function toResults(): void {
   viewRecord(rec?.id ?? null, 'game');
   if (useApp.getState().screen === 'game') useApp.getState().go('results');
 }
+
+/** Stages the caption bar and lower thirds can be up on (the play call is a menu; the Beasts' drive has its own lower third). */
+const ON_AIR = new Set(['play', 'fourth', 'try', 'kick']);
 
 /** Stages a card is up on (the pause menu can come up over them); a snap pauses in the play engine. */
 const PAUSABLE = new Set(['call', 'fourth', 'try', 'meanwhile', 'play', 'penalty', 'break']);
@@ -84,8 +91,9 @@ export function GameScreen() {
   const replayOpen = useReplay((s) => s.open);
   const montageOpen = useMontage((s) => s.open);
   useEffect(() => () => replay.abort(), []);
+  const hud = useHudScale();
   return (
-    <div className="game-screen">
+    <div className="game-screen" style={hud}>
       {stage === 'loading' ? <div className="practice-loading">Kickoff…</div> : null}
       {stage !== 'loading' && !replayOpen ? <ScoreBug /> : null}
       {!paused ? (
@@ -98,6 +106,7 @@ export function GameScreen() {
           {stage === 'try' ? <TryCard /> : null}
           {stage === 'penalty' ? <PenaltyCard /> : null}
           {stage === 'break' ? <HalftimeCard /> : null}
+          {ON_AIR.has(stage) ? <OnAirLayer /> : null}
           {replayOpen ? null : <ClockFlag />}
         </>
       ) : null}
@@ -165,65 +174,7 @@ function GamePause() {
   );
 }
 
-// ---- Score bug -----------------------------------------------------------------------
-
-function ScoreBug() {
-  useGame((s) => s.v);
-  // The Beasts' drive montage's last shot puts the drive's points on the bug (the match scores them when it ends).
-  const after = useMontage((s) => (s.shot === 'board' ? s.info?.after : null));
-  const m = game.match;
-  if (!m) return null;
-  const score = after ?? m.score;
-  const sit = m.sit;
-  const onField = m.phase === 'drive' || m.phase === 'fourth' || m.phase === 'twoPoint';
-  const timed = isTimed(m);
-  const pc = m.playClock;
-  // The game clock ticks between plays only when it's running (and a snap is due).
-  const running = m.clock.live && m.lastWhistle === 'runs' && pc !== null;
-  const final = m.phase === 'final';
-  const q = final ? (m.ot ? `F/${m.ot > 1 ? `${m.ot}OT` : 'OT'}` : 'FINAL') : m.ot ? (m.ot > 1 ? `${m.ot}OT` : 'OT') : `Q${m.clock.quarter}`;
-  const showTime = !final && !m.ot;
-  return (
-    <div className="score-bug">
-      <div className="sb-team us">
-        <span className="sb-name">Contenders</span>
-        <span className={`sb-score ${after && after.user !== m.score.user ? 'bump' : ''}`}>{score.user}</span>
-        {m.clock.live && !final ? (
-          <span className="sb-tos" title="Timeouts">
-            {[0, 1, 2].map((i) => (
-              <i key={i} className={i < m.clock.timeouts ? 'on' : ''} />
-            ))}
-          </span>
-        ) : null}
-      </div>
-      <div className="sb-team them">
-        <span className="sb-name">Beasts</span>
-        <span className={`sb-score ${after && after.beasts !== m.score.beasts ? 'bump' : ''}`}>{score.beasts}</span>
-      </div>
-      <div className="sb-clock">
-        <span className="sb-q">{q}</span>
-        {showTime ? <span className={`sb-time ${running ? 'running' : 'stopped'}`}>{clockText(m.clock.secs)}</span> : null}
-        {pc !== null && !final ? (
-          <span className={`sb-play ${pc <= 5 ? 'hot' : ''}`} title="Play clock">
-            :{String(Math.max(0, pc)).padStart(2, '0')}
-          </span>
-        ) : null}
-      </div>
-      {onField ? (
-        <div className="sb-down">
-          {m.phase === 'twoPoint' ? 'Two-point try' : downLabel(sit)} <span>{spotLabel(sit.los)}</span>
-        </div>
-      ) : timed ? (
-        <div className="sb-down dim">{final ? 'Final' : m.ot ? 'Overtime' : `${quarterName(m.clock.quarter)} quarter`}</div>
-      ) : (
-        <div className="sb-down dim">
-          Round {Math.min(m.round, m.cfg.drives)} of {m.cfg.drives}
-        </div>
-      )}
-      <Wind m={m} />
-    </div>
-  );
-}
+// ---- The clock's banners and cards -------------------------------------------------
 
 /** The clock's banner under the score bug: the two-minute warning, the end of a quarter. */
 function ClockFlag() {
@@ -310,19 +261,6 @@ function HalftimeCard() {
   );
 }
 
-function Wind({ m }: { m: Match }) {
-  // The arrow points where the wind blows, relative to the posts you attack (up the screen).
-  const deg = (-m.wind.dir * 180) / Math.PI;
-  return (
-    <div className="sb-wind" title="Wind">
-      <span className="wind-arrow" style={{ transform: `rotate(${deg}deg)` }}>
-        ↑
-      </span>
-      {m.wind.mph} mph
-    </div>
-  );
-}
-
 // ---- Pre-game -----------------------------------------------------------------------
 
 /** How long the pre-game holds before a press can kick off (a press from the walk-out never carries over). */
@@ -396,31 +334,48 @@ const RESULT_LINE: Record<string, string> = {
 
 function Meanwhile() {
   const d = useGame((s) => s.meanwhile);
+  const line = useOnAir((s) => s.drive);
   const m = game.match;
+  const hud = useHudScale();
   useMenuNav({ count: 1, focus: 0, setFocus: () => undefined, onConfirm: () => game.endMeanwhile(), onBack: () => game.endMeanwhile() });
   useEffect(() => {
     const t = setTimeout(() => game.endMeanwhile(), urlFlags.shot ? 400 : 5600);
     return () => clearTimeout(t);
   }, [d]);
   if (!d || !m) return null;
-  const scored = d.points > 0;
   const ot = m.ot > 0;
+  const next = ot ? 'Your answer from their 25' : d.result === 'EndOfHalf' ? 'Halftime: you receive the second half' : d.result === 'EndOfGame' ? (m.score.beasts + d.points > m.score.user ? 'They kneel it out' : 'The end of regulation') : `Your ball on the ${broadcastSpot(d.nextStart)}`;
   return (
-    <div className={`meanwhile ${scored ? 'scored' : 'stopped'}`}>
-      <div className="mw-kicker">{ot ? `Overtime ${m.ot}` : 'Meanwhile…'}</div>
-      <div className="mw-line">
-        <span className="mw-team">The Beasts</span>
-        <span className="mw-result">{RESULT_LINE[d.result]}</span>
-        {d.points ? <span className="mw-pts">+{d.points}</span> : null}
+    <>
+      <div className="onair meanwhile" style={hud}>
+        <LowerPlate
+          team="bst"
+          tag={ot ? `Overtime ${m.ot}` : 'Meanwhile'}
+          block="BST"
+          blockSmall
+          title={
+            <>
+              {RESULT_LINE[d.result]}
+              {d.points ? <span className="lt-pts">+{d.points}</span> : null}
+            </>
+          }
+          meta={
+            <>
+              <span>
+                {d.plays} {d.plays === 1 ? 'play' : 'plays'}
+              </span>
+              <span>{Math.max(0, Math.round(d.yards))} yd</span>
+              <span>{d.top}</span>
+              {d.twoPoint ? <span>Two-point try {d.twoPoint.good ? 'good' : 'failed'}</span> : null}
+              {d.result === 'Safety' ? <span>+2 Contenders</span> : null}
+            </>
+          }
+          line={line}
+          foot={next}
+        />
       </div>
-      <div className="mw-meta">
-        {d.plays} {d.plays === 1 ? 'play' : 'plays'}, {Math.max(0, Math.round(d.yards))} yd, {d.top}
-        {d.twoPoint ? ` · two-point try ${d.twoPoint.good ? 'good' : 'failed'}` : ''}
-        {d.result === 'Safety' ? ' · +2 Contenders' : ''}
-      </div>
-      <div className="mw-next">{ot ? 'Your answer from their 25.' : d.result === 'EndOfHalf' ? 'Halftime: you receive the second half.' : d.result === 'EndOfGame' ? (m.score.beasts + d.points > m.score.user ? 'They kneel it out.' : 'The end of regulation.') : `Your ball on the ${spotLabel(d.nextStart)}.`}</div>
       <Hints items={[{ kb: 'Enter', pad: 'A', label: 'Skip' }]} />
-    </div>
+    </>
   );
 }
 
@@ -458,6 +413,7 @@ function GamePlayCall() {
     Audio.uiSelect();
     practice.callPlay(plays[i]!.id);
     useGame.setState({ stage: 'play', note: null });
+    game.atTheLine();
   };
   const switchGroup = (d: number) => {
     Audio.uiTick();
@@ -675,16 +631,6 @@ const MOUSE_AIM = 0.0008;
 const WHY_LINE: Record<string, string> = { good: "It's good!", short: 'Short', wideLeft: 'Wide left', wideRight: 'Wide right', doink: 'Off the upright' };
 const PUNT_HOW: Record<string, string> = { returned: 'Returned', fairCatch: 'Fair catch', outOfBounds: 'Out of bounds', touchback: 'Touchback', downed: 'Downed' };
 
-/** "Wind 9 mph, left to right", relative to your kick (0 = at your back). */
-function windWords(w: { mph: number; dir: number }): string {
-  if (w.mph <= 1) return 'No wind';
-  const c = Math.cos(w.dir);
-  const sn = Math.sin(w.dir);
-  const along = c > 0.5 ? 'at your back' : c < -0.5 ? 'in your face' : '';
-  const across = sn > 0.5 ? 'right to left' : sn < -0.5 ? 'left to right' : '';
-  return `Wind ${w.mph} mph${along || across ? ', ' : ''}${[along, across].filter(Boolean).join(' and ')}`;
-}
-
 /**
  * The kick (Playtest 2): aim first (arrows, the D-pad or the left stick,
  * or the mouse), with the aim line and the wind on the field; then hold
@@ -722,6 +668,7 @@ function KickPanel() {
     setTimeout(
       () => {
         setReveal(true);
+        game.kickCalled();
         const kk = useGame.getState().kick;
         Audio.kickCrowd(kk?.punt ? kk.punt.net >= 38 || kk.punt.how === 'outOfBounds' : !!kk?.result?.good);
       },
@@ -827,12 +774,7 @@ function KickPanel() {
         <div className="result-kicker">{title}</div>
         <h2 className="result-head">{k.kind === 'PUNT' ? `From the ${spotLabel(m.sit.los)}` : `${Math.round(k.distance)} yards`}</h2>
         <div className="kick-pct">{k.kind === 'PUNT' ? 'Power is distance. Aim for the sideline to kill the return.' : `${Math.round(k.pct * 100)}% for a clean strike`}</div>
-        <div className="kick-wind">
-          <span className="wind-arrow" style={{ transform: `rotate(${(-m.wind.dir * 180) / Math.PI}deg)` }}>
-            ↑
-          </span>
-          {windWords(m.wind)}
-        </div>
+        <WindFlag wind={m.wind} />
         <span className="kick-aim" ref={aimEl}>
           Aim: straight
         </span>

@@ -42,6 +42,8 @@ import { getSettings } from '@/app/settings';
 import { buildRecord, keyMatchups, type GameRecord, type RecordMeta, type ReplayCapsule } from './record';
 import type { Situation } from './situation';
 import { emptyGameBox, pickPlayOfGame, sampleShadow, tallySnap, type GameBox, type PlayLog } from './stats';
+import { callForBeasts, callForKick, callForPunt, callForSituation, callForSnap } from './broadcast';
+import { onAir } from './onAir';
 
 export { emptyGameBox, type GameBox } from './stats';
 
@@ -196,6 +198,8 @@ class GameSession {
     return call;
   };
   private callFor: { key: string; call: DefCall } | null = null;
+  /** The drive the booth's situation lines were last said for (each is said once a drive). */
+  private lineDrive = -1;
 
   /** The call the Beasts have in for the next snap (a Field General reads its shell on the play call: presnap.ts). */
   nextCall(): DefCall | null {
@@ -236,6 +240,12 @@ class GameSession {
     this.tendencies = emptyTendencies();
     this.callFor = null;
     this.dcRng = deriveStream(o.seed, 'beasts-dc');
+    // The booth (M7): a commentator on the game's seed, and the catalog for the lower thirds' stints and traits.
+    onAir.start(o.seed, (id) => {
+      const e = o.cat.entry.get(id);
+      return e ? { team: e.team, decade: e.decade, traits: e.traits.map((t) => t.id) } : null;
+    });
+    this.lineDrive = -1;
     this.difficulty = o.difficulty;
     const m = createMatch({ drives: o.drives, quarterSecs: o.quarterSecs ?? null, seed: o.seed, beastsRating: o.beasts.rating.rating, diffAdj: o.diffAdj, kickerRange: KICKER_RANGE[o.difficulty] }, o.windScale ?? 1);
     this.m = m;
@@ -365,6 +375,7 @@ class GameSession {
 
   leave(): void {
     montage.abort();
+    onAir.stop();
     this.offKeys?.();
     this.offKeys = null;
     cancelAnimationFrame(this.raf);
@@ -382,6 +393,8 @@ class GameSession {
   private nextBeasts(): void {
     const m = this.m!;
     const d = beastsPossession(m);
+    const last = m.userDrives[m.userDrives.length - 1];
+    onAir.beasts(callForBeasts(d, m.score, !!last && last.points > 0));
     set({ stage: 'meanwhile', meanwhile: d, kick: null });
     if (getSettings().gameplay.beastsDrives !== 'montage' || !this.mTeams) return;
     const after = { user: m.score.user + (d.result === 'Safety' ? 2 : 0), beasts: m.score.beasts + d.points };
@@ -551,6 +564,7 @@ class GameSession {
     const ot = m.ot;
     const q = m.clock.quarter;
     const clock = m.ot ? (m.ot > 1 ? `${m.ot}OT` : 'OT') : `Q${q} ${clockText(m.clock.secs)}`;
+    const twoPoint = m.phase === 'twoPoint';
     tallySnap(get().box, s, r, before, this.names.qb, { round, ot });
     // The Beasts' staff charts it.
     const tgt = r.pass?.attempted ? s.agents[r.pass.target]?.p.id : undefined;
@@ -558,6 +572,8 @@ class GameSession {
     const out = applyPlay(m, r, endY, playSecs, 0);
     if (out.kind === 'firstDown' || (out.kind === 'touchdown' && r.offenseBall)) get().box.firstDowns++;
     this.logPlay(s, r, before, { drive: driveIdx, n, round, ot, score, q, clock });
+    // The booth: the call, and a big play's lower third (a touchdown's waits for the celebration).
+    onAir.snap(callForSnap(s, { before, outcome: out.kind, score, after: { ...m.score }, late: this.late(round, ot, q), twoPoint }), r.touchdown && r.offenseBall);
     set({ outcome: out.kind, stage: 'play' });
     this.checkFinal();
     return { next: m.sit, over: m.phase !== 'drive' && m.phase !== 'fourth' };
@@ -565,7 +581,6 @@ class GameSession {
 
   private logPlay(s: PlayState, r: PlayResult, before: Situation, at: { drive: number; n: number; round: number; ot: number; score: { user: number; beasts: number }; q: number; clock: string }): void {
     const card = describe(s);
-    const m = this.m!;
     this.plays.push({
       ...at,
       down: before.down,
@@ -579,7 +594,7 @@ class GameSession {
       touchdown: r.touchdown && r.offenseBall,
       turnover: !r.offenseBall,
       pickSix: r.touchdown && !r.offenseBall,
-      late: at.ot > 0 || (isTimed(m) ? at.q >= 4 : at.round >= m.cfg.drives),
+      late: this.late(at.round, at.ot, at.q),
       q: at.q,
       clock: at.clock,
     });
@@ -589,6 +604,48 @@ class GameSession {
     // Keep the inputs of the snaps that could still be the play of the game (memory: a game is ~60 snaps).
     const keep = pickPlayOfGame(this.plays);
     this.capsules = this.capsules.map((c, i) => (i === keep || i === this.capsules.length - 1 ? c : null));
+  }
+
+  /** The game's last round (a timed game: the fourth quarter) or overtime. */
+  private late(round: number, ot: number, q: number): boolean {
+    const m = this.m!;
+    return ot > 0 || (isTimed(m) ? q >= 4 : round >= m.cfg.drives);
+  }
+
+  /**
+   * At the line (the play is called): the booth says the situation when it's
+   * one worth saying (broadcast.ts callForSituation: the two-minute drill,
+   * fourth down, goal to go, third down, the red zone, a new drive).
+   */
+  atTheLine(): void {
+    const m = this.m;
+    if (!m || !m.drive || m.phase === 'twoPoint') return;
+    const driveNo = m.userDrives.length;
+    if (driveNo !== this.lineDrive) {
+      this.lineDrive = driveNo;
+      onAir.newDrive();
+    }
+    const two = m.clock.live && halfSecs(m) <= 120;
+    onAir.situation(
+      callForSituation({
+        sit: m.sit,
+        driveStart: m.drive.plays === 0,
+        firstSnap: driveNo === 0 && m.drive.plays === 0 && !m.ot,
+        goingForIt: m.sit.down === 4,
+        score: m.score,
+        twoMinute: two ? { clock: clockText(m.clock.secs), timeouts: m.clock.timeouts } : null,
+        saidThisDrive: onAir.saidThisDrive,
+      }),
+    );
+  }
+
+  /** The kick's call, as it comes down (the kick view's reveal): before the match scores it. */
+  kickCalled(): void {
+    const m = this.m;
+    const k = get().kick;
+    if (!m || !k) return;
+    if (k.punt) onAir.line(callForPunt(k.punt));
+    else if (k.result && k.kind !== 'PUNT') onAir.line(callForKick(k.kind, k.distance, k.result, m.wind, m.score, this.late(m.round, m.ot, m.clock.quarter)));
   }
 
   /** From the result card: on to the next snap, decision or possession. */
