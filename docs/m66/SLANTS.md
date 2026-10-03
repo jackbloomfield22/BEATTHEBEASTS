@@ -200,7 +200,9 @@ Pooled: zone on time 62% → **69%** (int+pbu 24% → 19%, 7.3 → 8.6 yd/att, Y
 
 **The AI pass game** (`tools/sim/outcomes.ts`, 60 a cell), before → after: completion 69.3% → 69.5%, 8.3 → 8.4 yd an attempt, interceptions 2.0% → 2.1%, 20+ yd completions 16.7% → 16.8%, sacks 6.4% → 6.3% of dropbacks, open men caught 89.6% → 89.6%. Against 2-man alone (120 a cell): 50.5% → 50.1%, 8.5 → 8.1 yd an attempt, interceptions 4.9% → 5.2%; its deep balls (aDOT 15+) 38% → 39% complete for 13.1 → 14.4 yd an attempt (the answer to 2-man, and sane); its slants 47% → 42%.
 
-**The identity harness** (6 reps): 16 → 18 of 20 (Gates/Lewis fails as before). Revis/Law still fails at 6 reps but closer: 57.6% against 62.7% allowed (60.8% / 63.7% before; it needs 6 points). Deion/Kam (55.5% / 71.2%) and Reed/Kam pass. At 14 reps: see below.
+**The identity harness.** 6 reps: 16 → 18 of 20 (Gates/Lewis fails as before; DeSean/Boldin and Gronk/Gonzalez pass this time). Revis/Law still fails at 6 reps, but closer: 57.6% against 62.7% allowed (60.8% / 63.7% before; it needs 6 points). Deion/Kam (55.5% / 71.2%) and Reed/Kam (tackles 62.8% / 78.2%) pass. 14 reps: 18 of 20 (DeSean/Boldin and Gates/Lewis fail); Revis/Law passes, 58.2% / 64.7% (57.3% / 67.0% after the second pass); Deion/Kam 58.4% / 70.9%; Reed/Kam 65.2% / 77.9% tackles finished.
+
+**Clips.** Three scripted plays changed outcome and were re-found (`src/game/clips.ts`, the same play, call and throw): completion-rac 18 → 16 (a juke and 41 after the catch to the end zone), post 9 → 108 (2-man's corner was 0.9 yd off him on 9; now 26 yd at 1.4 yd), the speed pair 6 → 67 (Hill 70 yd at 2.1 yd, Welker's incomplete at 1.1). Others play differently but still show what they're named for: go (the fire zone) is now 70 yd instead of 38, corner (2-man) 34 instead of 30, screen 5.3 instead of 5.7. Videos to re-record: **completion-rac, post, speed (both sides), go, corner, screen**. The determinism golden is re-pinned.
 
 ## The late throw
 
