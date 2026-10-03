@@ -1263,7 +1263,11 @@ export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
       // are; a poor one runs from them as if they were free.
       const free = d.fx.vmax * reachT * 0.9;
       const blk = blockOf(s, i);
-      const held = blk ? 0.9 + Math.max(0, blk.lev) * free * 0.6 : free;
+      // A force squeezing a stalk (runs.ts stalk) has his outside arm free:
+      // a lane round the outside of him is a lane into him.
+      const k = d.mem.contain as number | undefined;
+      const round = !!blk && d.mem.squeeze === true && k !== undefined && (c.pos.y + dir.y * Math.max(0, along) - d.pos.y) * k > 0;
+      const held = blk && !round ? 0.9 + Math.max(0, blk.lev) * free * 0.6 : free;
       const reach = held + (free - held) * (1 - c.fx.a('vision')) * 0.6;
       const threat = Math.max(0, reach + 1.2 - perp) / (1 + along * 0.15);
       score -= threat * 1.1;
@@ -1789,6 +1793,74 @@ function landmark(s: PlayState, d: Agent, zone: ZoneName): V2 {
   return v2(at.x + (d.mem.zj as number), at.y + (d.mem.zl as number));
 }
 
+/** A defender reads a bubble on his side within this of the receiver (yd): the corner, the apex, the curl-flat. Ours. */
+const BUBBLE_SEE = 14;
+/** The bubble: a receiver split out, behind the line (yd) and working out toward the sideline (yd/s) without climbing. */
+const BUBBLE_DEPTH = -0.3;
+const BUBBLE_OUT = 3;
+/** The force's point: outside the ball this far, and this far past him toward the line (yd); the alley's, inside it. Ours. */
+const FORCE_OUT = 1.5;
+const FORCE_UP = 2;
+const ALLEY_UP = 3;
+/** How far ahead (s) of the bubble's run the force and the alley aim: the force a full beat (the catch is ~0.6 s off when he triggers), the alley half that. Ours. */
+const FORCE_LOOK = 0.8;
+const ALLEY_LOOK = 0.4;
+
+/**
+ * The bubble read, before the throw. A receiver split out who steps back
+ * behind the line and works to the sideline is a screen, and the men on his
+ * side read it the way they're coached ("bubble!"): they stop their drops
+ * and come downhill, the corner (the force) outside-in to keep it from
+ * getting outside him, the curl-flat or the apex inside-out to the alley. A
+ * deep corner comes too once nothing on his side is going vertical (#1
+ * blocking is his run read). Each at his own reaction from when it showed.
+ * The hook and the safeties stay on their drops until the ball's out
+ * (play.ts rallyScreen). Without it the apex had dropped to 8–9 yd by the
+ * throw and the stalk blocker met him there, so a bubble that got past
+ * the corner had ten yards of grass (the bubble against Cover 2 12 yd a
+ * throw once the stalks went to the right men, tools/sim/screens.ts).
+ */
+function bubbleRead(s: PlayState, d: Agent, role: ZoneRole): boolean {
+  if (s.phase === 'carrier') return false;
+  const corner = d.slot === 'LCB' || d.slot === 'RCB';
+  if (role === 'tampa' || (role === 'deep' && !corner)) return false;
+  const los = s.setup.los;
+  const by = s.setup.ballY ?? 0;
+  // (A hook defender over the ball reads it to either side.)
+  const mine = role === 'hook' && Math.abs(d.pos.y - by) < 1 ? 0 : Math.sign(d.pos.y - by) || 1;
+  let r = (d.mem.bubble as number | undefined) ?? -1;
+  // (Read before the throw; once he's read it he keeps coming through the throw, until play.ts rallyScreen has him.)
+  if (r < 0) {
+    if (s.ball.mode !== 'held') return false;
+    for (const i of s.off) {
+      const a = s.agents[i]!;
+      if (!a.route || a.down || a.slot === 'RB' || Math.abs(s.setup.play.formation.align[a.slot as OffSlot].dy) < 5) continue;
+      const side = Math.sign(a.pos.y - by) || 1;
+      if ((mine !== 0 && side !== mine) || a.pos.x > los + BUBBLE_DEPTH || a.vel.x > 1 || a.vel.y * side < BUBBLE_OUT || dist(a.pos, d.pos) > BUBBLE_SEE) continue;
+      r = i;
+    }
+    if (r < 0) return false;
+    // A deep corner with a man going vertical on his side keeps his third.
+    if (role === 'deep' && s.off.some((i) => {
+      const a = s.agents[i]!;
+      return !!a.route && (Math.sign(a.pos.y - by) || 1) === mine && a.pos.x > los + 3 && a.vel.x > 3;
+    })) return false;
+    d.mem.bubble = r;
+    d.mem.bubbleAt = s.t;
+  }
+  if (s.t - (d.mem.bubbleAt as number) < reaction(s, d)) return false;
+  const a = s.agents[r]!;
+  const v = seen(a, reaction(s, d) * 0.5);
+  const side = Math.sign(v.pos.y - by) || 1;
+  // Where he's going: the force plays where the bubble will be caught (he has to beat it to the outside), the alley where it's turned up.
+  const look = corner ? FORCE_LOOK : ALLEY_LOOK;
+  const ahead = { x: v.pos.x + v.vel.x * look, y: v.pos.y + v.vel.y * look };
+  const at = corner ? v2(Math.max(ahead.x + FORCE_UP, los + 1), ahead.y + side * FORCE_OUT) : v2(Math.max(ahead.x + ALLEY_UP, los + 1.5), ahead.y - side * FORCE_OUT);
+  steer(d, boundaryGovern(d, arrive(d, at, 1, 1), 1), { face: atan2(v.pos.y - d.pos.y, v.pos.x - d.pos.x) });
+  d.anim = 'run';
+  return true;
+}
+
 /**
  * Zone coverage with pattern matching (GDD §10.4). Every zone drops to its
  * landmark and reads the receivers by number:
@@ -1826,6 +1898,7 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
     steer(d, { x: 0.8, y: 0 }, { face: Math.PI });
     return;
   }
+  if (bubbleRead(s, d, role)) return;
   const delay = reaction(s, d) * 0.7;
   const face = atan2(qb.pos.y - d.pos.y, qb.pos.x - d.pos.x);
   const bk = s.bracket && s.bracket.by === d.slot ? s.bracket : null;

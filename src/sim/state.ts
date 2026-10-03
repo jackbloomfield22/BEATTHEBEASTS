@@ -203,6 +203,47 @@ export function resolveMan(call: DefCall['assign'], offPos: Record<OffSlot, V2>,
   return res;
 }
 
+/** The receivers split more than 5 yd from the ball to each side, widest first (the corners take the widest; strength counts them). */
+function splitWide(offPos: Record<OffSlot, V2>, by: number): { left: { k: OffSlot; p: V2 }[]; right: { k: OffSlot; p: V2 }[] } {
+  const wide = (['X', 'Z', 'SLOT', 'TE', 'RB'] as OffSlot[]).map((k) => ({ k, p: offPos[k] }));
+  return { left: wide.filter((w) => w.p.y > by + 5).sort((a, b) => b.p.y - a.p.y), right: wide.filter((w) => w.p.y < by - 5).sort((a, b) => a.p.y - b.p.y) };
+}
+
+/** The formation's strength: the side with more receivers split out (+1 the offense's left, the side the call sheet is written to; a tie stays left). */
+export function strengthOf(offPos: Record<OffSlot, V2>, by: number): 1 | -1 {
+  const { left, right } = splitWide(offPos, by);
+  return right.length > left.length ? -1 : 1;
+}
+
+const MIRROR_ZONE: Partial<Record<ZoneName, ZoneName>> = { curlL: 'curlR', curlR: 'curlL', hookL: 'hookR', hookR: 'hookL', flatL: 'flatR', flatR: 'flatL' };
+
+/**
+ * The call as it's played against this formation. The call sheet is
+ * written with the strength to the offense's left (the Sam and his
+ * curl-flat to the strong side, the Will's to the weak side, the fire
+ * zone's dropping end away from it), and a defense calls its underneath
+ * zones by strength, not by the field: "Sam has the strong curl-flat"
+ * wherever the strength is. So with the strength to the right the
+ * underneath zones of everyone but the corners (who play their own side)
+ * swap sides, and the ends and tackles swap jobs. The deep zones stay with
+ * the men aligned in them. Before this, against trips or bunch right (half
+ * the snaps of every formation, flipped or not), the linebacker who aligned
+ * on the weak side had the strong curl and ran 15 yd across the formation
+ * to it at the snap (the bubble against Cover 2 had nobody inside the
+ * corner, tools/sim/screens.ts).
+ */
+export function toStrength(assign: DefCall['assign'], strength: 1 | -1): DefCall['assign'] {
+  if (strength > 0) return assign;
+  const out = { ...assign, LE: assign.RE, RE: assign.LE, LDT: assign.RDT, RDT: assign.LDT };
+  for (const k of DEF_SLOTS) {
+    if (k === 'LCB' || k === 'RCB') continue;
+    const a = out[k];
+    const m = a.kind === 'zone' ? MIRROR_ZONE[a.zone] : undefined;
+    if (m) out[k] = { kind: 'zone', zone: m };
+  }
+  return out;
+}
+
 /** A defender who plays like a defensive back (a corner or safety, wherever the package puts him). */
 export const isDB = (p: SimPlayer): boolean => p.pos === 'CB' || p.pos === 'S';
 
@@ -216,11 +257,10 @@ export const isDB = (p: SimPlayer): boolean => p.pos === 'CB' || p.pos === 'S';
 function defensiveAlignment(s: PlaySetup, offPos: Record<OffSlot, V2>, bracketY: number | null): Record<DefSlot, V2> {
   const los = s.los;
   const by = s.ballY ?? 0;
-  const look = s.def.shell ? defById(s.def.shell) : s.def;
+  const strength = strengthOf(offPos, by);
+  const look = s.def.shell ? { ...defById(s.def.shell), assign: toStrength(defById(s.def.shell).assign, strength) } : s.def;
   // Receivers split to each side (the widest two set the corners).
-  const wide = (OFF_SLOTS.filter((k) => ['X', 'Z', 'SLOT', 'TE', 'RB'].includes(k)) as OffSlot[]).map((k) => ({ k, p: offPos[k] }));
-  const left = wide.filter((w) => w.p.y > by + 5).sort((a, b) => b.p.y - a.p.y);
-  const right = wide.filter((w) => w.p.y < by - 5).sort((a, b) => a.p.y - b.p.y);
+  const { left, right } = splitWide(offPos, by);
   const out: Partial<Record<DefSlot, V2>> = {};
   // Front four: ends outside the tackles, tackles over the guards' outside shoulders.
   out.LE = v2(los + 0.9, by + 3.9);
@@ -228,7 +268,6 @@ function defensiveAlignment(s: PlaySetup, offPos: Record<OffSlot, V2>, bracketY:
   out.RDT = v2(los + 0.8, by - 1.0);
   out.RE = v2(los + 0.9, by - 3.9);
   // Linebackers at 4.5 yd, shaded toward the strength (more receivers).
-  const strength = right.length > left.length ? -1 : 1;
   out.WLB = v2(los + 4.5, by - 3.6 * strength);
   out.MLB = v2(los + 5, by + 0.4 * strength);
   out.SLB = v2(los + 4.5, by + 3.6 * strength);
@@ -295,15 +334,18 @@ export function createPlay(setup: PlaySetup): PlayState {
   // progression, a Receiving Back's routes), and a flipped call runs the
   // mirror image (the setup the play keeps is the one it runs).
   const own = personalize(setup.play, setup.offense);
-  const s: PlaySetup = setup.flip ? { ...setup, play: mirrorPlay(own), flip: false } : own === setup.play ? setup : { ...setup, play: own };
-  const by = s.ballY ?? 0;
+  const s0: PlaySetup = setup.flip ? { ...setup, play: mirrorPlay(own), flip: false } : own === setup.play ? setup : { ...setup, play: own };
+  const by = s0.ballY ?? 0;
   const agents: Agent[] = [];
   const slot: Record<string, number> = {};
   const offPos = {} as Record<OffSlot, V2>;
   for (const k of OFF_SLOTS) {
-    const a = s.play.formation.align[k];
-    offPos[k] = v2(s.los + a.dx, clampY(by + a.dy));
+    const a = s0.play.formation.align[k];
+    offPos[k] = v2(s0.los + a.dx, clampY(by + a.dy));
   }
+  // The call by the formation's strength (toStrength).
+  const strength = strengthOf(offPos, by);
+  const s: PlaySetup = strength > 0 ? s0 : { ...s0, def: { ...s0.def, assign: toStrength(s0.def.assign, strength) } };
   for (const k of OFF_SLOTS) {
     const ag = makeAgent(agents.length, 'off', k, s.offense[k], offPos[k], 0);
     slot[k] = ag.i;

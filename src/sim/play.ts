@@ -4,7 +4,7 @@
 // appended to `state.events` for the render, audio and commentary layers.
 
 import { atan2, cos, sin } from '@/engine/math/detmath';
-import { assignRunBlocks, assignRunFits, backToMesh, belief, keepIt, qbMesh, qbRunner, readEndStep, readKeep, runFit, schemeBlock, setZoneRead, stalk } from './runs';
+import { assignRunBlocks, assignRunFits, assignStalks, backToMesh, belief, keepIt, qbMesh, qbRunner, readEndStep, readKeep, runFit, schemeBlock, setZoneRead, stalk } from './runs';
 import {
   assignProtection,
   breakOnBall,
@@ -123,6 +123,7 @@ function doSnap(s: PlayState): void {
   setZoneRead(s);
   assignRunBlocks(s);
   assignRunFits(s);
+  assignStalks(s);
   // What the offense shows the defense, and when (runs.ts belief): a run
   // fires out at the snap; the draw shows pass first (its run show is the
   // handoff); play action shows run, then pass when the ball comes out of
@@ -1549,6 +1550,7 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
       // A screen's convoy keeps to its lanes in front of him.
       const lane = a.mem.convoy ? convoySpot(s, a, v2(a.mem.spotX as number, a.mem.spotY as number), carrier) : null;
       if (lane) screenConvoy(s, a, lane, carrier.pos, screenLetIn);
+      else if (as.kind === 'stalk') stalk(s, a, carrier.pos);
       else runBlock(s, a, carrier.pos, !(as.kind === 'runBlock' && (a.slot === 'LT' || a.slot === 'LG' || a.slot === 'C' || a.slot === 'RG' || a.slot === 'RT')));
       continue;
     }
@@ -1791,6 +1793,39 @@ function rallies(s: PlayState): number[] {
 const FLOW_R = 15;
 const FLOW_AHEAD = 5;
 
+/**
+ * A throw caught behind the line (the bubble, a screen): it's the run game
+ * now, and the defense plays it like a perimeter run ("screen!"). Every
+ * zone defender who's read it comes downhill to the ball, not to his zone
+ * or a spot along the receiver's run (which, for a bubble running across,
+ * was out at the sideline behind the line): a man inside the ball to the
+ * alley, a step inside it and a couple of yards past the catch (inside-out,
+ * so the cut back is his), a man outside it to a step outside (the force:
+ * outside-in, turning it back inside). Ours, from the coaching of the
+ * perimeter fits (force, alley, pursuit).
+ */
+const SCREEN_LINE = 0.5;
+/** Everyone rallies to a screen (yd from the catch point): the backside too, not just the men near it. */
+const SCREEN_R = 28;
+/** The alley point: this far past the catch toward the line, and this far inside (or for the force, outside) the ball (yd). */
+const ALLEY_UP = 2.5;
+const ALLEY_IN = 1.5;
+
+function rallyScreen(s: PlayState, d: Agent): boolean {
+  const aim = { x: s.ball.aim.x, y: s.ball.aim.y };
+  const los = s.setup.los;
+  if (aim.x > los + SCREEN_LINE || dist(d.pos, aim) > SCREEN_R) return false;
+  const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
+  if (as.kind !== 'zone') return false;
+  const by = s.setup.ballY ?? 0;
+  const bs = Math.sign(aim.y - by) || 1;
+  // The corner on the ball's side is the force whichever side of it he's on (he works back outside it).
+  const outside = d.slot === (bs > 0 ? 'LCB' : 'RCB') || (d.pos.y - aim.y) * bs > 0;
+  const at = v2(Math.max(aim.x + ALLEY_UP, los + 0.5), aim.y + (outside ? bs : -bs) * ALLEY_IN);
+  steer(d, arrive(d, at, 1, 1));
+  return true;
+}
+
 function flowToBall(s: PlayState, d: Agent): boolean {
   const aim = { x: s.ball.aim.x, y: s.ball.aim.y };
   if (dist(d.pos, aim) > FLOW_R) return false;
@@ -1820,7 +1855,8 @@ function flowToBall(s: PlayState, d: Agent): boolean {
 const JUMP_R = 8;
 function jumpThrow(s: PlayState, d: Agent): boolean {
   const w = s.windup!;
-  if (w.away) return false;
+  // (A man who's read the bubble is playing it as a run: ai.ts bubbleRead.)
+  if (w.away || d.mem.bubble !== undefined) return false;
   const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
   if (as.kind !== 'zone') return false;
   const hawk = has(d, 'ballhawk') ? 0.67 : 1;
@@ -1891,6 +1927,8 @@ function defenseRoles(s: PlayState): void {
       // it leaves (M6.5 calibration: he used to stop and wait a whole
       // reaction time at the release, and drift back toward his zone just
       // as the ball came out).
+      // A screen: zone defenders who've read the throw (or the bubble before it) play it as a perimeter run, force and alley, not as a ball to break on.
+      if (s.ball.target >= 0 && (since >= reaction(s, d) || d.mem.bubble !== undefined) && rallyScreen(s, d)) continue;
       const jumped = d.mem.onBall === true && s.ball.target >= 0;
       if (jumped && !rallies(s).includes(i)) {
         breakOnBall(s, d);
