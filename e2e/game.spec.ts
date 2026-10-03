@@ -9,7 +9,7 @@ import { trackErrors, waitReady } from './helpers';
 // slow frames don't matter.
 
 type W = {
-  __btbDraft: { getState(): { phase: string; begin(mode: string, o?: { seed?: number }): Promise<void> } };
+  __btbDraft: { getState(): { phase: string; begin(mode: string, o?: { seed?: number }): Promise<void>; finishWalkout(go: (s: string) => void): void } };
   __btbApp: { getState(): { screen: string; go(s: string): void } };
   __btbGameUi: { getState(): { stage: string; match: { round: number; phase: string; score: { user: number; beasts: number }; cfg: { drives: number } } | null } };
   __btbPracticeUi: { getState(): { stage: string } };
@@ -43,7 +43,16 @@ test('Quick Play: locker room, walk-out and a full six-round game to the results
     void w.__btbDraft.getState().begin('quick', { seed: 5 });
     w.__btbApp.getState().go('draft');
   });
-  // The full room, then the walk-out to the field.
+  // The full room, then Walk out (the room waits for the press). The walk-out starts; its ~9.5 s camera move is
+  // skipped to its end (as results.spec does): at the software renderer's seconds a frame it took longer than the test.
+  await page.waitForFunction(() => (window as unknown as W).__btbDraft.getState().phase === 'complete', null, { timeout: 300_000 });
+  await page.waitForTimeout(500);
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => (window as unknown as W).__btbDraft.getState().phase === 'walkout', null, { timeout: 60_000 });
+  await page.evaluate(() => {
+    const w = window as unknown as W;
+    w.__btbDraft.getState().finishWalkout((s) => w.__btbApp.getState().go(s));
+  });
   await page.waitForFunction(() => (window as unknown as W).__btbApp.getState().screen === 'game', null, { timeout: 300_000 });
   const seen = new Set<string>();
   let snaps = 0;
