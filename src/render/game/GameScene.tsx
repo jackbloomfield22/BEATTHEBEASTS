@@ -44,6 +44,8 @@ import { frameEvents } from './frameEvents';
 import { ballInHands, catchMagnet, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
 import { Officials } from './officials';
 import { kickView } from './kickView';
+import { reveal } from '@/game/tunnelReveal';
+import { revealBodies, revealView } from './tunnelShow';
 
 // The live play (TECH_PLAN §4.3): one top-priority frame callback advances
 // the sim through the Practice session, then every player, the ball, the
@@ -265,6 +267,8 @@ export function GameScene() {
   /** The Contenders' kit on the field (white if theirs is as dark as the Beasts'): the montage dresses the defense in it. */
   const userKit = useRef('whiteLime');
   const boardUp = useRef(false);
+  /** The tunnel reveal was on last frame (its exposure is given back the frame it ends). */
+  const revealOn = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -462,6 +466,28 @@ export function GameScene() {
     ball.visible = show;
     frameEvents.length = 0;
     if (officials.current) officials.current.group.visible = show;
+    // The tunnel reveal (M7, tunnelShow.ts): the run-out and the Beasts' line in place of the play,
+    // from the walk-out's hand-over until the pre-game card. It holds in the light until the bodies are built.
+    if (reveal.active || revealOn.current) {
+      const R = practice.rosters;
+      reveal.frame(step, !!bodies && !!R && !!practice.runner);
+      revealOn.current = reveal.active;
+      revealView(reveal.active);
+      if (reveal.active) {
+        marks.group.visible = false;
+        ball.visible = false;
+        if (officials.current) officials.current.group.visible = false;
+        for (const el of hudDom.icons) if (el) el.style.visibility = 'hidden';
+        if (r) routeArt.update(r.state, false, step, null);
+        if (bodies && R && reveal.shot !== 'hold') {
+          const roster = [...OFF_SLOTS.map((k) => R.offense[k]), ...DEF_SLOTS.map((k) => R.defense[k])];
+          revealBodies(bodies, roster, OFF_SLOTS.length, step, clock.elapsedTime, camera, gl.domElement.height);
+        } else if (bodies) for (const b of bodies) b.player.root.visible = false;
+        // After it, the next frame sets everyone in the pre-game lineup.
+        shownPlay.current = '';
+        return;
+      }
+    }
     if (bodies && kickView.active && !rp) {
       // The kick: everyone set in the field goal (or punt) look, the sim's marks and ball away.
       if (officials.current) officials.current.group.visible = true;

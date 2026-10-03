@@ -23,6 +23,8 @@ import { PlayHud, readsNote } from './PracticeScreen';
 import { ReplayCue, ReplayHud, useReplayKey } from '../game/ReplayHud';
 import { MontageHud } from '../game/MontageHud';
 import { montage, useMontage } from '@/game/montageSession';
+import { reveal, useReveal } from '@/game/tunnelReveal';
+import { TunnelHud } from '../game/TunnelHud';
 import '../styles/game.css';
 import '../styles/match.css';
 import '../styles/results.css';
@@ -69,7 +71,7 @@ export function GameScreen() {
       // (Esc is also menu.back: the pause menu's Back may have just resumed on this same press.)
       // In a replay Esc goes back to the result card (replaySession.ts).
       // The Beasts' drive montage takes Esc / Start as skip (montageSession.ts).
-      if (id !== 'global.pause' || info.repeat || justResumed || replay.active || montage.busy) return;
+      if (id !== 'global.pause' || info.repeat || justResumed || replay.active || montage.busy || reveal.active) return;
       const g = useGame.getState();
       const ps = usePractice.getState().stage;
       if (g.paused || ps === 'paused') return resumeGame();
@@ -83,13 +85,17 @@ export function GameScreen() {
   const replayOpen = useReplay((s) => s.open);
   const montageOpen = useMontage((s) => s.open);
   useEffect(() => () => replay.abort(), []);
+  // The tunnel reveal (M7) runs over the pre-game: its own graphics, then the card.
+  const revealOpen = useReveal((s) => s.open);
+  useEffect(() => () => reveal.abort(), []);
   return (
     <div className="game-screen">
-      {stage === 'loading' ? <div className="practice-loading">Kickoff…</div> : null}
-      {stage !== 'loading' && !replayOpen ? <ScoreBug /> : null}
+      {stage === 'loading' && !revealOpen ? <div className="practice-loading">Kickoff…</div> : null}
+      {stage !== 'loading' && !replayOpen && !revealOpen ? <ScoreBug /> : null}
+      {revealOpen ? <TunnelHud /> : null}
       {!paused ? (
         <>
-          {stage === 'pregame' ? <PreGame /> : null}
+          {stage === 'pregame' && !revealOpen ? <PreGame /> : null}
           {stage === 'meanwhile' ? montageOpen ? <MontageHud /> : <Meanwhile /> : null}
           {stage === 'call' ? <GamePlayCall /> : null}
           {stage === 'play' ? <GamePlay /> : null}

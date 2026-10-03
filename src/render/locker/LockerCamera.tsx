@@ -7,6 +7,9 @@ import { useDraft, type DraftPhase } from '@/app/draftStore';
 import { view } from '../view';
 import { ARC_R, DOOR, DOOR_ANGLE, LOCKER_OF, ROOM_R, WALL, WALL_ANGLE, onArc } from './layout';
 import { TUNNEL_POSE } from './LockerRoom';
+import { reveal, revealInfo } from '@/game/tunnelReveal';
+import { getSettings } from '@/app/settings';
+import { revealExposure, revealPose } from '../game/tunnelShow';
 
 // The locker room's camera (M6): a slow, handheld-feeling broadcast camera
 // that eases between shots (the row, the video wall, one stall) and, when
@@ -121,7 +124,8 @@ export function LockerCamera({ fovOffset = 0, onWalkoutDone }: { fovOffset?: num
 
   useEffect(
     () => () => {
-      view.exposureMul = 1;
+      // The tunnel reveal keeps the walk-out's white as it takes over (it gives the exposure back itself).
+      if (!reveal.active) view.exposureMul = 1;
       view.fade = 1;
     },
     [],
@@ -153,6 +157,20 @@ export function LockerCamera({ fovOffset = 0, onWalkoutDone }: { fovOffset?: num
           view.room = null;
           view.grade = null;
           c.fov = TUNNEL_POSE.fov;
+          // M7: the tunnel reveal takes it from here, in the stadium's tunnel, in the same white
+          // (src/game/tunnelReveal.ts); the game starts under it. Without a game to go to, the old walk on.
+          const st = useDraft.getState();
+          if (onWalkoutDone && st.next === 'game' && st.beasts) {
+            reveal.arm(revealInfo(st.beasts, st.cat, st.mode === 'film', st.mode === 'quick' || getSettings().gameplay.fastReveal, st.draft?.roster.QB?.name ?? null));
+            walk.current = null;
+            // This frame already draws the stadium: from where the reveal starts, in its white.
+            const p = revealPose({ pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: TUNNEL_POSE.fov });
+            camera.position.copy(p.pos);
+            camera.lookAt(p.look);
+            view.exposureMul = revealExposure();
+            onWalkoutDone();
+            return;
+          }
         }
         const f = Math.min(1, (w.t - total) / WALK.fieldS);
         view.exposureMul = 1 + 7 * Math.pow(1 - Math.min(1, f * 1.6), 2);

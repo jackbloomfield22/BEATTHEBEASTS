@@ -21,6 +21,7 @@ import { createConcreteMaterial, createGlassMaterial, createLightBankMaterial, c
 import { createFieldMaterial, createFieldPaint } from './field/field';
 import { createGrassShells, GRASS_SHELLS } from './field/grass';
 import { buildGoalposts } from './field/goalposts';
+import { buildTunnel } from './stadium/tunnel';
 import { buildPlazaGeometry, plazaLampPositions, createLightHeadMaterial, createMetalMaterial, createPavingMaterial, createScreenMaterial, createVideoBoardTexture } from './stadium/props';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { createShadowRig, shadowAttach, type ShadowRig } from './lighting/shadows';
@@ -119,6 +120,8 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
   });
   const plaza = useMemo(() => buildPlazaGeometry(), []);
   const goalposts = useMemo(() => buildGoalposts(), []);
+  // The Contenders' tunnel mouth under the north stands (M7, the tunnel reveal).
+  const tunnel = useMemo(() => buildTunnel(), []);
   const grass = useMemo(() => createGrassShells(assets.paint), [assets.paint]);
   useEffect(() => {
     grass.setShells(GRASS_SHELLS[quality.grassDetail]);
@@ -443,6 +446,7 @@ export function World({ preset, quality, onReady }: { preset: LightingPreset; qu
 
       <primitive object={grass.mesh} />
       <primitive object={goalposts} />
+      <primitive object={tunnel} />
       {/* Playing surface and apron */}
       <mesh name="field" rotation-x={-Math.PI / 2} position={[0, 0.02, -2]} material={assets.fieldMat} receiveShadow>
         <planeGeometry args={[STAND.halfWidth * 2, 138, 1, 1]} />

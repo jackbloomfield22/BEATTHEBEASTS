@@ -15,6 +15,7 @@ import { jerseyName } from '../players/glyphs';
 import { loadPlayerAsset } from '../players/playerAsset';
 import type { LightingPreset } from '../lighting/presets';
 import { view } from '../view';
+import { TUNNEL } from '../world/constants';
 import { DOOR, frontOf, LOCKER_OF, ARC_R } from './layout';
 import { lockerLitState, updateLockerLights } from './lockerLights';
 import { POS_OF_SLOT, type LockerOccupant } from './locker';
@@ -278,8 +279,8 @@ export function LockerRoom({ active, mainScene, preset }: { active: boolean; mai
   return null;
 }
 
-/** The stadium seen from the Contenders' tunnel mouth (north end, facing the field). */
-export const TUNNEL_POSE = { pos: new THREE.Vector3(0, 1.72, -69.2), look: new THREE.Vector3(0, 1.3, 0), fov: 50 };
+/** The stadium seen from the Contenders' tunnel mouth (north end, facing the field; render/stadium/tunnel.ts). */
+export const TUNNEL_POSE = { pos: new THREE.Vector3(TUNNEL.x, 1.72, TUNNEL.mouth + 0.4), look: new THREE.Vector3(TUNNEL.x, 1.3, 0), fov: 50 };
 
 function captureField(gl: THREE.WebGLRenderer, scene: THREE.Scene, rt: THREE.WebGLRenderTarget, gain: number, room: Room): void {
   const cam = new THREE.PerspectiveCamera(TUNNEL_POSE.fov, DOOR.width / DOOR.height, 0.3, 16000);
