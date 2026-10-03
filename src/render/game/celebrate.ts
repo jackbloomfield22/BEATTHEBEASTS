@@ -127,8 +127,11 @@ export class CelebrateScene {
       return;
     }
     const sb = bodies[cast.scorer]!;
-    // The team-mates set off as soon as the prompt is up.
+    // The team-mates set off as soon as the prompt is up. The scorer, still
+    // the sim's while he pulls up, comes to a stand in the idle rather than
+    // the stance he lined up in (a receiver's two-point crouch).
     if (this.mates.length === 0 && this.actors.size === 0) {
+      if (!sb.lie && !sb.ragdoll.active) sb.animator.setStance('stance_idle');
       for (const i of cast.mates) {
         const b = bodies[i]!;
         if (b.lie || b.ragdoll.active || b.fallen) continue;
