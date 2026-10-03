@@ -146,6 +146,48 @@ describe('Volume TE and Receiving Back: the play as these eleven run it', () => 
     expect(route('doubles-mesh', plain)).toBe('swing');
     expect(route('singleback-pa-post', plain)).toBe('arrow');
   });
+  it('the wheel is the arrow with a wheel tag: out of the fake he turns it up against man, and runs the arrow against a zone', () => {
+    // Where he is 2.5 s in: past the line and still climbing against man; in the flat, short of it, against a zone.
+    const at = (def: string, seed: number) => {
+      const s = stepTo(play(team, 'singleback-pa-post', def, seed), 2.5);
+      const rb = s.agents[s.slot.RB!]!;
+      return { read: rb.mem.optBreak, x: rb.pos.x - 35, s };
+    };
+    for (const seed of [1, 2, 3]) {
+      for (const def of ['cover1', 'cover2man']) expect(at(def, seed).read).toBe('wheel');
+      for (const def of ['cover3', 'cover2']) {
+        const z = at(def, seed);
+        expect(z.read).toBe('arrow');
+        expect(z.x).toBeLessThan(4);
+      }
+    }
+    // Without the trait the book's arrow has no tag: no read.
+    const s = stepTo(play({ ...team, RB: strip(team.RB, 'receiving-back') }, 'singleback-pa-post', 'cover1', 1), 2.5);
+    expect(s.agents[s.slot.RB!]!.mem.optBreak).toBeUndefined();
+  });
+});
+
+describe('Man coverage on a back in the backfield', () => {
+  it("the linebacker on him plays him from the line: off the play-action fake he doesn't follow the back's flare into the backfield", () => {
+    // Cover 1 and 2-man: the Sam has the back. From the end of the fake to
+    // the throw, the deepest he goes (yd past the line; negative is the
+    // backfield), averaged over four snaps: ~-1.2 (his momentum past the
+    // line), where chasing the back he went ~-2 (-1.3 to -2.4).
+    for (const def of ['cover1', 'cover2man']) {
+      let sum = 0;
+      for (const seed of [1, 2, 3, 4]) {
+        const s = play(team, 'singleback-pa-post', def, seed);
+        const lb = s.agents[s.slot.SLB!]!;
+        let low = Infinity;
+        while (!s.result && s.ball.mode !== 'air' && s.t < 4) {
+          stepPlay(s, NEUTRAL);
+          if (s.t - s.snapT > 0.9) low = Math.min(low, lb.pos.x - 35);
+        }
+        sum += low;
+      }
+      expect(sum / 4).toBeGreaterThan(-1.5);
+    }
+  });
 });
 
 describe('Third-Down Back: the blitz pickup, then the release', () => {
