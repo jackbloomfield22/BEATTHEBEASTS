@@ -19,7 +19,7 @@ import type { Officials } from './officials';
 // `celebView` for its low, tight shot; the crowd comes up as the clip starts.
 
 /** Where the camera looks (field frame): the scorer, his facing, how long the shot has run, and a cut when it comes on. */
-export const celebView = { on: false, x: 0, y: 0, face: 0, t: 0, cut: false, clip: '', done: false };
+export const celebView = { on: false, x: 0, y: 0, face: 0, t: 0, cut: false, clip: '', done: false, pair: 0, mates: NaN };
 
 type Mode = 'run' | 'face' | 'react' | 'settle' | 'wait' | 'clip' | 'five' | 'idle';
 
@@ -106,6 +106,7 @@ export class CelebrateScene {
     this.released = false;
     this.ball.mode = 'none';
     celebView.on = false;
+    celebView.pair = 0;
   }
 
   /** A replay opened over it: let go of the bodies for good (the replay hands back the play's own end). */
@@ -141,7 +142,7 @@ export class CelebrateScene {
     // The mates' spots ride with the scorer until he has set.
     const sx = this.scorer ? this.scorer.x : sb.player.root.position.x;
     const sz = this.scorer ? this.scorer.z : sb.player.root.position.z;
-    const syaw = this.scorer ? this.scorer.yaw : sb.player.root.rotation.y;
+    const syaw = this.scorer ? this.scorer.tyaw : sb.player.root.rotation.y;
     this.mates.forEach((m, k) => {
       if (m.mode !== 'run') return;
       if (m === this.partner) {
@@ -174,6 +175,14 @@ export class CelebrateScene {
     celebView.t += dt;
     celebView.clip = this.scorer?.clip ?? '';
     celebView.done = ui.phase === 'done';
+    // Which way his team-mates are from him (field angle), for the camera to keep to the other side.
+    let mx = 0;
+    let mz = 0;
+    for (const m of this.mates) {
+      mx += m.x - r.x;
+      mz += m.z - r.z;
+    }
+    celebView.mates = this.mates.length && Math.hypot(mx, mz) > 0.5 ? Math.atan2(-mx, -mz) : NaN;
     this.stepBall(dt);
   }
 
@@ -313,9 +322,10 @@ export class CelebrateScene {
       }
       if (def) {
         this.playClip(sc, def.clip, 'clip');
-        // The camera cuts to the front of the way he plays it, and the push starts again.
+        // The camera cuts to the front of the way he plays it (from the side of the two of them for the bump), and the push starts again.
         celebView.cut = true;
         celebView.t = 0;
+        celebView.pair = def.mate && p ? BUMP_DIST / 0.9144 : 0;
         crowdEnergy.trigger('celebration', performance.now() / 1000);
         Audio.celebrationRoar();
       } else this.setMode(sc, 'idle');
@@ -347,6 +357,10 @@ export class CelebrateScene {
       // Both play the five: the scorer with his free hand if the ball's in his right.
       this.playClip(sc, this.ball.mode === 'hand_r' ? 'cel_five_l' : 'cel_five_r', 'five');
       this.playClip(f, 'cel_five_r', 'five');
+      // A cut to the side of the two of them for it.
+      celebView.cut = true;
+      celebView.t = 2;
+      celebView.pair = FIVE_DIST / 0.9144;
       this.fived = true;
       return;
     }
