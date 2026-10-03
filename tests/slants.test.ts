@@ -8,7 +8,7 @@
 // scale (200+ a cell) and docs/m66/SLANTS.md has the figures.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEF_CALLS, practiceRosters, type SnapshotLike } from '@/sim';
+import { DEF_CALLS, defById, practiceRosters, type SnapshotLike } from '@/sim';
 import { CALLED, HOT, LATE, ON_TIME, isMan, runCell, summarize, withLinebackers, type SlantSample, type SlantScript } from '../tools/sim/slants';
 
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
@@ -59,5 +59,20 @@ describe('slants: the linebackers are themselves', () => {
     const poor = withLinebackers(rosters, snap, ['Carl Banks', 'Bart Scott', 'Matt Millen']);
     const cmp = (r: typeof rosters) => summarize(pool(r, [ON_TIME, LATE.find((s) => s.id === 'late-2.0')!], false)).cmp;
     expect(cmp(good)).toBeLessThan(cmp(poor) - 0.03);
+  });
+}, 180_000);
+
+describe('slants: Cover 2 man is the quick game\'s problem', () => {
+  it('trail technique under two halves takes the on-time slant away more than Cover 1 does', () => {
+    // The corners and the underneath men in trail (inside, a step behind
+    // in the hip pocket, under the break), the halves over the top
+    // (docs/m66/SLANTS.md, the third pass). At scale, the called Slants on
+    // time: Cover 2 man ~53%, Cover 1 ~66% (they were 63% and 65%).
+    const at = (id: string) => summarize(runCell(rosters, [CALLED, ...HOT], defById(id), ON_TIME, 12));
+    const two = at('cover2man');
+    const one = at('cover1');
+    expect(two.cmp).toBeLessThan(one.cmp - 0.06);
+    expect(two.cmp).toBeGreaterThan(0.35);
+    expect(two.intPbu).toBeGreaterThan(one.intPbu);
   });
 }, 180_000);
