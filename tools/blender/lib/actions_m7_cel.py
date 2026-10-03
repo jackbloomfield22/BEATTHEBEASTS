@@ -393,9 +393,9 @@ def leap_wall() -> Clip:
     ], height=0.12)
     run = P({"up": -0.08, "flex": 12}, {**spine(6), **hand(GRIP, "r"), **hand(SPREAD, "l"), "hand_r": (-20, 0, 0)}, {"r": Arm(flex=20, elbow=80, abd=14, inward=0.2), "l": Arm(flex=10, elbow=85, abd=14, inward=0.2)}, gaze=(-6.0, 0.0))
     gather = P({"up": -0.17, "flex": 18}, {**spine(8), **hand(GRIP, "r"), **hand(SPREAD, "l"), "hand_r": (-20, 0, 0)}, {"r": BACK, "l": BACK}, gaze=(-10.0, 0.0))
-    air = P({"up": 0.0, "flex": -8}, {**spine(-12), **neck(-10), **hand(GRIP, "r"), **hand(SPREAD, "l"), "hand_r": (-30, 0, 0)}, {"r": OVERHEAD, "l": Arm(flex=150, elbow=10, abd=30, inward=0.0)}, gaze=(-24.0, 0.0, 0.7))
+    air = P({"up": 0.0, "flex": -8}, {**spine(-12), **neck(-10), **hand(GRIP, "r"), **hand(SPREAD, "l"), "hand_r": (-30, 0, 0)}, {"r": Arm(flex=160, elbow=12, abd=18, inward=0.1), "l": Arm(flex=140, elbow=14, abd=30, inward=0.0)}, gaze=(-24.0, 0.0, 0.7))
     absorb = P({"up": -0.20, "flex": 30}, {**spine(10), **hand(GRIP, "r"), **hand(SPREAD, "l"), "hand_r": (-20, 0, 0)}, {"r": Arm(flex=120, elbow=30, abd=34, inward=0.0), "l": Arm(flex=100, elbow=30, abd=40, inward=0.0)}, gaze=(-10.0, 0.0))
-    lean = P({"up": -0.04, "flex": 30, "forward": 0.12}, {**spine(6), **neck(-26), **hand(GRIP, "r"), **hand(SPREAD, "l"), "hand_r": (-30, 0, 0)}, {"r": Arm(flex=112, elbow=12, abd=40, inward=0.0, clavicle=10), "l": Arm(flex=104, elbow=12, abd=48, inward=0.0, clavicle=10)}, gaze=(-24.0, 0.0, 0.8))
+    lean = P({"up": -0.04, "flex": 30, "forward": 0.12}, {**spine(6), **neck(-26), **hand(GRIP, "r"), **hand(SPREAD, "l"), "hand_r": (-30, 0, 0)}, {"r": Arm(flex=104, elbow=16, abd=34, inward=0.0, clavicle=4), "l": Arm(flex=98, elbow=16, abd=40, inward=0.0, clavicle=4)}, gaze=(-24.0, 0.0, 0.8))
     back = P({"up": -0.10, "flex": 18, "forward": 0.04}, {**spine(2), **neck(-12), **hand(GRIP, "r"), **hand(SPREAD, "l")}, {"r": Arm(flex=70, elbow=30, abd=34, inward=0.0), "l": Arm(flex=64, elbow=30, abd=40, inward=0.0)}, gaze=(-10.0, 0.0))
     keys = [(0.0, TUCKED), (0.30, run), (0.66, run), (0.80, gather), (1.04, air), (1.20, air), (t_land + 0.08, absorb), (1.80, lean), (2.10, back), (2.40, lean), (2.70, back), (T, HOLDING)]
 

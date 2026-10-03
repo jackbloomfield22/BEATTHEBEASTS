@@ -200,7 +200,11 @@ export class CelebrateScene {
       this.ball.target.set(_v.x, 1.25, _v.z).addScaledVector(_d.set(a.x - _v.x, 0, a.z - _v.z).normalize(), 0.35);
     } else if (def?.face === 'mate') {
       this.partner = this.mates[0] ?? null;
-      if (this.partner) a.tyaw = yawTo(a.x, a.z, this.partner.x, this.partner.z);
+      if (this.partner) {
+        a.tyaw = yawTo(a.x, a.z, this.partner.x, this.partner.z);
+        // Set (or on his way) behind him: round to the front for it.
+        if (this.partner.mode !== 'run') this.setMode(this.partner, 'run');
+      }
     }
     void bodies;
   }
@@ -241,7 +245,8 @@ export class CelebrateScene {
       yawRate = this.turnToward(a, a.tyaw, dt);
     } else if (a.mode === 'face' || a.mode === 'wait' || a.mode === 'idle') {
       yawRate = this.turnToward(a, a.mode === 'idle' && a !== this.scorer && this.scorer ? yawTo(a.x, a.z, this.scorer.x, this.scorer.z) : a.tyaw, dt);
-      if (a.mode === 'face' && Math.abs(wrap(a.tyaw - a.yaw)) < 0.15 && a !== this.partner && a !== this.fiver) {
+      // (They wait for the pick to react: one of them may be wanted for the chest bump.)
+      if (a.mode === 'face' && this.scorer && Math.abs(wrap(a.tyaw - a.yaw)) < 0.15 && a !== this.partner && a !== this.fiver) {
         if (anim.lib.meta.cel_mate_point && a.since > 0.1) this.playClip(a, 'cel_mate_point');
       } else if (a.mode === 'face' && (a === this.partner || a === this.fiver)) this.setMode(a, 'wait');
     } else if (a.mode === 'clip' || a.mode === 'react' || a.mode === 'five') {

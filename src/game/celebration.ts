@@ -142,8 +142,6 @@ class CelebrationSession {
   private pop: (() => void) | null = null;
   private off: (() => void) | null = null;
   private recent: CelebId[] = [];
-  /** Off for the browser tests and tools that step plays themselves and don't want one (set per page). */
-  enabled = true;
 
   /** The prompt or the celebration is on: the result card waits, and so does the automatic replay. */
   get busy(): boolean {
@@ -160,7 +158,7 @@ class CelebrationSession {
     if (playId !== this.play) this.reset(playId);
     if (!s) return;
     const r = s.result;
-    if (!r || !r.touchdown || !r.offenseBall || !s.setup.user || !this.enabled) return;
+    if (!r || !r.touchdown || !r.offenseBall || !s.setup.user) return;
     if (paused) return;
     this.t += dt;
     const ui = useCelebration.getState();

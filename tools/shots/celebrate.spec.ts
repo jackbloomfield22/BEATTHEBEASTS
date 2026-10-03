@@ -10,7 +10,7 @@ import { test, type Page } from '@playwright/test';
 // docs/m7/celebration-td.mp4. Every drawn frame is a fixed slice of game
 // time (?video=N), so the motion is as in play however slowly this machine draws.
 //   BTB_CELEB=1 BTB_PORT=5210 npx playwright test -c tools/shots/playwright.config.ts
-// BTB_CELEB_ONLY=spike,leap,... limits the gallery.
+// BTB_CELEB_ONLY=spike,leap,... limits the gallery (BTB_CELEB_ONLY=none: the prompt only).
 
 const OUT = 'docs/m7/shots';
 const VIDEO = !!process.env.BTB_CELEB_VIDEO;
@@ -112,7 +112,9 @@ const GALLERY: { id: string; at: number[] }[] = [
 
 test('celebrations · the prompt, a pick, the celebration, the card', async ({ page }) => {
   test.setTimeout(14_400_000);
-  await boot(page, VIDEO ? '' : '&pad');
+  // BTB_CELEB_PAD=1: the prompt in pad glyphs (A, B, X) instead of the keys.
+  const PAD = !!process.env.BTB_CELEB_PAD;
+  await boot(page, PAD && !VIDEO ? '&pad' : '');
   if (VIDEO) {
     const dir = 'tools/shots/out/celebrate/td';
     rmSync(dir, { recursive: true, force: true });
@@ -134,13 +136,7 @@ test('celebrations · the prompt, a pick, the celebration, the card', async ({ p
   await score(page);
   await until(page, (w) => w.__btbCelebUi.getState().phase === 'choose');
   await frame(page);
-  await still(page, 'celeb-01-prompt-pad');
-  // On the keys (the prompt follows the last device): its 1, 2, 3.
-  await page.mouse.move(10, 10);
-  await page.mouse.move(400, 300);
-  await page.keyboard.press('ShiftLeft');
-  await frame(page);
-  await still(page, 'celeb-02-prompt-keys');
+  await still(page, PAD ? 'celeb-01-prompt-pad' : 'celeb-02-prompt-keys');
   for (const g of GALLERY) {
     if (ONLY && !ONLY.includes(g.id)) continue;
     if (g !== GALLERY[0]) {
