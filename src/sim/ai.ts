@@ -1545,11 +1545,13 @@ export function onRhythm(s: PlayState): boolean {
  * one. A few hundredths is enough: it moves the average linebacker's read
  * to the release, where he breaks with everyone else (after his reaction,
  * play.ts defenseRoles), while a quick reader (Play Recognition, a
- * Ballhawk's or a Zone Reader's eyes) still jumps it. 0.06 puts the called
- * on-time slant against zone at ~69% (62% before; 0.15 took it to 77%);
- * the late throw doesn't change (the QB is off schedule).
+ * Ballhawk's or a Zone Reader's eyes) still jumps it. 0.05 puts the called
+ * on-time slant against zone at ~70% (62% before; 0.15 took it to 77%);
+ * the late throw doesn't change (the QB is off schedule). It was 0.06 until
+ * the identity pass's body-position term in the contested catch: together
+ * they took the AI pass game over its 70% ceiling (tests/outcomes.test.ts).
  */
-export const RHYTHM_READ = 0.06;
+export const RHYTHM_READ = 0.05;
 
 /** He's seen the QB go off schedule (his read time on it, Play Recognition). The ball still in the QB's hands. */
 function offSchedule(s: PlayState, d: Agent): boolean {

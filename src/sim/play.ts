@@ -992,6 +992,30 @@ function wrapped(c: Agent): boolean {
 }
 
 /**
+ * Leg drive in the wrap (Playtest 2, identity harness): how much of his
+ * momentum he turns into yards with a man on him. The fall forward was his
+ * share of the pair's mass times his speed and nothing else, so with a
+ * defender wrapped up Gronk (Trucking stand-in 83, Strength 71) carried a
+ * linebacker no further than Tony Gonzalez (74, 65), and Jerome Bettis
+ * (Trucking 94) no further than Barry Sanders (70): yards after contact were
+ * the elusive backs' stat. Now the runner's power (Trucking, the rating for
+ * running through a man, and Strength) against the tackler's anchor
+ * (Tackle, Strength) scales it: even power is the momentum alone, as before.
+ * LEG_K is ours, sized so a power back on a safety carries him about half
+ * again as far and a small back wrapped by a linebacker about a quarter less
+ * (NFL yards after contact per carry run ~2.3 for the lightest backs to
+ * ~3.3 for the power backs, PFF); the most a pile is carried grows with it.
+ */
+const LEG_K = 2;
+const LEG_MIN = 0.5;
+const LEG_MAX = 1.6;
+function legDrive(c: Agent, o: Agent): number {
+  const power = 0.5 * c.fx.a('trucking') + 0.5 * c.fx.a('strength');
+  const anchor = 0.5 * o.fx.a('tackle') + 0.5 * o.fx.a('strength');
+  return Math.max(LEG_MIN, Math.min(LEG_MAX, 1 + LEG_K * (power - anchor)));
+}
+
+/**
  * The wrap begins: the tackler has him. How far he drives on is the
  * fall-forward distance the harness is calibrated on (M6.5 #8: his share of
  * the pair's mass times his speed downhill, less the tackler's coming the
@@ -1000,8 +1024,9 @@ function wrapped(c: Agent): boolean {
 function startWrap(s: PlayState, c: Agent, o: Agent, inPocket: boolean): void {
   const attack = c.side === 'off' ? 1 : -1;
   const mr = c.fx.mass / (c.fx.mass + o.fx.mass);
-  let drive = FALL_K * Math.max(0, c.vel.x * attack) * mr - FALL_STOP * Math.max(0, -o.vel.x * attack) * (1 - mr);
-  drive = Math.max(0, Math.min(FALL_MAX, drive));
+  const legs = legDrive(c, o);
+  let drive = FALL_K * Math.max(0, c.vel.x * attack) * mr * legs - FALL_STOP * Math.max(0, -o.vel.x * attack) * (1 - mr);
+  drive = Math.max(0, Math.min(FALL_MAX * Math.max(1, legs), drive));
   // After contact, as the trait catalog words it: a Battering Ram meeting
   // him head on +0.8 yd; a Goal-Line Hammer inside the 5 falls forward
   // +1 yd; a Thumper in the hole takes 0.5 yd back between the tackles; an

@@ -7,7 +7,9 @@
 // fails when a difference it should show is small or goes the wrong way.
 //   node tools/run-ts.mjs tools/sim/identity.ts [reps] [--only=Tyreek]
 // Runs every milestone; tests/identity.test.ts holds the fastest pairs to it.
+import { fork } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 import { createPlay, defById, input, NEUTRAL, PLAYS, practiceRosters, runToWhistle, stepPlay, type SnapshotLike } from '../../src/sim/index.ts';
 import { findStint, simPlayer } from '../../src/sim/roster.ts';
 import { cellSeed } from '../../src/sim/outcomes.ts';
@@ -142,8 +144,12 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
     const yac: number[] = [];
     const sep: number[] = [];
     const plays = slot === 'TE' ? ['ace-te-seam', 'trips-y-cross', 'heavy-pa-te-leak', 'trips-stick'] : ['doubles-slants', 'doubles-quick-outs', 'doubles-curls', 'singleback-pa-post'];
-    // (Three times the reps: a contested ball is one throw in four or five, and at one rep set a pair's catch rate in traffic was ±7 points of noise.)
-    for (const id of plays) for (const def of covers) for (let k = 0; k < REPS * 3; k++) for (const at of [45, 70, 95]) {
+    // (Three times the reps: a contested ball is one throw in four or five, and at one rep set a pair's catch rate in traffic was ±7 points of noise.
+    // A tight end twelve times: half his catches come in a crowd and go down
+    // within a yard and a half, so his yards after the catch move on a few
+    // broken tackles. At three times six reps Gronk's edge over Tony Gonzalez
+    // read 0.73 yd, 0.84 at fourteen and 0.99 at twenty-four, ±0.2 of noise.)
+    for (const id of plays) for (const def of covers) for (let k = 0; k < REPS * (slot === 'TE' ? 12 : 3); k++) for (const at of [45, 70, 95]) {
       const play = PLAYS.find((p) => p.id === id);
       if (!play) continue;
       const s = mk(play, def, k, true);
@@ -215,12 +221,16 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
   }
   if (side === 'def' && (slot === 'LCB' || slot === 'SS')) {
     // Throws at the man he covers (man calls), and every tackle he tries.
+    // (Six times the reps: the AI throws at his man on one play in three or
+    // four, fewer against the best corners, so at six reps Revis and Ty Law
+    // were ~150 targets each and completions allowed ±5 points of noise: the
+    // gap read 2.9 points at six reps, 8.4 at twenty, 9.4 at forty.)
     let at = 0;
     let cmp = 0;
     const sep: number[] = [];
     let tries = 0;
     let made = 0;
-    for (const play of passPlays) for (const def of ['cover1', 'cover2man', 'cover1off'].map(defById)) for (let k = 0; k < REPS; k++) {
+    for (const play of passPlays) for (const def of ['cover1', 'cover2man', 'cover1off'].map(defById)) for (let k = 0; k < REPS * 6; k++) {
       const s = mk(play, def, k, false);
       const me = slotAgent(s, slot);
       const man = manOf(s, me);
@@ -267,8 +277,11 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
 export interface PairResult { pair: Pair; a: Partial<Record<Metric, number>>; b: Partial<Record<Metric, number>>; checks: { m: Metric; diff: number; ok: boolean }[] }
 
 export function runPair(p: Pair): PairResult {
-  const a = profile(p.side, p.slot, ...p.a);
-  const b = profile(p.side, p.slot, ...p.b);
+  return judge(p, profile(p.side, p.slot, ...p.a), profile(p.side, p.slot, ...p.b));
+}
+
+/** The pair's checks on the two men's numbers. */
+function judge(p: Pair, a: Partial<Record<Metric, number>>, b: Partial<Record<Metric, number>>): PairResult {
   const checks = (Object.entries(p.expect) as [Metric, 1 | -1][]).map(([m, dir]) => {
     const diff = (a[m] ?? NaN) - (b[m] ?? NaN);
     return { m, diff, ok: diff * dir >= LABEL[m][2] };
@@ -276,18 +289,75 @@ export function runPair(p: Pair): PairResult {
   return { pair: p, a, b, checks };
 }
 
-if (process.argv[1]?.endsWith('identity.ts')) {
-  let pass = 0;
-  const fmt = (m: Metric, v: number | undefined) => (v === undefined || Number.isNaN(v) ? '—' : `${v.toFixed(LABEL[m][1] === '%' || LABEL[m][1] === 'mph' ? 1 : 2)}${LABEL[m][1] === '%' ? '%' : LABEL[m][1] ? ' ' + LABEL[m][1] : ''}`);
-  for (const p of PAIRS.filter((x) => !ONLY || x.a[0].includes(ONLY) || x.b[0].includes(ONLY))) {
-    const r = runPair(p);
-    const ok = r.checks.every((c) => c.ok);
-    pass += ok ? 1 : 0;
-    console.log(`\n${ok ? 'PASS' : 'FAIL'}  ${p.a[0]} vs ${p.b[0]} (${p.slot}): ${p.why}`);
-    for (const m of Object.keys({ ...r.a, ...r.b }) as Metric[]) {
-      const c = r.checks.find((x) => x.m === m);
-      console.log(`   ${LABEL[m][0].padEnd(32)} ${fmt(m, r.a[m]).padStart(10)}  ${fmt(m, r.b[m]).padStart(10)}${c ? `   ${c.ok ? 'ok' : 'FAILS'} (needs ${p.expect[m]! > 0 ? '+' : '−'}${LABEL[m][2]})` : ''}`);
-    }
+type Numbers = Pick<PairResult, 'a' | 'b' | 'checks'>;
+
+/** One pair's result as the harness reports it; true if it passes. */
+function report(p: Pair, r: Numbers): boolean {
+  // (A metric with no sample is NaN, or null once it's crossed from a worker.)
+  const fmt = (m: Metric, v: number | null | undefined) => (v === undefined || v === null || Number.isNaN(v) ? '—' : `${v.toFixed(LABEL[m][1] === '%' || LABEL[m][1] === 'mph' ? 1 : 2)}${LABEL[m][1] === '%' ? '%' : LABEL[m][1] ? ' ' + LABEL[m][1] : ''}`);
+  const ok = r.checks.every((c) => c.ok);
+  console.log(`\n${ok ? 'PASS' : 'FAIL'}  ${p.a[0]} vs ${p.b[0]} (${p.slot}): ${p.why}`);
+  for (const m of Object.keys({ ...r.a, ...r.b }) as Metric[]) {
+    const c = r.checks.find((x) => x.m === m);
+    console.log(`   ${LABEL[m][0].padEnd(32)} ${fmt(m, r.a[m]).padStart(10)}  ${fmt(m, r.b[m]).padStart(10)}${c ? `   ${c.ok ? 'ok' : 'FAILS'} (needs ${p.expect[m]! > 0 ? '+' : '−'}${LABEL[m][2]})` : ''}`);
   }
-  console.log(`\n${pass} of ${ONLY ? 'the selected' : PAIRS.length} pairs pass`);
+  return ok;
+}
+
+type Profile = Partial<Record<Metric, number>>;
+/** One man's profile to run: who and where. */
+type Unit = [Side, OffSlot | DefSlot, string, string];
+const unitKey = (u: Unit) => u.join('|');
+/** The longest profiles first, so the last one to finish isn't a tight end started at the end. */
+const COST: Partial<Record<string, number>> = { TE: 5, X: 4, LCB: 3, SS: 3, QB: 2, RB: 1 };
+
+/** Every man's profile on `jobs` child processes (this bundle again, as a worker), each once, the long ones first. */
+async function runParallel(bundle: string, units: Unit[], jobs: number): Promise<Map<string, Profile>> {
+  const results = new Map<string, Profile>();
+  const queue = [...units].sort((x, y) => (COST[y[1]] ?? 0) - (COST[x[1]] ?? 0));
+  await Promise.all(
+    Array.from(
+      { length: Math.min(jobs, units.length) },
+      () =>
+        new Promise<void>((done, fail) => {
+          const child = fork(bundle, process.argv.slice(2), { env: { ...process.env, IDENTITY_WORKER: '1' } });
+          const next = () => {
+            const u = queue.shift();
+            if (u === undefined) child.disconnect();
+            else child.send(u);
+          };
+          child.on('message', (m: { u: Unit; r: Profile }) => {
+            // (JSON over the channel turns a metric with no sample, NaN, into null.)
+            results.set(unitKey(m.u), Object.fromEntries(Object.entries(m.r).map(([k, v]) => [k, v ?? NaN])));
+            next();
+          });
+          child.on('exit', (code) => (code ? fail(new Error(`identity: a worker exited with ${code}`)) : done()));
+          next();
+        }),
+    ),
+  );
+  return results;
+}
+
+// The command line. Every man's profile is independent and the sim is pure
+// and seeded, so they run on child processes, each to whichever is free,
+// with the same numbers one process gets running them in order (--jobs=1
+// does that). A child is this bundle again (tools/run-ts.mjs names it in
+// RUN_TS_OUTFILE) with IDENTITY_WORKER set: it runs the profiles it's sent.
+if (process.env.IDENTITY_WORKER) {
+  process.on('message', (u: Unit) => {
+    process.send!({ u, r: profile(...u) });
+  });
+} else if (process.argv[1]?.endsWith('identity.ts')) {
+  void (async () => {
+    const picked = PAIRS.filter((p) => !ONLY || p.a[0].includes(ONLY) || p.b[0].includes(ONLY));
+    const units = new Map<string, Unit>();
+    for (const p of picked) for (const who of [p.a, p.b]) units.set(unitKey([p.side, p.slot, ...who]), [p.side, p.slot, ...who]);
+    const bundle = process.env.RUN_TS_OUTFILE;
+    const jobs = Math.max(1, Number(process.argv.find((a) => a.startsWith('--jobs='))?.slice(7) ?? availableParallelism()));
+    const got = bundle && jobs > 1 ? await runParallel(bundle, [...units.values()], jobs) : new Map([...units].map(([k, u]) => [k, profile(...u)]));
+    let pass = 0;
+    for (const p of picked) pass += report(p, judge(p, got.get(unitKey([p.side, p.slot, ...p.a]))!, got.get(unitKey([p.side, p.slot, ...p.b]))!)) ? 1 : 0;
+    console.log(`\n${pass} of ${ONLY ? 'the selected' : PAIRS.length} pairs pass`);
+  })();
 }

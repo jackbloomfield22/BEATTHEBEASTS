@@ -33,4 +33,6 @@ await build({
   sourcemap: 'inline',
 });
 process.argv.splice(1, 1);
+// The bundle, for a tool that runs parts of itself in child processes (tools/sim/identity.ts).
+process.env.RUN_TS_OUTFILE = outfile;
 await import(pathToFileURL(outfile).href);
