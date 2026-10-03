@@ -12,7 +12,10 @@
 //   drop-back or play action, a receiving back runs a real route instead:
 //   the check-down becomes the option, the swing the angle, the play-action
 //   arrow the wheel. (The quick game keeps its check-down: the ball's out
-//   on the third step, before a back's route would break.)
+//   on the third step, before a back's route would break.) The wheel is the
+//   arrow with a wheel tag, the way an offense calls it: he turns it up the
+//   sideline against man, the linebacker on him; against a zone he runs the
+//   arrow to the flat under the fake (ai.ts wheelRead).
 
 import { has } from './traits';
 import type { Assignment, OffPlay, RouteName } from './plays';
@@ -37,7 +40,7 @@ export function personalize(play: OffPlay, offense: Record<OffSlot, SimPlayer>):
   const rb = play.assign.RB;
   if (rb.kind === 'route' && holds(offense.RB, 'receiving-back')) {
     const to = receivingBackRoute(play, rb.route);
-    if (to) edit().RB = { kind: 'route', route: to, read: rb.read };
+    if (to) edit().RB = { kind: 'route', route: to, read: rb.read, ...(to === 'wheel' ? { from: rb.route } : {}) };
   }
   // Volume TE: the progression starts with him.
   const te = (['TE', 'SLOT', 'Z', 'X'] as OffSlot[]).find((k) => {

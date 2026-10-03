@@ -41,7 +41,7 @@ import { manOf, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
 import { DRAWS, HOT_ROUTES } from './plays';
 import { dist, len, norm, sub, v2, type V2 } from './vec';
-import { routePoints } from './ai';
+import { readTag, routePoints } from './ai';
 
 /** The hitch off a dropback (s): a step up into the pocket before the throw (the rhythm of a five-step drop and hitch). */
 const HITCH = 0.3;
@@ -1547,6 +1547,8 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
       steer(a, arrive(a, hole, 0.75), {});
       a.anim = 'carry';
       if (s.t - s.snapT >= 0.3 + play.pa.fake - TICK && as.kind === 'route') {
+        // Out of the fake he reads a tagged route (a Receiving Back's wheel against man, else the book's arrow).
+        readTag(s, a);
         const r = routePoints(s, a);
         if (r) a.route = { pts: r.pts, sit: r.sit, idx: 0 };
       }

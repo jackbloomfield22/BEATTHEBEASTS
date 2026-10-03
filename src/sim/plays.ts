@@ -154,7 +154,14 @@ export const ROUTE_LABEL: Record<RouteName, string> = {
 };
 
 export type Assignment =
-  | { kind: 'route'; route: RouteName; /** Progression order (1 = first read). */ read: number }
+  | {
+      kind: 'route';
+      route: RouteName;
+      /** Progression order (1 = first read). */
+      read: number;
+      /** The book's route a trait turned into this one (usage.ts): a Receiving Back's wheel is the book's arrow with a wheel tag, and against a zone he runs the arrow (ai.ts wheelRead). */
+      from?: RouteName;
+    }
   | { kind: 'passBlock' }
   | { kind: 'runBlock' }
   /** A receiver blocking the man over him from the snap (screens): stalk, then drive him away from the ball. */

@@ -42,7 +42,8 @@ export function jitter(s: PlayState, d: Agent): number {
 export function routeOf(s: PlayState, a: Agent): RouteName | null {
   const as = s.setup.play.assign[a.slot as keyof OffPlay['assign']];
   if (as.kind !== 'route') return null;
-  return s.hot[a.slot as OffSlot] ?? as.route;
+  // (A tagged route he read as the book's own: readTag.)
+  return s.hot[a.slot as OffSlot] ?? (a.mem.ran as RouteName | undefined) ?? as.route;
 }
 
 /**
@@ -317,6 +318,34 @@ const OPTION_SLIDE = 2.5;
 /** A break off the drawn one has to be this much more open (yd of separation at the catch) to be worth it. Ours. */
 const OPTION_EDGE = 0.3;
 
+/** Is a defender in man coverage on him (the man the option route and the wheel read)? */
+function manOn(s: PlayState, a: Agent): boolean {
+  return s.def.some((i) => {
+    const d = s.agents[i]!;
+    return s.man[d.slot as keyof typeof s.man] === a.slot && s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign].kind === 'man' && !d.down;
+  });
+}
+
+/**
+ * A Receiving Back's wheel off play action (usage.ts: the book's arrow with a
+ * wheel tag, the way an offense calls it). Coming out of the fake he reads
+ * who's on him: a man in man coverage, the linebacker the wheel is called
+ * for, and he turns it up the sideline past him; a zone and he runs the
+ * arrow the book drew, to the flat under the fake (a flat defender sinks
+ * with a wheel and a deep third or half is over the top of it: it isn't the
+ * call there). Run against everything, the wheel was caught 64% of the time
+ * for 19.5 yd against the all-time Beasts (n 407, tools/sim/outcomes.ts
+ * --routes) against the arrow's 72% for 6.3, and took the AI pass game from
+ * 8.6 to 8.9 yd an attempt on its own. play.ts calls this as the fake ends.
+ */
+export function readTag(s: PlayState, a: Agent): void {
+  const as = s.setup.play.assign[a.slot as keyof OffPlay['assign']];
+  if (as.kind !== 'route' || !as.from || s.hot[a.slot as OffSlot] || a.mem.optBreak !== undefined) return;
+  const man = manOn(s, a);
+  a.mem.optBreak = man ? as.route : as.from;
+  if (!man) a.mem.ran = as.from;
+}
+
 /**
  * An option route's read at the top of the stem, against man: he reads the
  * man on him and breaks where he'll be open, in, out or as the route's drawn
@@ -343,8 +372,7 @@ function optionRead(s: PlayState, a: Agent, name: RouteName | null): void {
   if (dist(a.pos, q) > OPTION_READ) return;
   a.mem.optRead = true;
   // Against a zone the route's drawn to find the hole (the option's own settles in it): he runs it. Against the man on him, he reads him.
-  const man = s.def.some((i) => s.man[s.agents[i]!.slot as keyof typeof s.man] === a.slot && s.setup.def.assign[s.agents[i]!.slot as keyof typeof s.setup.def.assign].kind === 'man' && !s.agents[i]!.down);
-  if (!man) {
+  if (!manOn(s, a)) {
     a.mem.optBreak = 'drawn';
     return;
   }
