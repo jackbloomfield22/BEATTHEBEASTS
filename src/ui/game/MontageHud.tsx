@@ -11,8 +11,9 @@ import '../styles/montage.css';
 // The Beasts' drive montage's graphics (M7, src/game/montageSession.ts): a
 // broadcast package's, drawn once per cut (the store changes on cuts only).
 //   the bumper while the key play is staged ("MEANWHILE · BEASTS BALL");
-//   the bug, top left, through the establishing and play shots: the key
-//     play's down, distance and spot;
+//   a tag, top left, through the establishing and play shots ("Meanwhile ·
+//     Key play"); the key play's down, distance and spot are on the score
+//     bug's down cell (./Broadcast.tsx), so the screen says it once;
 //   the call, big, on the reaction shot ("TOUCHDOWN", "INTERCEPTED");
 //   the "BEASTS DRIVE" lower third on the board shot (the broadcast
 //     package's plate, ./Broadcast.tsx): the result, the drive's plays, yards
@@ -31,10 +32,6 @@ const RESULT: Record<string, string> = {
   EndOfGame: 'Time runs out',
 };
 
-const DOWN = ['1st', '2nd', '3rd', '4th'];
-
-/** The key play's spot as a broadcast says it (los: yards from the Beasts' goal line), as the score bug does. */
-const spotOf = (los: number): string => broadcastSpot(100 - los);
 
 /** Where your drive starts, or what the clock did. */
 function nextLine(info: MontageInfo): string {
@@ -74,11 +71,8 @@ export function MontageHud() {
       ) : null}
       {(shot === 'establish' || shot === 'play') && p ? (
         <div className="mt-bug" key="bug">
-          <span className="mt-bug-tag">Beasts ball</span>
-          <span className="mt-bug-sit">
-            {DOWN[p.down - 1]} &amp; {p.los + p.toGo >= 100 ? 'Goal' : p.toGo}
-          </span>
-          <span className="mt-bug-spot">{spotOf(p.los)}</span>
+          <span className="mt-bug-tag">{info.ot ? `Overtime ${info.ot}` : 'Meanwhile'}</span>
+          <span className="mt-bug-sit">Key play</span>
         </div>
       ) : null}
       {shot === 'reaction' && p ? (

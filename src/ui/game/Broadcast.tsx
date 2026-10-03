@@ -45,9 +45,12 @@ function Ball() {
   );
 }
 
-/** Down and distance as the bug says it ("3rd & 4", "1st & Goal", "2-pt try"), and whether it's a big down. */
-function downCell(m: Match): { text: string; spot: string | null; tone: 'big' | 'beasts' | 'plain' | 'dim' } {
+type KeyPlay = { down: number; toGo: number; los: number } | null;
+
+/** Down and distance as the bug says it ("3rd & 4", "1st & Goal", "2-pt try"), and whether it's a big down. `key`: the montage's key play (its los from the Beasts' goal line). */
+function downCell(m: Match, key: KeyPlay): { text: string; spot: string | null; tone: 'big' | 'beasts' | 'plain' | 'dim' } {
   if (m.phase === 'final') return { text: 'Final', spot: null, tone: 'dim' };
+  if (m.phase === 'meanwhile' && key) return { text: `${Q_WORD[key.down - 1] ?? `${key.down}th`} & ${key.los + key.toGo >= 100 ? 'Goal' : Math.max(1, Math.round(key.toGo))}`, spot: broadcastSpot(100 - key.los), tone: 'beasts' };
   if (m.phase === 'meanwhile') return { text: 'Beasts ball', spot: null, tone: 'beasts' };
   if (m.phase === 'twoPoint') return { text: '2-pt try', spot: broadcastSpot(m.sit.los), tone: 'big' };
   if (m.phase === 'try') return { text: 'Extra point', spot: null, tone: 'plain' };
@@ -65,6 +68,8 @@ function downCell(m: Match): { text: string; spot: string | null; tone: 'big' | 
 export function ScoreBug() {
   useGame((s) => s.v);
   const after = useMontage((s) => (s.shot === 'board' ? s.info?.after : null));
+  // The montage's key play: its down, distance and spot while it's on screen.
+  const keyPlay = useMontage((s) => (s.shot === 'establish' || s.shot === 'play' ? (s.info?.play ?? null) : null));
   const m = game.match;
   if (!m) return null;
   const score = after ?? m.score;
@@ -74,7 +79,7 @@ export function ScoreBug() {
   const q = final ? (m.ot ? `F/${m.ot > 1 ? `${m.ot}OT` : 'OT'}` : 'Final') : m.ot ? (m.ot > 1 ? `${m.ot}OT` : 'OT') : (Q_WORD[m.clock.quarter - 1] ?? 'OT');
   const showTime = !final && !m.ot;
   const has: Team | null = final ? null : m.phase === 'meanwhile' ? 'bst' : 'con';
-  const down = downCell(m);
+  const down = downCell(m, keyPlay);
   const tos = m.clock.live && !final ? m.clock.timeouts : -1;
   return (
     <div className="bc sb">
@@ -118,7 +123,8 @@ export function ScoreBug() {
 /** One pip a possession, in order; the one on now outlined in its team's colour; Quick Play's to come, faint. */
 function DriveStrip({ m }: { m: Match }) {
   const st = driveStrip(m);
-  if (!st.pips.length && !st.now) return null;
+  // (Nothing played yet: no strip, rather than one lonely pip.)
+  if (!st.pips.length) return null;
   return (
     <div className="sb-strip" aria-label="Drives">
       {st.pips.map((p, i) => (
