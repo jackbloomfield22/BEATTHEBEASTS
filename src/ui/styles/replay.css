@@ -1,0 +1,61 @@
+/* The instant replay (M7): the wipe, the bug and the deck. The scene stays clear above the deck. */
+.replay-hud { position: absolute; inset: 0; pointer-events: none; --rp: #ff2a6d; }
+
+/* The wipe: a band sweeps across as the replay opens (the broadcast's "REPLAY" sting). */
+.replay-wipe { position: absolute; inset: 0; overflow: hidden; display: grid; place-items: center; pointer-events: none; }
+.replay-wipe::before { content: ''; position: absolute; top: -10%; bottom: -10%; left: 0; width: 160%; background: linear-gradient(100deg, transparent 0 18%, var(--rp) 18% 21%, rgba(8,7,15,.94) 21% 79%, var(--lime) 79% 81%, transparent 81%); transform: translateX(-110%) skewX(-12deg); animation: replay-wipe 780ms cubic-bezier(.6,.05,.3,1) both; }
+.replay-wipe span { position: relative; font-family: var(--font-display); font-size: 5.4rem; letter-spacing: .32em; color: #fff; text-shadow: 0 0 2.4rem color-mix(in srgb, var(--rp) 70%, transparent); opacity: 0; animation: replay-word 780ms ease-out both; }
+@keyframes replay-wipe { 0% { transform: translateX(-110%) skewX(-12deg); } 45%, 55% { transform: translateX(-20%) skewX(-12deg); } 100% { transform: translateX(80%) skewX(-12deg); } }
+@keyframes replay-word { 0%, 20% { opacity: 0; transform: scale(.94); } 40%, 60% { opacity: 1; transform: scale(1); } 85%, 100% { opacity: 0; transform: scale(1.03); } }
+
+.replay-bug { position: absolute; top: 2.2rem; left: 2.6rem; display: flex; align-items: stretch; height: 2.6rem; background: rgba(8,7,15,.78); backdrop-filter: blur(8px); border-bottom: 2px solid var(--rp); font-weight: 700; animation: rb-in 300ms 420ms cubic-bezier(.2,.7,.2,1) both; }
+.replay-bug > span { display: flex; align-items: center; gap: .5rem; padding: 0 1rem; border-right: 1px solid rgba(244,240,255,.1); white-space: nowrap; }
+.replay-bug > span:last-child { border-right: 0; }
+.rb-mark { background: var(--rp); color: #fff; font-family: var(--font-display); font-size: 1.1rem; letter-spacing: .12em; text-transform: uppercase; }
+.rb-dot { width: .55rem; height: .55rem; border-radius: 50%; background: #fff; animation: rb-blink 1.1s steps(2, start) infinite; }
+.rb-key { font-family: var(--font-display); font-weight: 400; font-size: 1.05rem; color: var(--lime); text-transform: uppercase; }
+.rb-key.kind-turnover { color: #ff7a9a; }
+.rb-speed { font-family: var(--font-num); font-size: 1rem; color: var(--ink); min-width: 4.5rem; justify-content: center; }
+.rb-cam { color: var(--ink-3); font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; }
+@keyframes rb-in { from { opacity: 0; transform: translateX(-1rem); } to { opacity: 1; transform: none; } }
+@keyframes rb-blink { to { visibility: hidden; } }
+
+.replay-loading { position: absolute; top: 46%; left: 50%; transform: translateX(-50%); color: var(--ink-2); font-size: 1.1rem; letter-spacing: .06em; }
+
+/* The deck: the scrub bar, then the transport, then the cameras and the way back. */
+.replay-deck { position: absolute; left: 50%; bottom: 1.6rem; transform: translateX(-50%); width: min(70rem, calc(100vw - 5rem)); display: flex; flex-direction: column; gap: .55rem; padding: .8rem 1.2rem .7rem; background: linear-gradient(180deg, rgba(8,7,15,.62), rgba(8,7,15,.84)); backdrop-filter: blur(8px); border-top: 2px solid color-mix(in srgb, var(--rp) 70%, transparent); pointer-events: auto; animation: deck-in 320ms 480ms cubic-bezier(.2,.7,.2,1) both; }
+@keyframes deck-in { from { opacity: 0; transform: translate(-50%, 1rem); } to { opacity: 1; transform: translate(-50%, 0); } }
+.replay-deck > .replay-controls, .replay-deck > .replay-cams { max-height: 3rem; transition: max-height 280ms ease, opacity 220ms ease; }
+.replay-deck { transition: padding 280ms ease, background 280ms ease; }
+.replay-deck.tucked { padding-top: .35rem; padding-bottom: .35rem; gap: 0; background: linear-gradient(180deg, rgba(8,7,15,.18), rgba(8,7,15,.5)); }
+.replay-deck.tucked > .replay-controls, .replay-deck.tucked > .replay-cams { max-height: 0; opacity: 0; overflow: hidden; pointer-events: none; }
+.replay-scrub { display: flex; align-items: center; gap: 1rem; }
+.replay-time { font-family: var(--font-num); font-weight: 700; font-size: 1.05rem; min-width: 4.6rem; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+.replay-bar { position: relative; flex: 1; height: 2.2rem; cursor: pointer; touch-action: none; }
+.rbar-track { position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px; background: rgba(244,240,255,.16); border-radius: 2px; overflow: hidden; }
+.rbar-fill { height: 100%; width: 0; background: var(--lime); box-shadow: 0 0 .5rem color-mix(in srgb, var(--lime) 60%, transparent); }
+.rbar-head { position: absolute; top: 50%; left: 0; width: .95rem; height: .95rem; margin: -.475rem 0 0 -.475rem; border-radius: 50%; background: #fff; box-shadow: 0 0 .6rem rgba(0,0,0,.6), 0 0 0 3px color-mix(in srgb, var(--lime) 55%, transparent); }
+.rbar-mark { position: absolute; top: 50%; pointer-events: none; }
+.rbar-mark.snap { width: 2px; height: .9rem; margin: -.45rem 0 0 -1px; background: var(--ink-2); }
+.rbar-mark.key { width: 0; height: 0; }
+.rbar-mark.key::before { content: ''; position: absolute; left: -.3rem; top: -.3rem; width: .6rem; height: .6rem; background: var(--rp); transform: rotate(45deg); box-shadow: 0 0 .5rem var(--rp); }
+.rbar-mark.key span { position: absolute; bottom: .55rem; left: 0; transform: translateX(-50%); white-space: nowrap; font-size: .64rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #fff; text-shadow: 0 0 .4rem rgba(0,0,0,.9); }
+
+.replay-controls, .replay-cams { display: flex; align-items: center; justify-content: center; gap: .35rem 1rem; flex-wrap: wrap; }
+.replay-cams { gap: .35rem 1.3rem; color: var(--ink-2); }
+.replay-cams .rc:last-child { margin-left: auto; }
+.rc { padding: .22rem .5rem .22rem .25rem; border: 0; border-radius: .35rem; background: transparent; color: var(--ink-2); cursor: pointer; font: inherit; font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.rc:hover { background: rgba(244,240,255,.08); color: var(--ink); }
+.rc.wide { min-width: 7.2rem; justify-content: center; color: var(--ink); }
+.rc.lit { color: var(--lime); }
+.rc.hint { cursor: default; background: none; color: var(--ink-3); }
+.rc kbd { font-size: .78rem; }
+.rc .glyph { height: 1.8em; }
+
+/* The offer on a result card: a flagged play leads with its replay. */
+.replay-offer { display: flex; align-items: center; justify-content: center; gap: .8rem; margin: .1rem 0 .6rem; }
+.replay-offer .ro-tag { font-family: var(--font-display); font-size: .95rem; letter-spacing: .1em; color: #fff; background: var(--rp, #ff2a6d); padding: .12rem .55rem; text-transform: uppercase; }
+.replay-cue { border: 0; background: transparent; cursor: pointer; padding: .2rem .4rem; border-radius: .3rem; color: var(--ink); font: inherit; }
+.replay-cue:hover { background: rgba(244,240,255,.08); }
+.replay-cue .cue-w { font-size: .82rem; }
+.result-replay { display: flex; justify-content: center; margin-top: .5rem; color: var(--ink-2); }

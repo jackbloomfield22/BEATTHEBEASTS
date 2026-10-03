@@ -6,6 +6,8 @@ import { Audio } from "@/audio/audio";
 import { inputLabel } from "@/input/actions";
 import { promptCode } from "@/input/prompts";
 import { practice, usePractice } from "@/game/practice";
+import { replay, snapFlag, useReplay } from "@/game/replaySession";
+import { Input } from "@/input/InputManager";
 import { AUDIBLES } from "@/game/audible";
 import { latency } from "@/game/latency";
 import {
@@ -37,6 +39,7 @@ import {
 import { InputGlyph, TabKey, useBindings } from "../components/Glyph";
 import { PlayArt, RouteGlyph } from "../game/PlayArt";
 import { hudDom, RING_LEN } from "../game/hudDom";
+import { ReplayCue, ReplayHud, useReplayKey } from "../game/ReplayHud";
 import "../styles/game.css";
 
 // The Practice Field (GDD §4): free play against the Beasts. The play call is
@@ -47,6 +50,8 @@ import "../styles/game.css";
 export function PracticeScreen() {
   const stage = usePractice((s) => s.stage);
   const error = usePractice((s) => s.error);
+  // The instant replay (M7) runs over the result: its own HUD, the play's off.
+  const replayOpen = useReplay((s) => s.open);
   const difficulty = useSettings((s) => s.settings.gameplay.difficulty);
 
   useEffect(() => {
@@ -56,7 +61,10 @@ export function PracticeScreen() {
     void practice.enter(
       urlFlags.seed !== null ? Number(urlFlags.seed) : undefined,
     );
-    return () => practice.leave();
+    return () => {
+      replay.abort();
+      practice.leave();
+    };
   }, []);
 
   if (error)
@@ -71,10 +79,11 @@ export function PracticeScreen() {
         <div className="practice-loading">Loading the Beasts…</div>
       ) : null}
       {stage === "call" ? <PlayCall /> : null}
-      {stage === "presnap" || stage === "live" || stage === "result" ? (
+      {stage === "presnap" || stage === "live" || (stage === "result" && !replayOpen) ? (
         <PlayHud />
       ) : null}
-      {stage === "result" ? <ResultPanel /> : null}
+      {stage === "result" && !replayOpen ? <ResultPanel /> : null}
+      {replayOpen ? <ReplayHud /> : null}
       {stage === "paused" ? <PauseMenu /> : null}
     </>
   );
@@ -682,6 +691,11 @@ function ResultPanel() {
   const ui = usePractice();
   const back = useApp((s) => s.back);
   const [focus, setFocus] = useState(0);
+  // The instant replay (M7): a flagged play (a touchdown, a turnover, a big hit) leads with it until it's been watched.
+  const flag = ui.result ? snapFlag() : null;
+  const watched = useReplay((s) => s.watched) === practice.playId;
+  const watch = () => void replay.openSnap();
+  useReplayKey(watch);
   const items = [
     { label: "Next play", run: () => practice.nextPlay() },
     { label: "Run it back", run: () => practice.runItBack() },
@@ -696,7 +710,8 @@ function ResultPanel() {
     focus,
     setFocus,
     onConfirm: confirm,
-    onBack: () => confirm(0),
+    // Backspace is Back and the replay key: here it's the replay.
+    onBack: () => !Input.isHeld("global.replay") && confirm(0),
     onAlt: () => confirm(1),
   });
   const r = ui.result;
@@ -706,6 +721,12 @@ function ResultPanel() {
     : `Next: ${downLabel(ui.situation)} on the ${spotLabel(ui.situation.los)}.`;
   return (
     <div className={`result-card tone-${r.tone}`}>
+      {flag && !watched ? (
+        <div className="replay-offer">
+          <span className="ro-tag">{flag.label}</span>
+          <ReplayCue label="Watch the replay" onClick={watch} />
+        </div>
+      ) : null}
       <div className="result-kicker">
         {ui.lastCover ? `The Beasts played ${ui.lastCover}` : "Result"}
       </div>
@@ -732,6 +753,11 @@ function ResultPanel() {
           />
         ))}
       </nav>
+      {!flag || watched ? (
+        <div className="result-replay">
+          <ReplayCue label="Replay" onClick={watch} />
+        </div>
+      ) : null}
     </div>
   );
 }

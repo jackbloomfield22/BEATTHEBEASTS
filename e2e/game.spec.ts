@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { trackErrors, waitReady } from './helpers';
+import { noAutoReplay, trackErrors, waitReady } from './helpers';
 
 // M6 gate: a full game with no dead ends. Quick Play drafts a team in the
 // locker room, walks out the tunnel and plays a six-round game against the
@@ -38,6 +38,7 @@ test('Quick Play: locker room, walk-out and a full six-round game to the results
   const errors = trackErrors(page);
   await page.goto('/?screen=main&nointro&quality=low&autokick');
   await waitReady(page);
+  await noAutoReplay(page);
   await page.evaluate(() => {
     const w = window as unknown as W;
     void w.__btbDraft.getState().begin('quick', { seed: 5 });

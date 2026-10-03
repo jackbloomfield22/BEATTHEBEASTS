@@ -24,6 +24,7 @@ import { view } from './view';
 import { LockerRoom } from './locker/LockerRoom';
 import { LockerCamera } from './locker/LockerCamera';
 import { useDraft } from '@/app/draftStore';
+import { useReplay } from '@/game/replaySession';
 
 // The one WebGL canvas. Everything 3D lives here and persists across screens.
 
@@ -180,7 +181,9 @@ export function currentQuality(): QualityPreset {
 export function Stage({ onContextLost }: { onContextLost?: (canvas: HTMLCanvasElement) => void } = {}) {
   const preset = useLightingPreset();
   const shot = useApp((s) => s.shot);
-  const inGame = useApp((s) => s.screen === 'practice' || s.screen === 'game');
+  // The results screen's play of the game replays in the play scene (M7).
+  const recordReplay = useReplay((s) => s.open && s.from === 'record');
+  const inGame = useApp((s) => s.screen === 'practice' || s.screen === 'game') || recordReplay;
   const inRoom = useApp((s) => s.screen === 'draft');
   const go = useApp((s) => s.go);
   // The room is built on first entry and kept (its textures and programs stay warm).

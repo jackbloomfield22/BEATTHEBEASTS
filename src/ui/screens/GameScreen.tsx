@@ -7,6 +7,7 @@ import { game, useGame } from '@/game/game';
 import { canVictoryFormation, clockLabel, clockText, fgDistance, fgMakePct, halfSecs, hurry, isTimed, quarterName, type Match } from '@/game/match';
 import { reasonFor } from '@/game/coordinator';
 import { practice, usePractice } from '@/game/practice';
+import { replay, snapFlag, useReplay } from '@/game/replaySession';
 import { downLabel, spotLabel } from '@/game/situation';
 import { aimFor, powerNeeded, PUNT_DEPTH } from '@/game/kick';
 import { KickControl, METER, METER_MAX, strikeWord, type Strike } from '@/game/kickMeter';
@@ -18,6 +19,7 @@ import { Hints, KeyCap, MenuItem, useDevice } from '../components/controls';
 import { TabKey } from '../components/Glyph';
 import { PlayArt } from '../game/PlayArt';
 import { PlayHud, readsNote } from './PracticeScreen';
+import { ReplayCue, ReplayHud, useReplayKey } from '../game/ReplayHud';
 import '../styles/game.css';
 import '../styles/match.css';
 import '../styles/results.css';
@@ -62,7 +64,8 @@ export function GameScreen() {
   useEffect(() => {
     return Input.onAction((id, info) => {
       // (Esc is also menu.back: the pause menu's Back may have just resumed on this same press.)
-      if (id !== 'global.pause' || info.repeat || justResumed) return;
+      // In a replay Esc goes back to the result card (replaySession.ts).
+      if (id !== 'global.pause' || info.repeat || justResumed || replay.active) return;
       const g = useGame.getState();
       const ps = usePractice.getState().stage;
       if (g.paused || ps === 'paused') return resumeGame();
@@ -72,10 +75,13 @@ export function GameScreen() {
     });
   }, []);
   const showPause = paused || (stage === 'play' && snapPaused);
+  // The instant replay (M7) keeps the screen clean: no score bug or clock banners over it.
+  const replayOpen = useReplay((s) => s.open);
+  useEffect(() => () => replay.abort(), []);
   return (
     <div className="game-screen">
       {stage === 'loading' ? <div className="practice-loading">Kickoff…</div> : null}
-      {stage !== 'loading' ? <ScoreBug /> : null}
+      {stage !== 'loading' && !replayOpen ? <ScoreBug /> : null}
       {!paused ? (
         <>
           {stage === 'pregame' ? <PreGame /> : null}
@@ -86,7 +92,7 @@ export function GameScreen() {
           {stage === 'try' ? <TryCard /> : null}
           {stage === 'penalty' ? <PenaltyCard /> : null}
           {stage === 'break' ? <HalftimeCard /> : null}
-          <ClockFlag />
+          {replayOpen ? null : <ClockFlag />}
         </>
       ) : null}
       {stage === 'kick' ? <KickPanel /> : null}
@@ -532,6 +538,8 @@ const OUTCOME: Record<string, string> = {
 
 function GamePlay() {
   const stage = usePractice((s) => s.stage);
+  const replayOpen = useReplay((s) => s.open);
+  if (replayOpen) return <ReplayHud />;
   return (
     <>
       {stage === 'presnap' || stage === 'live' || stage === 'result' ? <PlayHud bug={false} /> : null}
@@ -544,7 +552,14 @@ function GameResult() {
   const r = usePractice((s) => s.result);
   const outcome = useGame((s) => s.outcome);
   const m = game.match!;
-  useMenuNav({ count: 1, focus: 0, setFocus: () => undefined, onConfirm: () => game.afterResult() });
+  // The instant replay (M7): Continue stays first; a flagged play leads the card with its replay until it's watched.
+  const flag = r ? snapFlag() : null;
+  const watched = useReplay((s) => s.watched) === practice.playId;
+  const watch = () => void replay.openSnap();
+  useReplayKey(watch);
+  const [focus, setFocus] = useState(0);
+  const pick = (i: number) => (i === 0 ? game.afterResult() : watch());
+  useMenuNav({ count: 2, focus, setFocus, columns: 2, onConfirm: pick });
   if (!r) return null;
   const head = outcome && OUTCOME[outcome] ? OUTCOME[outcome] : r.headline;
   const next =
@@ -554,9 +569,21 @@ function GameResult() {
       <div className="result-kicker">{head === r.headline ? 'Result' : head}</div>
       <h2 className="result-head">{r.headline}</h2>
       <p className="result-detail">{r.detail}</p>
+      {flag && !watched ? (
+        <div className="replay-offer">
+          <span className="ro-tag">{flag.label}</span>
+          <ReplayCue label="Watch the replay" onClick={watch} />
+        </div>
+      ) : null}
       <nav className="result-actions">
-        <MenuItem size="md" label={`Continue: ${next}`} focused onHover={() => undefined} onClick={() => game.afterResult()} />
+        <MenuItem size="md" label={`Continue: ${next}`} focused={focus === 0} onHover={() => setFocus(0)} onClick={() => pick(0)} />
+        <MenuItem size="md" label="Replay" focused={focus === 1} onHover={() => setFocus(1)} onClick={() => pick(1)} />
       </nav>
+      {!flag || watched ? (
+        <div className="result-replay">
+          <ReplayCue label="Replay" onClick={watch} />
+        </div>
+      ) : null}
     </div>
   );
 }

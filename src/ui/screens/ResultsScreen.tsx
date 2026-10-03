@@ -5,6 +5,9 @@ import { useHistory } from '@/app/history';
 import { urlFlags } from '@/app/platform';
 import { Audio } from '@/audio/audio';
 import { game } from '@/game/game';
+import { replay, useReplay } from '@/game/replaySession';
+import { Input } from '@/input/InputManager';
+import { ReplayCue, ReplayHud, useReplayKey } from '../game/ReplayHud';
 import { useMenuNav } from '../nav';
 import { Hints, MenuItem } from '../components/controls';
 import { BoxScore, dateLabel, PlayOfGameLine, ResultHeader } from '../results/GameReport';
@@ -85,6 +88,15 @@ export function ResultsScreen() {
             { label: 'History', run: toHistory },
           ];
   const ready = beat >= 2;
+  // The play of the game plays back (M7): in the play scene over the stadium, from the record's capsule.
+  const replayOpen = useReplay((s) => s.open && s.from === 'record');
+  const replayError = useReplay((s) => s.error);
+  const canReplay = !!rec?.playOfGame?.replay.capsule?.players;
+  const watch = () => {
+    if (rec && canReplay) replay.openRecord(rec);
+  };
+  useReplayKey(watch, ready && canReplay);
+  useEffect(() => () => replay.abort(), []);
   const pick = (i: number) => {
     if (!ready) return;
     Audio.uiSelect();
@@ -99,6 +111,8 @@ export function ResultsScreen() {
     enabled: ready,
     onConfirm: pick,
     onBack: () => {
+      // Backspace is Back and the replay key: here it's the replay.
+      if (canReplay && Input.isHeld('global.replay')) return;
       leaveGame();
       if (from === 'history') toHistory();
       else toMenu();
@@ -112,13 +126,14 @@ export function ResultsScreen() {
         <div className="practice-loading">No game to show.</div>
       </div>
     );
+  if (replayOpen) return <ReplayHud />;
   return (
     <div className={`menu-screen results beat-${beat} ${fresh ? 'fresh' : ''}`}>
       <div className="menu-scrim strong" />
       <ResultHeader rec={rec} shown={shown} meta={from !== 'game' ? <span>{dateLabel(rec.finishedAt)}</span> : null} />
       {ready ? (
         <>
-          <PlayOfGameLine rec={rec} />
+          <PlayOfGameLine rec={rec} replay={canReplay ? <ReplayCue className="pog-replay" label="Watch it" onClick={watch} /> : replayError ? <span className="pog-w">{replayError}</span> : null} />
           <BoxScore rec={rec} />
           <nav className="res-actions">
             {items.map((it, i) => (

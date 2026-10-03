@@ -11,7 +11,7 @@ import adapterFile from '@data/ratings/adapter.v1.json';
 import { adaptDefenders, adaptOffense, unitAttrs, type AdapterFile, type AttrLookup } from '@/engine/legacy/adapter';
 import { buildMatchups } from '@/engine/legacy/sim';
 import type { Roster as LegacyRoster, RosterEntry } from '@/engine/legacy/types';
-import type { DefCall, Difficulty, InputFrame } from '@/sim';
+import type { DefCall, DefSlot, Difficulty, InputFrame, OffSlot, SimPlayer } from '@/sim';
 import type { RatedBeasts } from './beasts';
 import type { Catalog, DraftMode, Roster } from './draft';
 import { clockLabel, gradeRounds, isTimed, matchGrade, regulationRounds, type BeastsDrive, type Grade, type Match, type UserDrive } from './match';
@@ -46,6 +46,19 @@ export interface ReplayCapsule {
   legs?: Record<string, number>;
   /** [count, frame] runs: the InputFrame the sim got each tick. */
   frames: [number, InputFrame][];
+  /**
+   * M7 (the replay system): what the setup above doesn't name. The eleven on
+   * each side as the sim had them (the depth chart's rotation and the sub
+   * packages change who's in a slot, and a record must replay on the
+   * ratings it was played on), QB–receiver chemistry, whether the user ran
+   * the offense, and the state hash after the last frame: a replay that
+   * doesn't reach it (a record from an older build) isn't shown.
+   * Absent on records from before M7 (their play of the game can't replay).
+   */
+  players?: { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, SimPlayer> };
+  chem?: Record<string, number>;
+  user?: boolean;
+  hash?: number;
 }
 
 export interface PlayOfGame extends PlayLog {

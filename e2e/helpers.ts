@@ -34,3 +34,16 @@ export function trackErrors(page: Page): string[] {
   });
   return errors;
 }
+
+/**
+ * Automatic replays off (M7): the full-game tests answer every card with
+ * Enter; a touchdown's replay rolling by itself would hold the card for a
+ * long time at a software-rendered frame rate. The replay has its own test
+ * (replay.spec.ts).
+ */
+export async function noAutoReplay(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as unknown as { __btbSettings: { getState(): { set(f: (d: { gameplay: { autoReplay: string } }) => void): void } } };
+    w.__btbSettings.getState().set((d) => void (d.gameplay.autoReplay = 'off'));
+  });
+}
