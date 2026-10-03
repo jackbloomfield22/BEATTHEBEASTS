@@ -207,19 +207,22 @@ function orbitPose(): Pose {
 
 /**
  * The end zone: high in the stands behind the end line the play is heading
- * for (the offense's, or the other on a turnover), looking back up the
- * field over the posts, on a long lens that keeps about 20 yd of field
- * across the frame wherever the ball is. Never closer than 24 yd, so play at
- * the goal line is framed, not looked down on.
+ * for (the offense's, or the other on a turnover), off to the side of the
+ * posts so the uprights stay out of the shot, looking back up the field on
+ * a long lens that keeps about 20 yd of field across the frame wherever the
+ * ball is. Never closer than 30 yd, so play at the goal line is framed, not
+ * looked down on.
  */
 function endzonePose(): Pose {
   const p = replay.player!;
   const f = replayFocus();
   const back = p.key?.kind === 'turnover' ? -1 : 1;
-  const ex = back > 0 ? Math.max(118, f.x + 24) : Math.min(-8, f.x - 24);
-  const d = Math.abs(ex - f.x);
-  const fov = Math.min(45, Math.max(12, (2 * Math.atan(10 / d) * 180) / Math.PI));
-  return { ex, ey: f.y * 0.4, eh: 14, lx: f.x, ly: f.y, lh: Math.max(0.8, f.h * 0.8), fov };
+  const ex = back > 0 ? Math.max(120, f.x + 30) : Math.min(-10, f.x - 30);
+  const d = Math.hypot(ex - f.x, 9);
+  const fov = Math.min(42, Math.max(12, (2 * Math.atan(10 / d) * 180) / Math.PI));
+  // The side of the posts away from the ball's.
+  const ey = f.y * 0.5 + (f.y >= 0 ? -9 : 9);
+  return { ex, ey, eh: 18, lx: f.x, ly: f.y, lh: Math.max(0.8, f.h * 0.8), fov };
 }
 
 /** Orbit by the keys and sticks (radians a second at full tilt) and zoom (e-folds a second). */
