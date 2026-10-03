@@ -37,8 +37,9 @@
 .rbar-head { position: absolute; top: 50%; left: 0; width: .95rem; height: .95rem; margin: -.475rem 0 0 -.475rem; border-radius: 50%; background: #fff; box-shadow: 0 0 .6rem rgba(0,0,0,.6), 0 0 0 3px color-mix(in srgb, var(--lime) 55%, transparent); }
 .rbar-mark { position: absolute; top: 50%; pointer-events: none; }
 .rbar-mark.snap { width: 2px; height: .9rem; margin: -.45rem 0 0 -1px; background: var(--ink-2); }
-.rbar-mark.key { width: .6rem; height: .6rem; margin: -.3rem 0 0 -.3rem; background: var(--rp); transform: rotate(45deg); box-shadow: 0 0 .5rem var(--rp); }
-.rbar-mark.key span { position: absolute; bottom: .7rem; left: .5rem; transform: rotate(-45deg) translateX(-50%); transform-origin: left bottom; white-space: nowrap; font-size: .68rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #fff; }
+.rbar-mark.key { width: 0; height: 0; }
+.rbar-mark.key::before { content: ''; position: absolute; left: -.3rem; top: -.3rem; width: .6rem; height: .6rem; background: var(--rp); transform: rotate(45deg); box-shadow: 0 0 .5rem var(--rp); }
+.rbar-mark.key span { position: absolute; bottom: .55rem; left: 0; transform: translateX(-50%); white-space: nowrap; font-size: .64rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #fff; text-shadow: 0 0 .4rem rgba(0,0,0,.9); }
 
 .replay-controls, .replay-cams { display: flex; align-items: center; justify-content: center; gap: .35rem 1rem; flex-wrap: wrap; }
 .replay-cams { gap: .35rem 1.3rem; color: var(--ink-2); }

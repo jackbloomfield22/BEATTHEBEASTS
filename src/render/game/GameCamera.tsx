@@ -207,9 +207,9 @@ function orbitPose(): Pose {
 
 /**
  * The end zone: high in the stands behind the end line the play is heading
- * for (the offense's, or the other on a turnover), off to the side of the
- * posts so the uprights stay out of the shot, looking back up the field on
- * a long lens that keeps about 20 yd of field across the frame wherever the
+ * for (the offense's, or the other on a turnover), out wide of the posts
+ * so the uprights stay out of the shot, looking back up the field on a long
+ * lens that keeps about 16 yd of field across the frame wherever the
  * ball is. Never closer than 30 yd, so play at the goal line is framed, not
  * looked down on.
  */
@@ -218,10 +218,10 @@ function endzonePose(): Pose {
   const f = replayFocus();
   const back = p.key?.kind === 'turnover' ? -1 : 1;
   const ex = back > 0 ? Math.max(120, f.x + 30) : Math.min(-10, f.x - 30);
-  const d = Math.hypot(ex - f.x, 9);
-  const fov = Math.min(42, Math.max(12, (2 * Math.atan(10 / d) * 180) / Math.PI));
-  // The side of the posts away from the ball's.
-  const ey = f.y * 0.5 + (f.y >= 0 ? -9 : 9);
+  // Out to the ball's side of the posts (the sight line crosses the end line wide of the uprights, ±3.1 yd).
+  const ey = f.y + (f.y >= 0 ? 12 : -12);
+  const d = Math.hypot(ex - f.x, ey - f.y);
+  const fov = Math.min(40, Math.max(12, (2 * Math.atan(8 / d) * 180) / Math.PI));
   return { ex, ey, eh: 18, lx: f.x, ly: f.y, lh: Math.max(0.8, f.h * 0.8), fov };
 }
 
