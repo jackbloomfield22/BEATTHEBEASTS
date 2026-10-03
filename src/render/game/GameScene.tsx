@@ -382,15 +382,18 @@ export function GameScene() {
   /**
    * A replay's scrub (replay.ts): step the play on to the target and animate
    * every step, so the bodies arrive with the clips, falls and catches they'd
-   * have had playing it. Coarse (8 ticks a step) far from the target, a
-   * broadcast frame (2 ticks) over its last second; at most `budgetMs` of a
-   * frame, the rest on the next (the screen shows it fast-forwarding).
+   * have had playing it. Coarse (12 ticks a step) more than a second out:
+   * that far back only what persists matters (a man down, a catch made);
+   * finer over the last second, a broadcast frame (2 ticks) over its last
+   * third. At most `budgetMs` of a frame, the rest on the next (the screen
+   * shows it fast-forwarding).
    */
   function catchUp(bs: Body[], budgetMs: number, camera: THREE.Camera, viewportPx: number) {
     const p = replay.player!;
     const t0 = performance.now();
     while (p.seeking && performance.now() - t0 < budgetMs) {
-      replayStats.ticks += p.stepTicks(p.target - p.tick > 60 ? 8 : 2);
+      const left = p.target - p.tick;
+      replayStats.ticks += p.stepTicks(left > 60 ? 12 : left > 20 ? 4 : 2);
       replayStats.steps++;
       const r = p.runner;
       const s = r.state;

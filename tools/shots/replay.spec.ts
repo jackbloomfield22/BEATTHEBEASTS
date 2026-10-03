@@ -113,7 +113,7 @@ test('replay · a touchdown: the offer, the director cut, three cameras, scrub, 
   test.setTimeout(14_400_000);
   await boot(page);
   await playClip(page, 'completion-rac');
-  await still(page, '01-td-result-offer');
+  if (!VIDEO) await still(page, '01-td-result-offer');
   await ev(page, (w) => w.__btbReplay.openSnap(true));
   await frame(page);
   if (VIDEO) {
@@ -135,9 +135,8 @@ test('replay · a touchdown: the offer, the director cut, three cameras, scrub, 
     writeFileSync(`${dir}/log.txt`, log.join('\n') + '\n');
     execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-framerate', '30', '-i', `${dir}/%04d.jpg`, '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'docs/m7/replay-td.mp4']);
     console.log(`  replay-td.mp4: ${n} frames`);
-    // Open it again for the stills.
-    await ev(page, (w) => w.__btbReplay.openSnap(false));
-    await frame(page);
+    // The video run (often at another size and quality) leaves the stills alone.
+    return;
   }
   // Just before the ball crosses: the orbit (the replay's own camera), then the presets.
   await ev(page, (w) => {
