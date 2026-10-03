@@ -4,7 +4,8 @@ import { test, type Page } from '@playwright/test';
 // tab with an H-Back's play in it and its art, a Pre-Snap Wizard's blitz
 // tags at the line against the fire zone (two linebackers come), and a Field
 // General's five audibles (Joe Montana is a Maestro: Surgeon and Field
-// General). The practice roster's QB is given Pre-Snap Wizard in the page.
+// General). The practice roster's QB is given Pre-Snap Wizard and Designed
+// Runner in the page (the zone read's art: the QB's keep round the read end).
 // BTB_TRAITS=1 npm run shots  ->  tools/shots/out/traits/
 
 type P = {
@@ -29,14 +30,16 @@ test('traits at the play call and the line', async ({ page }) => {
   await page.evaluate(() => {
     const w = window as unknown as P;
     const qb = w.__btbPractice.teams!.team.QB;
-    qb.traits = [...(qb.traits ?? []), 'pre-snap-wizard'];
+    qb.traits = [...(qb.traits ?? []), 'pre-snap-wizard', 'designed-runner'];
     w.__btbPracticeUi.setState({ cover: 'firezone' });
   });
-  // The run tab (five tabs over from the quick game), then the last play in it: H Iso.
+  // The run tab (five tabs over from the quick game), then the Designed Runner's zone read and the H-Back's H Iso at the end of it.
   for (let k = 0; k < 5; k++) await page.keyboard.press('KeyE');
   await shot(page, '01-run-tab');
-  await page.keyboard.press('ArrowUp');
-  await shot(page, '02-run-tab-last');
+  for (let k = 0; k < 14; k++) await page.keyboard.press('ArrowDown');
+  await shot(page, '02-zone-read-art');
+  await page.keyboard.press('ArrowDown');
+  await shot(page, '02b-h-iso-art');
   // Back round to the drop-backs (one tab on, wrapping, then one more) and call the first: Smash.
   await page.keyboard.press('KeyE');
   await page.keyboard.press('KeyE');

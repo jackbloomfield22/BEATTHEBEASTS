@@ -45,7 +45,7 @@
 .rec-name { left: 50%; top: 1.45rem; transform: translateX(-50%); font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; color: rgba(244,240,255,.85); text-shadow: 0 .1rem .5rem rgba(0,0,0,.9); }
 /* A Pre-Snap Wizard's blitz tags, over the Beasts who'll blitz (placed every frame at the line). */
 .blitz-tag { position: absolute; left: 0; top: 0; width: 0; height: 0; visibility: hidden; will-change: transform; }
-.blitz-tag > span { position: absolute; left: 50%; top: -.4rem; transform: translateX(-50%); padding: .08rem .45rem; border-radius: .3rem; background: #ff2a6d; color: #fff; font-size: .66rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; box-shadow: 0 0 .6rem rgba(255,42,109,.6); animation: pulse 1.2s ease-in-out infinite; }
+.blitz-tag > span { position: absolute; left: 50%; top: -.6rem; transform: translateX(-50%); padding: .12rem .55rem; border-radius: .3rem; background: #ff2a6d; color: #fff; font-size: .78rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; box-shadow: 0 0 .8rem rgba(255,42,109,.75), 0 .1rem .4rem rgba(0,0,0,.6); }
 .aim-reticle { position: absolute; left: -.55rem; top: -.55rem; width: 1.1rem; height: 1.1rem; border: 2px solid #fff; border-radius: 50%; visibility: hidden; box-shadow: 0 0 .5rem rgba(0,0,0,.6); }
 .aim-reticle::after { content: ''; position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px; background: var(--lime); border-radius: 50%; }
 

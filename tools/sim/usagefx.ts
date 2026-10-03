@@ -74,7 +74,6 @@ function receivers(label: string, snaps: Snap[], who: (s: PlayState) => boolean)
 const PASS = BASE_PLAYS.filter((q) => !q.run);
 const RUNS = BASE_PLAYS.filter((q) => q.run);
 const team = base.team;
-const isSlot = (slot: string) => (s: PlayState) => s.agents[s.ball.target]!.slot === slot;
 
 if (!ONLY || ONLY === 'receiving') {
   // Receiving Back: Roger Craig (also a Third-Down Back) with and without it, the whole pass book.
@@ -99,8 +98,10 @@ if (!ONLY || ONLY === 'third') {
   }
 }
 if (!ONLY || ONLY === 'slot') {
-  // Slot Weapon: Wes Welker in the slot, the plays where the slot runs a short breaking route, against man and zone.
-  console.log('Slot Weapon (Wes Welker in the slot: stick, hitch, quick out, quick in, spot)');
+  // Slot Weapon: Wes Welker in the slot on the plays where the slot runs a
+  // short breaking route; the player throws to him a beat after his break
+  // (the same tick rule with and without the trait), against man and zone.
+  console.log('Slot Weapon (Wes Welker in the slot: stick, hitch, quick out, quick in, spot; thrown to a beat after his break)');
   const welker = p('Wes Welker', 'WR');
   const plays = PASS.filter((q) => {
     const a = q.assign.SLOT;
@@ -109,20 +110,52 @@ if (!ONLY || ONLY === 'slot') {
   console.log(`    plays: ${plays.map((q) => q.id).join(', ')}`);
   for (const calls of [['cover1', 'cover1off', 'cover2man', 'cover1blitz'], ['cover3', 'cover2', 'cover4', 'tampa2']]) {
     for (const [label, wr] of [['Welker without Slot Weapon', strip(welker, 'slot-weapon')], ['Welker (Slot Weapon)', welker]] as const) {
-      const snaps = book({ ...team, WR3: wr }, plays, calls.map(defById));
-      let sepN = 0;
-      let sep = 0;
-      for (const { s } of snaps) {
-        const t = target(s);
-        if (!t || t.slot !== 'SLOT') continue;
-        // Separation when the ball got to him: the nearest defender.
-        const at = s.events.find((e) => (e.type === 'catch' || e.type === 'drop' || e.type === 'deflection' || e.type === 'interception') && e.t >= s.ball.releaseT);
-        if (!at) continue;
-        sepN++;
-        sep += Math.min(...s.def.map((i) => dist(s.agents[i]!.pos, t.pos)));
+      let n = 0;
+      let c = 0;
+      let y = 0;
+      let sepRel = 0;
+      for (const play of plays) {
+        for (const d of calls.map(defById)) {
+          for (let k = 0; k < REPS * 2; k++) {
+            const sd = sidesFor({ ...base, team: { ...team, WR3: wr } }, play, d);
+            const s = createPlay({ seed: cellSeed(play, d, k), offense: sd.offense, defense: sd.defense, play, def: sd.def, los: 35, ballY: HASH[k % 3], toGo: 10, user: true, flip: k % 2 === 1 });
+            const icon = s.icons.indexOf(s.slot.SLOT!) + 1;
+            const a = s.agents[s.slot.SLOT!]!;
+            let fireAt = -1;
+            let rel = -1;
+            runToWhistle(s, (st) => {
+              if (st.phase === 'presnap') return input({ snap: true });
+              if (st.phase === 'air') {
+                if (rel < 0) rel = Math.min(...st.def.map((i) => dist(st.agents[i]!.pos, a.pos)));
+                return input({ catchType: 'rac' });
+              }
+              if (st.phase === 'carrier') return input({ move: { x: 1, y: 0 } });
+              // A beat after his break: heading to his last point.
+              if (fireAt < 0 && a.route && a.route.idx >= a.route.pts.length - 1) fireAt = st.tick + 6;
+              return input({ throwHeld: fireAt > 0 && st.tick >= fireAt && st.tick < fireAt + 3 ? icon : 0 });
+            });
+            if (rel < 0 || s.ball.target !== a.i) continue;
+            n++;
+            sepRel += rel;
+            const caughtIt = s.events.some((e) => e.type === 'catch' && e.who?.[0] === a.i);
+            if (caughtIt) {
+              c++;
+              y += yards(s);
+            }
+          }
+        }
       }
-      receivers(`${label} vs ${calls[0]!.startsWith('cover1') ? 'man' : 'zone'}`, snaps, isSlot('SLOT'));
-      console.log(`    separation at the ball ${(sep / Math.max(1, sepN)).toFixed(2)} yd (whistle-time proxy)`);
+      console.log(`  ${`${label} vs ${calls[0]!.startsWith('cover1') ? 'man' : 'zone'}`.padEnd(40)} thrown to: caught ${pct(c, n)} of ${n}, ${(y / Math.max(1, n)).toFixed(2)} yd a throw; nearest defender at the release ${(sepRel / Math.max(1, n)).toFixed(2)} yd`);
+      // The AI QB on the same plays: he throws to the slot when he's open, so this is what the read buys a drive.
+      const snaps = book({ ...team, WR3: wr }, plays, calls.map(defById));
+      let ty = 0;
+      let ok = 0;
+      for (const { s } of snaps) {
+        ty += yards(s);
+        if (yards(s) >= 4) ok++;
+      }
+      receivers('  the AI QB:', snaps, (st) => st.agents[st.ball.target]!.slot === 'SLOT');
+      console.log(`      the plays: ${(ty / snaps.length).toFixed(2)} yd a snap, 4+ yd on ${pct(ok, snaps.length)}`);
     }
   }
 }

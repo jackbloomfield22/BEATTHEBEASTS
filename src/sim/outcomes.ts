@@ -41,7 +41,7 @@ export function sidesFor(r: HarnessRosters, play: OffPlay, def: DefCall): { offe
   return { offense, defense: defenseFor(call, r.beasts), def: call };
 }
 
-/** The harness's book: the everyday plays (situational calls, the sneak and the Hail Mary, are left out). */
+/** The harness's book: the everyday plays (situational calls, the sneak and the Hail Mary, are left out, and so are the plays a trait unlocks: they're tools/sim/qbruns.ts's and usagefx.ts's). */
 const PASS_BASE = PASS_PLAYS.filter((p) => !p.situ && !p.unlock);
 const RUN_BASE = RUN_PLAYS.filter((p) => !p.situ && !p.unlock);
 import { dist, type V2 } from './vec';

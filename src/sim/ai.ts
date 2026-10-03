@@ -308,24 +308,30 @@ function chip(s: PlayState, a: Agent): void {
   steer(a, arrive(a, near.pos, 1), { face: atan2(near.pos.y - a.pos.y, near.pos.x - a.pos.x) });
 }
 
-/** The short breaking routes a Slot Weapon runs as option routes from the slot (break away from the man's leverage, or from a zone defender sitting on the break). */
+/** The short breaking routes a Slot Weapon runs as option routes from the slot (he breaks where he'll be open). */
 const SLOT_OPTIONS: readonly RouteName[] = ['stick', 'hitch', 'qout', 'qin', 'spot'];
 /** He reads it this far (yd) short of the top of his stem, and breaks this far across (yd; a settle route slides this far into the window). */
 const OPTION_READ = 1.5;
 const OPTION_BREAK = 6;
 const OPTION_SLIDE = 2.5;
-/** He reads the nearest defender within this (yd); a zone defender this close is sitting on his break. */
-const OPTION_SEE = 7;
-const OPTION_ZONE = 3.5;
+/** A break off the drawn one has to be this much more open (yd of separation at the catch) to be worth it. Ours. */
+const OPTION_EDGE = 0.3;
 
 /**
- * An option route's read at the top of the stem: against man, break away
- * from the defender's leverage (out if he's inside, in if he's outside);
- * against a zone, away from a defender sitting on the break, and as drawn
- * when nobody is (he's open where the route takes him). Every option route
- * reads it (the back's option); a Slot Weapon's short routes from the slot
- * read it too ("from the slot, option routes read the leverage of the
- * nearest defender automatically"); anyone else runs them as drawn.
+ * An option route's read at the top of the stem, against man: he reads the
+ * man on him and breaks where he'll be open, in, out or as the route's drawn
+ * (a settle route slides a step either way). "Open" is the QB's own measure
+ * (openness: the separation at the catch point if the ball came now, the
+ * defenders closing at their speed), so the read is away from the leverage
+ * that matters at the catch, not just the shade at the snap (man defenders
+ * here align inside, and a fixed "out against inside leverage" broke into
+ * the trail and the sideline: 81% caught on the drawn routes, 36% breaking
+ * out every time, tools/sim/usagefx.ts). Against a zone he runs it as drawn:
+ * breaking off it there found him more open but shorter, and the plays
+ * gained 2 yd a snap less. Every option route reads it (the back's option);
+ * a Slot Weapon's short routes from the slot read it too ("from the slot,
+ * option routes read the leverage of the nearest defender automatically");
+ * anyone else runs them as drawn.
  */
 function optionRead(s: PlayState, a: Agent, name: RouteName | null): void {
   const rt = a.route;
@@ -336,31 +342,38 @@ function optionRead(s: PlayState, a: Agent, name: RouteName | null): void {
   const q = rt.pts[stem]!;
   if (dist(a.pos, q) > OPTION_READ) return;
   a.mem.optRead = true;
-  let near: Agent | null = null;
-  let nd = OPTION_SEE;
-  for (const i of s.def) {
-    const d = s.agents[i]!;
-    if (d.down || blockOf(s, i)) continue;
-    const k = dist(d.pos, a.pos);
-    if (k < nd) {
-      nd = k;
-      near = d;
-    }
-  }
-  const out = Math.sign(q.y - (s.setup.ballY ?? 0)) || 1;
-  const man = !!near && s.setup.def.assign[near.slot as keyof typeof s.setup.def.assign].kind === 'man' && s.man[near.slot as keyof typeof s.man] === a.slot;
-  if (!near || (!man && nd > OPTION_ZONE)) {
+  // Against a zone the route's drawn to find the hole (the option's own settles in it): he runs it. Against the man on him, he reads him.
+  const man = s.def.some((i) => s.man[s.agents[i]!.slot as keyof typeof s.man] === a.slot && s.setup.def.assign[s.agents[i]!.slot as keyof typeof s.setup.def.assign].kind === 'man' && !s.agents[i]!.down);
+  if (!man) {
     a.mem.optBreak = 'drawn';
     return;
   }
-  // Away from him: out if he's inside (between me and the ball's side of the field), in if he's outside.
-  const dir = (near.pos.y - a.pos.y) * out < 0 ? out : -out;
+  const qb = s.agents[s.qb]!;
+  const out = Math.sign(q.y - (s.setup.ballY ?? 0)) || 1;
   const sit = rt.sit[rt.sit.length - 1] === true;
   const lim = FIELD_HALF_W - ROUTE_ROOM;
-  const to = v2(q.x + (sit ? 0 : 0.5), Math.max(-lim, Math.min(lim, q.y + dir * (sit ? OPTION_SLIDE : OPTION_BREAK))));
-  a.mem.optBreak = dir === out ? 'out' : 'in';
+  const head = rt.pts.slice(0, stem + 1);
+  const heads = rt.sit.slice(0, stem + 1);
+  const breakTo = (dir: number) => v2(q.x + (sit ? 0 : 0.5), Math.max(-lim, Math.min(lim, q.y + dir * (sit ? OPTION_SLIDE : OPTION_BREAK))));
+  const options: { why: 'drawn' | 'out' | 'in'; route: NonNullable<Agent['route']> }[] = [
+    { why: 'drawn', route: rt },
+    { why: 'out', route: { pts: [...head, breakTo(out)], sit: [...heads, sit], idx: rt.idx } },
+    { why: 'in', route: { pts: [...head, breakTo(-out)], sit: [...heads, sit], idx: rt.idx } },
+  ];
+  const open = (route: NonNullable<Agent['route']>) => openness(s, qb, { ...a, route, mem: { ...a.mem } }, true).sep;
+  const drawn = open(rt);
+  let best = options[0]!;
+  let bs = drawn + OPTION_EDGE;
+  for (const o of options.slice(1)) {
+    const k = open(o.route);
+    if (k > bs) {
+      bs = k;
+      best = o;
+    }
+  }
+  a.mem.optBreak = best.why;
   // A new route from here (the read is a new path: the route-art check, outcomes.ts routeFidelity, stops at it).
-  a.route = { pts: [...rt.pts.slice(0, stem + 1), to], sit: [...rt.sit.slice(0, stem + 1), sit], idx: rt.idx };
+  if (best.why !== 'drawn') a.route = best.route;
 }
 
 /** Run the route: stem at pace, sharp breaks for good route runners, settle on sits. */

@@ -199,13 +199,14 @@ describe('Slot Weapon and the option route: the leverage read', () => {
       const s = stepTo(play({ ...team, WR3: wr }, 'empty-quick', def, k + 1), 2.0);
       return s.agents[s.slot.SLOT!]!.mem.optBreak as string | undefined;
     });
-  it('from the slot he reads the man over him: in or out, away from his leverage; against a zone, away from a man sitting on the break', () => {
+  it('from the slot he reads the man on him and breaks where he will be open; against a zone he runs it as drawn', () => {
     const man = reads(welker, 'cover1').filter(Boolean);
     expect(man.length).toBeGreaterThan(4);
-    for (const r of man) expect(['in', 'out']).toContain(r);
+    for (const r of man) expect(['in', 'out', 'drawn']).toContain(r);
+    expect(man.some((r) => r !== 'drawn')).toBe(true);
     const zone = reads(welker, 'cover3').filter(Boolean);
     expect(zone.length).toBeGreaterThan(4);
-    for (const r of zone) expect(['in', 'out', 'drawn']).toContain(r);
+    for (const r of zone) expect(r).toBe('drawn');
   });
   it('without the trait he runs the quick out as drawn', () => {
     expect(reads(strip(welker, 'slot-weapon'), 'cover1').every((r) => r === undefined)).toBe(true);
