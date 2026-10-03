@@ -36,6 +36,9 @@ describe('outcomes: the passing game', () => {
     expect(d.ypa).toBeGreaterThan(6.0);
     // Playtest 1's faster ball: ypa 7.9 → 8.4–8.5 (yards after the catch 7.6, against the NFL's ~5).
     // The coverage squeeze on the quick game (Playtest 2) is the fix; the ceiling is 8.8 until it lands.
+    // (M6.6 trait pass: Roger Craig's Receiving Back routes took it 8.4 → 8.9 at scale; the wheel read
+    // by the coverage and the man on a back playing him from the line, not chasing him into the
+    // backfield, bring it to 8.6. The rest is his option route over the check-down.)
     expect(d.ypa).toBeLessThan(8.8);
     expect(d.yacShort).toBeGreaterThan(3.5);
     expect(d.yacShort).toBeLessThan(7);
@@ -103,6 +106,7 @@ describe('outcomes: the run game', () => {
 }, 180_000);
 
 describe('outcomes: big hits are rare', () => {
+  // (The whole book, every call: slow under a full parallel run, hence the long timeout.)
   it('a few a game: ~3–10% of tackles', () => {
     let tackles = 0;
     let big = 0;
@@ -122,5 +126,5 @@ describe('outcomes: big hits are rare', () => {
     }
     expect(big / tackles).toBeGreaterThan(0.02);
     expect(big / tackles).toBeLessThan(0.12);
-  }, 120_000);
+  }, 240_000);
 });
