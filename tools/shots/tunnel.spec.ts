@@ -72,7 +72,7 @@ test('the tunnel reveal', async ({ page }) => {
     if (VIDEO) await page.screenshot({ path: `${dir}/${String(n).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 88 });
     n++;
   };
-  for (let k = 0; k < FPS; k++) await frame(); // the full row
+  for (let k = 0; k < FPS / 2; k++) await frame(); // the full row
   await page.evaluate(() => (window as unknown as W).__btbDraft.setState({ phase: 'walkout', focus: null, wallBeasts: null }));
   const stills = new Set<string>();
   const still = async (name: string) => {

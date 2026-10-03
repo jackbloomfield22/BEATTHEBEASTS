@@ -6,10 +6,9 @@
 // The run-out: the Contenders' eleven wait in a pack inside the tunnel,
 // fastest at the front, and run out on curves that leave the mouth straight
 // and fan to a line across their side of midfield (TEAM_Z), where each one
-// pulls up and turns to face the Beasts. Each man's pace is his own: 64% of
-// his top speed from the sim (effects.vmax, the 40 and the 10-yd split), up
-// to it on his own acceleration (tau), so the fast men pull away out of the
-// mouth and the linemen come last, as they would. The QB raises both arms
+// pulls up and turns to face the Beasts. Each man's pace is his own, from
+// his 40 (paceFor), reached on his own acceleration (the sim's tau), so the
+// fast men pull away out of the mouth and the linemen come last, as they would. The QB raises both arms
 // as he comes into the light, the lead man one (the officials' touchdown
 // signal clip on the arms only: no new motion).
 //
@@ -18,9 +17,9 @@
 // line to him.
 
 import * as THREE from 'three';
-import { effects, type SimPlayer } from '@/sim';
+import { effects, speedToForty, type SimPlayer } from '@/sim';
 import { reveal, REVEAL_SECS } from '@/game/tunnelReveal';
-import { TUNNEL, YARD } from '../world/constants';
+import { TUNNEL } from '../world/constants';
 import { crowdEnergy } from '../crowd/reactions';
 import { activeVfx } from '../vfx/active';
 import { Audio } from '@/audio/audio';
@@ -39,8 +38,15 @@ const BEASTS_GAP = 2.2;
 /** Tight to the mouth, so the Steadicam has room behind the last row. */
 const PACK_ROWS = [TUNNEL.mouth - 0.8, TUNNEL.mouth - 2.0, TUNNEL.mouth - 3.2, TUNNEL.mouth - 4.4];
 const PACK_COLS = [-1.55, 0, 1.55];
-/** Jog-out pace as a share of his top speed (a run, not a sprint: the stride reads as the run gait). */
-const PACE = 0.64;
+/**
+ * Jog-out pace (m/s) from his 40 (the sim's, from his Speed rating): 6.0 m/s
+ * for a 4.50 man, 3.2 m/s slower per second of 40, 4.3 to 7.2. Ours: a run-out
+ * is a stride, not a sprint, so a share of top speed would bunch them (the
+ * fitted top speeds of a 4.3 and a 5.2 man are only ~12% apart, the 40 is
+ * mostly acceleration); this spreads them the way the eye expects, the
+ * receivers striding away and the linemen lumbering out last.
+ */
+const paceFor = (p: SimPlayer) => Math.min(7.2, Math.max(4.3, 6 - (speedToForty(p.attrs.speed ?? 50) - 4.5) * 3.2));
 /** Braking (m/s²) as he pulls up: a few strides, not a skid. */
 const BRAKE = 2.4;
 /** Arms: the clip's arm bones (tools/blender/lib/actions.py arm_mask). */
@@ -100,7 +106,7 @@ function setUp(bodies: Body[], roster: SimPlayer[], nOff: number): void {
   }
   // The Contenders: fastest at the front of the pack.
   const off = roster.slice(0, nOff).map((p, i) => ({ i, p, fx: effects(p) }));
-  off.sort((a, b) => b.fx.vmax - a.fx.vmax);
+  off.sort((a, b) => paceFor(b.p) - paceFor(a.p));
   const packed = off.map((m, k) => {
     const row = Math.min(PACK_ROWS.length - 1, Math.floor(k / 3));
     const col = PACK_COLS[k % 3]!;
@@ -129,8 +135,7 @@ function setUp(bodies: Body[], roster: SimPlayer[], nOff: number): void {
       len: curve.getLength(),
       s: 0,
       v: 0,
-      // 64% of his top speed (yd/s to m/s).
-      pace: PACE * m.fx.vmax * YARD,
+      pace: paceFor(m.p),
       tau: Math.max(0.35, m.fx.tau * 0.8),
       t0: 0.25 + m.row * 0.32 + (((m.i * 17) % 5) / 5) * 0.12,
       hype: m.i === qb ? 'both' : m === packed[0] && m.i !== qb ? 'r' : null,
