@@ -229,7 +229,7 @@ export class CelebrateScene {
       const dx = a.tx - a.x;
       const dz = a.tz - a.z;
       const d = Math.hypot(dx, dz);
-      const want = Math.min(RUN_TOP, Math.sqrt(2 * RUN_ACCEL * Math.max(0, d - 0.1)));
+      const want = Math.min(RUN_TOP, Math.sqrt(2 * RUN_ACCEL * Math.max(0, d - 0.27)));
       a.speed = want > a.speed ? Math.min(want, a.speed + RUN_ACCEL * dt) : Math.max(want, a.speed - RUN_ACCEL * 1.5 * dt);
       if (d > 0.3) {
         const head = Math.atan2(dx, dz);
@@ -242,7 +242,8 @@ export class CelebrateScene {
         a.z += (dz / d) * mv;
       }
       speed = a.speed;
-      if (d < 0.3 && a.speed < 0.8) {
+      // Arrived (he stops moving inside 0.3 m, so that is the test, not his speed).
+      if (d < 0.3) {
         a.speed = 0;
         this.setMode(a, 'face');
       }
@@ -348,7 +349,12 @@ export class CelebrateScene {
         m.tz = sc.z + Math.cos(ang) * FIVE_DIST;
         m.tyaw = ang + Math.PI;
         sc.tyaw = ang;
-        this.setMode(m, 'run');
+        // Already about there (the bump's partner is): he just turns to him, no shuffle round in a circle.
+        if (Math.hypot(m.tx - m.x, m.tz - m.z) < 0.5) {
+          m.tx = m.x;
+          m.tz = m.z;
+          this.setMode(m, 'face');
+        } else this.setMode(m, 'run');
       } else if (sc.since >= 2.5 || this.mates.length === 0) this.end();
       return;
     }
