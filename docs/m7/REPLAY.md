@@ -99,9 +99,9 @@ takes the orbit from where the preset was (no jump). The old unused
   scene's own animation pass restores all of it. `GameScene.catchUp` does
   that: 8 ticks a step far from the target, a broadcast frame (2 ticks) over
   its last second, at most 7 ms of a frame and the rest on the next (the
-  screen shows a quick fast-forward; at open it's under the wipe). The
-  capture harness and the browser tests (`?video`, `?shot`) do it in one
-  frame.
+  camera holds while it runs, then cuts to where it lands; at open it's
+  under the wipe). The capture harness and the browser tests (`?video`,
+  `?shot`) do it in one frame.
 - **Hand-back**: a snap's replay, closing, runs on to the last recorded tick
   (the state the live play is frozen at), then the scene carries on drawing
   the live play with the bodies exactly as the replay left them: no
@@ -121,15 +121,100 @@ takes the orbit from where the preset was (no jump). The old unused
 
 ## Perf
 
-PERF_PLACEHOLDER
+- **Playback costs what live play costs.** A replay frame runs the same
+  single sim-advance and the same per-body animation pass as a live frame
+  (it *is* the live path, fed recorded inputs); the replay's own per-frame
+  work is a few comparisons and three DOM style writes. No React renders per
+  frame: the store changes on transport changes only. So it holds Medium's
+  60 fps wherever live play does. Not measured on the target hardware (this
+  container has no GPU; SwiftShader draws a frame in seconds).
+- **Seeking is the cost**, and it's bounded and sliced. Measured here
+  (`__btbReplayStats`, the 70-yard touchdown clip, 588 ticks; JS time, with
+  SwiftShader eating the same CPU): the sim rebuild to the window's start
+  1.2 ms; an animation step for 22 bodies ~6–10 ms here (the same pass a
+  live frame runs once). Opening the flagged replay (catch-up 401 ticks) was
+  72 steps / 0.70 s of JS at the first step sizes; the worst back-scrub (to
+  the last second, 528 ticks) 87 steps / 0.64 s; a 1 s step back near the
+  end 81 steps / 0.50 s. The step sizes are now 12 / 4 / 2 ticks, ~30% fewer
+  steps (~60 for the worst scrub). On a desktop CPU the pass is a fraction
+  of that (live play runs it every frame inside its 16.7 ms with rendering),
+  so a full back-scrub should land in roughly 0.2–0.4 s of 7 ms slices: the
+  frame rate holds, the seek isn't instant. Node: a 321-tick play
+  re-simulated twice (analysis plus a seek) in 14 ms.
+- Sim snapshots would make the *sim* half of a seek instant, but that half is
+  already ~1 ms; the animation is the cost and a sim snapshot can't skip it
+  (see How it works). If seeks need to be instant later: keep a pose
+  snapshot of each body every second (bone quaternions are ~1.5 KB a body)
+  and catch up from the nearest one.
 
 ## Screenshots
 
 `npm run shots` with `BTB_REPLAY=1` (`tools/shots/replay.spec.ts`; every
 drawn frame is 1/30 s of game time, `?video=30`) writes `docs/m7/shots/`:
 
-SHOTS_PLACEHOLDER
+| | |
+|---|---|
+| `01-td-result-offer` | The touchdown's result card: "TOUCHDOWN · P Watch the replay" leads it |
+| `02-td-key-orbit` | The director's cut a few ticks before the plane, the orbit's opening angle, slow-mo |
+| `03-td-key-broadcast` | The same moment from the broadcast angle (the live camera's logic) |
+| `04-td-key-endzone` | The end-zone angle from the stands |
+| `05-td-key-orbit-low-player` | The orbit swung round, low and tight on the scorer |
+| `06-td-start` | Scrubbed back to the start: the camera holds through the catch-up and cuts to the formation |
+| `07-td-quarter-speed` | ¼× through the snap; the deck tucked to the scrub bar while it plays untouched |
+| `08-td-back-to-card` | Esc: the hand-back to the card on the live play's own state (the official still signalling) |
+| `09-hit-result-offer-pad` | A big hit's card with pad glyphs (View) |
+| `10-hit-key-orbit-pad` | The hit's moment, the deck in pad glyphs |
+| `11-hit-key-orbit-tight` | Tight on the man about to take it |
+| `12-results-offer` | The results screen: "Play of the game … P Watch it" |
+| `13-results-replay` | The play of the game playing back over the stadium (deck tucked) |
+| `14-results-after` | Back to the results |
+
+`BTB_REPLAY_VIDEO=1` records the touchdown's automatic replay (the director
+cut, from a beat before the moment to the hand-back) to
+`docs/m7/replay-td.mp4` (960×540, Low, 30 fps of game time).
 
 ## Critique (honest)
 
-CRITIQUE_PLACEHOLDER
+What works:
+
+- The orbit is the best of it. Low and tight on the scorer at the goal line
+  (`05`) or on Rice as Deion arrives (`11`) is the broadcast's super-slow
+  replay angle, and with the animation exact to the play (the same clips,
+  catches and falls as live, not a re-pose) it reads as the play you just
+  made. The director's ease into 0.3× through the moment and back out feels
+  like a replay operator, not a speed switch.
+- The hand-back is invisible: the card comes back over the same bodies in
+  the same poses. Scrubbing back cuts cleanly to the formation (`06`).
+- The REPLAY bug and the tucked deck keep the picture clean once it plays.
+
+What's rough:
+
+- **The end-zone angle** (`04`) is better than its first two versions but
+  still not a broadcast end-zone shot: from 30 yd back and 14–18 m up the
+  near upright still crosses the frame and the lens is wider than a real
+  one. A proper rig wants a fixed pole height above the posts' tops and a
+  tighter lens that follows the ball's depth; tune it watching it move.
+- **The broadcast angle** on a goal-line moment (`03`) is the live
+  follow-cam, behind and above the carrier: fine, but it's the shot you
+  already saw. A second broadcast preset (the high sideline) would serve
+  replays better.
+- **No wipe in the captures**: the stills turn CSS animation off (frames take
+  seconds here), so the REPLAY sting is unverified in pictures. It's a CSS
+  keyframe band, 0.78 s.
+- **The scrub bar's key label** sits at the bar's right end on long plays and
+  can crowd the end of the track.
+- **Seeks aren't instant** (see Perf): a back-scrub is a fast-forward of a
+  few tenths of a second (the camera holds), not a jump.
+- **No depth of field or motion blur.** GDD §11.5 and the Graphics settings
+  ("Replay depth of field", "Replay motion blur") promise them; neither
+  effect exists in the post chain yet, and the 60 fps-on-Medium rule says
+  they wait until they can be measured on the target GPU. The settings still
+  do nothing. 2–3 automatic broadcast angles per auto replay (GDD §11.5) are
+  also not done: an automatic replay plays one angle (the orbit).
+- Hit sounds replay; the crowd doesn't react twice. Slow motion doesn't pitch
+  the sound down.
+- Old records (before M7) have no players in their capsule and show no
+  replay button; a record whose replay no longer reaches its hash (the sim
+  changed since) says so instead of playing a different play. Other agents'
+  sim changes will retire every saved replay; that's the price of exact
+  replays without a snapshot store.
