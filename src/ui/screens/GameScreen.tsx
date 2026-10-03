@@ -20,6 +20,7 @@ import { TabKey } from '../components/Glyph';
 import { PlayArt } from '../game/PlayArt';
 import { PlayHud, readsNote } from './PracticeScreen';
 import { ReplayCue, ReplayHud, useReplayKey } from '../game/ReplayHud';
+import { CelebrationPrompt, useCelebrating } from '../game/CelebrationPrompt';
 import '../styles/game.css';
 import '../styles/match.css';
 import '../styles/results.css';
@@ -539,11 +540,14 @@ const OUTCOME: Record<string, string> = {
 function GamePlay() {
   const stage = usePractice((s) => s.stage);
   const replayOpen = useReplay((s) => s.open);
+  // A touchdown's celebration (M7) comes before the result card.
+  const celebrating = useCelebrating();
   if (replayOpen) return <ReplayHud />;
   return (
     <>
       {stage === 'presnap' || stage === 'live' || stage === 'result' ? <PlayHud bug={false} /> : null}
-      {stage === 'result' ? <GameResult /> : null}
+      {stage === 'result' && !celebrating ? <GameResult /> : null}
+      {stage !== 'paused' ? <CelebrationPrompt /> : null}
     </>
   );
 }

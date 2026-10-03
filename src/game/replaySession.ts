@@ -15,6 +15,7 @@ import { getSettings } from '@/app/settings';
 import { urlFlags } from '@/app/platform';
 import { TICK, type DefSlot, type OffSlot, type SimPlayer } from '@/sim';
 import { practice, usePractice } from './practice';
+import { celebration } from './celebration';
 import type { GameRecord } from './record';
 import { AUTO_TAIL, captureSource, KEY_LEAD, keyMoment, ReplayPlayer, SCRUB_TICKS, sourceOf, type FlagKind, type ReplayKey, type ReplaySource } from './replay';
 
@@ -287,6 +288,11 @@ class ReplaySession {
       this.resultPlay = practice.playId;
       this.resultAt = performance.now();
       this.autoDone = false;
+    }
+    // A touchdown's celebration (M7) plays first: the card comes up after it, and the beat counts from then.
+    if (celebration.busy) {
+      this.resultAt = performance.now();
+      return;
     }
     if (this.autoDone || performance.now() - this.resultAt < AUTO_DELAY * 1000) return;
     this.autoDone = true;

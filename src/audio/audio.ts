@@ -181,6 +181,21 @@ class AudioEngine {
     }
   }
 
+  /** The crowd going up again for a touchdown celebration (M7): a long, building roar. */
+  celebrationRoar(): void {
+    if (!this.ctx) return;
+    this.noiseHit(2.6, 600, 0.4, 0.2, 'crowd');
+    this.noiseHit(2.0, 900, 0.5, 0.1, 'crowd', 0.35);
+  }
+
+  /** A football hitting the turf (a spike, a drop): a short leather thud, by how hard (0..1). */
+  ballThud(k: number): void {
+    if (!this.ctx) return;
+    const f = Math.min(1, Math.max(0, k));
+    this.noiseHit(0.05, 700 + 500 * f, 1.2, 0.08 + 0.2 * f, 'sfx');
+    this.tone(110, 0.08, 'sine', 0.06 + 0.16 * f, 'sfx', 70);
+  }
+
   /** The play clock's last five seconds: a dry tick each second. */
   playClockTick(): void {
     this.noiseHit(0.03, 3200, 5, 0.09, 'ui');

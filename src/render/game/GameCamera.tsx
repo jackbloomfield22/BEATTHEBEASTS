@@ -11,6 +11,7 @@ import { YARD } from '../world/constants';
 import { view } from '@/game/view';
 import { fieldDir, worldX, worldZ } from '@/game/coords';
 import { frameEvents } from './frameEvents';
+import { celebView } from './celebrate';
 
 // The play cameras (GDD §11.1, TECH_PLAN §8), driven from the sim snapshot
 // through critically damped springs so every cut is a glide:
@@ -113,6 +114,7 @@ function targetPose(mode: Mode): Pose | null {
     return { ex: sx - 11 + bx * 0.55, ey: by * 0.4, eh: 4.4 + bz * 0.25, lx: sx + bx + 4, ly: by, lh: bz * 0.9144 * 0.8, fov: 52 };
   }
   if (kickView.active && !replay.active) return { ex: kickView.spotX - 12, ey: 0, eh: 3.6, lx: 110, ly: 0, lh: 2.4, fov: 36 };
+  if (celebView.on && !replay.active) return celebPose();
   const r = activeRunner();
   if (!r) {
     // Before the first snap (the play call): the field from behind the line.
@@ -180,6 +182,39 @@ function targetPose(mode: Mode): Pose | null {
     };
   }
   return base;
+}
+
+// ---- Touchdown celebration (M7) --------------------------------------------------------------
+
+/** The side of him the shot is from (rad off his facing, 0 = in front), chosen once per celebration. */
+const celebCam = { base: 0 };
+/** Offsets tried in turn (rad off his facing): in front a little to one side, then wider round, so the camera never ends up in the stands. */
+const CELEB_SIDES = [0.35, -0.35, 0.9, -0.9, 1.6, -1.6, 2.4, -2.4];
+const CELEB_DIST = { from: 7.4, to: 5.0 };
+
+/**
+ * The celebration: low (chest height, a little under), tight, in front of
+ * the scorer and to one side, the field or the stands behind him; over the
+ * shot the camera arcs round ~30° and pushes in from ~7.4 m to 5 m, the lens
+ * closing a few degrees. (GDD §11: the camera sells the moment.)
+ */
+function celebPose(): Pose {
+  const v = celebView;
+  const ease = (k: number) => smooth(Math.min(1, Math.max(0, k)));
+  const k = ease(v.t / 7);
+  const dist = (CELEB_DIST.from + (CELEB_DIST.to - CELEB_DIST.from) * k) / YARD;
+  if (v.cut) {
+    // In the field of play and the end zone, and off the bench areas: the first side that fits for the whole push.
+    const far = CELEB_DIST.from / YARD;
+    celebCam.base = CELEB_SIDES.find((a) => {
+      const ex = v.x + Math.cos(v.face + a) * far;
+      const ey = v.y + Math.sin(v.face + a) * far;
+      return ex < 109 && ex > -9 && Math.abs(ey) < 26;
+    }) ?? Math.PI;
+  }
+  // The arc swings toward his front as it pushes in.
+  const a = v.face + celebCam.base - Math.sign(celebCam.base || 1) * 0.5 * k;
+  return { ex: v.x + Math.cos(a) * dist, ey: v.y + Math.sin(a) * dist, eh: 1.35 - 0.15 * k, lx: v.x, ly: v.y, lh: 1.15, fov: 34 - 5 * k };
 }
 
 // ---- Replay cameras (M7) ------------------------------------------------------------------
@@ -395,8 +430,9 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       step = Math.max(0, Math.min(0.1, now - videoClock.t));
       videoClock.t = now;
       if (!springs.current) step = 0;
-      // A replay's camera answers in the frame's time (it moves while the replay is paused or slowed, as it would in play).
-      if (replay.active) step = 1 / urlFlags.video;
+      // A replay's camera answers in the frame's time (it moves while the replay is paused or slowed, as it would in play);
+      // so does the celebration's (the dead ball's sim stops a few seconds after the whistle).
+      if (replay.active || celebView.on) step = 1 / urlFlags.video;
     }
     // A replay rebuilt for a scrub back (or a new replay): the camera holds while the scene catches it up,
     // then cuts to where it lands, as a broadcast would; never a glide across the field through the fast-forward.
@@ -432,7 +468,8 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       springs.current = [camera.position.x, camera.position.y, camera.position.z, look.x, look.y, look.z, camera.fov].map((v) => new Spring(v));
     }
     // Screenshots and browser tests cut straight to the pose every frame; so does a replay's camera change.
-    const cut = (urlFlags.shot !== null && !urlFlags.video) || (rmode !== null && replayCam.cut);
+    const cut = (urlFlags.shot !== null && !urlFlags.video) || (rmode !== null && replayCam.cut) || (!rmode && celebView.on && celebView.cut);
+    if (!rmode) celebView.cut = false;
     if (cut) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
     replayCam.cut = false;
     const sp = springs.current;
@@ -440,7 +477,9 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     // In the air the whole rig tightens up so it keeps pace with the ball.
     // The replay's orbit is the user's hand on it: tight, so it answers at once.
     const air = activeRunner()?.cur.phase === 'air' && (rmode ?? modeSetting) === 'broadcast';
-    const w = rmode === 'orbit' ? [9, 9, 9, 7, 7, 7, 6] : rmode === 'endzone' ? [3, 3, 3, 5, 5, 5, 3] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
+    // The celebration's: the dolly slow and smooth (the push), the lens keeping him framed as he moves.
+    const celeb = !rmode && celebView.on;
+    const w = rmode === 'orbit' ? [9, 9, 9, 7, 7, 7, 6] : rmode === 'endzone' ? [3, 3, 3, 5, 5, 5, 3] : celeb ? [2.2, 2.2, 2.2, 5, 5, 5, 3] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));
     // Shake: hits kick it, it rings down in ~0.3 s.
     for (const e of frameEvents) {

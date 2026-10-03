@@ -1,0 +1,21 @@
+/* The touchdown celebration's prompt (M7): low on the screen so the scorer in the end zone stays the picture. */
+.celeb-prompt { position: absolute; left: 50%; bottom: 3.2rem; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .7rem; padding: .9rem 1.4rem .8rem; min-width: 40rem; background: linear-gradient(180deg, rgba(8,7,15,.55), rgba(8,7,15,.86)); backdrop-filter: blur(8px); border-top: 3px solid var(--lime); animation: celeb-in 260ms cubic-bezier(.2,.7,.2,1) both; }
+@keyframes celeb-in { from { opacity: 0; transform: translate(-50%, 1rem); } to { opacity: 1; transform: translate(-50%, 0); } }
+.celeb-head { display: flex; align-items: baseline; gap: .9rem; }
+.celeb-td { font-family: var(--font-display); font-size: 1.6rem; letter-spacing: .14em; text-transform: uppercase; color: var(--lime); text-shadow: 0 0 1.2rem color-mix(in srgb, var(--lime) 35%, transparent); }
+.celeb-who { font-size: .85rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
+.celeb-choices { display: flex; gap: .8rem; }
+.celeb-choice { display: flex; align-items: center; gap: .55rem; min-width: 11.5rem; padding: .45rem .9rem .45rem .5rem; border: 1px solid rgba(244,240,255,.16); border-radius: .4rem; background: rgba(244,240,255,.05); color: var(--ink); font: inherit; cursor: pointer; transition: background 120ms ease, border-color 120ms ease; }
+.celeb-choice:hover { background: rgba(244,240,255,.12); border-color: var(--lime); }
+.celeb-choice.first { border-color: color-mix(in srgb, var(--lime) 60%, transparent); }
+.celeb-choice .glyph { height: 1.9em; }
+.celeb-choice kbd { font-size: .9rem; }
+.celeb-name { font-size: .95rem; font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
+.celeb-foot { display: flex; align-items: center; gap: 1rem; width: 100%; }
+/* Runs out over the choice's two seconds; the first choice plays when it's gone. */
+.celeb-clock { flex: 1; height: 3px; background: var(--lime); transform-origin: left center; animation: celeb-clock linear both; opacity: .8; }
+@keyframes celeb-clock { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.celeb-skip-cue, .celeb-skip .cue { border: 0; background: transparent; color: var(--ink-3); cursor: pointer; font: inherit; padding: .15rem .35rem; border-radius: .3rem; display: flex; align-items: center; gap: .35rem; }
+.celeb-skip-cue:hover, .celeb-skip .cue:hover { background: rgba(244,240,255,.08); color: var(--ink); }
+.celeb-skip-cue .cue-w, .celeb-skip .cue-w { font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.celeb-skip { position: absolute; right: 2.4rem; bottom: 2rem; text-shadow: 0 .1rem .6rem rgba(0,0,0,.8); }

@@ -91,6 +91,20 @@ export class Officials {
     }
   }
 
+  /** Where the official nearest a world point stands (world, on the turf): the touchdown celebration flips him the ball (M7). */
+  nearestAt(wx: number, wz: number, out: THREE.Vector3): THREE.Vector3 {
+    let bd = Infinity;
+    for (const o of this.crew) {
+      const p = o.player.root.position;
+      const d = (p.x - wx) ** 2 + (p.z - wz) ** 2;
+      if (d < bd) {
+        bd = d;
+        out.copy(p);
+      }
+    }
+    return out;
+  }
+
   private nearest(ball: { x: number; y: number }): Official {
     let best = this.crew[0]!;
     let bd = Infinity;

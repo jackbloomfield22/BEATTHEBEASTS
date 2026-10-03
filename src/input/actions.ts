@@ -13,6 +13,7 @@ export type InputContext =
   | 'carrier'
   | 'kick'
   | 'replay'
+  | 'celebrate'
   | 'global';
 
 export interface ActionDef {
@@ -161,6 +162,13 @@ export const ACTIONS: ActionDef[] = [
   a('replay.orbit', 'replay', 'Orbit camera (drag) / zoom (wheel)', ['Mouse0'], ['Pad:RStick'], true),
   a('replay.close', 'replay', 'Back to the result', [], ['Pad:B']),
 
+  // Touchdown celebrations (M7): the three on offer, the keys and the pad's
+  // A, B, X as the prompt draws them; skip goes straight to the result card.
+  a('celebrate.pick1', 'celebrate', 'Celebration 1', ['Digit1'], ['Pad:A']),
+  a('celebrate.pick2', 'celebrate', 'Celebration 2', ['Digit2'], ['Pad:B']),
+  a('celebrate.pick3', 'celebrate', 'Celebration 3', ['Digit3'], ['Pad:X']),
+  a('celebrate.skip', 'celebrate', 'Skip the celebration', ['Enter', 'Space'], ['Pad:Y']),
+
   // Global
   a('global.pause', 'global', 'Pause', ['Escape'], ['Pad:Menu']),
   a('global.replay', 'global', 'Instant replay', ['KeyP', 'Backspace'], ['Pad:View']),
@@ -254,6 +262,7 @@ export const CONTEXT_LABELS: Record<InputContext, string> = {
   carrier: 'Ball Carrier',
   kick: 'Kicking',
   replay: 'Replay',
+  celebrate: 'Touchdown Celebration',
   global: 'General',
 };
 

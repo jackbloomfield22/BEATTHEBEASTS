@@ -54,6 +54,11 @@ const PROMPTED = [
   'replay.camera',
   'replay.focus',
   'replay.close',
+  // Touchdown celebrations (M7): the three choices and the skip.
+  'celebrate.pick1',
+  'celebrate.pick2',
+  'celebrate.pick3',
+  'celebrate.skip',
 ];
 
 describe('prompt labels per device', () => {
@@ -71,6 +76,11 @@ describe('prompt labels per device', () => {
     expect([1, 2, 3, 4, 5].map((n) => promptText(`pocket.throw${n}`, 'kb', kb, pad))).toEqual(['1', '2', '3', '4', '5']);
     expect(['carrier.option1', 'carrier.option2', 'carrier.option3'].map((a) => promptText(a, 'kb', kb, pad))).toEqual(['1', '2', '3']);
     expect(promptCode('preSnap.snap', 'kb', kb, pad)).toBe('Space');
+  });
+
+  it('draws the celebration choices as 1, 2, 3 on the keys and A, B, X on a pad', () => {
+    expect(['celebrate.pick1', 'celebrate.pick2', 'celebrate.pick3'].map((a) => promptText(a, 'kb', kb, pad))).toEqual(['1', '2', '3']);
+    expect(['celebrate.pick1', 'celebrate.pick2', 'celebrate.pick3'].map((a) => promptCode(a, 'pad', kb, pad))).toEqual(['Pad:A', 'Pad:B', 'Pad:X']);
   });
 
   it('follows a rebinding', () => {
