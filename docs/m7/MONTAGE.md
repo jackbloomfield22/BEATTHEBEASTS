@@ -81,7 +81,7 @@ optional `lead` for the longer pre-snap window), and the director cuts:
 
 | Shot | Camera | Length |
 |---|---|---|
-| 1. Establish | high and wide from the offense's left sideline (the sun behind the lens), 42 yd off the ball, 15 m up, a slow drift; the bug top left: BEASTS BALL · 3rd & 8 · BEA 34 · Q1 5:00 | the offense set, to 0.6 s before the snap (~1.8 s) |
+| 1. Establish | high and wide from the offense's left sideline (the sun behind the lens), 42 yd off the ball, 15 m up, a slow drift; the bug top left: BEASTS BALL · 3rd & 8 · BEA 34 (the score bug keeps the clock) | the offense set, to 0.6 s before the snap (~1.8 s) |
 | 2. The play | the live broadcast camera's own logic (behind the offense, rides the throw, follows the carrier, the breakaway angle) | to just past the whistle; a score or a pick eases into 0.4× through the moment and back (~3–5 s) |
 | 3. Reaction | low (1.5 m) and tight (26° lens, 8 yd) on the man the play was about (the scorer, the interceptor, the sacker, the defender at the incompletion, the tackler, the carrier), the call big on screen ("TOUCHDOWN" in crimson, "INTERCEPTED" / "INCOMPLETE" in lime) | 1.8 s |
 | 4. The board | from high over the south end, down the bowl to the north stands and the video board, which shows BEASTS / CONTENDERS and the new score with the call; the score bug's numbers jump to the new score; the "BEASTS DRIVE" lower third: result, points, plays · yards · time, where your drive starts | 2.6 s |
@@ -131,4 +131,85 @@ canvas repaint at the board cut. Not measured on the target GPU (none here).
 `BTB_MONTAGE=1 BTB_PORT=5220 npx playwright test -c tools/shots/playwright.config.ts`
 (`tools/shots/montage.spec.ts`; `BTB_MONTAGE_SEED`, `_FPS`, `_W`).
 
-CRITIQUE_PLACEHOLDER
+Two drives recorded (800×450, Low, 20 fps of game time; SwiftShader, so
+the look is judged on the stills, the timing on the videos):
+
+| | |
+|---|---|
+| `docs/m7/montage-td.mp4` (10.8 s) | Draft seed 8: the Beasts' opening drive, TD, 6 plays, 75 yd, 2:20. Key play: 2nd & Goal at the CON 4, a goal-line run into the end zone |
+| `docs/m7/montage-punt.mp4` (10.5 s) | Draft seed 7: punt, 6 plays, 9 yd, 2:05. Key play: 3rd & 8 at the BEA 34, a deep ball down the sideline against Cover 3, incomplete |
+| `docs/m7/shots/montage-{td,punt}-{search,establish,play,reaction,board}.png` | a still a beat into each shot (`search` is the first frame after the bumper) |
+| `docs/m7/shots/montage-{td,punt}-sheet.png` | every 12th frame of each video |
+
+## Critique (honest)
+
+What works:
+
+- **The cut grammar reads as a highlight package.** Wide from the sideline,
+  hard cut to behind the offense for the snap, hard cut to tight and low,
+  hard cut to the board: four different angles, no swoops, and the
+  broadcast camera's own logic in the play shot (on the punt drive it rides
+  the deep ball down the sideline to the receiver and the corner, which is
+  the shot a director would want).
+- **The board shot is the best of it.** The video board over the north
+  stands flips to BEASTS 7 · CONTENDERS 0 · TOUCHDOWN BEASTS with the drive
+  line, the score bug's Beasts score jumps to 7 in crimson at the same cut,
+  and the lower third carries the resolver's numbers (6 plays · 75 yd ·
+  2:20, "Your ball on the Own 25"). It answers "what happened and what's the
+  score" in one frame.
+- **The football is real.** Each key play is a sim snap the Beasts' AI ran
+  against a real (anonymous) defense, consistent with the drive: a score
+  from the right distance with goal-line personnel, a third-down stop short
+  of the sticks where the drive ended, a pick that comes down where your
+  drive starts. Both videos land at ~10.5–11 s, and the end-zone "BEASTS"
+  paint in the goal-line establishing shot is a nice accident of staging.
+
+What's rough:
+
+- **The reaction shot is the weakest.** The sim's dead ball just pulls
+  everyone up: after the goal-line score the "reaction" is the runner
+  standing in a pile at the line, cropped at the knees, no celebration, no
+  teammates arriving; after the incompletion it's the receiver and the
+  defender jogging apart. A real broadcast cuts to emotion here. The
+  touchdown celebrations being built in parallel (another agent) could play
+  on the scorer in this shot later; until then a better frame would be a
+  slightly wider (35°) lens at chest height, and choosing the man from the
+  side the action ends on.
+- **The establishing shot is static.** The offense is set in its stances
+  for its whole 1.8 s; a broadcast's wide establishing shot usually catches
+  the break from the huddle or a motion. Half the field is in the stands'
+  shadow at golden hour, which flattens it.
+- **The board shot's framing** (from high over the south end, down the
+  bowl): the board is readable and centred after the second pass, but the
+  underside of the north roof and the upper stands fill the lower half, and
+  at 800 px the board's canvas reads soft. The crowd's energy rises on a
+  Beasts score but it doesn't read in that frame. A lower, longer lens from
+  midfield might put the crowd under the board better; it needs a look on a
+  real GPU.
+- **Turnovers stage ~80% of the time**; the rest (and kneel-outs) fall back
+  to the Meanwhile card. A turnover's search can hold the bumper ~0.6 s on
+  average here (up to ~2.7 s in the worst of 28 drives) before the montage
+  starts; tries are sliced so frames keep coming, but the bumper is a wait.
+  A fumble pool (runs) or more pick pairs would raise the rate and shorten
+  the wait. The bumper itself (a CSS band) wasn't verified moving: the
+  captures turn CSS animation off.
+- **Field goals and punts aren't kicked in the montage**: the key play is
+  the drive's longest gain or the stop, and the result is said by the
+  board and the lower third. Staging the kick with the existing kick view
+  (the Beasts' unit in the punt or field goal look) is the obvious next shot.
+- **No names.** The GDD's lower third "names the scorer"; there is no one to
+  name honestly (see Who plays), so the call is the result ("TOUCHDOWN").
+  The men are real players' bodies and ratings, unnamed.
+- **Perf isn't measured on the target hardware** (no GPU here). The
+  montage frame is the replay's frame, which is the live play's; the
+  per-cut costs are listed above.
+
+Harness note (found while recording): in `?video` mode Chromium draws extra
+frames while Playwright takes each screenshot (R3F's loop runs during the
+capture), and each one stepped the scene by a full 1/N s, so the first
+recordings ran the montage ~5× too fast. The montage now steps only in the
+frames the recorder asks for (`platform.ts videoGate`, set by Stage's
+`__btbRenderFrame`). Other recordings that rely on `?video` (the feel
+videos, the replay video) likely have the same problem and weren't
+changed. Also: after editing a module the dev server had served, a page
+could load two copies of it (HMR timestamps); restart Vite before a capture.
