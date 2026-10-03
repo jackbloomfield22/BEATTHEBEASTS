@@ -5,9 +5,11 @@ import { loadAnimLibrary, type AnimLibrary } from '@/anim/library';
 import { PlayerAnimator } from '@/anim/animator';
 import { Ragdoll } from '@/anim/ragdoll';
 import { skinHexFor } from '@/app/characterization';
-import { urlFlags } from '@/app/platform';
+import { urlFlags, videoGate } from '@/app/platform';
 import { practice, usePractice } from '@/game/practice';
 import { replay, replayStats } from '@/game/replaySession';
+import { montage, useMontage, type MontageInfo } from '@/game/montageSession';
+import { videoBoard, type BoardScore } from '../stadium/props';
 import type { SimRunner } from '@/game/runner';
 import { Input } from '@/input/InputManager';
 import { createRouteArt } from './routeArt';
@@ -161,7 +163,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: Pl
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null };
+    return { player, who: `${p.id}|${kit}|0`, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null };
   });
 }
 
@@ -170,11 +172,15 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: Pl
  * the SLOT slot, the nickel corner for a linebacker): dress the body for
  * whoever lines up there now. Look and body only; the skeleton and clips stay.
  */
-function relook(b: Body, p: SimPlayer): void {
-  if (b.who === p.id) return;
-  b.who = p.id;
+function relook(b: Body, p: SimPlayer, kit = b.kit, anonymous = false): void {
+  // Keyed by the man, the kit and the nameplate (a body is built as `id|kit|0`).
+  const look = `${p.id}|${kit}|${anonymous ? 1 : 0}`;
+  if (b.who === look) return;
+  b.who = look;
+  b.kit = kit;
   const body = bodyFromImperial(p.heightIn, p.weightLb);
-  b.player.setLook({ kit: KITS[b.kit]!, skin: skinHexFor(p.name), number: p.num, name: jerseyName(p.name), variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name) });
+  // The Beasts' drive montage (M7) plays men the game never names: no nameplate.
+  b.player.setLook({ kit: KITS[kit]!, skin: skinHexFor(p.name), number: p.num, name: anonymous ? '' : jerseyName(p.name), variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name) });
   b.player.setBody(body.heightM, body.weightKg);
   b.ext = bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg);
 }
@@ -229,6 +235,14 @@ const _lean = { x: 0, z: 0 };
 /** What the scene draws: the live play's runner, or a replay's. */
 type Runner = SimRunner;
 
+/** The board's lines for a Beasts drive: the call, the score after it. */
+const BOARD_LINE: Record<string, string> = { TD: 'TOUCHDOWN BEASTS', FG: 'FIELD GOAL BEASTS', Punt: 'BEASTS PUNT', Turnover: 'TURNOVER', Downs: 'STOPPED ON DOWNS', Safety: 'SAFETY', MissedFG: 'NO GOOD', EndOfHalf: 'END OF HALF', EndOfGame: 'END OF REGULATION' };
+function boardScore(info: MontageInfo): BoardScore {
+  const d = info.drive;
+  const tp = d.twoPoint ? (d.twoPoint.good ? ' · TWO GOOD' : ' · TWO NO GOOD') : '';
+  return { kicker: `BEASTS DRIVE  ·  ${d.plays} ${d.plays === 1 ? 'PLAY' : 'PLAYS'}  ·  ${Math.max(0, Math.round(d.yards))} YD  ·  ${d.top}`, headline: BOARD_LINE[d.result]! + tp, home: info.after.beasts, away: info.after.user };
+}
+
 /** The carrier's move options as the HUD says them (one word each). */
 const OPTION_WORD: Record<string, string> = { juke: 'Juke', stiffArm: 'Stiff arm', spin: 'Spin', truck: 'Truck', hurdle: 'Hurdle', dive: 'Dive', protect: 'Protect' };
 
@@ -247,6 +261,9 @@ export function GameScene() {
   const lastSimT = useRef(0);
   const snapped = useRef(false);
   const [contact] = useState(() => new ContactSmoother());
+  /** The Contenders' kit on the field (white if theirs is as dark as the Beasts'): the montage dresses the defense in it. */
+  const userKit = useRef('whiteLime');
+  const boardUp = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -261,6 +278,7 @@ export function GameScene() {
       // Agent order in the sim: OFF_SLOTS then DEF_SLOTS (sim/plays.ts).
       // Never two dark kits on the field (Playtest 1 decision 5): the offense changes to white if its kit is as dark as the Beasts'.
       const offKit = kitAgainst(practice.offenseKit, 'beasts').id;
+      userKit.current = offKit;
       const all = [...buildTeam(OFF_SLOTS.map((k) => R.offense[k]), OFF_SLOTS, offKit, asset, lib), ...buildTeam(DEF_SLOTS.map((k) => R.defense[k]), DEF_SLOTS, 'beasts', asset, lib)];
       const g = new THREE.Group();
       g.name = 'players';
@@ -419,12 +437,24 @@ export function GameScene() {
   }
 
   useFrame(({ camera, gl, clock }, dt) => {
-    const step = urlFlags.video ? 1 / urlFlags.video : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    // (A recording's montage steps only in the frames the recorder asked for: platform.ts videoGate.)
+    const step = urlFlags.video ? (montage.busy && !videoGate.open ? 0 : 1 / urlFlags.video) : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
     latency.frame++;
     // A replay (M7) plays instead of the live snap, which holds where it stands until it hands back.
     replay.frame(step);
-    if (!replay.active) practice.frame(step);
-    const rp = replay.active ? replay.player : null;
+    // The Beasts' drive montage (M7) plays its staged snap the same way, when no replay is up.
+    if (!replay.active) montage.frame(step);
+    const mp = !replay.active && montage.active ? montage.player : null;
+    if (!replay.active && !mp) practice.frame(step);
+    const rp = replay.active ? replay.player : mp;
+    // The montage's last shot is the video board with the new score (a repaint at the cut, not per frame).
+    const onBoard = montage.shot === 'board';
+    if (onBoard !== boardUp.current) {
+      boardUp.current = onBoard;
+      const info = useMontage.getState().info;
+      if (onBoard && info) videoBoard.show(boardScore(info));
+      else videoBoard.reset();
+    }
     const r: Runner | null = rp ? rp.runner : practice.runner;
     const show = !!r && !!bodies;
     marks.group.visible = show && r!.cur.phase !== 'dead';
@@ -477,7 +507,7 @@ export function GameScene() {
     }
 
     // A new play (or a replay rebuilt for a scrub back): settle everyone into his stance where he lines up.
-    const showing = rp ? `r${rp.epoch}` : `p${practice.playId}`;
+    const showing = mp ? `m${mp.epoch}` : rp ? `r${rp.epoch}` : `p${practice.playId}`;
     if (shownPlay.current !== showing) {
       if (!rp && shownPlay.current.startsWith('r') && replay.handoff === practice.playId) {
         // A snap's replay has closed on the very state the live play is in: carry on with the bodies as they are.
@@ -490,7 +520,10 @@ export function GameScene() {
         const cur0 = r.cur;
         bodies.forEach((b, i) => {
           const a = cur0.agents[i]!;
-          relook(b, s0.agents[i]!.p);
+          // The montage: the Beasts on offense in their black, the Contenders' defense in the user's kit, all anonymous.
+          const off = i < OFF_SLOTS.length;
+          if (mp) relook(b, s0.agents[i]!.p, off ? 'beasts' : userKit.current, true);
+          else relook(b, s0.agents[i]!.p, off ? userKit.current : 'beasts');
           b.player.root.visible = true;
           b.player.root.position.set(worldX(a.y), 0, worldZ(a.x));
           b.player.root.rotation.set(0, yawOf(a.face), 0);
@@ -520,7 +553,8 @@ export function GameScene() {
     const { cur } = rr;
     const alpha = rr.alpha;
     for (const e of rr.drainEvents()) frameEvents.push(e);
-    if (rp) reactReplay();
+    if (mp) reactMontage(clock.elapsedTime);
+    else if (rp) reactReplay();
     else reactCrowd(clock.elapsedTime);
 
     // The snap: everyone who has a get-off out of his stance plays it.
@@ -555,7 +589,7 @@ export function GameScene() {
   // at -90), so the icons and the carrier's keys sit on the players as drawn,
   // not a frame behind them.
   useFrame(({ camera }) => {
-    if (!practice.runner || !bodies || replay.active) return;
+    if (!practice.runner || !bodies || replay.active || montage.active) return;
     camera.updateMatrixWorld();
     placeHud();
   }, -80);
@@ -728,6 +762,16 @@ export function GameScene() {
   /** A replay's hits sound again; the crowd doesn't react twice. */
   function reactReplay() {
     for (const e of frameEvents) if (e.type === 'hit') Audio.hit(Number(e.data?.force ?? 4), !!e.data?.big);
+  }
+
+  /** The Beasts' drive (M7): it's their house, so a Beasts score or big play brings the bowl up and a Contenders stop sits it down. */
+  function reactMontage(now: number) {
+    for (const e of frameEvents) {
+      if (e.type === 'touchdown') crowdEnergy.trigger('touchdown', now);
+      else if (e.type === 'interception' || e.type === 'recovery' || e.type === 'sack') crowdEnergy.trigger('groan', now);
+      else if (e.type === 'catch') crowdEnergy.trigger('bigPlay', now);
+      if (e.type === 'hit') Audio.hit(Number(e.data?.force ?? 4), !!e.data?.big);
+    }
   }
 
   function reactCrowd(now: number) {

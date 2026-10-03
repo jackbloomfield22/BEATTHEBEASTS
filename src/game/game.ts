@@ -30,11 +30,14 @@ import { squadFor } from './rotation';
 import type { RatedBeasts } from './beasts';
 import type { NewDaily } from './daily';
 import { describe } from './describe';
-import { applyBeastsDrive, applyKick, applyPlay, applyPunt, beastsPossession, callTimeout, canVictoryFormation, chooseFourth, chooseTry, clockText, createMatch, fgMakePct, halfSecs, isTimed, KICKER_RANGE, quarterName, readyForPlay, resolvePunt, SIDELINE, snapped, spikeOrKneel, tickClock, type BeastsDrive, type ClockEvent, type GameLength, type Match, type PlayOutcome, type PuntResult } from './match';
+import { applyBeastsDrive, applyKick, applyPlay, applyPunt, beastsPossession, callTimeout, canVictoryFormation, clockLabel, chooseFourth, chooseTry, clockText, createMatch, fgMakePct, halfSecs, isTimed, KICKER_RANGE, quarterName, readyForPlay, resolvePunt, SIDELINE, snapped, spikeOrKneel, tickClock, type BeastsDrive, type ClockEvent, type GameLength, type Match, type PlayOutcome, type PuntResult } from './match';
 import { kickFlight, puntFlight, type KickResult } from './kick';
 import { urlFlags } from '@/app/platform';
 import { practice, usePractice } from './practice';
 import { capsuleOf } from './replay';
+import { montageTeams, type MontageTeams } from './montage';
+import { montage } from './montageSession';
+import { getSettings } from '@/app/settings';
 import { buildRecord, keyMatchups, type GameRecord, type RecordMeta, type ReplayCapsule } from './record';
 import type { Situation } from './situation';
 import { emptyGameBox, pickPlayOfGame, sampleShadow, tallySnap, type GameBox, type PlayLog } from './stats';
@@ -164,6 +167,8 @@ class GameSession {
   private start0: GameStart | null = null;
   private team: ContendersRoster | null = null;
   private beastsD: BeastsDefense | null = null;
+  /** The anonymous elevens the Beasts' drive montage stages its key plays with (montage.ts), drawn once a game. */
+  private mTeams: MontageTeams | null = null;
   /** Every snap of the game (the play of the game is picked from these). */
   private plays: PlayLog[] = [];
   private capsules: (ReplayCapsule | null)[] = [];
@@ -197,6 +202,9 @@ class GameSession {
     this.start0 = o;
     this.team = rosters.team;
     this.beastsD = rosters.beastsD;
+    const t = rosters.team;
+    const onField = [t.QB, t.RB, t.RB2, t.WR1, t.WR2, t.WR3, t.TE, t.TE2, ...t.OL].map((p) => p.id).concat([...o.beasts.beasts, ...o.beasts.subs].map((b) => b.id));
+    this.mTeams = montageTeams(o.cat, onField, o.seed);
     this.plays = [];
     this.halftimeShown = false;
     this.acc = 0;
@@ -328,6 +336,7 @@ class GameSession {
   }
 
   leave(): void {
+    montage.abort();
     this.offKeys?.();
     this.offKeys = null;
     cancelAnimationFrame(this.raf);
@@ -336,11 +345,20 @@ class GameSession {
     set({ stage: 'loading', match: null, paused: false });
   }
 
-  /** A Beasts possession: computed now, shown as the Meanwhile cut. */
+  /**
+   * A Beasts possession: computed now (the resolver decides it), then shown:
+   * the broadcast montage of its key play (M7; staged over the next frames,
+   * src/game/montage.ts) or, by the setting or when no snap fits, the
+   * Meanwhile card. The montage only shows what the resolver decided.
+   */
   private nextBeasts(): void {
     const m = this.m!;
     const d = beastsPossession(m);
     set({ stage: 'meanwhile', meanwhile: d, kick: null });
+    if (getSettings().gameplay.beastsDrives !== 'montage' || !this.mTeams) return;
+    const after = { user: m.score.user + (d.result === 'Safety' ? 2 : 0), beasts: m.score.beasts + d.points };
+    const info = { drive: d, play: null, before: { ...m.score }, after, clock: clockLabel(m), ot: m.ot };
+    montage.prepare(d, this.mTeams, m.cfg.seed, m.round, m.ot, info, () => this.endMeanwhile(), () => set({}));
   }
 
   /** The Meanwhile cut is over (or skipped): score it, and to your drive. */
@@ -348,6 +366,7 @@ class GameSession {
     const m = this.m;
     const d = get().meanwhile;
     if (!m || !d || get().stage !== 'meanwhile' || get().paused) return;
+    montage.abort();
     applyBeastsDrive(m, d);
     set({ meanwhile: null });
     this.toPhase();

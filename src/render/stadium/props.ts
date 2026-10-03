@@ -5,6 +5,45 @@ import { stadiumUniforms } from './materials';
 
 // Video board, south light masts, the open-end terrace and the plaza.
 
+/** What the video board shows over the default branding: a score (the Beasts' drive montage, M7). */
+export interface BoardScore {
+  kicker: string;
+  headline: string;
+  home: number;
+  away: number;
+}
+
+/**
+ * The video board's painter (the World builds one board): show a score, or
+ * back to the branding. A repaint is one 2048×820 canvas upload, done at a
+ * cut, never per frame.
+ */
+const boards = new Set<(s: BoardScore | null) => void>();
+let boardNow: BoardScore | null = null;
+export const videoBoard = {
+  show(s: BoardScore): void {
+    boardNow = s;
+    for (const paint of boards) paint(s);
+  },
+  reset(): void {
+    if (!boardNow) return;
+    boardNow = null;
+    for (const paint of boards) paint(null);
+  },
+};
+
+function fitText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, max: number): void {
+  const w = ctx.measureText(text).width;
+  if (w <= max) ctx.fillText(text, x, y);
+  else {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(max / w, 1);
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
+}
+
 export function createVideoBoardTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = 2048;
@@ -12,17 +51,59 @@ export function createVideoBoardTexture(): THREE.CanvasTexture {
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
-  const draw = () => {
-    const ctx = c.getContext('2d')!;
+  let score: BoardScore | null = null;
+  const ground = (ctx: CanvasRenderingContext2D) => {
     const g = ctx.createLinearGradient(0, 0, 0, c.height);
     g.addColorStop(0, '#0c0a14');
     g.addColorStop(1, '#030206');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, c.width, c.height);
+  };
+  const grid = (ctx: CanvasRenderingContext2D) => {
     // LED pixel grid feel.
     ctx.fillStyle = 'rgba(255,255,255,0.025)';
     for (let x = 0; x < c.width; x += 6) ctx.fillRect(x, 0, 1, c.height);
     for (let y = 0; y < c.height; y += 6) ctx.fillRect(0, y, c.width, 1);
+  };
+  const drawScore = (ctx: CanvasRenderingContext2D, sc: BoardScore) => {
+    ground(ctx);
+    // The home side's crimson wash on the left half, the visitors' on the right.
+    ctx.fillStyle = 'rgba(200,16,46,0.22)';
+    ctx.fillRect(0, 230, c.width / 2 - 8, 420);
+    ctx.fillStyle = 'rgba(170,255,0,0.10)';
+    ctx.fillRect(c.width / 2 + 8, 230, c.width / 2 - 8, 420);
+    grid(ctx);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '72px Bungee, "Arial Black", sans-serif';
+    ctx.fillStyle = '#f4f0ff';
+    fitText(ctx, sc.kicker, c.width / 2, 110, c.width - 160);
+    ctx.font = '84px Bungee, "Arial Black", sans-serif';
+    ctx.fillStyle = '#ff2a4d';
+    ctx.fillText('BEASTS', c.width / 4, 300);
+    ctx.fillStyle = '#aaff00';
+    ctx.fillText('CONTENDERS', (3 * c.width) / 4, 300);
+    ctx.font = '300px Bungee, "Arial Black", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#ff2a4d';
+    ctx.shadowBlur = 40;
+    ctx.fillText(String(sc.home), c.width / 4, 500);
+    ctx.shadowColor = '#aaff00';
+    ctx.fillText(String(sc.away), (3 * c.width) / 4, 500);
+    ctx.shadowBlur = 0;
+    ctx.font = '96px Bungee, "Arial Black", sans-serif';
+    ctx.fillStyle = '#ff2a4d';
+    fitText(ctx, sc.headline, c.width / 2, 735, c.width - 160);
+  };
+  const draw = () => {
+    const ctx = c.getContext('2d')!;
+    if (score) {
+      drawScore(ctx, score);
+      tex.needsUpdate = true;
+      return;
+    }
+    ground(ctx);
+    grid(ctx);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '96px Bungee, "Arial Black", sans-serif';
@@ -41,6 +122,11 @@ export function createVideoBoardTexture(): THREE.CanvasTexture {
   };
   draw();
   document.fonts?.load('100px Bungee').then(draw, () => undefined);
+  // Every board texture built (React's dev double-render can build two; the World keeps one) takes the score.
+  boards.add((sc) => {
+    score = sc;
+    draw();
+  });
   return tex;
 }
 

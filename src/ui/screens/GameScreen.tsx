@@ -20,6 +20,8 @@ import { TabKey } from '../components/Glyph';
 import { PlayArt } from '../game/PlayArt';
 import { PlayHud, readsNote } from './PracticeScreen';
 import { ReplayCue, ReplayHud, useReplayKey } from '../game/ReplayHud';
+import { MontageHud } from '../game/MontageHud';
+import { montage, useMontage } from '@/game/montageSession';
 import '../styles/game.css';
 import '../styles/match.css';
 import '../styles/results.css';
@@ -65,7 +67,8 @@ export function GameScreen() {
     return Input.onAction((id, info) => {
       // (Esc is also menu.back: the pause menu's Back may have just resumed on this same press.)
       // In a replay Esc goes back to the result card (replaySession.ts).
-      if (id !== 'global.pause' || info.repeat || justResumed || replay.active) return;
+      // The Beasts' drive montage takes Esc / Start as skip (montageSession.ts).
+      if (id !== 'global.pause' || info.repeat || justResumed || replay.active || montage.busy) return;
       const g = useGame.getState();
       const ps = usePractice.getState().stage;
       if (g.paused || ps === 'paused') return resumeGame();
@@ -77,6 +80,7 @@ export function GameScreen() {
   const showPause = paused || (stage === 'play' && snapPaused);
   // The instant replay (M7) keeps the screen clean: no score bug or clock banners over it.
   const replayOpen = useReplay((s) => s.open);
+  const montageOpen = useMontage((s) => s.open);
   useEffect(() => () => replay.abort(), []);
   return (
     <div className="game-screen">
@@ -85,7 +89,7 @@ export function GameScreen() {
       {!paused ? (
         <>
           {stage === 'pregame' ? <PreGame /> : null}
-          {stage === 'meanwhile' ? <Meanwhile /> : null}
+          {stage === 'meanwhile' ? montageOpen ? <MontageHud /> : <Meanwhile /> : null}
           {stage === 'call' ? <GamePlayCall /> : null}
           {stage === 'play' ? <GamePlay /> : null}
           {stage === 'fourth' ? <FourthCard /> : null}
@@ -163,8 +167,11 @@ function GamePause() {
 
 function ScoreBug() {
   useGame((s) => s.v);
+  // The Beasts' drive montage's last shot puts the drive's points on the bug (the match scores them when it ends).
+  const after = useMontage((s) => (s.shot === 'board' ? s.info?.after : null));
   const m = game.match;
   if (!m) return null;
+  const score = after ?? m.score;
   const sit = m.sit;
   const onField = m.phase === 'drive' || m.phase === 'fourth' || m.phase === 'twoPoint';
   const timed = isTimed(m);
@@ -178,7 +185,7 @@ function ScoreBug() {
     <div className="score-bug">
       <div className="sb-team us">
         <span className="sb-name">Contenders</span>
-        <span className="sb-score">{m.score.user}</span>
+        <span className={`sb-score ${after && after.user !== m.score.user ? 'bump' : ''}`}>{score.user}</span>
         {m.clock.live && !final ? (
           <span className="sb-tos" title="Timeouts">
             {[0, 1, 2].map((i) => (
@@ -189,7 +196,7 @@ function ScoreBug() {
       </div>
       <div className="sb-team them">
         <span className="sb-name">Beasts</span>
-        <span className="sb-score">{m.score.beasts}</span>
+        <span className={`sb-score ${after && after.beasts !== m.score.beasts ? 'bump' : ''}`}>{score.beasts}</span>
       </div>
       <div className="sb-clock">
         <span className="sb-q">{q}</span>
