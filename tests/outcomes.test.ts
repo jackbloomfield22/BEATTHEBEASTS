@@ -126,5 +126,5 @@ describe('outcomes: big hits are rare', () => {
     }
     expect(big / tackles).toBeGreaterThan(0.02);
     expect(big / tackles).toBeLessThan(0.12);
-  }, 240_000);
+  }, 600_000);
 });

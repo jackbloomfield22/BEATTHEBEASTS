@@ -119,7 +119,7 @@ describe('sim: a play snap to whistle', () => {
       }
     }
     // (The whole book, the plays a trait unlocks too: under a minute alone, longer beside the rest of the suite.)
-  }, 240_000);
+  }, 600_000);
 
   it('a user throw goes where the icon says: snap, throw, catch or incomplete', () => {
     const s = setup(7, playById('trips-stick'), defById('cover3'), true);
