@@ -1793,7 +1793,7 @@ function landmark(s: PlayState, d: Agent, zone: ZoneName): V2 {
   return v2(at.x + (d.mem.zj as number), at.y + (d.mem.zl as number));
 }
 
-/** A defender reads a bubble on his side within this of the receiver (yd): the corner, the apex, the curl-flat. Ours. */
+/** A defender reads a bubble on his side within this of the receiver (yd): the corner, the apex or curl-flat, the hook. Ours. */
 const BUBBLE_SEE = 14;
 /** The bubble: a receiver split out, behind the line (yd) and working out toward the sideline (yd/s) without climbing. */
 const BUBBLE_DEPTH = -0.3;
@@ -1807,23 +1807,9 @@ const FORCE_LOOK = 0.8;
 const ALLEY_LOOK = 0.4;
 
 /**
- * The bubble read, before the throw. A receiver split out who steps back
- * behind the line and works to the sideline is a screen, and the men on his
- * side read it the way they're coached ("bubble!"): they stop their drops
- * and come downhill, the corner (the force) outside-in to keep it from
- * getting outside him, the curl-flat or the apex inside-out to the alley. A
- * deep corner comes too once nothing on his side is going vertical (#1
- * blocking is his run read). Each at his own reaction from when it showed.
- * The hook and the safeties stay on their drops until the ball's out
- * (play.ts rallyScreen). Without it the apex had dropped to 8–9 yd by the
- * throw and the stalk blocker met him there, so a bubble that got past
- * the corner had ten yards of grass (the bubble against Cover 2 12 yd a
- * throw once the stalks went to the right men, tools/sim/screens.ts).
- */
-/**
  * A safety in quarters: a half zone with the corner on his side playing deep
  * outside him (Cover 4's two-deep look with four deep). He's a run-support
- * player who reads #2 (the Saban/Belichick quarters rule): #2 going to the
+ * player who reads #2 (the quarters safety's rule): #2 going to the
  * flat or behind the line puts him in the alley. A Cover 2 or Tampa 2 half
  * safety, with a squat corner under him, stays deep. He reads it from his
  * depth (13 yd), this much further off than the men underneath (yd). Ours.
@@ -1869,6 +1855,21 @@ function stalkRead(s: PlayState, d: Agent, mine: number): boolean {
   return true;
 }
 
+/**
+ * The bubble read, before the throw. A receiver split out who steps back
+ * behind the line and works to the sideline is a screen, and the men on his
+ * side read it the way they're coached ("bubble!"): they stop their drops
+ * and come downhill, the corner (the force) outside-in to keep it from
+ * getting outside him; the curl-flat or the apex, the hook to that side and
+ * a quarters safety inside-out to the alley. A deep corner comes too once
+ * nothing on his side is going vertical (stalkRead: #1 blocking is his run
+ * read). Each at his own reaction from when it showed. A deep half (Cover 2,
+ * Tampa 2) and the deep middle stay on their drops until the ball's out
+ * (play.ts rallyScreen). Without it the apex had dropped to 8–9 yd by the
+ * throw and the stalk blocker met him there, so a bubble that got past the
+ * corner had ten yards of grass (the bubble against Cover 2 12 yd a throw
+ * once the stalks went to the right men, tools/sim/screens.ts).
+ */
 function bubbleRead(s: PlayState, d: Agent, role: ZoneRole): boolean {
   if (s.phase === 'carrier') return false;
   const corner = d.slot === 'LCB' || d.slot === 'RCB';

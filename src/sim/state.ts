@@ -229,11 +229,11 @@ const MIRROR_ZONE: Partial<Record<ZoneName, ZoneName>> = { curlL: 'curlR', curlR
  * wherever the strength is. So with the strength to the right the
  * underneath zones of everyone but the corners (who play their own side)
  * swap sides, and the ends and tackles swap jobs. The deep zones stay with
- * the men aligned in them. Before this, against trips or bunch right (half
- * the snaps of every formation, flipped or not), the linebacker who aligned
- * on the weak side had the strong curl and ran 15 yd across the formation
- * to it at the snap (the bubble against Cover 2 had nobody inside the
- * corner, tools/sim/screens.ts).
+ * the men aligned in them. Before this, with the strength to the right
+ * (trips and bunch as drawn, every 2x1 set flipped), the linebacker who
+ * aligned on the weak side had the strong curl and ran 15 yd across the
+ * formation to it at the snap (the bubble against Cover 2 had nobody inside
+ * the corner, tools/sim/screens.ts).
  */
 export function toStrength(assign: DefCall['assign'], strength: 1 | -1): DefCall['assign'] {
   if (strength > 0) return assign;
