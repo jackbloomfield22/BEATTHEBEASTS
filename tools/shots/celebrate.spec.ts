@@ -17,13 +17,13 @@ const VIDEO = !!process.env.BTB_CELEB_VIDEO;
 const ONLY = process.env.BTB_CELEB_ONLY?.split(',');
 const W = Number(process.env.BTB_CELEB_W ?? 1280);
 const H = Math.round((W * 9) / 16);
-const FPS = VIDEO ? 30 : 15;
+const FPS = VIDEO ? 30 : 10;
 
 type Clip = { id: string; seed: number; script(s: unknown): unknown };
 type Win = {
   __btbPractice: { runner: { paused: boolean; state: { result: unknown } } | null; callClip(c: unknown): Promise<void>; tickWith(f: unknown): void };
   __btbPracticeUi: { getState(): { stage: string } };
-  __btbCeleb: { choose(n: number, auto: boolean): void };
+  __btbCeleb: { choose(n: number, auto: boolean): void; skip(): void };
   __btbCelebUi: { getState(): { phase: string; choices: string[] }; setState(p: object): void };
   __btbClips(): Promise<Clip[]>;
   __btbGameReady?: boolean;
@@ -137,12 +137,15 @@ test('celebrations · the prompt, a pick, the celebration, the card', async ({ p
   await until(page, (w) => w.__btbCelebUi.getState().phase === 'choose');
   await frame(page);
   await still(page, PAD ? 'celeb-01-prompt-pad' : 'celeb-02-prompt-keys');
+  let first = true;
+  let scored = true;
   for (const g of GALLERY) {
     if (ONLY && !ONLY.includes(g.id)) continue;
-    if (g !== GALLERY[0]) {
+    if (!scored) {
       await score(page);
       await until(page, (w) => w.__btbCelebUi.getState().phase === 'choose');
     }
+    scored = false;
     await ev(page, (w, id: string) => {
       const ui = w.__btbCelebUi.getState();
       w.__btbCelebUi.setState({ choices: [id, ...ui.choices.filter((c) => c !== id)].slice(0, 3) });
@@ -156,10 +159,12 @@ test('celebrations · the prompt, a pick, the celebration, the card', async ({ p
       }
       await still(page, `celeb-${g.id}-${at.toFixed(1)}`);
     }
-    await until(page, (w) => w.__btbCelebUi.getState().phase === 'done');
-    if (g === GALLERY[0]) {
+    if (first) {
+      // The first plays out to the card (the team-mate's high five on the way); the rest are skipped once shot (frames are slow here).
+      first = false;
+      await until(page, (w) => w.__btbCelebUi.getState().phase === 'done');
       for (let k = 0; k < 4; k++) await frame(page);
       await still(page, 'celeb-03-after-card');
-    }
+    } else await ev(page, (w) => w.__btbCeleb.skip());
   }
 });
