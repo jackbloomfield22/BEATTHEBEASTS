@@ -156,8 +156,8 @@ export function holdIt(s: PlayState): InputFrame {
 
 // Seeds found by tools/sim/findclips.ts (re-found for M6's sim).
 export const CLIPS: Clip[] = [
-  // Four verticals against Cover 2: the slot's seam caught in stride, then a juke and 42 more after the catch to the end zone (re-found for M6.6's ratings: seed 51; for the second slant pass, the lead on the path he really runs and timing: seed 18).
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 18, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'juke') },
+  // Four verticals against Cover 2: the slot's seam caught in stride, then a juke and 42 more after the catch to the end zone (re-found for M6.6's ratings: seed 51; for the second slant pass, the lead on the path he really runs and timing: seed 18; for the third, the rhythm read: seed 16, a juke and 41 more to the end zone).
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 16, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // Stick against Cover 1: the short catch, a stiff arm sheds the first tackler a second later, down 15 yd on (11 after the catch).
@@ -176,11 +176,11 @@ export const CONCEPTS: Clip[] = [
   { id: 'out', title: 'Quick out', seed: 8, play: 'doubles-quick-outs', def: 'cover1', los: 30, script: concept({ icon: 1, at: 30 }) },
   // Curl against man: settles at 10 facing the QB, SECURE on the catch (10 yd).
   { id: 'curl', title: 'Curl', seed: 5, play: 'doubles-curls', def: 'cover1', los: 30, script: concept({ icon: 1, at: 60, call: 'possession' }) },
-  // Four verticals against the fire zone: the blitz comes, the ball goes at 1.5 s, the Z up the sideline over the rotated corner (38 yd, 2 yd of separation; re-found for the identity pass's sim, and for the second slant pass: seed 19 → 17, the same play, call and throw).
+  // Four verticals against the fire zone: the blitz comes, the ball goes at 1.5 s, the Z up the sideline over the rotated corner (38 yd, 2 yd of separation; re-found for the identity pass's sim, and for the second slant pass: seed 19 → 17, the same play, call and throw. Since the third slant pass's rhythm read he's caught at 1.4 yd and goes the distance, 70 yd).
   { id: 'go', title: 'Go', seed: 17, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
   // Play-action post against man: the fake, the post behind it, the ball led into the middle (25 yd).
-  // Seed 13 → 40 for the slant squeeze (docs/m66/SLANTS.md): a half safety now breaks on the ball at the pace that gets him there, and on seed 13 he got a hand to it. Seed 40 → 9 for the second slant pass (the lead on his real path, timing), the same play, coverage and throw: 24 yd, 1.5 yd of separation.
-  { id: 'post', title: 'Post', seed: 9, play: 'singleback-pa-post', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 80, hold: 10 }) },
+  // Seed 13 → 40 for the slant squeeze (docs/m66/SLANTS.md): a half safety now breaks on the ball at the pace that gets him there, and on seed 13 he got a hand to it. Seed 40 → 9 for the second slant pass (the lead on his real path, timing), the same play, coverage and throw: 24 yd, 1.5 yd of separation. Seed 9 → 108 for the third (2-man's trail technique: on 9 the corner was 0.9 yd off him), the same play, coverage and throw: 26 yd, 1.4 yd of separation.
+  { id: 'post', title: 'Post', seed: 108, play: 'singleback-pa-post', def: 'cover2man', los: 30, script: concept({ icon: 1, at: 80, hold: 10 }) },
   // Snag's corner against man: the Z's corner from the bunch, the ball over the outside shoulder (36 yd).
   { id: 'corner', title: 'Corner', seed: 6, play: 'bunch-snag', def: 'cover2man', los: 30, script: concept({ icon: 3, at: 60, hold: 14 }) },
   // PA crossers against the fire zone: the blitz bites on the fake, the X's deep cross comes open behind it, caught running (14 yd; re-found for the identity pass's sim).
@@ -205,8 +205,8 @@ const pair = (id: string, title: string, base: Omit<Clip, 'id' | 'title' | 'swap
   { ...base, id: `${id}-b`, title: `${title}: ${b.name}`, swap: b },
 ];
 export const IDENTITY: Clip[] = [
-  // Speed: the play-action post against Cover 2. Hill is behind the safety, open by 2.5 yd, for 45; Welker's ball falls incomplete with a man on him (1.4 yd). (Seed 7 → 6 for the second slant pass, the same play, call and throw.)
-  ...pair('speed', 'Speed', { seed: 6, play: 'singleback-pa-post', def: 'cover2', los: 30, script: concept({ icon: 1, at: 90, hold: 16 }) }, { off: 'X', name: 'Tyreek Hill', pos: 'WR' }, { off: 'X', name: 'Wes Welker', pos: 'WR' }),
+  // Speed: the play-action post against Cover 2. Hill is behind the safety, open by 2.5 yd, for 45; Welker's ball falls incomplete with a man on him (1.4 yd). (Seed 7 → 6 for the second slant pass, the same play, call and throw; 6 → 67 for the third, the rhythm read: Hill 70 yd at 2.1 yd of separation, Welker's incomplete at 1.1.)
+  ...pair('speed', 'Speed', { seed: 67, play: 'singleback-pa-post', def: 'cover2', los: 30, script: concept({ icon: 1, at: 90, hold: 16 }) }, { off: 'X', name: 'Tyreek Hill', pos: 'WR' }, { off: 'X', name: 'Wes Welker', pos: 'WR' }),
   // Elusive against power: I-form power against Cover 1, the AI carrying. Barry makes the man miss and goes 70; Bettis breaks two and is down at 6.5.
   ...pair('elusive', 'Make a man miss', { seed: 11, play: 'iform-power', def: 'cover1', los: 30, user: false, script: () => NEUTRAL }, { off: 'RB', name: 'Barry Sanders', pos: 'RB' }, { off: 'RB', name: 'Jerome Bettis', pos: 'RB' }),
   // Accuracy: the curl against Cover 3, thrown the same beat. Montana's is 0.2 yd off and caught for 10; Namath's is 1.9 off and falls incomplete (seed 16 → 60 for the second slant pass, the same play, call and throw).
