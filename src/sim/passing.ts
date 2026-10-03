@@ -796,7 +796,13 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
   const ballhawk = has(a, 'ballhawk') ? 0.1 : 0;
   // In front of the intended receiver (undercutting) he can catch it; from behind he mostly knocks it away.
   const r = b.target >= 0 ? s.agents[b.target]! : null;
-  const front = r ? ((a.pos.x - r.pos.x) * (s.agents[b.thrower]!.pos.x - r.pos.x) + (a.pos.y - r.pos.y) * (s.agents[b.thrower]!.pos.y - r.pos.y)) > 0 : true;
+  // In front means on the QB's side of him and not on his hip: a man trailing him (a step behind along his run, as 2-man's
+  // trail technique lives, under him on the QB's side) reaches across the receiver for it and plays through the hands, a
+  // breakup far more often than a pick (M6.6: counted as in front, 2-man picked 10% of the on-time slants thrown blind,
+  // tools/sim/slants.ts).
+  const rv = r ? len(r.vel) : 0;
+  const onHip = !!r && rv > 2 && dist(a.pos, r.pos) < HIP_R && (a.pos.x - r.pos.x) * r.vel.x + (a.pos.y - r.pos.y) * r.vel.y < 0;
+  const front = r ? !onHip && (a.pos.x - r.pos.x) * (s.agents[b.thrower]!.pos.x - r.pos.x) + (a.pos.y - r.pos.y) * (s.agents[b.thrower]!.pos.y - r.pos.y) > 0 : true;
   const close = Math.max(0, 1 - off / 0.9);
   // Breakups outnumber interceptions about 4 to 1 in the NFL (passes defensed
   // vs interceptions); a ballhawk undercutting a route gets his hands on more.
@@ -816,6 +822,9 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
   if (u < pInt + pBreak) return 'deflect';
   return 'miss';
 }
+
+/** A defender within this (yd) of the receiver and behind him along his run is on his hip (resolveCatch): ai.ts TRAIL_R's trail. */
+const HIP_R = 3;
 
 /** One tick of the ball in the air; returns the agent whose hands it reached (or −1). */
 export function stepAir(s: PlayState): number {
