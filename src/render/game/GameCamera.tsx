@@ -187,7 +187,13 @@ function targetPose(mode: Mode): Pose | null {
 // ---- Touchdown celebration (M7) --------------------------------------------------------------
 
 /** Where the shot is from (field angle from the scorer to the camera) and which way it arcs, set at each cut. */
-const celebCam = { az: 0, arc: 1 };
+const celebCam = { az: 0, arc: 1, done: false };
+/**
+ * Where the celebration camera may stand (field yd): the playing surface and
+ * its apron (the turf runs ~17 yd past each end line and ~12 yd outside
+ * each sideline, render/stadium/props.ts), short of the walls and benches.
+ */
+const celebFits = (ex: number, ey: number) => ex < 121 && ex > -11 && Math.abs(ey) < 30;
 /** Offsets tried in turn (rad off his facing): in front a little to one side, then wider round, so the camera never ends up in the stands. */
 const CELEB_SIDES = [0.35, -0.35, 0.9, -0.9, 1.6, -1.6, 2.4, -2.4];
 /** Two men facing each other (the chest bump, the high five): from the side, square to the line between them, so neither hides the other. */
@@ -213,17 +219,21 @@ function celebPose(): Pose {
     // In the field of play and the end zone, off the bench areas: the first side that fits for the whole push.
     // Of the sides that fit, the one farthest round from where his team-mates are (they'd walk through the shot).
     const far = CELEB_DIST.from / YARD;
-    const fits = (v.pair ? CELEB_SIDES_PAIR : CELEB_SIDES).filter((a) => {
-      const ex = v.x + Math.cos(v.face + a) * far;
-      const ey = v.y + Math.sin(v.face + a) * far;
-      return ex < 109 && ex > -9 && Math.abs(ey) < 26;
-    });
+    const fits = (v.pair ? CELEB_SIDES_PAIR : CELEB_SIDES).filter((a) => celebFits(v.x + Math.cos(v.face + a) * far, v.y + Math.sin(v.face + a) * far));
     const front = fits.slice(0, 2);
     const away = (a: number) => (Number.isFinite(v.mates) ? Math.abs(Math.atan2(Math.sin(v.face + a - v.mates), Math.cos(v.face + a - v.mates))) : 0);
     const side = front.length ? front.reduce((b, a) => (away(a) > away(b) + 0.2 ? a : b)) : (fits[0] ?? Math.PI);
     celebCam.az = v.face + side;
     celebCam.arc = side >= 0 ? 1 : -1;
   }
+  // Under the card it backs off: round to where that distance still fits, gliding there.
+  if (v.done && !celebCam.done) {
+    const far = CELEB_DIST.card / YARD;
+    const base = celebCam.az - celebCam.arc * 0.5 * k;
+    const d = [0, 0.5, -0.5, 1, -1, 1.5, -1.5, 2.2, -2.2, Math.PI].find((o) => celebFits(v.x + Math.cos(base + o) * far, v.y + Math.sin(base + o) * far)) ?? 0;
+    celebCam.az += d;
+  }
+  celebCam.done = v.done;
   // The arc swings toward his front as it pushes in.
   const a = celebCam.az - celebCam.arc * 0.5 * k;
   const back = v.done ? 1 : 0;

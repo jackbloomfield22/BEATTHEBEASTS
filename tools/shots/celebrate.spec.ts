@@ -129,7 +129,7 @@ test('celebrations · the prompt, a pick, the celebration, the card', async ({ p
       await frame(page);
       await shoot();
     }
-    execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-framerate', '30', '-i', `${dir}/%04d.jpg`, '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'docs/m7/celebration-td.mp4']);
+    execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-framerate', '30', '-i', `${dir}/%04d.jpg`, '-c:v', 'libx264', '-preset', 'slow', '-crf', '29', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'docs/m7/celebration-td.mp4']);
     console.log(`  celebration-td.mp4: ${n} frames`);
     return;
   }
