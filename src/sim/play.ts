@@ -1978,7 +1978,8 @@ function defenseRoles(s: PlayState): void {
       // reaction time at the release, and drift back toward his zone just
       // as the ball came out).
       // A screen: zone defenders who've read the throw (or the bubble before it) play it as a perimeter run, force and alley, not as a ball to break on.
-      if (s.ball.target >= 0 && (since >= reaction(s, d) || d.mem.bubble !== undefined) && rallyScreen(s, d)) continue;
+      const readBubble = d.mem.bubbleAt !== undefined && s.t - (d.mem.bubbleAt as number) >= reaction(s, d);
+      if (s.ball.target >= 0 && (since >= reaction(s, d) || readBubble) && rallyScreen(s, d)) continue;
       const jumped = d.mem.onBall === true && s.ball.target >= 0;
       if (jumped && !rallies(s).includes(i)) {
         breakOnBall(s, d);
