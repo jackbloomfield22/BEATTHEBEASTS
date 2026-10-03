@@ -15,11 +15,13 @@
 
 .decision-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 34rem; padding: 1.4rem 1.6rem; background: rgba(6,6,8,.9); border-top: 3px solid var(--lime); backdrop-filter: blur(8px); }
 .decision-card .hints { position: static; margin-top: 1rem; }
+/* The wind flag on a card that offers a kick, under its head. */
+.decision-wind { margin: .5rem 0 .2rem; }
 /* The choices stack (↑↓ picks one), so a long option never runs off the card. */
 .decision-card .result-actions { flex-direction: column; align-items: stretch; margin-top: .8rem; }
 .decision-card .result-actions .menu-item { white-space: normal; }
-/* A strip hung under the score bug (it clears the play call's header below it). */
-.clock-flag { position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; top: 6.05rem; padding: .22rem 1.4rem; z-index: 29; pointer-events: none; font-family: var(--font-display); font-size: .92rem; letter-spacing: .12em; text-transform: uppercase; color: #0b0b0d; background: #ffd400; animation: lt-in 380ms cubic-bezier(.2,.7,.2,1) both; box-shadow: 0 .3rem 1.4rem rgba(0,0,0,.5); }
+/* A strip hung under the score bug and its drive strip (it clears the play call's header below it; it follows the HUD scale). */
+.clock-flag { position: absolute; left: 0; right: 0; margin: 0 auto; width: max-content; top: calc(2rem + 3.8rem * var(--hud-scale, 1)); padding: .22rem 1.4rem; z-index: 29; pointer-events: none; font-family: var(--font-display); font-size: .92rem; letter-spacing: .12em; text-transform: uppercase; color: #0b0b0d; background: #ffd400; animation: lt-in 380ms cubic-bezier(.2,.7,.2,1) both; box-shadow: 0 .3rem 1.4rem rgba(0,0,0,.5); }
 .clock-flag.ev-endOfQuarter { background: var(--lime); }
 .meanwhile.final .linescore { margin: .8rem auto .2rem; }
 .penalty-card { border-top-color: #ffd400; }

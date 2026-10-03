@@ -4,7 +4,7 @@ import { useSettings } from '@/app/settings';
 import { broadcastSpot, driveStrip, type Team } from '@/game/broadcast';
 import { useCelebration } from '@/game/celebration';
 import { game, useGame } from '@/game/game';
-import { clockText, isTimed, type Match } from '@/game/match';
+import { clockText, type Match } from '@/game/match';
 import { useMontage } from '@/game/montageSession';
 import { useOnAir, type LowerUi } from '@/game/onAir';
 import { usePractice } from '@/game/practice';
@@ -72,7 +72,7 @@ export function ScoreBug() {
   const pc = m.playClock;
   const running = m.clock.live && m.lastWhistle === 'runs' && pc !== null;
   const q = final ? (m.ot ? `F/${m.ot > 1 ? `${m.ot}OT` : 'OT'}` : 'Final') : m.ot ? (m.ot > 1 ? `${m.ot}OT` : 'OT') : (Q_WORD[m.clock.quarter - 1] ?? 'OT');
-  const showTime = !final && !m.ot && (isTimed(m) || m.clock.live || m.clock.secs > 0);
+  const showTime = !final && !m.ot;
   const has: Team | null = final ? null : m.phase === 'meanwhile' ? 'bst' : 'con';
   const down = downCell(m);
   const tos = m.clock.live && !final ? m.clock.timeouts : -1;

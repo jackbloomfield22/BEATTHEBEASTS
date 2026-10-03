@@ -585,6 +585,12 @@ function FourthCard() {
       <h2 className="result-head">
         4th & {Math.max(1, Math.round(m.sit.toGo))} on the {spotLabel(m.sit.los)}
       </h2>
+      {/* A kick is on the table: the wind flag, as on the kick itself. */}
+      {pct > 0 ? (
+        <div className="decision-wind">
+          <WindFlag wind={m.wind} />
+        </div>
+      ) : null}
       <nav className="result-actions">
         {items.map((it, i) => (
           <MenuItem key={it.id} size="md" label={it.label} sub={it.sub} focused={focus === i} onHover={() => setFocus(i)} onClick={() => pick(i)} />
@@ -614,6 +620,9 @@ function TryCard() {
       <h2 className="result-head">
         Contenders {m.score.user}, Beasts {m.score.beasts}
       </h2>
+      <div className="decision-wind">
+        <WindFlag wind={m.wind} />
+      </div>
       <nav className="result-actions">
         {items.map((it, i) => (
           <MenuItem key={it.label} size="md" label={it.label} sub={it.sub} focused={focus === i} onHover={() => setFocus(i)} onClick={() => pick(i)} />
