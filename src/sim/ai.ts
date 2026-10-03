@@ -1045,7 +1045,19 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   // (Against a Burner, off coverage gives 2 yd more cushion: the trait catalog's line.)
   const over = Math.max(depth > 12 ? 1.2 : 0.4, off ? 5.5 + (has(r, 'burner') ? 2 : 0) - 0.42 * Math.max(0, depth) : 0);
   // He mirrors what he saw `delay` ago, projected to now.
-  const aim = v2(v.pos.x + v.vel.x * delay + over, v.pos.y + v.vel.y * delay + inside);
+  let aim = v2(v.pos.x + v.vel.x * delay + over, v.pos.y + v.vel.y * delay + inside);
+  // Trail technique (2-man): he blends into it as his man gets past the
+  // line (a pressed corner from the release; an underneath man once his man
+  // is TRAIL_FROM_OFF yd up the field, so the back's checkdown, the flat and
+  // the slot's quick break are still played inside-out as above).
+  if (as.kind === 'man' && as.trail) {
+    const from = as.press ? 0 : TRAIL_FROM_OFF;
+    const w = Math.max(0, Math.min(1, (v.pos.x - s.setup.los - from) / TRAIL_BLEND));
+    if (w > 0) {
+      const t = trailAim(s, d, v, delay, inside);
+      aim = v2(aim.x + (t.x - aim.x) * w, aim.y + (t.y - aim.y) * w);
+    }
+  }
   const want = boundaryGovern(d, track(d, aim, v.vel, 2.2), 1);
   // Backpedal while he's in front, turn and run when he's even.
   const face = r.pos.x > d.pos.x - 0.5 ? atan2(v.vel.y, v.vel.x) : Math.PI;
@@ -1055,6 +1067,60 @@ export function manCover(s: PlayState, d: Agent, r: Agent): void {
   steer(d, { x: want.x * closeK, y: want.y * closeK }, { face, mult: closeK });
   d.anim = r.pos.x < d.pos.x - 1 && len(d.vel) < 5 ? 'backpedal' : 'run';
 }
+
+/**
+ * Trail technique (man under two deep halves, 2-man): no step over the top,
+ * the halves have that. He lives in the receiver's hip pocket: a step behind
+ * him along his run and on the QB's side of him. On the stem that's
+ * underneath and inside (his leverage is the inside; he aligns there,
+ * state.ts); once the man breaks in (the slant, the dig, the drag) it's under
+ * the break, between him and the QB, and he drives on it: how far into the
+ * throwing lane he gets is his Play Recognition (TRAIL_LANE: ~1 yd for a
+ * 95, ~0.7 for a 60), so a great corner sits in the window the in-breaker
+ * needs and a poor one chases it from behind. How tight he stays is the
+ * man-coverage read above (Man Coverage), his speed and his plant
+ * (coverPlant, Agility), as for any man defender. Deep, he closes to half a
+ * step, in phase, to play through the hands with the half safety over the
+ * top. The out, the comeback and the corner break away from him: that's the
+ * coverage's give, with the ball over the top.
+ *
+ * Calibrated on tools/sim/slants.ts (called Slants, on time, 300 a receiver):
+ * against Cover 2 man the X slant on Deion Sanders went 65% → 43%, the Z on
+ * Revis 61% → 37%, the slot (the nickel, off) ~70% both ways; the AI pass
+ * game against 2-man (outcomes.ts) unchanged, ~50% and its deep balls
+ * 38% for ~13 yd. A hip pocket squarer to the QB (in the lane on the stem)
+ * took the corners to 15–30% with a quarter of the throws picked.
+ */
+function trailAim(s: PlayState, d: Agent, v: { pos: V2; vel: V2 }, delay: number, inside: number): V2 {
+  const qb = s.agents[s.qb]!;
+  const sp = len(v.vel);
+  const run = sp > 2 ? { x: v.vel.x / sp, y: v.vel.y / sp } : { x: 1, y: 0 };
+  const at = v2(v.pos.x + v.vel.x * delay, v.pos.y + v.vel.y * delay);
+  // Square to his run, the QB's side of him: on the stem that's his inside,
+  // on an in-breaker it's under the break, the throwing lane.
+  let n = { x: -run.y, y: run.x };
+  if (n.x * (qb.pos.x - at.x) + n.y * (qb.pos.y - at.y) < 0) n = { x: -n.x, y: -n.y };
+  // How much of his run is toward the ball (0 on the stem, ~0.7 on a slant).
+  const inward = Math.max(0, Math.min(1, run.y * Math.sign(inside)));
+  const back = at.x - s.setup.los > TRAIL_DEEP ? TRAIL_BACK_DEEP : TRAIL_BACK;
+  const lane = TRAIL_INSIDE * (1 - inward) + inward * TRAIL_LANE * (TRAIL_LANE_0 + (1 - TRAIL_LANE_0) * d.fx.a('playRec'));
+  return v2(at.x - run.x * back + n.x * lane, at.y - run.y * back + n.y * lane);
+}
+/** An underneath man (not pressed) starts his trail once his man is this far past the line (yd)... */
+const TRAIL_FROM_OFF = 4;
+/** ...and is fully in it this much (yd) later (a pressed corner: from the line to here). */
+const TRAIL_BLEND = 2;
+/** In his hip pocket: a step behind him along his run (yd). */
+const TRAIL_BACK = 0.8;
+/** Past this depth (yd) he closes to half a step, in phase, to play through the hands on the ball over the top. */
+const TRAIL_DEEP = 12;
+const TRAIL_BACK_DEEP = 0.4;
+/** On the stem: inside him by this (yd), on the QB's side (every man defender shades 0.7 inside; a trail man is a little further). */
+const TRAIL_INSIDE = 0.9;
+/** On an in-breaker: into the lane under the break by this (yd) for a perfect play reader... */
+const TRAIL_LANE = 1;
+/** ...and this share of it for a zero. */
+const TRAIL_LANE_0 = 0.3;
 
 /**
  * A cover man (man, or a zone defender carrying the man in his area) breaking with a route (M6.5: the receivers' plant at every
@@ -1455,6 +1521,33 @@ function offScheduleT(s: PlayState): number {
   if (bail !== undefined) t = Math.min(t, bail);
   return t;
 }
+
+/**
+ * The QB is still on rhythm: his drop's set and a hitch (offScheduleT) not
+ * yet past, and he hasn't bailed. A ball out on rhythm comes off a compact
+ * motion from the top of the drop, with his eyes moving: a zone defender
+ * reading the shoulders gets it RHYTHM_READ later than one reading a QB who
+ * has held it and stared his man down (play.ts jumpThrow).
+ */
+export function onRhythm(s: PlayState): boolean {
+  const t = offScheduleT(s);
+  return t < 0 || s.t < t;
+}
+/**
+ * How much later (s) a zone defender reads the windup of a throw on rhythm.
+ * M6.6, the third slant pass: with the read the same on rhythm and late, a
+ * hook or curl defender within 8 yd jumped the windup ~0.1 s before the
+ * release, and of the 141 called on-time slants against zone a defender got
+ * a hand to (out of 600), 68 were curl defenders who had (tools/sim/
+ * slantdump.ts --tips): the quick game's window between the zones wasn't
+ * one. A few hundredths is enough: it moves the average linebacker's read
+ * to the release, where he breaks with everyone else (after his reaction,
+ * play.ts defenseRoles), while a quick reader (Play Recognition, a
+ * Ballhawk's or a Zone Reader's eyes) still jumps it. 0.06 puts the called
+ * on-time slant against zone at ~69% (62% before; 0.15 took it to 77%);
+ * the late throw doesn't change (the QB is off schedule).
+ */
+export const RHYTHM_READ = 0.06;
 
 /** He's seen the QB go off schedule (his read time on it, Play Recognition). The ball still in the QB's hands. */
 function offSchedule(s: PlayState, d: Agent): boolean {

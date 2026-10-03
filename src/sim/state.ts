@@ -235,7 +235,9 @@ function defensiveAlignment(s: PlaySetup, offPos: Record<OffSlot, V2>, bracketY:
   const cb = (slot: 'LCB' | 'RCB', rec: { p: V2 } | undefined, sideSign: number) => {
     const a = call[slot];
     const press = a.kind === 'man' && a.press;
-    const y = rec ? rec.p.y + sideSign * 0.8 : by + sideSign * 15;
+    // Outside shade, except in trail technique (2-man), where his leverage is the inside.
+    const shade = a.kind === 'man' && a.trail ? -0.8 : 0.8;
+    const y = rec ? rec.p.y + sideSign * shade : by + sideSign * 15;
     // Press at the line; off man at ~6.5 yd (the cushion he bails from); a deep third at 7; a flat/cloud corner at 5.5.
     return v2(los + (press ? 1.2 : a.kind === 'man' ? 6.5 : a.kind === 'zone' && ZONES[a.zone].deep ? 7 : 5.5), y);
   };
