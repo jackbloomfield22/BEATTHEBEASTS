@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { urlFlags } from '@/app/platform';
+import { urlFlags, videoTime } from '@/app/platform';
 import { worldX, worldY, worldZ, yawOf } from '@/game/coords';
 import { PUNT_DEPTH } from '@/game/kick';
 import { loadAnimLibrary } from '@/anim/library';
@@ -103,7 +103,7 @@ export function KickBall() {
       placed.current = null;
       return;
     }
-    const step = urlFlags.video ? 1 / urlFlags.video : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
+    const step = urlFlags.video ? videoTime.step() : urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
     const sx = kickView.spotX;
     const punt = kickView.kind === 'PUNT';
     const p = kickView.path;

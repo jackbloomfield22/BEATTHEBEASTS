@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { contactFor, kickView } from './kickView';
 import * as THREE from 'three';
 import { useSettings } from '@/app/settings';
-import { urlFlags, videoGate } from '@/app/platform';
+import { urlFlags, videoTime } from '@/app/platform';
 import { Input } from '@/input/InputManager';
 import { practice, usePractice } from '@/game/practice';
 import { ORBIT_LIMITS, replay, replayCam, useReplay } from '@/game/replaySession';
@@ -398,8 +398,8 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       videoClock.t = now;
       if (!springs.current) step = 0;
       // A replay's camera answers in the frame's time (it moves while the replay is paused or slowed, as it would in play).
-      if (replay.active) step = 1 / urlFlags.video;
-      if (montage.active) step = videoGate.open ? 1 / urlFlags.video : 0;
+      // Both step only in the frames the recorder asked for (platform.ts videoTime).
+      if (replay.active || montage.active) step = videoTime.step();
     }
     // A replay rebuilt for a scrub back (or a new replay): the camera holds while the scene catches it up,
     // then cuts to where it lands, as a broadcast would; never a glide across the field through the fast-forward.

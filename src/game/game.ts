@@ -33,7 +33,7 @@ import type { NewDaily } from './daily';
 import { describe } from './describe';
 import { applyBeastsDrive, applyKick, applyPlay, applyPunt, beastsPossession, callTimeout, canVictoryFormation, clockLabel, chooseFourth, chooseTry, clockText, createMatch, fgMakePct, halfSecs, isTimed, KICKER_RANGE, quarterName, readyForPlay, resolvePunt, SIDELINE, snapped, spikeOrKneel, tickClock, type BeastsDrive, type ClockEvent, type GameLength, type Match, type PlayOutcome, type PuntResult } from './match';
 import { kickFlight, puntFlight, type KickResult } from './kick';
-import { urlFlags } from '@/app/platform';
+import { urlFlags, videoTime } from '@/app/platform';
 import { practice, usePractice } from './practice';
 import { capsuleOf } from './replay';
 import { montageTeams, type MontageTeams } from './montage';
@@ -161,6 +161,8 @@ class GameSession {
   /** The play clock's real-time driver (a rAF loop while a game is on). */
   private raf = 0;
   private lastFrame = 0;
+  /** A recording's game time at the last clock frame (platform.ts videoTime). */
+  private lastVideoT = 0;
   private acc = 0;
   private halftimeShown = false;
   private offKeys: (() => void) | null = null;
@@ -260,6 +262,7 @@ class GameSession {
     });
     cancelAnimationFrame(this.raf);
     this.lastFrame = 0;
+    this.lastVideoT = videoTime.t;
     this.raf = requestAnimationFrame(this.clockFrame);
     set({ match: m, box: emptyGameBox(this.names.qb), stage: 'pregame' });
     // The pre-game picture: both teams set at the opening spot, the Beasts in their base defense.
@@ -285,9 +288,11 @@ class GameSession {
 
   /** Each frame: real time onto the play clock, a whole second at a time. */
   private clockFrame = (t: number): void => {
-    // The capture harness steps its (slow) frames at a fixed 1/60 s, as the play engine does.
-    const dt = urlFlags.shot !== null || urlFlags.video ? 1 / 60 : this.lastFrame ? Math.min(0.25, (t - this.lastFrame) / 1000) : 0;
+    // The capture harness steps its (slow) frames at a fixed 1/60 s, as the play engine does; a
+    // recording runs the clock on the frames it asked for (the browser's own frames aren't its time).
+    const dt = urlFlags.video ? Math.max(0, videoTime.t - this.lastVideoT) : urlFlags.shot !== null ? 1 / 60 : this.lastFrame ? Math.min(0.25, (t - this.lastFrame) / 1000) : 0;
     this.lastFrame = t;
+    this.lastVideoT = videoTime.t;
     if (this.clockRuns()) {
       this.acc += dt;
       while (this.acc >= 1 && this.clockRuns()) {
