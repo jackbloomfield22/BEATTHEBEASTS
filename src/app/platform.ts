@@ -55,6 +55,25 @@ export function hasWebGL2(): boolean {
   }
 }
 
+/**
+ * A ?video recording's game time: the frames the recorder asked for, 1/N s
+ * each (Stage's __btbRenderFrame counts them and hands R3F's clock `t`).
+ * Everything that steps per frame in a recording steps by `step()`: 1/N s
+ * inside the asked-for frame, nothing in any other redraw. So the sim, the
+ * animation, the cameras, the play clock and the shader clocks all move
+ * exactly one frame step per recorded frame (a recording that ran fast:
+ * docs/m7/MONTAGE.md, "Harness note"). Inert without ?video.
+ */
+export const videoTime = {
+  frames: 0,
+  get t(): number {
+    return urlFlags.video ? this.frames / urlFlags.video : 0;
+  },
+  step(): number {
+    return urlFlags.video && videoGate.open ? 1 / urlFlags.video : 0;
+  },
+};
+
 export const urlFlags = (() => {
   const p = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
   return {
@@ -89,22 +108,3 @@ export const urlFlags = (() => {
  * recording keeps its 1/N s a frame.
  */
 export const videoGate = { open: false };
-
-/**
- * A ?video recording's game time: the frames the recorder asked for, 1/N s
- * each (Stage's __btbRenderFrame counts them and hands R3F's clock `t`).
- * Everything that steps per frame in a recording steps by `step()`: 1/N s
- * inside the asked-for frame, nothing in any other redraw. So the sim, the
- * animation, the cameras, the play clock and the shader clocks all move
- * exactly one frame step per recorded frame (a recording that ran fast:
- * docs/m7/MONTAGE.md, "Harness note"). Inert without ?video.
- */
-export const videoTime = {
-  frames: 0,
-  get t(): number {
-    return urlFlags.video ? this.frames / urlFlags.video : 0;
-  },
-  step(): number {
-    return urlFlags.video && videoGate.open ? 1 / urlFlags.video : 0;
-  },
-};
