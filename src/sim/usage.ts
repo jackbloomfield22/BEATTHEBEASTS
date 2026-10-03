@@ -8,10 +8,11 @@
 //   it is the first read whenever he runs a route (the rest keep their order
 //   behind him).
 // - Receiving Back: "runs the full receiver route tree from the backfield
-//   (wheel, option, angle)": where the book gives the back an outlet (the
-//   check-down, the play-action arrow), a receiving back runs a real route
-//   instead: the angle in the quick game, the option on the drop-backs and
-//   shots, the wheel off play action.
+//   (wheel, option, angle)": where the book gives the back an outlet on a
+//   drop-back or play action, a receiving back runs a real route instead:
+//   the check-down becomes the option, the swing the angle, the play-action
+//   arrow the wheel. (The quick game keeps its check-down: the ball's out
+//   on the third step, before a back's route would break.)
 
 import { has } from './traits';
 import type { Assignment, OffPlay, RouteName } from './plays';
@@ -21,7 +22,9 @@ const holds = (p: SimPlayer | undefined, id: string): boolean => !!p && has({ p 
 
 /** The receiving back's route for an outlet the book gives him, or null to keep it. */
 export function receivingBackRoute(play: OffPlay, route: RouteName): RouteName | null {
-  if (route === 'checkdown') return play.type === 'quick' ? 'angle' : play.type === 'dropback' || play.type === 'shot' ? 'option' : null;
+  const drop = play.type === 'dropback' || play.type === 'shot';
+  if (route === 'checkdown' && drop) return 'option';
+  if (route === 'swing' && drop) return 'angle';
   if (route === 'arrow' && play.type === 'playAction') return 'wheel';
   return null;
 }

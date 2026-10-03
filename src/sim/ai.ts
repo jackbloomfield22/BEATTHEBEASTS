@@ -208,7 +208,7 @@ const CHECK_T = 0.55;
 /**
  * Third-Down Back (the trait catalog: "blitz pickup and a checkdown release
  * on the same snap: picks up the rusher, then leaks out if nobody comes"):
- * on a drop-back (not the quick game) where the book gives him an outlet, he sets beside the QB
+ * on a third- or fourth-down drop-back (not the quick game) where the book gives him an outlet, he sets beside the QB
  * and reads the second level for CHECK_T. A blitzer still coming free then
  * (a rusher off the second level or the edge that no blocker has his hands
  * on) is his: he picks him up and stays in, and the lineman who'd have had
@@ -218,8 +218,8 @@ const CHECK_T = 0.55;
 function checkRelease(s: PlayState, a: Agent, name: RouteName | null): boolean {
   if (a.slot !== 'RB' || !name || !OUTLETS.includes(name) || !has(a, 'third-down-back')) return false;
   const play = s.setup.play;
-  // (Not in the quick game: the ball's out before a check would end.)
-  if (play.run || play.pa || play.screen || play.type === 'quick' || s.hot.RB || a.mem.released) return false;
+  // (On third and fourth down, the blitz downs he's on the field for; not in the quick game: the ball's out before a check would end.)
+  if ((s.setup.down ?? 1) < 3 || play.run || play.pa || play.screen || play.type === 'quick' || s.hot.RB || a.mem.released) return false;
   const since = s.t - s.snapT;
   const qb = s.agents[s.qb]!;
   if (a.mem.pickup === undefined && since < CHECK_T) {
@@ -359,8 +359,8 @@ function optionRead(s: PlayState, a: Agent, name: RouteName | null): void {
   const lim = FIELD_HALF_W - ROUTE_ROOM;
   const to = v2(q.x + (sit ? 0 : 0.5), Math.max(-lim, Math.min(lim, q.y + dir * (sit ? OPTION_SLIDE : OPTION_BREAK))));
   a.mem.optBreak = dir === out ? 'out' : 'in';
-  rt.pts = [...rt.pts.slice(0, stem + 1), to];
-  rt.sit = [...rt.sit.slice(0, stem + 1), sit];
+  // A new route from here (the read is a new path: the route-art check, outcomes.ts routeFidelity, stops at it).
+  a.route = { pts: [...rt.pts.slice(0, stem + 1), to], sit: [...rt.sit.slice(0, stem + 1), sit], idx: rt.idx };
 }
 
 /** Run the route: stem at pace, sharp breaks for good route runners, settle on sits. */

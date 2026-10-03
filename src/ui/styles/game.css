@@ -8,6 +8,8 @@
 .call-sit { display: flex; align-items: baseline; gap: 1.2rem; padding-bottom: .3rem; }
 .call-down { font-family: var(--font-display); font-size: 1.5rem; color: var(--lime); }
 .call-spot { font-size: 1rem; letter-spacing: .08em; color: var(--ink-2); }
+/* A Field General reads the Beasts' shell on the play call (game/presnap.ts). */
+.call-shell { color: var(--lime); font-weight: 700; text-transform: uppercase; font-size: .85rem; letter-spacing: .14em; }
 .call-body { position: absolute; top: 8.5rem; bottom: 6.5rem; left: 5.5rem; right: 5.5rem; display: grid; grid-template-columns: minmax(0, 40rem) 1fr; gap: 5rem; }
 .call-list { overflow: hidden; }
 .call-list .setting-header:first-child { margin-top: .4rem; }

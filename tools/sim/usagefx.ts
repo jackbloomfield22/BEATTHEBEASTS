@@ -25,13 +25,13 @@ interface Snap {
   s: PlayState;
 }
 /** Every play of `plays` against every call in `calls`, REPS each, the AI on both sides (the harness's hashes and flips); `hot` calls hot routes at the line. */
-function book(team: ContendersRoster, plays: OffPlay[], calls = DEF_CALLS, hot?: (s: PlayState) => { icon: number; route: import('../../src/sim/index.ts').RouteName } | null, watch?: (s: PlayState) => void): Snap[] {
+function book(team: ContendersRoster, plays: OffPlay[], calls = DEF_CALLS, hot?: (s: PlayState) => { icon: number; route: import('../../src/sim/index.ts').RouteName } | null, watch?: (s: PlayState) => void, down = 1): Snap[] {
   const out: Snap[] = [];
   for (const play of plays) {
     for (const def of calls) {
       for (let k = 0; k < REPS; k++) {
         const sd = sidesFor({ ...base, team }, play, def);
-        const s = createPlay({ seed: cellSeed(play, def, k), offense: sd.offense, defense: sd.defense, play, def: sd.def, los: 35, ballY: HASH[k % 3], toGo: 10, user: false, flip: k % 2 === 1, autoSnap: !hot });
+        const s = createPlay({ seed: cellSeed(play, def, k), offense: sd.offense, defense: sd.defense, play, def: sd.def, los: 35, ballY: HASH[k % 3], toGo: 10, down, user: false, flip: k % 2 === 1, autoSnap: !hot });
         if (hot) {
           const h = hot(s);
           stepPlay(s, input({ hotRoute: h ?? undefined }));
@@ -83,11 +83,11 @@ if (!ONLY || ONLY === 'receiving') {
 }
 if (!ONLY || ONLY === 'third') {
   // Third-Down Back against the blitz calls: does the pressure get home?
-  console.log('Third-Down Back (Roger Craig against Cover 1 Blitz and the Fire Zone, the drop-backs)');
+  console.log('Third-Down Back (Roger Craig against Cover 1 Blitz and the Fire Zone, the drop-backs, 3rd and 10)');
   const blitz = ['cover1blitz', 'firezone'].map(defById);
   const drops = PASS.filter((q) => q.type === 'dropback' || q.type === 'shot' || q.type === 'quick');
   for (const [label, rb] of [['Craig without Third-Down Back', strip(team.RB, 'third-down-back')], ['Craig (Third-Down Back)', team.RB]] as const) {
-    const snaps = book({ ...team, RB: rb }, drops, blitz);
+    const snaps = book({ ...team, RB: rb }, drops, blitz, undefined, undefined, 3);
     let pressured = 0;
     let picked = 0;
     for (const { s } of snaps) {

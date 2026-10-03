@@ -45,10 +45,10 @@ const add = (p: SimPlayer, ...ids: string[]): SimPlayer => ({ ...p, traits: [...
 const vick = who('Michael Vick', 'QB');
 
 /** A play with the drafted nine against the Beasts in the call's package. */
-function play(t: ContendersRoster, id: string, def: string, seed: number, o: { user?: boolean; flip?: boolean; ballY?: number } = {}): PlayState {
+function play(t: ContendersRoster, id: string, def: string, seed: number, o: { user?: boolean; flip?: boolean; ballY?: number; down?: number } = {}): PlayState {
   const p = playById(id);
   const d: DefCall = defById(def);
-  return createPlay({ seed, offense: offenseFor(p, t), defense: defenseFor(d, base.beasts), play: p, def: d, los: 35, ballY: o.ballY ?? 0, toGo: 10, down: 1, user: o.user ?? false, flip: o.flip });
+  return createPlay({ seed, offense: offenseFor(p, t), defense: defenseFor(d, base.beasts), play: p, def: d, los: 35, ballY: o.ballY ?? 0, toGo: 10, down: o.down ?? 1, user: o.user ?? false, flip: o.flip });
 }
 const stepTo = (s: PlayState, t: number) => {
   while (!s.result && s.t < t) stepPlay(s, NEUTRAL);
@@ -133,46 +133,54 @@ describe('Volume TE and Receiving Back: the play as these eleven run it', () => 
       }).length;
     expect(outOn({ ...team, TE: kelce })).toBeGreaterThanOrEqual(outOn({ ...team, TE: strip(kelce, 'volume-te') }));
   });
-  it("a Receiving Back's outlets are routes: the angle (quick game), the option (drop-backs) and the wheel (play action)", () => {
+  it("a Receiving Back's outlets are routes: the option and the angle (drop-backs) and the wheel (play action); the quick game keeps its check-down", () => {
     const route = (id: string, rb: SimPlayer) => {
       const p = playById(id);
       return (personalize(p, offenseFor(p, { ...team, RB: rb })).assign.RB as { route: string }).route;
     };
-    expect(route('trips-stick', team.RB)).toBe('angle');
+    expect(route('trips-stick', team.RB)).toBe('checkdown');
+    expect(route('doubles-mesh', team.RB)).toBe('angle');
     expect(route('doubles-smash', team.RB)).toBe('option');
     expect(route('singleback-pa-post', team.RB)).toBe('wheel');
     const plain = strip(team.RB, 'receiving-back');
-    expect(route('trips-stick', plain)).toBe('checkdown');
+    expect(route('doubles-mesh', plain)).toBe('swing');
     expect(route('singleback-pa-post', plain)).toBe('arrow');
   });
 });
 
 describe('Third-Down Back: the blitz pickup, then the release', () => {
-  it('he picks up the blitzing linebacker that nobody else has; without the trait he never stays in', () => {
+  it('on third down he picks up the blitzing linebacker still coming free; without the trait he never stays in', () => {
     let picked = 0;
     let plain = 0;
+    let first = 0;
     for (let seed = 1; seed <= 12; seed++) {
-      const s = stepTo(play(team, 'doubles-smash', 'cover1blitz', seed), 1.2);
+      const s = stepTo(play(team, 'doubles-smash', 'cover1blitz', seed, { down: 3 }), 1.2);
       const rb = s.agents[s.slot.RB!]!;
       if (rb.mem.pickup !== undefined) {
         picked++;
         expect(s.agents[rb.mem.pickup as number]!.p.pos).not.toMatch(/DE|DT/);
       }
-      const t = stepTo(play({ ...team, RB: strip(team.RB, 'third-down-back') }, 'doubles-smash', 'cover1blitz', seed), 1.2);
+      const t = stepTo(play({ ...team, RB: strip(team.RB, 'third-down-back') }, 'doubles-smash', 'cover1blitz', seed, { down: 3 }), 1.2);
       if (t.agents[t.slot.RB!]!.mem.pickup !== undefined) plain++;
+      const u = stepTo(play(team, 'doubles-smash', 'cover1blitz', seed, { down: 1 }), 1.2);
+      if (u.agents[u.slot.RB!]!.mem.pickup !== undefined) first++;
     }
     expect(picked).toBeGreaterThan(3);
     expect(plain).toBe(0);
+    expect(first).toBe(0);
   });
   it('nobody comes: he holds for his read, then leaks out on his route', () => {
-    const s = play(team, 'doubles-smash', 'cover3', 2);
+    const s = play(team, 'doubles-smash', 'cover3', 2, { down: 3 });
     const rb = s.agents[s.slot.RB!]!;
     stepTo(s, 0.45);
     expect(rb.route!.idx).toBe(0);
     expect(rb.anim).toBe('block');
-    stepTo(s, 1.4);
+    stepTo(s, 0.9);
+    const x = rb.pos.x;
+    stepTo(s, 1.5);
     expect(rb.mem.pickup).toBeUndefined();
-    expect(rb.pos.x).toBeGreaterThan(s.setup.los - 3);
+    expect(rb.mem.released).toBe(true);
+    expect(rb.pos.x).toBeGreaterThan(x + 0.5);
   });
   it('the rotation: only the starter holds it, so he keeps the passing downs', () => {
     const sit = { down: 3, toGo: 8, los: 40, ballY: 0 };
