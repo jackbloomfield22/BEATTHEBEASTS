@@ -11,6 +11,8 @@ import { YARD } from '../world/constants';
 import { view } from '@/game/view';
 import { fieldDir, worldX, worldZ } from '@/game/coords';
 import { frameEvents } from './frameEvents';
+import { montage } from '@/game/montageSession';
+import { montagePose, montageRates } from './montageCam';
 
 // The play cameras (GDD §11.1, TECH_PLAN §8), driven from the sim snapshot
 // through critically damped springs so every cut is a glide:
@@ -24,10 +26,10 @@ import { frameEvents } from './frameEvents';
 
 type Mode = 'broadcast' | 'all22' | 'field';
 
-/** The play on screen: a replay's (M7) while one is on, else the live snap's. */
-const activeRunner = () => (replay.active ? replay.runner : practice.runner);
-/** Changes with each play on screen (a replay is its own). */
-const activeId = () => (replay.active ? -1 - replay.epoch : practice.playId);
+/** The play on screen: a replay's (M7) while one is on, the Beasts' drive montage's, else the live snap's. */
+const activeRunner = () => (replay.active ? replay.runner : montage.active ? montage.player!.runner : practice.runner);
+/** Changes with each play on screen (a replay is its own; so is a montage). */
+const activeId = () => (replay.active ? -1 - replay.epoch : montage.active ? -100000 - montage.epoch : practice.playId);
 
 interface Pose {
   /** Field frame: x downfield, y left, h height (m). */
@@ -396,7 +398,7 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       videoClock.t = now;
       if (!springs.current) step = 0;
       // A replay's camera answers in the frame's time (it moves while the replay is paused or slowed, as it would in play).
-      if (replay.active) step = 1 / urlFlags.video;
+      if (replay.active || montage.active) step = 1 / urlFlags.video;
     }
     // A replay rebuilt for a scrub back (or a new replay): the camera holds while the scene catches it up,
     // then cuts to where it lands, as a broadcast would; never a glide across the field through the fast-forward.
@@ -416,7 +418,9 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     const rcam = replay.active ? useReplay.getState().cam : null;
     if (rcam && orbitInput(Math.min(dt, 0.1)) && rcam !== 'orbit') orbitFrom(camera.position);
     const rmode = replay.active ? useReplay.getState().cam : null;
-    const goal = rmode === 'orbit' ? orbitPose() : rmode === 'endzone' ? endzonePose() : targetPose(rmode ? 'broadcast' : modeSetting);
+    // The Beasts' drive montage (M7): each shot's camera, cut to on its first frame.
+    const mshot = !replay.active && montage.active ? montage.shot : null;
+    const goal = mshot ? montagePose(mshot, () => targetPose('broadcast')) : rmode === 'orbit' ? orbitPose() : rmode === 'endzone' ? endzonePose() : targetPose(rmode ? 'broadcast' : modeSetting);
     if (!goal) return;
     // World-space target: eye and look.
     const t = [worldX(goal.ey), goal.eh, worldZ(goal.ex), worldX(goal.ly), goal.lh, worldZ(goal.lx), goal.fov];
@@ -432,15 +436,16 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       springs.current = [camera.position.x, camera.position.y, camera.position.z, look.x, look.y, look.z, camera.fov].map((v) => new Spring(v));
     }
     // Screenshots and browser tests cut straight to the pose every frame; so does a replay's camera change.
-    const cut = (urlFlags.shot !== null && !urlFlags.video) || (rmode !== null && replayCam.cut);
+    const cut = (urlFlags.shot !== null && !urlFlags.video) || (rmode !== null && replayCam.cut) || (mshot !== null && montage.cut);
     if (cut) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
     replayCam.cut = false;
+    if (mshot) montage.cut = false;
     const sp = springs.current;
     // Eye slower than the look: the lens leads, the dolly follows.
     // In the air the whole rig tightens up so it keeps pace with the ball.
     // The replay's orbit is the user's hand on it: tight, so it answers at once.
-    const air = activeRunner()?.cur.phase === 'air' && (rmode ?? modeSetting) === 'broadcast';
-    const w = rmode === 'orbit' ? [9, 9, 9, 7, 7, 7, 6] : rmode === 'endzone' ? [3, 3, 3, 5, 5, 5, 3] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
+    const air = activeRunner()?.cur.phase === 'air' && (mshot ? 'broadcast' : (rmode ?? modeSetting)) === 'broadcast';
+    const w = (mshot && montageRates(mshot)) || (rmode === 'orbit' ? [9, 9, 9, 7, 7, 7, 6] : rmode === 'endzone' ? [3, 3, 3, 5, 5, 5, 3] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3]);
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));
     // Shake: hits kick it, it rings down in ~0.3 s.
     for (const e of frameEvents) {
@@ -465,7 +470,7 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     // rest of the play: the camera riding the ball toward the sideline, or
     // swinging to the sideline on a long run, mustn't turn the carrier's
     // controls mid-stride.
-    if (rmode) return;
+    if (rmode || mshot) return;
     const ph = practice.runner?.cur.phase;
     const fx = ph === 'air' || ph === 'carrier' || ph === 'dead' ? NaN : v[3]! - v[0]!;
     const fz = v[5]! - v[2]!;

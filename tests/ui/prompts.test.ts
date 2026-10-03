@@ -54,6 +54,9 @@ const PROMPTED = [
   'replay.camera',
   'replay.focus',
   'replay.close',
+  // The Beasts' drive montage (M7): skipped with the confirm or back binding (and Start, global.pause).
+  'menu.confirm',
+  'menu.back',
 ];
 
 describe('prompt labels per device', () => {
@@ -71,6 +74,14 @@ describe('prompt labels per device', () => {
     expect([1, 2, 3, 4, 5].map((n) => promptText(`pocket.throw${n}`, 'kb', kb, pad))).toEqual(['1', '2', '3', '4', '5']);
     expect(['carrier.option1', 'carrier.option2', 'carrier.option3'].map((a) => promptText(a, 'kb', kb, pad))).toEqual(['1', '2', '3']);
     expect(promptCode('preSnap.snap', 'kb', kb, pad)).toBe('Space');
+  });
+
+  it("skips the Beasts' drive montage with A or B on a pad, Enter or Esc on a keyboard", () => {
+    expect(promptCode('menu.confirm', 'pad', kb, pad)).toBe('Pad:A');
+    expect(promptCode('menu.back', 'pad', kb, pad)).toBe('Pad:B');
+    expect(promptCode('menu.confirm', 'kb', kb, pad)).toBe('Enter');
+    expect(promptCode('menu.back', 'kb', kb, pad)).toBe('Escape');
+    expect(promptCode('global.pause', 'pad', kb, pad)).toBe('Pad:Menu');
   });
 
   it('follows a rebinding', () => {

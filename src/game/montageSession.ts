@@ -18,22 +18,23 @@ import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
 import { TICK } from '@/sim';
 import type { BeastsDrive } from './match';
-import type { StagedPlay } from './montage';
-import { PRE_SNAP } from './montage';
+import { PRE_SNAP, staging, type MontageTeams, type StagedPlay } from './montage';
 import { ReplayPlayer } from './replay';
 
-export type ShotId = 'establish' | 'play' | 'reaction' | 'board';
+/** 'search': the key play is being staged (a bumper is up; a few frames). */
+export type ShotId = 'search' | 'establish' | 'play' | 'reaction' | 'board';
 
 /** What the HUD says: the drive (the resolver's), the staged play, the score before and after, the game clock. */
 export interface MontageInfo {
   drive: BeastsDrive;
-  play: Pick<StagedPlay, 'kind' | 'label' | 'down' | 'toGo' | 'los' | 'yards'>;
+  /** The staged play (null while it's being staged). */
+  play: Pick<StagedPlay, 'kind' | 'label' | 'down' | 'toGo' | 'los' | 'yards'> | null;
   before: { user: number; beasts: number };
   after: { user: number; beasts: number };
   /** "Q2 7:41", "OT". */
   clock: string;
-  /** The line under the summary ("Your ball on your 25."). */
-  next: string;
+  /** Overtime period (0 in regulation). */
+  ot: number;
 }
 
 export interface MontageUi {
@@ -72,15 +73,74 @@ class MontageSession {
   staged: StagedPlay | null = null;
   /** Set on every cut; the camera takes it (and snaps to the new shot). */
   cut = false;
+  /** Cuts so far (a shot's camera keys its once-per-shot choices on it). */
+  cutCount = 0;
   /** Seconds into the current shot. */
   shotT = 0;
   private playEnd = 0;
   private slow = false;
   private onDone: (() => void) | null = null;
+  private onNone: (() => void) | null = null;
   private off: (() => void) | null = null;
+  private search: Generator<void, StagedPlay | null, void> | null = null;
+  private pending: MontageInfo | null = null;
 
+  /** A montage is on screen (its play drawn). */
   get active(): boolean {
     return this.player !== null;
+  }
+
+  /** The key play is being staged, or the montage is on: the game waits on it. */
+  get busy(): boolean {
+    return this.player !== null || this.search !== null;
+  }
+
+  /** Most of a frame the search takes (ms): a try runs whole, so a frame can go over by one. */
+  static readonly SLICE_MS = 6;
+
+  /**
+   * Stage a drive's key play over the next frames (montage.ts staging, a try
+   * at a time), then play it. `onNone`: nothing fits (the Meanwhile card instead).
+   */
+  prepare(d: BeastsDrive, teams: MontageTeams, seed: number, round: number, ot: number, info: MontageInfo, onDone: () => void, onNone: () => void): void {
+    this.abort();
+    this.search = staging(d, teams, seed, round, ot);
+    this.pending = info;
+    this.onDone = onDone;
+    this.onNone = onNone;
+    this.off = Input.onAction((id, i) => {
+      if (id === 'global.pause' && !i.repeat) this.skip();
+    });
+    useMontage.setState({ open: true, shot: 'search', info });
+  }
+
+  /** Run the search to its end now (the browser tests and the capture harness, whose frames are slow). */
+  settle(): void {
+    while (this.search) this.searchStep(Infinity);
+  }
+
+  private searchStep(budgetMs: number): void {
+    const it = this.search!;
+    const t0 = performance.now();
+    for (;;) {
+      const n = it.next();
+      if (n.done) {
+        this.search = null;
+        const info = this.pending!;
+        this.pending = null;
+        if (n.value) this.start(n.value, info);
+        else {
+          const none = this.onNone;
+          this.onDone = this.onNone = null;
+          this.off?.();
+          this.off = null;
+          useMontage.setState({ open: false, shot: null, info: null });
+          none?.();
+        }
+        return;
+      }
+      if (performance.now() - t0 >= budgetMs) return;
+    }
   }
 
   get shot(): ShotId | null {
@@ -92,28 +152,25 @@ class MontageSession {
     return this.player?.epoch ?? -1;
   }
 
-  begin(staged: StagedPlay, info: MontageInfo, onDone: () => void): void {
-    this.abort();
+  private start(staged: StagedPlay, info: MontageInfo): void {
     const p = new ReplayPlayer(staged.src, WINDOW);
     p.director = false;
     p.playing = true;
     this.player = p;
     this.staged = staged;
-    this.onDone = onDone;
     this.slow = staged.kind === 'td' || staged.kind === 'turnover';
     // The play shot runs to just past the whistle (a beat longer after a score or a pick, in slow motion).
     this.playEnd = Math.min(p.end, Math.max(staged.keyTick + (this.slow ? 40 : 20), staged.whistleTick + 12));
     this.shotT = 0;
     this.cut = true;
-    // Start (and Esc, which is also the HUD's back) skips it: no pause menu over a ten-second cut.
-    this.off = Input.onAction((id, i) => {
-      if (id === 'global.pause' && !i.repeat) this.skip();
-    });
-    useMontage.setState({ open: true, shot: 'establish', info });
+    this.cutCount++;
+    const { kind, label, down, toGo, los, yards } = staged;
+    useMontage.setState({ open: true, shot: 'establish', info: { ...info, play: { kind, label, down, toGo, los, yards } } });
   }
 
   /** Every frame of the play screens (GameScene, before it draws), by the frame's step (s). */
   frame(step: number): void {
+    if (this.search) this.searchStep(MontageSession.SLICE_MS);
     const p = this.player;
     const st = this.staged;
     if (!p || !st) return;
@@ -130,6 +187,7 @@ class MontageSession {
   private to(shot: ShotId): void {
     this.shotT = 0;
     this.cut = true;
+    this.cutCount++;
     useMontage.setState({ shot });
   }
 
@@ -140,17 +198,20 @@ class MontageSession {
 
   /** Skipped (or over): the game scores the drive and moves on. */
   skip(): void {
-    if (this.player) this.finish();
+    if (this.busy) this.finish();
   }
 
   /** Gone with no hand-back (the game is being left). */
   abort(): void {
     this.onDone = null;
-    if (this.player) this.finish();
+    if (this.busy) this.finish();
   }
 
   private finish(): void {
     const done = this.onDone;
+    this.search = null;
+    this.pending = null;
+    this.onNone = null;
     this.player = null;
     this.staged = null;
     this.onDone = null;
