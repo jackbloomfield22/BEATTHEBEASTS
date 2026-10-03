@@ -186,35 +186,44 @@ function targetPose(mode: Mode): Pose | null {
 
 // ---- Touchdown celebration (M7) --------------------------------------------------------------
 
-/** The side of him the shot is from (rad off his facing, 0 = in front), chosen once per celebration. */
-const celebCam = { base: 0 };
+/** Where the shot is from (field angle from the scorer to the camera) and which way it arcs, set at each cut. */
+const celebCam = { az: 0, arc: 1 };
 /** Offsets tried in turn (rad off his facing): in front a little to one side, then wider round, so the camera never ends up in the stands. */
 const CELEB_SIDES = [0.35, -0.35, 0.9, -0.9, 1.6, -1.6, 2.4, -2.4];
-const CELEB_DIST = { from: 7.4, to: 5.0 };
+const CELEB_DIST = { from: 7.4, to: 5.0, card: 8.6 };
 
 /**
  * The celebration: low (chest height, a little under), tight, in front of
- * the scorer and to one side, the field or the stands behind him; over the
- * shot the camera arcs round ~30° and pushes in from ~7.4 m to 5 m, the lens
- * closing a few degrees. (GDD §11: the camera sells the moment.)
+ * the scorer and to one side, the field or the stands behind him. It cuts
+ * in with the prompt and again as the celebration starts (in front of the
+ * way he plays it: the stands, the official, his team-mate); between cuts
+ * it holds its own bearing like an operator on the field (he turns, the
+ * shot doesn't swing round with him), arcs ~30° and pushes in from ~7.4 m
+ * to 5 m as the lens closes a few degrees. Under the result card it eases
+ * back and up so the card and the end zone share the frame.
+ * (GDD §11: the camera sells the moment.)
  */
 function celebPose(): Pose {
   const v = celebView;
   const ease = (k: number) => smooth(Math.min(1, Math.max(0, k)));
   const k = ease(v.t / 7);
-  const dist = (CELEB_DIST.from + (CELEB_DIST.to - CELEB_DIST.from) * k) / YARD;
   if (v.cut) {
-    // In the field of play and the end zone, and off the bench areas: the first side that fits for the whole push.
+    // In the field of play and the end zone, off the bench areas: the first side that fits for the whole push.
     const far = CELEB_DIST.from / YARD;
-    celebCam.base = CELEB_SIDES.find((a) => {
-      const ex = v.x + Math.cos(v.face + a) * far;
-      const ey = v.y + Math.sin(v.face + a) * far;
-      return ex < 109 && ex > -9 && Math.abs(ey) < 26;
-    }) ?? Math.PI;
+    const side =
+      CELEB_SIDES.find((a) => {
+        const ex = v.x + Math.cos(v.face + a) * far;
+        const ey = v.y + Math.sin(v.face + a) * far;
+        return ex < 109 && ex > -9 && Math.abs(ey) < 26;
+      }) ?? Math.PI;
+    celebCam.az = v.face + side;
+    celebCam.arc = side >= 0 ? 1 : -1;
   }
   // The arc swings toward his front as it pushes in.
-  const a = v.face + celebCam.base - Math.sign(celebCam.base || 1) * 0.5 * k;
-  return { ex: v.x + Math.cos(a) * dist, ey: v.y + Math.sin(a) * dist, eh: 1.35 - 0.15 * k, lx: v.x, ly: v.y, lh: 1.15, fov: 34 - 5 * k };
+  const a = celebCam.az - celebCam.arc * 0.5 * k;
+  const back = v.done ? 1 : 0;
+  const dist = (CELEB_DIST.from + (CELEB_DIST.to - CELEB_DIST.from) * k + (CELEB_DIST.card - CELEB_DIST.to) * back) / YARD;
+  return { ex: v.x + Math.cos(a) * dist, ey: v.y + Math.sin(a) * dist, eh: 1.35 - 0.15 * k + 0.7 * back, lx: v.x, ly: v.y, lh: 1.15 - 0.2 * back, fov: 34 - 5 * k + 6 * back };
 }
 
 // ---- Replay cameras (M7) ------------------------------------------------------------------

@@ -19,7 +19,7 @@ import type { Officials } from './officials';
 // `celebView` for its low, tight shot; the crowd comes up as the clip starts.
 
 /** Where the camera looks (field frame): the scorer, his facing, how long the shot has run, and a cut when it comes on. */
-export const celebView = { on: false, x: 0, y: 0, face: 0, t: 0, cut: false, clip: '' };
+export const celebView = { on: false, x: 0, y: 0, face: 0, t: 0, cut: false, clip: '', done: false };
 
 type Mode = 'run' | 'face' | 'react' | 'settle' | 'wait' | 'clip' | 'five' | 'idle';
 
@@ -173,6 +173,7 @@ export class CelebrateScene {
     celebView.face = wrap(r.yaw - Math.PI);
     celebView.t += dt;
     celebView.clip = this.scorer?.clip ?? '';
+    celebView.done = ui.phase === 'done';
     this.stepBall(dt);
   }
 
@@ -312,6 +313,9 @@ export class CelebrateScene {
       }
       if (def) {
         this.playClip(sc, def.clip, 'clip');
+        // The camera cuts to the front of the way he plays it, and the push starts again.
+        celebView.cut = true;
+        celebView.t = 0;
         crowdEnergy.trigger('celebration', performance.now() / 1000);
         Audio.celebrationRoar();
       } else this.setMode(sc, 'idle');
