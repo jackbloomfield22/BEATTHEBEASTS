@@ -244,9 +244,14 @@ What's rough:
   chest and stays there in front of him; he doesn't raise his hands or
   move (the officials have no catch clip). It reads from the broadcast
   distance, not up close.
-- **The salute and the pointing** are the weakest of the twelve at the
-  camera's angles: a hand at the brow or a pointed finger is small at 5–7 m
-  and the camera picks its side before it knows which arm he'll use.
+- **The flip to the official is the weakest shot**: he turns toward the
+  official (usually the back judge under the posts), so the camera, in
+  front of him, looks back across the end zone, and the team-mates and the
+  Beasts walking off the dead ball (the sim's; nothing moves them out of
+  the way) cross between it and him (`celeb-flip-1.5`). The salute and the
+  point read (`celeb-salute-1.9`, `celeb-point-2.0`), but a hand at the brow
+  is small at 5–7 m and the camera picks its side before it knows which arm
+  he'll use.
 - **No variety within a clip**: the same celebration plays the same way
   for every scorer (scaled to his body). A big man's flex and a receiver's
   are the same keys; per-player personality (a trait that picks or flavours
