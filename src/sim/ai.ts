@@ -515,6 +515,7 @@ export function assignProtection(s: PlayState): void {
     return k === 'passBlock' || (draw && k === 'runBlock' && a.p.pos === 'OL');
   });
   const taken = new Set<number>();
+  const maestroSet = has(s.agents[s.qb]!, 'maestro');
   // Each rusher gets the nearest free blocker by lateral position.
   const byY = [...rushers].sort((p, q) => s.agents[q]!.pos.y - s.agents[p]!.pos.y);
   for (const r of byY) {
@@ -540,7 +541,8 @@ export function assignProtection(s: PlayState): void {
       if (blitz) {
         const line = s.off.map((i) => s.agents[i]!).filter((a) => a.p.pos === 'OL');
         const k = (line.some((a) => has(a, 'smart-line')) ? 0.8 : 1) * (line.some((a) => has(a, 'sack-prone')) ? 1.1 : 1) * (has(B, 'liability-protection') ? 1.3 : 1);
-        if (s.rng.ai() < PICKUP_MISS * k) continue;
+        // A Maestro who changed a route at the line reset the protection to the look with it (the trait catalog: "his hot-route changes also adjust the protection"): nobody's missed.
+        if (!(maestroSet && Object.keys(s.hot).length > 0) && s.rng.ai() < PICKUP_MISS * k) continue;
       }
       taken.add(best);
       B.mem.man = r;

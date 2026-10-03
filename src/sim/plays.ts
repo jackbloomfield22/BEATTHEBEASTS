@@ -440,6 +440,13 @@ export const RUN_PLAYS: OffPlay[] = [
   { id: 'h-iso', name: 'H Iso', type: 'run', formation: F.singlebackH, drop: HANDOFF(0.8), unlock: 'h-back', assign: RUN_PERSONNEL, run: { scheme: 'iso', aim: 1.6, mesh: 0.8 } },
 ];
 
+/** The play call's line under a designed run: who carries it. */
+export function runNote(p: OffPlay): string {
+  if (p.run?.scheme === 'qbDraw') return 'A QB draw: show pass, then take it up the middle yourself as the rush runs past.';
+  if (p.run?.scheme === 'zoneRead') return 'Zone read: the backside end is left for you to read. He crashes on the back, you keep it round him; he sits, the back has it.';
+  return 'A designed run: the back takes the handoff; you run it from there.';
+}
+
 /** The whole book, as the play call lists it (passes first, then runs). */
 export const PLAYS: OffPlay[] = [...PASS_PLAYS, ...RUN_PLAYS];
 

@@ -15,7 +15,7 @@ import { describe, type ResultCard } from './describe';
 import { loadPracticeRosters, loadSnapshot } from './rosters';
 import { SimRunner } from './runner';
 import { withSwap, type Clip } from './clips';
-import { AUDIBLES, audiblePlay, type AudibleKind } from './audible';
+import { audiblePlay, audiblesFor, type AudibleKind } from './audible';
 import { afterSnap, defenseSnaps, emptyFatigue, fatigueOf, freshLegs, type DriveFatigue, type Snap } from './fatigue';
 import { routeOf } from '@/sim/ai';
 import type { OffPlay } from '@/sim/plays';
@@ -448,7 +448,8 @@ class PracticeSession {
       // The audible picker shares the hot-route context's keys: 1–4 (A, B, X, Y) call, H (LB) closes.
       if (id === 'hot.cancel') return this.closeHot();
       const k = id.startsWith('hot.n') ? Number(id.slice(5)) : 0;
-      if (k >= 1 && k <= AUDIBLES.length) this.callAudible(AUDIBLES[k - 1]!.kind);
+      const list = audiblesFor(s.agents[s.qb]!.p);
+      if (k >= 1 && k <= list.length) this.callAudible(list[k - 1]!.kind);
       return;
     }
     const hot = ui.hot;
