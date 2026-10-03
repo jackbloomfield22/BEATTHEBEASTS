@@ -46,6 +46,16 @@ SLIDE_MAX = 0.005  # m of foot drift on a planted frame
 LOOP_MAX = 1.0  # degrees between the last frame and the first of a loop
 CLEAR_MIN = 0.07  # m between the ankles (and knees) at every frame
 COM_MARGIN = -0.02  # m: centre of mass may sit at most 2 cm outside the support polygon
+# Joint limits for the M7 celebrations (the clips most free in their arm and
+# leg shapes): peak knee flexion 150 deg (a deep squat or a knee on the turf
+# reaches ~140-150; Hemmerich et al. 2006, kneeling and squatting ROM),
+# peak elbow flexion 150 deg (active elbow flexion tops out ~145-150, AAOS
+# norms), and every IK foot target reached within 1.5 cm (no leg locked
+# straight short of its plant: a foot floating or sliding).
+JOINT_GATED = ("cel_",)
+KNEE_MAX = 150.0
+ELBOW_MAX = 150.0
+REACH_MAX = 0.015
 
 # Whole-body mechanics gates for the locomotion cycles (M4.5), from the same
 # literature the keyer uses (lib/gait.py): trunk lean from vertical (deg,
@@ -352,6 +362,7 @@ def bake(rig, c, clip):
     clearance = math.inf
     com_margin = math.inf
     reach = 0.0  # worst distance between an IK target and where the limb got to
+    knee_max = elbow_max = 0.0  # peak flexion (deg), for the joint-limit gate
     stance_metrics = {}
     mech = {k: [] for k in ("lean", "pz", "px", "pyaw", "tyaw", "elbow", "shoulder", "thigh", "knee", "hand_up", "hand_back", "strike")}
     for f in range(frames + 1):
@@ -369,6 +380,10 @@ def bake(rig, c, clip):
                 measure(rig, mech, f, clip)
             for s in "lr":
                 reach = max(reach, (world(rig, f"foot_{s}") - c.foot[s].location).length)
+                hp, kn, an = world(rig, f"thigh_{s}"), world(rig, f"calf_{s}"), world(rig, f"foot_{s}")
+                knee_max = max(knee_max, math.degrees((kn - hp).angle(an - kn)))
+                sh, el, wr = world(rig, f"upperarm_{s}"), world(rig, f"forearm_{s}"), world(rig, f"hand_{s}")
+                elbow_max = max(elbow_max, math.degrees((el - sh).angle(wr - el)))
             clearance = min(clearance, (world(rig, "foot_l") - world(rig, "foot_r")).length, (world(rig, "calf_l") - world(rig, "calf_r")).length)
             if clip["kind"] == "stance" and clip.get("balance", True):
                 cm = com(rig)
@@ -439,12 +454,16 @@ def bake(rig, c, clip):
         "com_cm": None if com_margin == math.inf else round(com_margin * 100, 1),
         "reach_cm": round(reach * 100, 2),
     }
+    joint_gated = clip["name"].startswith(JOINT_GATED)
+    if joint_gated:
+        gates["joints"] = {"knee_deg": round(knee_max, 1), "elbow_deg": round(elbow_max, 1)}
     gates["pass"] = (
         gates["slide_cm"] <= SLIDE_MAX * 100
         and gates["loop_deg"] <= LOOP_MAX
         and gates["clear_cm"] >= CLEAR_MIN * 100
         and (gates["com_cm"] is None or gates["com_cm"] >= COM_MARGIN * 100)
         and not gates.get("mech_fail")
+        and (not joint_gated or (knee_max <= KNEE_MAX and elbow_max <= ELBOW_MAX and reach <= REACH_MAX))
     )
     return act, gates
 
@@ -466,6 +485,20 @@ def write_doc(results):
         lines.append(f"| `{r['name']}` | {r['kind']} | {r['frames']} | {r['speed']:.1f} | {g['slide_cm']:.2f} | {g['loop_deg']:.2f} | {g['clear_cm']:.1f} | {com_s} | {'pass' if g['pass'] else '**FAIL**'} |")
     passed = sum(r["gates"]["pass"] for r in results)
     lines += ["", f"**{passed} of {len(results)} clips pass.**", ""]
+    gated = [r for r in results if "joints" in r["gates"]]
+    if gated:
+        lines += [
+            "## Joint limits (M7 celebrations)",
+            "",
+            f"Peak knee flexion ≤ {KNEE_MAX:.0f}°, peak elbow flexion ≤ {ELBOW_MAX:.0f}°, every IK foot target reached within {REACH_MAX * 100:.1f} cm.",
+            "",
+            "| Clip | Knee (°) | Elbow (°) | Foot reach (cm) | Result |",
+            "|---|---|---|---|---|",
+        ]
+        for r in gated:
+            g = r["gates"]
+            lines.append(f"| `{r['name']}` | {g['joints']['knee_deg']:.1f} | {g['joints']['elbow_deg']:.1f} | {g['reach_cm']:.2f} | {'pass' if g['pass'] else '**FAIL**'} |")
+        lines.append("")
     with open(OUT_DOC, "w") as f:
         f.write("\n".join(lines))
 

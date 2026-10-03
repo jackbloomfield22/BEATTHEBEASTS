@@ -677,7 +677,7 @@ def shrug() -> Clip:
     look = copy.deepcopy(let)
     look.gaze = (48.0, -6.0, 0.7)
     palms = {"hand_l": (-40, 0, 80), "hand_r": (-40, 0, 80)}
-    big = P({"up": 0.0, "side": 0.03, "lateral": 4}, {**spine(-2, 3), **neck(0, 12), **hand(SPREAD, "r"), **hand(SPREAD, "l"), **palms, "clavicle_l": (0, 13, 0), "clavicle_r": (0, 13, 0)}, {"r": Arm(flex=14, elbow=96, abd=26, inward=-0.6), "l": Arm(flex=14, elbow=96, abd=26, inward=-0.6)}, gaze=(-4.0, 0.0, 0.5))
+    big = P({"up": -0.025, "side": 0.03, "lateral": 4}, {**spine(-2, 3), **neck(0, 12), **hand(SPREAD, "r"), **hand(SPREAD, "l"), **palms, "clavicle_l": (0, 13, 0), "clavicle_r": (0, 13, 0)}, {"r": Arm(flex=14, elbow=96, abd=26, inward=-0.6), "l": Arm(flex=14, elbow=96, abd=26, inward=-0.6)}, gaze=(-4.0, 0.0, 0.5))
     small = P({"up": -0.01, "side": -0.02, "lateral": -3}, {**spine(0, -2), **neck(0, -8), **hand(SPREAD, "r"), **hand(SPREAD, "l"), **palms, "clavicle_l": (0, 8, 0), "clavicle_r": (0, 8, 0)}, {"r": Arm(flex=10, elbow=90, abd=24, inward=-0.5), "l": Arm(flex=10, elbow=90, abd=24, inward=-0.5)}, gaze=(0.0, 0.0, 0.5))
     mid = P({"up": -0.01}, {**hand(RELAXED, "r"), **hand(RELAXED, "l")}, {"r": Arm(flex=8, elbow=50, abd=20), "l": Arm(flex=8, elbow=50, abd=20)}, gaze=(0.0, 0.0))
     keys = [(0.0, TUCKED), (0.38, out), (0.48, let), (0.62, look), (0.78, look), (1.08, big), (1.36, big), (1.52, mid), (1.72, small), (1.92, small), (2.20, EMPTY), (T, EMPTY)]
