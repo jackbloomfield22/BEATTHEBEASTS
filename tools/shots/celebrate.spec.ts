@@ -137,7 +137,8 @@ test('celebrations · the prompt, a pick, the celebration, the card', async ({ p
   await until(page, (w) => w.__btbCelebUi.getState().phase === 'choose');
   await frame(page);
   await still(page, PAD ? 'celeb-01-prompt-pad' : 'celeb-02-prompt-keys');
-  let first = true;
+  // The first in the list plays out to the card (BTB_CELEB_ONLY without "card": none does).
+  let first = !ONLY || ONLY.includes('card');
   let scored = true;
   for (const g of GALLERY) {
     if (ONLY && !ONLY.includes(g.id)) continue;
@@ -163,7 +164,7 @@ test('celebrations · the prompt, a pick, the celebration, the card', async ({ p
       // The first plays out to the card (the team-mate's high five on the way); the rest are skipped once shot (frames are slow here).
       first = false;
       await until(page, (w) => w.__btbCelebUi.getState().phase === 'done');
-      for (let k = 0; k < 4; k++) await frame(page);
+      for (let k = 0; k < 15; k++) await frame(page); // the camera eases back under the card
       await still(page, 'celeb-03-after-card');
     } else await ev(page, (w) => w.__btbCeleb.skip());
   }
