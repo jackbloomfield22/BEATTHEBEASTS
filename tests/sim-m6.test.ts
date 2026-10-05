@@ -314,10 +314,15 @@ describe('M6: zones match the routes', () => {
     while (!s.result && (s.snapT < 0 || s.t - s.snapT < t)) stepPlay(s, NEUTRAL);
   };
   it('the curl-to-flat defender expands with #2 to the flat when #1 has gone deep (Cover 3 against stick)', () => {
+    // (He expands with the flat from the snap, a few yards behind it as it runs, and is on it as it settles: the
+    // nickel over #2 since the call is played by strength; before, the box safety, who was across from it at 1.6 s.)
     const s = at(playById('trips-stick'), defById('cover3'), 4);
-    until(s, 1.6);
+    until(s, 2.2);
     const flat = s.agents[s.slot.SLOT!]!; // #2 to the trips side runs the flat
-    const curlR = s.agents[s.slot.SS!]!; // the curl-flat player on that side
+    // The curl-flat player on that side: the call by strength (state.ts toStrength) gives the trips side's curl to the Sam (or the nickel in his slot).
+    const k = Object.entries(s.setup.def.assign).find(([, a]) => a.kind === 'zone' && a.zone === 'curlR')![0];
+    expect(k).toBe('SLB');
+    const curlR = s.agents[s.slot[k]!]!;
     expect(Math.hypot(flat.pos.x - curlR.pos.x, flat.pos.y - curlR.pos.y)).toBeLessThan(4);
   });
   it('with a curl and a flat on him he takes the flat and leaves the curl behind him: the high-low that beats Cover 3', () => {

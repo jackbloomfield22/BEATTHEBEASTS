@@ -523,9 +523,74 @@ export function runFit(s: PlayState, d: Agent): void {
   steer(d, arrive(d, alley, 1, 1), {});
 }
 
-/** Receivers' stalk blocks on a screen: the man over me, driven away from the ball. */
+/** The down linemen: never a stalk blocker's man (the line has them, and they're rushing past the screen). */
+const FRONT: readonly string[] = ['LE', 'LDT', 'RDT', 'RE'];
+/**
+ * The men a stalk blocker counts (yd past the line at the snap): off the
+ * ball, and short of the deep safety's depth. The deep man is the one the
+ * bubble is built to leave unblocked: the receiver has to beat him (two
+ * blockers on the corner and the apex, three men on the bubble side to
+ * count: the coaching rule for the bubble from trips and bunch).
+ */
+const STALK_DEEP = 10;
+/** A man counts as on the screen's side this far outside the ball (yd): the apex and the curl defender, not the middle linebacker over the center. */
+const STALK_IN = 2;
+
+/**
+ * The stalk blocks on a screen, counted at the snap as they're coached: the
+ * blockers on the screen's side take the men off the ball on that side who
+ * can get to the catch first (as many as there are blockers), outside-in
+ * (the outside blocker the widest man, the corner or the force; the next
+ * one the apex or curl defender inside him, or in man the man over the
+ * bubble, whose own man then has to come through the bunch). Before this the
+ * stalk blocker took the nearest man to him and the ball, which from a
+ * bunch was the defensive end rushing past: both blockers turned back
+ * inside after him and the corner came down untouched (the bubble against
+ * Cover 2 lost a yard on 51 of 60 throws, tools/sim/screens.ts).
+ */
+export function assignStalks(s: PlayState): void {
+  const play = s.setup.play;
+  const blockers = s.off.map((i) => s.agents[i]!).filter((a) => play.assign[a.slot as OffSlot].kind === 'stalk');
+  if (!blockers.length || !s.icons.length) return;
+  const by = s.setup.ballY ?? 0;
+  const los = s.setup.los;
+  const to = s.agents[s.icons[0]!]!;
+  const end = to.route?.pts[to.route.pts.length - 1] ?? to.pos;
+  const side = end.y >= by ? 1 : -1;
+  const width = (p: V2) => (p.y - by) * side;
+  // The men who can get to the catch first (the nearest to it, off the ball and short of the deep man), then outside-in.
+  const men = s.def
+    .map((i) => s.agents[i]!)
+    .filter((d) => !FRONT.includes(d.slot) && d.pos.x < los + STALK_DEEP && width(d.pos) > STALK_IN)
+    .sort((p, q) => dist(p.pos, end) - dist(q.pos, end))
+    .slice(0, blockers.length)
+    .sort((p, q) => width(q.pos) - width(p.pos));
+  blockers.sort((p, q) => width(q.pos) - width(p.pos)).forEach((b, j) => (b.mem.target = men[j]?.i ?? -1));
+}
+
+/** A stalk blocker's man is gone from the screen once he's rushing in the backfield (a blitzer counted at the snap). */
+const stalkSkip = (s: PlayState) => (d: Agent): boolean => FRONT.includes(d.slot) || d.pos.x < s.setup.los;
+
+/** Receivers' stalk blocks on a screen: the man he counted at the snap (assignStalks), driven away from the ball. */
 export function stalk(s: PlayState, b: Agent, toward: V2): void {
-  runBlock(s, b, toward, true);
+  const skip = stalkSkip(s);
+  const t = (b.mem.target as number | undefined) ?? -1;
+  if (t >= 0 && skip(s.agents[t]!)) b.mem.target = -1;
+  runBlock(s, b, toward, true, true, skip);
+  // The corner against the stalk is the force: he squeezes it, working to the
+  // blocker's outside shoulder and keeping it (stepBlocks' edge technique),
+  // so the ball has to come back inside him to the men rallying from inside
+  // out. A stalk that drove him to the sideline gave the bubble the edge.
+  // Any man on a stalk plays through it to the ball once it's caught (blocks.ts PLAY_THROUGH).
+  const blk = blockOf(s, b.i);
+  if (blk && blk.b === b.i) {
+    const d = s.agents[blk.d]!;
+    d.mem.playThrough = true;
+    if ((d.slot === 'LCB' || d.slot === 'RCB') && d.mem.contain === undefined) {
+      d.mem.contain = Math.sign(d.pos.y - (s.setup.ballY ?? 0)) || 1;
+      d.mem.squeeze = true;
+    }
+  }
 }
 
 // ---- The zone read (a Designed Runner's play) ----------------------------------
