@@ -36,12 +36,15 @@ Cuts between shots, never swoops (the montage's grammar, M7).
 
 ### Every player is himself, even jogging out
 
-Each Contender's pace is 64% of his own top speed from the sim
-(`effects(p).vmax`: his 40 and his 10-yd split), reached on his own
-acceleration constant (`tau`). The pack is ordered fastest at the front.
-So the receivers and backs break away out of the mouth and the linemen come
-out last and arrive last: on seed 7, Tyreek-class speed jogs out at ~6.0
-m/s and a lineman at ~4.5 m/s, ~2 s apart over the 45 m. They run on
+Each Contender's jog-out pace comes from his own 40 (the sim's, from his
+Speed rating): 6.0 m/s for a 4.50 man, 3.2 m/s slower per second of 40,
+clamped to 4.3–7.2 m/s, reached on his own acceleration constant (the sim's
+`tau`). A share of top speed was tried first and bunched them: the fitted
+top speeds of a 4.30 man and a 5.17 man are only ~12% apart (9.8 against 8.7
+m/s), because the 40 is mostly acceleration. Now a 4.30 receiver runs out at
+6.6 m/s and a 5.2 lineman at 4.3, ~4 s apart over the ~48 m. The pack is
+ordered fastest at the front, so the receivers and backs break away out of
+the mouth and the linemen come out last and arrive last. They run on
 curves that leave the tunnel straight and fan out to their spot on a line
 across their side of midfield (z = -18.5 m), keep the pack's left-to-right
 order (so nobody crosses through anybody), brake over the last strides at
@@ -104,9 +107,10 @@ order (so nobody crosses through anybody), brake over the last strides at
 
 ## Cost
 
-Measured on this container (SwiftShader, Medium, frame-stepped,
-`/tmp/.../perf.mjs`-style probe through the real walk-out; draw calls and
-triangles from `gl.info`, the JS from `__btbRevealStats`):
+Measured on this container (SwiftShader, Medium, 640 × 360, `?video=10`
+frame-stepped through the real walk-out from a full draft, seed 7; draw
+calls and triangles from `gl.info` via the dev handle `__btbPerfStats`, the
+JS from `__btbRevealStats`):
 
 | | Draw calls (mean / max) | Triangles (mean / max) | Programs |
 |---|---|---|---|
@@ -133,16 +137,69 @@ triangles from `gl.info`, the JS from `__btbRevealStats`):
 
 ## Media
 
-- `docs/m7/tunnel.mp4`: the full walk-out and reveal to the pre-game card,
-  Medium, 960 × 540, 24 fps, frame-true (every frame is 1/24 s of game time).
-- `docs/m7/tunnel-fast.mp4`: the fast version (Quick Play).
+- `docs/m7/tunnel.mp4` (25.2 s): the full row for half a second, the
+  walk-out and the reveal to the pre-game card, Medium, 960 × 540, 24 fps,
+  frame-true (every frame is 1/24 s of game time; 1.2 h to record here).
+- The fast version (Quick Play) is **not recorded**: it is the same run-out
+  on squeezed camera keys and the face-off, covered by the unit test only.
 - Stills (`docs/m7/shots/tunnel-*.png`): the room, the light at the start of
   the run-out, the run-out with its lower third, the Beasts' card and the
-  best man's, the face-off, the pre-game card.
+  best man's, the face-off, the pre-game card (960 × 540, from the same run).
 
 Re-record: `BTB_TUNNEL=1 BTB_PORT=5293 BTB_TUNNEL_W=960 BTB_TUNNEL_FPS=24 npx playwright test -c tools/shots/playwright.config.ts`
 (`BTB_TUNNEL_MODE=quick` for the fast version).
 
 ## Critique (honest)
 
-CRITIQUE
+Watched frame by frame (contact sheets at 2 fps and the stills).
+
+**What works**
+- *The run-out is the moment.* The eleven standing in the dark tunnel as
+  the white resolves, silhouetted against the opening, then going out into
+  the light past the gerbs, is the image a broadcast opens on. The
+  hand-over from the room's corridor is invisible: the same graphite walls,
+  strip lights and lime rule continue, and the white hides the cut.
+- *The rise sells the place.* Coming up over the team as it spreads onto the
+  field, the frame opens to both stands, the roof lip, the sun low over the
+  sea past the open end and the Beasts' dark line waiting in front of it.
+  It's the best establishing shot of Blackcliff in the game so far.
+- *Speed reads.* The receivers and backs are gone out of the mouth while
+  the linemen are still lumbering through it, and the big men are still
+  jogging in to their spots at the face-off. Nobody would mistake the order.
+- *The Beasts shot ends on a man.* The dolly across the black jerseys
+  settling on a full-length Rod Woodson, right of centre with his lower third
+  (CB · PIT 1990s, 98, No-Fly Zone) clear of him, is a real "meet the
+  defense" insert, front-lit now (the first pass, straight on into the sun,
+  was all silhouettes).
+
+**What's weak**
+- *The Beasts stand like mannequins.* Every one plays the same stance idle:
+  arms held a little out from the sides, square, still. In a portrait that
+  close it's the weakest frame of the reveal. They want a waiting
+  repertoire (hands on hips, a bounce on the toes, a helmet slap, arms
+  folded): new in-house clips in `tools/blender`, deliberately not keyed
+  here because the celebrations agent is regenerating the same clip
+  library in parallel and `anims.glb` can't be merged.
+- *The hype is hard to see.* The QB's arms-up (the officials' touchdown
+  signal on the arms) happens as he crosses the mouth, which on this seed
+  is behind three linemen in the Steadicam's view. Real teams run out
+  bouncing, jumping, slapping hands; ours run out in clean gaits.
+- *The tunnel's inside is plain.* Flat grey lining with four strips, lit by
+  a faint self-light, reads as an untextured box at 960 wide. It needs the
+  room's materials (ribbed panels, a rubber floor with texture, a sign-free
+  graphic band) and some fog hanging in it.
+- *The face-off is far.* The lines are 24 m apart and spaced 3 m (ours) and
+  2.2 m (theirs), so over the shoulders it's a scattered row of white in
+  front of a thin black line on the horizon, with the slow linemen still
+  walking in. Real teams don't line up facing each other, either; a
+  director would more likely cut to the Beasts' sideline or the captains.
+  It's pretty (the sun and the sea) but not yet a confrontation.
+- *The smoke and pyro are small.* The gerbs read as sparks at the mouth
+  for a second; the smoke is a thin roll that the camera passes through as
+  two soft blobs near the lens. Bigger was worse (the first pass filled the
+  frame with a beige wall), so this is a floor, not a design.
+- *Sound* is a synthesized swell and the title horn, unheard in this
+  container (no audio in the recordings).
+- *Numbers*: Film Room hides the OVR and the rating; the threat word stays,
+  as the Beasts' lineup on the wall does.
+- *Not verified on a GPU.* The look and the budget are from SwiftShader.
