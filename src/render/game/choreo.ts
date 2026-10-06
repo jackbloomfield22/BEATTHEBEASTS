@@ -729,10 +729,11 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
           // The launch: harder on a big hit, but capped (4.5 m/s across, a little lift): a
           // man is knocked off his feet and back, not thrown across the field.
           const force = Number(e.data?.force ?? s.bigHit?.force ?? 5);
-          const mag = big ? Math.min(4.5, 1.5 + Math.min(4, force * 0.35) * 1.5) : e.data?.fall === 'forward' ? 2.2 : 1.8;
+          // Held in a tackle he's taken down, not launched: a gentle topple the way the sim says (at 2 m/s and a lift he cartwheeled clear of the men who had him).
+          const mag = big ? Math.min(4.5, 1.5 + Math.min(4, force * 0.35) * 1.5) : e.data?.fall === 'forward' ? 0.9 : 0.7;
           push.normalize().multiplyScalar(mag);
-          push.y = big ? 1.1 : 0.5;
-          fall(c, vel.multiplyScalar(0.8), push, big);
+          push.y = big ? 1.1 : 0.1;
+          fall(c, vel.multiplyScalar(big ? 0.8 : 0.5), push, big);
         }
         break;
       }
