@@ -1,0 +1,37 @@
+/* The tunnel reveal (M7): the LIVE bug, the lower thirds, the matchup band, Skip. The montage's family (montage.css). */
+
+.tunnel-hud { position: absolute; inset: 0; pointer-events: none; }
+.tunnel-hud > * { pointer-events: none; }
+
+/* The bug, top left: a red LIVE tag and where we are. */
+.tn-bug { position: absolute; left: 3.5rem; top: 1.6rem; display: flex; align-items: stretch; font-weight: 800; text-transform: uppercase; letter-spacing: .14em; animation: tn-in 380ms cubic-bezier(.2,.7,.2,1) both; }
+.tn-bug > span { padding: .42rem .8rem; background: rgba(6,6,8,.82); font-size: .8rem; display: flex; align-items: center; color: #fff; }
+.tn-bug > .tn-live { background: #c8102e; gap: .45rem; }
+.tn-bug > .tn-live::before { content: ''; width: .5rem; height: .5rem; border-radius: 50%; background: #fff; box-shadow: 0 0 .4rem rgba(255,255,255,.7); }
+.tn-where { color: var(--ink-2); }
+
+/* Lower thirds: lime for the Contenders, crimson for the Beasts. */
+.tn-lower { position: absolute; left: 3.5rem; bottom: 6rem; min-width: 26rem; padding: .9rem 1.6rem 1rem; background: linear-gradient(90deg, rgba(5,5,6,.92), rgba(5,5,6,.55)); border-left: 5px solid var(--lime); animation: tn-in 460ms cubic-bezier(.2,.7,.2,1) both; }
+.tn-lower.them { border-left-color: #ff2a4d; }
+.tn-k { display: inline-block; padding: .14rem .55rem; font-size: .72rem; font-weight: 800; letter-spacing: .24em; text-transform: uppercase; color: #0b0c0e; background: var(--lime); }
+.tn-lower.them .tn-k { color: #fff; background: #c8102e; }
+.tn-name { display: flex; align-items: baseline; gap: .9rem; margin-top: .35rem; font-family: var(--font-display); font-size: 2.4rem; line-height: 1.05; text-transform: uppercase; color: #fff; }
+.tn-ovr { font-size: 1.5rem; color: #ff2a4d; font-variant-numeric: tabular-nums; }
+.tn-meta { margin-top: .3rem; color: var(--ink-2); font-weight: 600; letter-spacing: .04em; }
+.tn-meta b { color: #fff; font-variant-numeric: tabular-nums; }
+.tn-threat { color: #ff2a4d; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+.tn-trait { display: inline-block; margin-top: .5rem; padding: .18rem .6rem; border: 1px solid rgba(255,42,77,.6); color: #ffd6dc; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+
+/* The matchup band across the top on the face-off (the two lines fill the lower frame). */
+.tn-match { position: absolute; left: 0; right: 0; top: 5.5rem; display: flex; align-items: baseline; justify-content: center; gap: 1.6rem; padding: .9rem 0; background: linear-gradient(90deg, rgba(5,5,6,0), rgba(5,5,6,.86) 25%, rgba(5,5,6,.86) 75%, rgba(5,5,6,0)); animation: tn-band 520ms cubic-bezier(.2,.7,.2,1) both; }
+.tn-side { font-family: var(--font-display); font-size: 2.6rem; text-transform: uppercase; letter-spacing: .03em; }
+.tn-side.us { color: var(--lime); }
+.tn-side.them { color: #ff2a4d; }
+.tn-vs { font-size: .95rem; font-weight: 800; letter-spacing: .3em; text-transform: uppercase; color: var(--ink-2); }
+
+/* Skip, bottom right: the confirm binding's glyph (Enter, A) and the word; clickable. */
+.tunnel-hud > .tn-skip { position: absolute; right: 2.4rem; bottom: 2rem; display: flex; align-items: center; gap: .55rem; padding: .4rem .8rem; background: rgba(6,6,8,.6); border: 1px solid rgba(255,255,255,.12); color: var(--ink-2); font: inherit; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: .78rem; cursor: pointer; pointer-events: auto; }
+.tunnel-hud > .tn-skip:hover { color: #fff; border-color: var(--lime); }
+
+@keyframes tn-in { from { opacity: 0; transform: translateX(-1.5rem); } to { opacity: 1; transform: none; } }
+@keyframes tn-band { from { clip-path: inset(0 50% 0 50%); } to { clip-path: inset(0 0 0 0); } }

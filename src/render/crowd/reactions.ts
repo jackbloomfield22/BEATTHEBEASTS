@@ -6,7 +6,7 @@
 
 import { urlFlags } from '@/app/platform';
 
-export type CrowdEvent = 'bigPlay' | 'touchdown' | 'turnover' | 'defensiveStop' | 'kickoff' | 'groan' | 'celebration';
+export type CrowdEvent = 'bigPlay' | 'touchdown' | 'turnover' | 'defensiveStop' | 'kickoff' | 'groan' | 'celebration' | 'walkout' | 'beastsRoar';
 
 /** Peak energy each event lifts the crowd to, and how long it holds before decaying (s). */
 export const REACTIONS: Record<CrowdEvent, { peak: number; hold: number; decay: number }> = {
@@ -19,13 +19,17 @@ export const REACTIONS: Record<CrowdEvent, { peak: number; hold: number; decay: 
   kickoff: { peak: 0.6, hold: 2, decay: 3 },
   // A groan sits the crowd down: energy below ambient.
   groan: { peak: 0.08, hold: 1.5, decay: 3 },
+  // The tunnel reveal (M7): the visitors coming out into the Beasts' house
+  // bring the bowl up most of the way; the Beasts on the big screen, all of it.
+  walkout: { peak: 0.75, hold: 4.5, decay: 3 },
+  beastsRoar: { peak: 1, hold: 5, decay: 6 },
 };
 
 export class CrowdEnergy {
   private start = -Infinity;
   private ev: CrowdEvent | null = null;
-  /** Where the energy stood when this event came in: the rise starts from there, never dips back to ambient first. */
-  private from = 0;
+  /** Where the rise starts: the energy when it was triggered (a new event over one in progress rises from there, never dips to ambient first). */
+  private from: number;
 
   constructor(public ambient = 0.3) {
     this.from = ambient;
@@ -45,11 +49,11 @@ export class CrowdEnergy {
     if (t < 0) return this.from;
     // Rise over 0.4 s (a crowd reacts within a beat) from where it stood, hold, then ease back to ambient.
     const rise = Math.min(1, t / 0.4);
-    const top = this.from + (r.peak - this.from) * rise;
-    if (t <= r.hold) return top;
-    const fall = Math.max(0, 1 - (t - r.hold) / r.decay);
+    const fall = t <= r.hold ? 1 : Math.max(0, 1 - (t - r.hold) / r.decay);
     const k = fall * fall * (3 - 2 * fall);
-    return this.ambient + (r.peak - this.ambient) * k;
+    // Rise from where it was to the peak, then ease back to ambient.
+    const top = this.from + (r.peak - this.from) * rise;
+    return t <= r.hold ? top : this.ambient + (top - this.ambient) * k;
   }
 }
 

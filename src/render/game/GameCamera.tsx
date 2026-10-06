@@ -14,6 +14,8 @@ import { frameEvents } from './frameEvents';
 import { montage } from '@/game/montageSession';
 import { montagePose, montageRates } from './montageCam';
 import { celebView } from './celebrate';
+import { reveal } from '@/game/tunnelReveal';
+import { revealPose, type RevealPose } from './tunnelShow';
 
 // The play cameras (GDD §11.1, TECH_PLAN §8), driven from the sim snapshot
 // through critically damped springs so every cut is a glide:
@@ -391,6 +393,9 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
 /** Game time the video camera last stepped to. */
 const videoClock = { t: 0 };
 
+/** The tunnel reveal's camera this frame (M7, tunnelShow.ts). */
+const revealCam: RevealPose = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 50 };
+
 export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const modeSetting = useSettings((s) => s.settings.gameplay.camera);
@@ -452,6 +457,20 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
   }, []);
 
   useFrame((_, dt) => {
+    // The tunnel reveal (M7) flies its own shots; when it hands back, the play camera cuts to the pre-game picture.
+    if (reveal.active) {
+      revealPose(revealCam);
+      camera.position.copy(revealCam.pos);
+      camera.lookAt(revealCam.look);
+      const rf = revealCam.fov + fovOffset * 0.5;
+      if (Math.abs(camera.fov - rf) > 1e-3) {
+        camera.fov = rf;
+        camera.updateProjectionMatrix();
+      }
+      return;
+    }
+    const revealCut = reveal.handback;
+    reveal.handback = false;
     // Video recording: the camera moves by the game time that passed (the
     // page renders freely between recorded frames), so its easing is as in play.
     let step = urlFlags.shot !== null ? 1 / 60 : Math.min(dt, 0.1);
@@ -502,7 +521,7 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       springs.current = [camera.position.x, camera.position.y, camera.position.z, look.x, look.y, look.z, camera.fov].map((v) => new Spring(v));
     }
     // Screenshots and browser tests cut straight to the pose every frame; so does a replay's camera change.
-    const cut = (urlFlags.shot !== null && !urlFlags.video) || (rmode !== null && replayCam.cut) || (mshot !== null && montage.cut) || (!rmode && !mshot && celebView.on && celebView.cut);
+    const cut = (urlFlags.shot !== null && !urlFlags.video) || (rmode !== null && replayCam.cut) || (mshot !== null && montage.cut) || (!rmode && !mshot && celebView.on && celebView.cut) || revealCut;
     if (!rmode) celebView.cut = false;
     if (cut) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
     replayCam.cut = false;

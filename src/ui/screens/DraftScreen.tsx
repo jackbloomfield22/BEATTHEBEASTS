@@ -17,7 +17,10 @@ import { useMenuNav } from '../nav';
 import { Hints, KeyCap } from '../components/controls';
 import { TraitList } from '../scouting/TraitBadge';
 import { LastGamePanel, ReportOverlay } from '../results/LastGame';
+import { Input } from '@/input/InputManager';
+import { ActionGlyph } from '../components/Glyph';
 import '../styles/draft.css';
+import '../styles/tunnel.css';
 
 // The draft over the Contenders' locker room (M6). The reels spin on the
 // video wall; the pick panel lists what the pair offers, filtered by
@@ -194,6 +197,19 @@ export function DraftScreen() {
     Audio.uiSelect();
     useDraft.setState({ phase: 'walkout', focus: null, wallBeasts: null });
   };
+  // The walk-out is a cinematic: confirm, back or Start (or Skip) goes straight to the pre-game, no tunnel reveal.
+  const skipWalk = () => {
+    if (useDraft.getState().phase !== 'walkout') return;
+    Audio.uiSelect();
+    useDraft.getState().finishWalkout(go);
+  };
+  useEffect(() => {
+    if (d.phase !== 'walkout') return;
+    return Input.onAction((id, info) => {
+      if (!info.repeat && (id === 'menu.confirm' || id === 'menu.back' || id === 'global.pause')) skipWalk();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d.phase]);
   const cycleTab = (dir: 1 | -1) => {
     const tabs = POS_TABS.filter((t) => t === 'All' || all.some((c) => c.pos === t));
     const i = tabs.indexOf(tab);
@@ -284,6 +300,14 @@ export function DraftScreen() {
       </header>
 
       {phase === 'loading' ? <div className="draft-center">Opening the locker room…</div> : null}
+      {phase === 'walkout' ? (
+        <div className="tunnel-hud">
+          <button className="tn-skip" tabIndex={-1} onClick={skipWalk}>
+            <ActionGlyph action="menu.confirm" />
+            <span>Skip</span>
+          </button>
+        </div>
+      ) : null}
       {phase === 'intro' && d.mode !== 'quick' ? <RulesCard mode={d.mode} /> : null}
 
       {draft && (phase === 'intro' || phase === 'ready' || phase === 'spinning' || (choosing && draft.pair) || phase === 'complete' || phase === 'viewing') ? (

@@ -196,6 +196,33 @@ class AudioEngine {
     this.tone(110, 0.08, 'sine', 0.06 + 0.16 * f, 'sfx', 70);
   }
 
+  /**
+   * The bowl coming up (M7, the tunnel reveal): a roar that swells over
+   * `attack` s and dies away over `dur`, two bands of noise (the crowd's
+   * body and its edge), `level` 0..1. Synthesized like the rest.
+   */
+  crowdRoar(level: number, attack = 0.9, dur = 4.5): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    for (const [freq, q, g] of [[480, 0.5, 0.26], [1250, 0.9, 0.1]] as const) {
+      const t = ctx.currentTime;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noise;
+      src.loop = true;
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = freq;
+      f.Q.value = q;
+      const gn = ctx.createGain();
+      gn.gain.setValueAtTime(0.0001, t);
+      gn.gain.exponentialRampToValueAtTime(Math.max(0.001, g * level), t + attack);
+      gn.gain.exponentialRampToValueAtTime(0.0001, t + attack + dur);
+      src.connect(f).connect(gn).connect(this.buses.crowd);
+      src.start(t, Math.random() * 2);
+      src.stop(t + attack + dur + 0.05);
+    }
+  }
+
   /** The play clock's last five seconds: a dry tick each second. */
   playClockTick(): void {
     this.noiseHit(0.03, 3200, 5, 0.09, 'ui');

@@ -3,7 +3,7 @@
 // GPU. The particle pool (particles.ts) uploads what `burst` returns; the
 // motion itself runs in the vertex shader from the spawn state.
 
-export type EffectId = 'turfKick' | 'hitDust' | 'confetti' | 'pyro' | 'breath';
+export type EffectId = 'turfKick' | 'hitDust' | 'confetti' | 'pyro' | 'breath' | 'smoke';
 
 export interface Particle {
   pos: [number, number, number];
@@ -79,6 +79,15 @@ export const EFFECTS: Record<EffectId, EffectSpec> = {
     size: [R(0.04, 0.07), R(0.3, 0.5)],
     colors: [[0.75, 0.77, 0.8]],
     alpha: 0.18, gravity: -0.15, drag: 1.8, spin: R(-0.5, 0.5), emissive: 0,
+  },
+  smoke: {
+    // Stage smoke out of the tunnel mouth (M7, the tunnel reveal): a fogger
+    // pushes cool smoke at ~1-2 m/s; it spreads to puffs of a few meters,
+    // hangs, and thins out over ~3 s.
+    count: 12, spread: 1.2, speed: R(0.4, 1.4), push: 1.1, jitter: 0.9, life: R(2.4, 3.8),
+    size: [R(0.5, 0.8), R(1.6, 2.4)],
+    colors: [[0.8, 0.8, 0.82], [0.72, 0.72, 0.75]],
+    alpha: 0.09, gravity: -0.12, drag: 1.1, spin: R(-0.4, 0.4), emissive: 0,
   },
 };
 

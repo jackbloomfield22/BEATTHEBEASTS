@@ -29,3 +29,12 @@ export function coastZ(x: number): number {
  * Azimuth measured from +Z (the open end) toward -X.
  */
 export const SUN_AZIMUTH_OFF_AXIS_DEG = 35;
+
+/**
+ * The Contenders' tunnel mouth (M7, the tunnel reveal): a covered portal out
+ * of the north stands onto the apron, east of the goalposts so the team runs
+ * out past them, not into them. x is its center line; the portal runs from
+ * the field wall (back) to its mouth; inner width and height. The room's
+ * corridor (render/locker) walks out into it.
+ */
+export const TUNNEL = { x: 12, back: STAND.northZ, mouth: STAND.northZ + 9, width: 6, height: 3.3 };
