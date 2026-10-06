@@ -4,11 +4,15 @@
 // appended to `state.events` for the render, audio and commentary layers.
 
 import { atan2, cos, sin } from '@/engine/math/detmath';
-import { assignRunBlocks, assignRunFits, backToMesh, belief, keepIt, qbMesh, qbRunner, readEndStep, readKeep, runFit, schemeBlock, setZoneRead, stalk } from './runs';
+import { assignRunBlocks, assignRunFits, assignStalks, backToMesh, belief, keepIt, qbMesh, qbRunner, readEndStep, readKeep, runFit, schemeBlock, setZoneRead, stalk } from './runs';
 import {
   assignProtection,
   breakOnBall,
   carrierAI,
+  intercept,
+  convoySide,
+  convoySpot,
+  screenConvoy,
   manCover,
   onRhythm,
   RHYTHM_READ,
@@ -120,6 +124,7 @@ function doSnap(s: PlayState): void {
   setZoneRead(s);
   assignRunBlocks(s);
   assignRunFits(s);
+  assignStalks(s);
   // What the offense shows the defense, and when (runs.ts belief): a run
   // fires out at the snap; the draw shows pass first (its run show is the
   // handoff); play action shows run, then pass when the ball comes out of
@@ -386,7 +391,10 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
     // collapses (the trait catalog's line): up, not out.
     if (has(qb, 'climber') && (push.x !== 0 || push.y !== 0)) push = { x: Math.abs(push.x) + 0.5 * Math.abs(push.y), y: push.y * 0.4 };
     const esc = (qb.mem.escape as number | undefined) ?? 0;
-    steer(qb, { x: push.x * (0.6 + pp), y: push.y * (0.6 + pp) * 0.8 + esc * 5 }, { face: 0, pace: esc ? 0.9 : 0.6 });
+    // A slow screen: once his line lets the rush go he drifts back, drawing
+    // it up the field and buying the beat the convoy needs to get out.
+    const drift = play.screen && since >= play.screen.release && qb.pos.x > dropX - SCREEN_DRIFT ? SCREEN_DRIFT_V : 0;
+    steer(qb, { x: push.x * (0.6 + pp) - drift, y: push.y * (0.6 + pp) * 0.8 + esc * 5 }, { face: 0, pace: esc ? 0.9 : 0.6 });
   } else {
     steer(qb, { x: 0, y: 0 }, { face: 0 });
   }
@@ -1502,6 +1510,17 @@ function ballStep(s: PlayState): void {
   }
 }
 
+/** The rushers a screen lets in: past the line and on their way to the QB, they aren't the releasing linemen's (the second level is). */
+const screenLetIn = (d: Agent): boolean => d.side === 'def' && d.mem.screenLetIn === true;
+
+/** The punch before a screen release (ticks, ~0.2 s): his hands on the rusher, then off him and out. Ours. */
+const SCREEN_PUNCH = 12;
+/** ...and the rusher it lands on is stood up for this long (ticks, ~0.13 s) before he's off to the QB again. Ours. */
+const PUNCH_STUN = 8;
+/** The QB's drift on a slow screen: up to this much further back than his drop (yd), at this rate (yd/s, before the pocket pace). Ours. */
+const SCREEN_DRIFT = 2.5;
+const SCREEN_DRIFT_V = 4;
+
 function offenseRoles(s: PlayState, inp: InputFrame): void {
   const play = s.setup.play;
   const carrier = s.carrier >= 0 ? s.agents[s.carrier]! : null;
@@ -1529,7 +1548,11 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
       // Blocking for the ball carrier. Linemen keep driving at the point of
       // attack; everyone else, receivers included the moment the ball is
       // caught, blocks downfield (feedback item 7: YAC comes from the blocks).
-      runBlock(s, a, carrier.pos, !(as.kind === 'runBlock' && (a.slot === 'LT' || a.slot === 'LG' || a.slot === 'C' || a.slot === 'RG' || a.slot === 'RT')));
+      // A screen's convoy keeps to its lanes in front of him.
+      const lane = a.mem.convoy ? convoySpot(s, a, v2(a.mem.spotX as number, a.mem.spotY as number), carrier) : null;
+      if (lane) screenConvoy(s, a, lane, carrier.pos, screenLetIn);
+      else if (as.kind === 'stalk') stalk(s, a, carrier.pos);
+      else runBlock(s, a, carrier.pos, !(as.kind === 'runBlock' && (a.slot === 'LT' || a.slot === 'LG' || a.slot === 'C' || a.slot === 'RG' || a.slot === 'RT')));
       continue;
     }
     if (carrier && carrier.side === 'def') {
@@ -1554,10 +1577,52 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
       }
       continue;
     }
-    // Screens: the line pass-sets, then releases to lead the screen.
+    // Screens: the line pass-sets, then releases to lead the screen. Set,
+    // punch, let him go: a guard or the center with a rusher on him lets him
+    // run on at the QB (the ball goes over him) and releases, a beat later,
+    // to his landmark in the convoy (ai.ts screenConvoy): the linebackers
+    // and the defensive backs coming downhill to the ball, never the rushers
+    // he let in (they're past the play). The man who has the back runs into
+    // the release (M6.6 trait pass: the linemen stayed on their pass blocks
+    // and the man on the back came down untouched; RB screens against man
+    // fell to ~6 yd a throw).
     if (play.screen && as.kind === 'passBlock' && a.p.pos === 'OL' && s.t - s.snapT >= play.screen.release) {
       const to = s.agents[s.icons[0]!]!;
-      if (s.phase === 'air' || s.ball.mode === 'held') runBlock(s, a, to.pos, true, s.phase !== 'air');
+      if (a.mem.spotX === undefined) {
+        // The catch spot the convoy is laid off: where the screen's route sets up.
+        const end = to.route?.pts[to.route.pts.length - 1] ?? to.pos;
+        a.mem.spotX = end.x;
+        a.mem.spotY = end.y;
+      }
+      const spot = v2(a.mem.spotX as number, a.mem.spotY as number);
+      const lane = convoySpot(s, a, spot);
+      // The tackles ride the ends up the field past the back (their pass sets)
+      // until the ball's out, then block what's left in front of it. Released
+      // with the rest, they picked the ends up again as run blocks four yards
+      // deep, right where the back sets up, and an end who shed made the tackle.
+      if (!lane) {
+        if (s.ball.mode === 'held') passBlock(s, a);
+        else if (s.phase === 'air') runBlock(s, a, to.pos, true, true, screenLetIn);
+        continue;
+      }
+      if (!a.mem.screenRel) {
+        a.mem.screenRel = true;
+        const k = s.blocks.findIndex((q) => q.b === i && q.kind === 'pass');
+        if (k >= 0) {
+          const d = s.agents[s.blocks[k]!.d]!;
+          s.blocks.splice(k, 1);
+          d.mem.shedAt = s.t;
+          d.mem.screenLetIn = true;
+          d.busy = Math.max(d.busy, PUNCH_STUN);
+          d.anim = 'rush';
+          a.anim = 'run';
+          a.busy = Math.max(a.busy, SCREEN_PUNCH);
+        }
+      }
+      a.mem.convoy = true;
+      const side = convoySide(s, spot);
+      if (a.slot === side.lead) a.mem.convoyLead = side.ps;
+      if (s.phase === 'air' || s.ball.mode === 'held') screenConvoy(s, a, lane, spot, screenLetIn);
       continue;
     }
     switch (as.kind) {
@@ -1729,6 +1794,87 @@ function rallies(s: PlayState): number[] {
 const FLOW_R = 15;
 const FLOW_AHEAD = 5;
 
+/**
+ * A throw caught behind the line (the bubble, a screen): it's the run game
+ * now, and the defense plays it like a perimeter run ("screen!"). Every
+ * zone defender who's read it comes downhill to the ball, not to his zone
+ * or a spot along the receiver's run (which, for a bubble running across,
+ * was out at the sideline behind the line): a man inside the ball to the
+ * alley, a step inside it and a couple of yards past the catch (inside-out,
+ * so the cut back is his), a man outside it to a step outside (the force:
+ * outside-in, turning it back inside). Ours, from the coaching of the
+ * perimeter fits (force, alley, pursuit).
+ */
+const SCREEN_LINE = 0.5;
+/** Everyone rallies to a screen (yd from the catch point): the backside too, not just the men near it. */
+const SCREEN_R = 28;
+/** The alley point: this far past the catch toward the line, and this far inside (or for the force, outside) the ball (yd). */
+const ALLEY_UP = 2.5;
+const ALLEY_IN = 1.5;
+
+/**
+ * A perimeter screen: thrown behind the line to a receiver who was split
+ * out (the bubble), the play a defense fits as a run to the edge. The back's
+ * slow screen is a different fight, linebackers getting off the convoy of
+ * linemen in front of it (ai.ts screenConvoy), and keeps its pursuit.
+ */
+function perimeterScreen(s: PlayState, target: number): boolean {
+  if (target < 0 || s.ball.aim.x > s.setup.los + SCREEN_LINE) return false;
+  const r = s.agents[target]!;
+  return r.slot !== 'RB' && Math.abs(s.setup.play.formation.align[r.slot as OffSlot].dy) > 5;
+}
+
+function rallyScreen(s: PlayState, d: Agent): boolean {
+  const aim = { x: s.ball.aim.x, y: s.ball.aim.y };
+  const los = s.setup.los;
+  if (!perimeterScreen(s, s.ball.target) || dist(d.pos, aim) > SCREEN_R) return false;
+  const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
+  if (as.kind !== 'zone') return false;
+  const by = s.setup.ballY ?? 0;
+  const bs = Math.sign(aim.y - by) || 1;
+  // The corner on the ball's side is the force whichever side of it he's on (he works back outside it).
+  const outside = d.slot === (bs > 0 ? 'LCB' : 'RCB') || (d.pos.y - aim.y) * bs > 0;
+  const at = v2(Math.max(aim.x + ALLEY_UP, los + 0.5), aim.y + (outside ? bs : -bs) * ALLEY_IN);
+  steer(d, arrive(d, at, 1, 1));
+  return true;
+}
+
+/**
+ * After the catch of a screen thrown behind the line, a zone defender in
+ * front of the carrier fits him like a perimeter run until he's on him
+ * (SCREEN_FIT_R) or the carrier's past him: downhill to a point just in
+ * front of him, on his inside shoulder (the alley) or, for the corner on
+ * that side, his outside one (the force). A pursuit angle from in front
+ * (pursue's, taken for a back already at full speed up the field) had the
+ * hook and the safeties running alongside the bubble five yards inside it
+ * until it was ten yards up the field. Until he's this far past the line
+ * (yd); the fit point this far in front of him and to his shoulder (yd). Ours.
+ */
+const SCREEN_FIT_TO = 4;
+const SCREEN_FIT_R = 3.5;
+const FIT_AHEAD = 2;
+const FIT_SHOULDER = 1;
+
+function screenFit(s: PlayState, d: Agent, c: Agent): boolean {
+  const los = s.setup.los;
+  if (!perimeterScreen(s, c.i) || c.pos.x > los + SCREEN_FIT_TO) return false;
+  const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
+  if (as.kind !== 'zone' || d.pos.x < c.pos.x + 1 || dist(d.pos, c.pos) < SCREEN_FIT_R) return false;
+  const by = s.setup.ballY ?? 0;
+  const bs = Math.sign(c.pos.y - by) || 1;
+  const force = d.slot === (bs > 0 ? 'LCB' : 'RCB') && (d.pos.y - c.pos.y) * bs > -1;
+  // Where we meet on his run as he's running it now (not the full-speed run up the field pursue() leads), a step in front of him, on my shoulder of him.
+  const meet = intercept(d.pos, d.fx.vmax, c.pos, c.vel);
+  if (!meet) return false;
+  const v = len(c.vel);
+  const ux = v > 1 ? c.vel.x / v : 1;
+  const uy = v > 1 ? c.vel.y / v : 0;
+  const at = v2(meet.x + ux * FIT_AHEAD, meet.y + uy * FIT_AHEAD + (force ? bs : -bs) * FIT_SHOULDER);
+  const k = Math.max(0.1, dist(at, d.pos));
+  steer(d, { x: ((at.x - d.pos.x) / k) * d.fx.vmax, y: ((at.y - d.pos.y) / k) * d.fx.vmax });
+  return true;
+}
+
 function flowToBall(s: PlayState, d: Agent): boolean {
   const aim = { x: s.ball.aim.x, y: s.ball.aim.y };
   if (dist(d.pos, aim) > FLOW_R) return false;
@@ -1758,7 +1904,8 @@ function flowToBall(s: PlayState, d: Agent): boolean {
 const JUMP_R = 8;
 function jumpThrow(s: PlayState, d: Agent): boolean {
   const w = s.windup!;
-  if (w.away) return false;
+  // (A man who's read the bubble is playing it as a run: ai.ts bubbleRead.)
+  if (w.away || d.mem.bubble !== undefined) return false;
   const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
   if (as.kind !== 'zone') return false;
   const hawk = has(d, 'ballhawk') ? 0.67 : 1;
@@ -1795,7 +1942,8 @@ function defenseRoles(s: PlayState): void {
       continue;
     }
     if (carrier && carrier.side === 'off' && !s.setup.play.run) {
-      // After a catch (or a scramble) everyone pursues.
+      // After a catch (or a scramble) everyone pursues; a screen caught behind the line, the men in front of it fit it first.
+      if (d.busy === 0 && screenFit(s, d, carrier)) continue;
       pursueTackle(s, d, carrier);
       continue;
     }
@@ -1829,6 +1977,9 @@ function defenseRoles(s: PlayState): void {
       // it leaves (M6.5 calibration: he used to stop and wait a whole
       // reaction time at the release, and drift back toward his zone just
       // as the ball came out).
+      // A screen: zone defenders who've read the throw (or the bubble before it) play it as a perimeter run, force and alley, not as a ball to break on.
+      const readBubble = d.mem.bubbleAt !== undefined && s.t - (d.mem.bubbleAt as number) >= reaction(s, d);
+      if (s.ball.target >= 0 && (since >= reaction(s, d) || readBubble) && rallyScreen(s, d)) continue;
       const jumped = d.mem.onBall === true && s.ball.target >= 0;
       if (jumped && !rallies(s).includes(i)) {
         breakOnBall(s, d);
@@ -1845,7 +1996,9 @@ function defenseRoles(s: PlayState): void {
     const as = call[d.slot as keyof typeof call];
     switch (as.kind) {
       case 'rush':
-        if (s.phase === 'air') pursueTackle(s, d, s.agents[Math.max(0, s.ball.target)]!);
+        // A rusher has his eyes on the QB: he turns to the ball once he's read the throw (his reaction), not as it leaves the hand
+        // (a screen is built on that beat: the rush runs on past the back it's thrown to).
+        if (s.phase === 'air' && (s.ball.target < 0 || s.t - s.ball.releaseT >= reaction(s, d))) pursueTackle(s, d, s.agents[Math.max(0, s.ball.target)]!);
         else rush(s, d);
         break;
       case 'man':

@@ -244,7 +244,7 @@ describe('Slot Weapon and the option route: the leverage read', () => {
   it('from the slot he reads the man on him and breaks where he will be open; against a zone he runs it as drawn', () => {
     const man = reads(welker, 'cover1').filter(Boolean);
     expect(man.length).toBeGreaterThan(4);
-    for (const r of man) expect(['in', 'out', 'drawn']).toContain(r);
+    for (const r of man) expect(['in', 'out', 'drawn', 'sit']).toContain(r);
     expect(man.some((r) => r !== 'drawn')).toBe(true);
     const zone = reads(welker, 'cover3').filter(Boolean);
     expect(zone.length).toBeGreaterThan(4);
@@ -252,6 +252,55 @@ describe('Slot Weapon and the option route: the leverage read', () => {
   });
   it('without the trait he runs the quick out as drawn', () => {
     expect(reads(strip(welker, 'slot-weapon'), 'cover1').every((r) => r === undefined)).toBe(true);
+  });
+  it("against the nickel's inside leverage his quick in stays in: the out from the slot is a long throw over the man's head", () => {
+    // Levels: the slot's quick in. The man on him is inside and a step deep; the old read (the generic closing model) broke out
+    // on every snap and a quarter of those throws were picked (tools/sim/usagefx.ts --only=slot).
+    const breaks = Array.from({ length: 8 }, (_, k) => {
+      const s = stepTo(play({ ...team, WR3: welker }, 'empty-levels', 'cover1', k + 1), 2.0);
+      return s.agents[s.slot.SLOT!]!.mem.optBreak as string | undefined;
+    }).filter(Boolean);
+    expect(breaks.length).toBeGreaterThan(4);
+    expect(breaks.filter((r) => r === 'out').length).toBeLessThan(breaks.length / 2);
+  });
+});
+
+describe('The angle: a swing release, the break back inside', () => {
+  // Roger Craig (Receiving Back) on Mesh: the book's swing is his angle.
+  const at = (def: string, seed: number, t: number) => {
+    const s = stepTo(play(team, 'doubles-mesh', def, seed), t);
+    return s.agents[s.slot.RB!]!;
+  };
+  it('against a zone he settles in the hole past the line, against man he runs on across, away from the linebacker', () => {
+    for (const seed of [1, 2, 3]) {
+      const z = at('cover3', seed, 2.6);
+      const m = at('cover1', seed, 2.6);
+      if (z.mem.drill || m.mem.drill) continue;
+      // Settled 3–6 yd past the line against Cover 3 (it settled at 2).
+      expect(z.pos.x - 35).toBeGreaterThan(2.5);
+      expect(z.route!.sit[z.route!.pts.length - 1]).toBe(true);
+      // Against Cover 1 his route runs on: no settle point at the end.
+      expect(m.mem.angleRead).toBe(true);
+      expect(m.route!.sit[m.route!.pts.length - 1]).toBe(false);
+    }
+  });
+});
+
+describe('The RB screen against man: the hug and the release', () => {
+  it('the linebacker who has the back adds to the rush while the back shows pass protection', () => {
+    let hugged = 0;
+    for (const seed of [1, 2, 3, 4]) {
+      const s = play(team, 'doubles-rb-screen', 'cover1', seed);
+      const sam = s.agents[s.slot.SLB!]!;
+      stepTo(s, 0.85);
+      if (sam.mem.hug === true) hugged++;
+    }
+    expect(hugged).toBeGreaterThanOrEqual(3);
+  });
+  it('at the release the line lets its rushers in: no lineman is still on a pass block a beat later', () => {
+    const s = play(team, 'doubles-rb-screen', 'cover1', 2);
+    stepTo(s, s.setup.play.screen!.release + 0.1);
+    for (const k of ['LT', 'LG', 'C', 'RG', 'RT']) expect(s.blocks.some((b) => b.b === s.slot[k] && b.kind === 'pass')).toBe(false);
   });
 });
 

@@ -65,7 +65,7 @@ export function leadRun(r: Agent, T: number): { pos: V2; vel: V2; offScript: num
   // really swings a yard wide of, so the second-pass slant dumps had the
   // driven ball arriving ~1.1 yd off him, mostly across his run, and a
   // third of them where nobody could reach (tools/sim/slantdump.ts).
-  const g: Agent = { ...r, pos: { x: r.pos.x, y: r.pos.y }, vel: { x: r.vel.x, y: r.vel.y }, route: { pts: rt.pts, sit: rt.sit, idx: rt.idx }, mem: { room: r.mem.room ?? null } };
+  const g: Agent = { ...r, pos: { x: r.pos.x, y: r.pos.y }, vel: { x: r.vel.x, y: r.vel.y }, route: { pts: rt.pts, sit: rt.sit, idx: rt.idx }, mem: { room: r.mem.room ?? null, window: r.mem.window ?? null } };
   const n = Math.min(LEAD_TICKS, Math.floor(T / TICK));
   // When he runs past the route's last point (s from now; 0 if he's past it already, T if he never is).
   let ends = rt.idx >= rt.pts.length ? 0 : T;
@@ -796,7 +796,14 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
   const ballhawk = has(a, 'ballhawk') ? 0.1 : 0;
   // In front of the intended receiver (undercutting) he can catch it; from behind he mostly knocks it away.
   const r = b.target >= 0 ? s.agents[b.target]! : null;
-  const front = r ? ((a.pos.x - r.pos.x) * (s.agents[b.thrower]!.pos.x - r.pos.x) + (a.pos.y - r.pos.y) * (s.agents[b.thrower]!.pos.y - r.pos.y)) > 0 : true;
+  // In front means on the QB's side of him and not on his hip: a man trailing him (a step behind along his run, as 2-man's
+  // trail technique lives, under him on the QB's side) on a ball led to the receiver reaches across him for it and plays
+  // through the hands, a breakup far more often than a pick (M6.6: counted as in front, 2-man picked 10% of the on-time
+  // slants thrown blind, tools/sim/slants.ts). A ball thrown behind the receiver is the trailer's to take.
+  const rv = r ? len(r.vel) : 0;
+  const along = (p: { x: number; y: number }) => (r ? ((p.x - r.pos.x) * r.vel.x + (p.y - r.pos.y) * r.vel.y) / Math.max(1e-6, rv) : 0);
+  const onHip = !!r && rv > 2 && dist(a.pos, r.pos) < HIP_R && along(a.pos) < 0 && along(b.pos) > HIP_BEHIND;
+  const front = r ? !onHip && (a.pos.x - r.pos.x) * (s.agents[b.thrower]!.pos.x - r.pos.x) + (a.pos.y - r.pos.y) * (s.agents[b.thrower]!.pos.y - r.pos.y) > 0 : true;
   const close = Math.max(0, 1 - off / 0.9);
   // Breakups outnumber interceptions about 4 to 1 in the NFL (passes defensed
   // vs interceptions); a ballhawk undercutting a route gets his hands on more.
@@ -816,6 +823,11 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
   if (u < pInt + pBreak) return 'deflect';
   return 'miss';
 }
+
+/** A defender within this (yd) of the receiver and behind him along his run is on his hip (resolveCatch): ai.ts TRAIL_R's trail. */
+const HIP_R = 3;
+/** ...on a ball no more than this (yd) behind the receiver along his run: further behind him, it's thrown to the trailer. */
+const HIP_BEHIND = -0.5;
 
 /** One tick of the ball in the air; returns the agent whose hands it reached (or −1). */
 export function stepAir(s: PlayState): number {

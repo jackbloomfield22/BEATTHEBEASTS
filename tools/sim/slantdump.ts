@@ -2,13 +2,13 @@
 // where the ball was meant and aimed, where lead() said he'd be, and where he
 // really was when it arrived, in his run's frame (along / across). With
 // --ticks, every tick of the flight for the first few throws.
-//   node tools/run-ts.mjs tools/sim/slantdump.ts [reps=20] [--man] [--ticks=N] [--def=cover3] [--late=ticks] [--tips]
+//   node tools/run-ts.mjs tools/sim/slantdump.ts [reps=20] [--man] [--ticks=N] [--def=cover3] [--late=ticks] [--tips] [--hot=k]
 import { readFileSync } from 'node:fs';
 import { createPlay, DEF_CALLS, playById, practiceRosters, stepPlay, type SnapshotLike } from '../../src/sim/index.ts';
 import { cellSeed, sidesFor } from '../../src/sim/outcomes.ts';
 import { lead } from '../../src/sim/passing.ts';
 import { dist } from '../../src/sim/vec.ts';
-import { CALLED, isMan, ON_TIME, slantInput, type SlantScript } from './slants.ts';
+import { CALLED, HOT, isMan, ON_TIME, slantInput, type SlantScript } from './slants.ts';
 
 const HASHES = [3.08, 0, -3.08];
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
@@ -28,12 +28,15 @@ let shown = 0;
 for (const def of DEF_CALLS) {
   if (isMan(def) !== man) continue;
   if (only && def.id !== only) continue;
-  const play = playById(CALLED.play);
+  // --hot=k: the k-th hot-routed slant (slants.ts HOT) instead of the called concept.
+  const hotK = process.argv.find((a) => a.startsWith('--hot='))?.slice(6);
+  const call = hotK !== undefined ? HOT[Number(hotK)]! : CALLED;
+  const play = playById(call.play);
   for (let k = 0; k < N; k++) {
-    const icon = CALLED.icons[k % 3]!;
+    const icon = call.icons[k % call.icons.length]!;
     const sd = sidesFor(rosters, play, def);
     const s = createPlay({ seed: cellSeed(play, def, k), offense: sd.offense, defense: sd.defense, play, def: sd.def, los: 35, ballY: HASHES[k % 3], flip: Math.floor(k / 3) % 2 === 1, toGo: 10, user: true });
-    const script = slantInput(sc, icon);
+    const script = slantInput(sc, icon, call.hot);
     let rel = false;
     let pred = { x: 0, y: 0 };
     let row: Partial<Row> | null = null;

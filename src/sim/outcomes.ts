@@ -476,8 +476,8 @@ export function routeFidelity(rosters: HarnessRosters, n: number, plays: OffPlay
           for (const [i, r] of art) {
             const a = s.agents[i]!;
             const rt = a.route;
-            // A new route (an option read's break, a blitz pickup): the art was the old one, so the check stops there.
-            if (rt !== r.ref || a.mem.pickup !== undefined) r.rec.switched = true;
+            // A new route (an option read's break, a blitz pickup, a late slant working the window): the art was the old one, so the check stops there.
+            if (rt !== r.ref || a.mem.pickup !== undefined || a.mem.window) r.rec.switched = true;
             if (r.rec.switched) continue;
             const pastEnd = !!rt && rt.idx >= rt.pts.length;
             const dv = pastEnd && FIELD_HALF_W - Math.abs(a.pos.y) < 6 ? 0 : strayFrom(a.pos, r.pts, r.sitEnd);

@@ -31,6 +31,40 @@
   - Honest limits:
     - A long sprint costs 0.02–0.04 stamina a second, so a 40-yard breakaway loses ~10–15% of the bar and ~2% of top speed. That's visible on the bar but subtle in the legs. The drive-long model (stamina carried from play to play, Workhorse and the rest) is what gives it teeth.
     - Watched on the recorded broken-tackle clip (below, "Sprint watched").
+- **The bubble against zone** (2026-10-03, `wip/sim-bubble`; agent):
+  - *Stalks counted at the snap:* the blockers take the men nearest the catch, outside-in (the corner, then the apex or the man over the bubble), never a lineman. Before, they chased the defensive end.
+  - *Zone calls played by strength:* the call sheet is written strength-left. With the strength right, the non-corner underneath zones swap sides, and the end and tackle jobs swap. Before, in Cover 2 against bunch right, the weak-side linebacker had the strong curl and ran 15 yd across to it. This hit every flipped 2x1 set, so many per-call cells moved. Against three receivers to a side, the Mike shades over the strong B gap.
+  - *The defense plays the bubble as a perimeter run:* the read before the throw (the corner forces outside-in; the apex, hook and quarters safety take the alley; a deep corner reads his #1's stalk), the corner squeezing and playing through the stalk, and the fit on the carrier's real run after the catch. This applies only to screens thrown to a split receiver; the back's screen keeps its convoy.
+  - Bubble yards a throw: Cover 3 1.9 → 5.7, Cover 2 0.7 → 4.1, Tampa 2 0.5 → 4.0, Cover 4 6.2 → 6.3, fire zone 7.0 → 8.4, sim pressure 1.8 → 6.8. Against man: Cover 1 4.8 → 5.7, Cover 1 off −0.5 → 5.5, Cover 1 blitz 4.2 → 6.7, 2-man 8.0 → −0.5 (the old figure came from the stalks bumping the trail man by accident). RB screen against zone 4.4–5.6 → 4.6–6.5 (sim pressure 5.2 → 3.0).
+  - Outcomes 68.4%, 8.57 ypa, every band holds. Runs 4.8 yd a carry. Called slants against zone on time 69% → 64% complete. Identity 19/20; trait audit 127/127. Golden re-pinned (299 of 900 cases) and film regenerated.
+  - **Still open:**
+    - The hot-routed late slant at 2.5 s is picked 9% (was 11%). It's a 1.4–1.6 s ball that anyone nearby can reach, not mainly the defender on his hip, and it's the player's own throw, so there's no believable fix.
+    - Cover 4 bubble 6.3: the quarters safety aligns at 13 yd, deeper than real quarters.
+    - Bubble against 2-man −0.5.
+    - Contact to tackle takes ~0.5 s, adding 3–4 yd to every bubble.
+    - The bubble is caught standing at the landmark, not on the run.
+    - None of it watched on screen.
+- **Screens and late slants** (2026-10-03, `wip/sim-screens-slants`; agent):
+  - *The RB screen against zone:* a convoy. The guards and center release to landmarks outside the back's spot (playside guard 4 yd outside, center 2, backside guard over it, 1–2 yd past the line). Each blocks the first man into his lane, squared up in his path. They used to run off after dropping linebackers, away from the ball.
+    - The tackles ride the ends up the field until the ball is out.
+    - The QB waits for the back to set (unless the rush is on him) and drifts as the rush is let in.
+    - The slip sets 2.5 yd deep, not 6, and the back rides his playside guard until the guard is on a man.
+    - Yards a throw: Cover 2 0.7 → 5.6, Tampa 2 1.5 → 4.7, Cover 3 2.9 → 4.3, Cover 4 2.8 → 4.4. Against man the average goes 8.1 → 7.7 (Cover 1 10.2 → 5.4, 2-man and Cover 1 off up).
+  - *The late slant against zone:* off schedule, he throttles to 75% of top speed from his last leg and works across the window at his depth, instead of running to the far sideline. Still moving, the ball is led away from the hook defender on his hip. Sitting in the window had been picked 12–14% of the time. Called Slants late 34/32/34% → 40/45/46%, picked 4/5/6% → 7/4/4%. Man and on-time are unchanged.
+  - Outcomes 68.5%, 8.66 ypa, every band holds; identity 19/20; trait audit 127/127. The screen clip is re-found (Cover 2, seed 51) and needs re-recording.
+  - **Still open:**
+    - Hot-routed late slants at 2.5 s are picked 11%.
+    - The bubble against zone (0.5–1.9 yd): its stalk blockers chase the defensive end, a bug. Fixing that alone gives 12–14 yd, because nothing else is near the flat; in Cover 2 against bunch, the linebacker with the strong-side curl lines up on the weak side. It needs the corner's play against the stalk, and maybe the zone alignment against bunch and trips.
+    - None of it watched on screen.
+- **Full-game e2e fixed:** `e2e/game.spec.ts` waited for the walk-out to start by itself. The room has waited for a Walk out press since the M6.6 draft stage, so the test timed out on every branch. It now presses Enter, sees the walk-out start, and skips the camera move to its end, as `results.spec` does.
+- **Weak-spot pass** (2026-10-03, `wip/sim-weakspots`; agent):
+  - *The screen against man:* the line sets, punches and lets its rushers in, then releases for the second level. A rusher turns to the ball on his read of the throw, not at the release. A linebacker whose back shows pass protection hugs (adds to the rush), and gets caught in the rush lane when the back slips out. RB screen against man 5.8 → 8.1 yd a throw (Cover 1 6.4 → 10.2).
+  - *The angle:* a swing release, settling 4–5 yd past the line against zone (51% for 2.9 yd → 95% for 6.6). Against man he runs on across, away from the linebacker. It still doesn't beat a linebacker in man, so the QB rarely throws it there.
+  - *Slot Weapon:* the option read plays the man on him (mirror a read late, break on the throw, the throwing lane). The old read broke out on every quick in. `usagefx` now counts deflected throws. Welker against man with the trait 9.4% → 25.0% caught (20.3% without).
+  - *Zone:* the flat defender comes off a carry when the flat is threatened. Cover 2's squat corner sinks only past 7 yd.
+  - *The catch:* a defender on the receiver's hip plays through the hands, so 2-man's on-time slant interceptions fall 10% → 4%. Total interceptions stay at 2.0%.
+  - Outcomes 68.5%, 8.6 ypa, every band holds; identity 19/20 (Gates vs Lewis waits on your top-speed decision); trait audit 127/127.
+  - **Still open:** completion. Zone completes 79% (NFL ~70%) and man 49% (NFL ~57%). The QB throws only to open men, who are caught ~88% against the test's own ~80% note. The levers left are the open-catch rate and the pressure rate, which earlier passes calibrated, so they're your call. Also open: late slants 32–34%, and screens against zone (Cover 2 ~0.7 yd). None of it has been watched on screen. The screen clip has been re-found and needs re-recording.
 - **Video recordings on a frame-true clock** (2026-10-03, `wip/video-gate`; the M7 montage's harness note, `docs/m7/MONTAGE.md`, generalized):
   - Two faults in `?video` mode. (1) The canvas re-applies its `frameloop` prop (default `always`) on every Stage render, so after any re-render (a screen change, a settings change) R3F's own loop ran again and drew ~4 extra frames inside each Playwright screenshot, each stepping the scene 1/N s. Measured on completion-rac after a re-render: 108 scene steps for 20 recorded frames (87 of them inside screenshots), 180 ms of animation and camera time per 33.3 ms frame. This is what ran the M7 montage ~5× fast; the feel, concept and identity clips record on the Practice screen with no re-render and stepped once per frame. (2) R3F's clock ran on `performance.now()` in milliseconds: +3,845 to +5,335 "seconds" per recorded frame in every recording, so World's shader clock, the crowd's reactions and the effects ran on wall time ×1000.
   - The fix: the canvas holds `frameloop="never"` in video mode; M7's `videoGate` (opened by Stage's `__btbRenderFrame`) now gates every video-mode step through `videoTime.step()` (play scene, kick, locker room and its camera); R3F's clock and the play clock run on `videoTime.t`, the recorded frames × 1/N s. Inert without `?video`.

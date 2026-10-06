@@ -51,6 +51,23 @@ const RUN_BIAS = 0.4;
  * off the block as he arrived (M6.5 #8), so the run died at the line.
  */
 const COME_OFF = 2.5;
+/**
+ * The force squeezing a stalk (the corner against a screen's blocker, runs.ts
+ * stalk) plays with his outside arm free: a ball that bounces outside him
+ * pulls him off the block from this far (yd), about a second of the
+ * carrier's run, not the step-and-an-arm of a lineman's block. Ours.
+ */
+const SQUEEZE_OFF = 9;
+/** ...and how hard (edge): off it in about half a second from an even block, the time the carrier takes to get to him. Ours. */
+const SQUEEZE_E = 1.2;
+/**
+ * Any man on a stalk (a defensive back or a linebacker coming downhill at a
+ * screen, not a lineman's drive block) plays through it to the ball once
+ * it's thrown and the man it's thrown to is that close (SQUEEZE_OFF): a receiver's stalk
+ * in space slows him for a beat, it doesn't hold him through the run. Off
+ * it in ~0.8 s from an even block. Ours.
+ */
+const PLAY_THROUGH = 0.5;
 /** A pass set's rep-to-rep spread (σ of skill edge), M6: without it every rep of a matchup took the same time, and the rush never won early. */
 const PASS_BIAS = 0.4;
 /**
@@ -266,6 +283,12 @@ export function stepBlocks(s: PlayState, goal: V2): void {
       const toC = norm(sub(goal, d.pos));
       const cover = toB.x * toC.x + toB.y * toC.y;
       if (dist(d.pos, goal) < COME_OFF) e += Math.max(0, 0.4 - cover) * 1.2;
+      // On a stalk: the ball (the man it's thrown to, or carrying it) near him, and he plays through it; outside the
+      // force with his blocker not outside him (the squeeze), and he's off it to the ball.
+      const ball = s.carrier >= 0 ? goal : s.phase === 'air' && s.ball.target >= 0 ? s.agents[s.ball.target]!.pos : null;
+      const k = d.mem.contain as number | undefined;
+      if (ball && d.mem.playThrough && dist(d.pos, ball) < SQUEEZE_OFF) e += PLAY_THROUGH;
+      if (ball && d.mem.squeeze && k !== undefined && dist(d.pos, ball) < SQUEEZE_OFF && (ball.y - d.pos.y) * k > 0 && (b.pos.y - d.pos.y) * k < 0.3) e += SQUEEZE_E;
     }
     // Drift toward whoever has the edge, plus a base drift for the rusher
     // (blocks don't hold forever), plus matchup noise.
