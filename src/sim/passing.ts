@@ -116,9 +116,9 @@ export function driveTime(d: number, power: number): number {
 export function layer(d: number): number {
   return LAYER_MAX * Math.max(0, Math.min(1, (d - LAYER_FROM) / (LAYER_FULL - LAYER_FROM)));
 }
-const LAYER_FROM = 24;
+const LAYER_FROM = 28;
 const LAYER_FULL = 44;
-const LAYER_MAX = 0.8;
+const LAYER_MAX = 0.6;
 
 /**
  * A touch pass (the icon held): the driven time stretched by 10% for a

@@ -54,8 +54,8 @@
 .prompt-row { position: absolute; bottom: 2.4rem; left: 50%; transform: translateX(-50%); display: flex; gap: 1.6rem; font-size: .85rem; color: var(--ink-2); white-space: nowrap; text-shadow: 0 .1rem .8rem rgba(0,0,0,.9); }
 .prompt-row span { display: flex; align-items: center; gap: .4rem; }
 .prompt-row.catch { font-size: 1rem; color: var(--ink); }
-/* The catch call: up the moment the ball is thrown; the called catch lights and the others fade. */
-.catch-call { position: absolute; top: 58%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .6rem; text-shadow: 0 .1rem .8rem rgba(0,0,0,.9); animation: catch-in .12s ease-out; }
+/* The catch call: up the moment the ball is thrown; the called catch lights and the others fade. Low on the screen (it sat at 58%, across the flight from the QB to his receivers on the broadcast camera, and hid the ball in the air: docs/passing/PASSING.md). */
+.catch-call { position: absolute; top: 79%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .6rem; text-shadow: 0 .1rem .8rem rgba(0,0,0,.9); animation: catch-in .12s ease-out; }
 .catch-head { font-size: 1rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-2); }
 .catch-opts { display: flex; gap: 1.2rem; }
 .catch-opt { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: .6rem; align-items: center; min-width: 15rem; padding: .9rem 1.2rem; border: 2px solid var(--line); border-radius: .5rem; background: var(--panel); transition: transform .1s ease-out, opacity .15s, border-color .1s, background .1s; }

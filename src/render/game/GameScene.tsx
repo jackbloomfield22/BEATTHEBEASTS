@@ -216,6 +216,16 @@ function puntMotion(b: Body, los: number, dt: number): number {
 const _p = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _hands = new THREE.Vector3();
+/**
+ * The ball's readability on the broadcast camera (render only): true size
+ * within BALL_NEAR m of the camera, growing to BALL_GROW× by BALL_FAR. A
+ * real-size football 40 m out is ~5 px across at 1280 wide and disappears
+ * against the grass in the air; broadcast games draw it larger than life the
+ * same way. Ours, sized by eye on the passing recordings.
+ */
+const BALL_NEAR = 12;
+const BALL_FAR = 45;
+const BALL_GROW = 1.6;
 /** Fastest the drawn facing turns (rad/s): a sharp pivot, ~180° in a quarter second. */
 const YAW_MAX = 12;
 const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move: null, down: false, stamina: 1 };
@@ -488,6 +498,8 @@ export function GameScene() {
     const b1 = cur.ball;
     const held = b1.mode === 'held' && b1.holder >= 0;
     const inSnap = cur.phase === 'presnap' || (snapT >= 0 && t - snapT < 0.34);
+    // True size in the hands; in the air and on the turf it grows with distance from the camera (BALL_FAR).
+    ball.scale.setScalar(1);
     if (held && !inSnap && bodies && ballInHands(bodies[b1.holder]!, r.state, ball)) {
       heldAt(flight, ball);
       return;
@@ -508,6 +520,8 @@ export function GameScene() {
       const k = catchMagnet(bodies[r.state.ball.target]!, ball.position, _hands);
       if (k > 0) ball.position.lerp(_hands, k);
     }
+    const far = THREE.MathUtils.clamp((ball.position.distanceTo(camera.position) - BALL_NEAR) / (BALL_FAR - BALL_NEAR), 0, 1);
+    ball.scale.setScalar(1 + (BALL_GROW - 1) * far);
   }
 
   function placeMarks(los: number, toGo: number) {
