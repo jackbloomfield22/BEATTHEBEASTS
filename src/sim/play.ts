@@ -55,18 +55,16 @@ const HITCH = 0.3;
 const SCRAMBLE_THROW = 5;
 
 /**
- * How far a tackler's arms reach past the two bodies (yd), from pads to
- * pads (bodies.ts: the widest part of a man, and what a wrap closes round
- * from any side): ~0.7 m. An arm is ~0.75 m from the shoulder to the
- * fingertips, the shoulder ~0.2 m inside the pad's edge, and a tackler
- * leans into a wrap; docs/m65/BODIES.md measured the model's hands 0.9–1.0
- * m out to the side of the root. (The sim had 0.6 yd past circles ~5 cm a
- * side too big for the skill players: about the same reach between two of
- * them, which every harness is calibrated on. Measured from the chests'
- * depth head on instead, the reach fell ~0.2 yd and yards a throw rose
- * 8.5 → 9.0.)
+ * Where a tackler gets his hands on a man (yd): each man's reach base
+ * (effects.ts `reach`) plus this. For the tackler that's his hands' reach
+ * from his centre, 0.9–1.0 m to the side as docs/m65/BODIES.md measured the
+ * model (reach base ~0.33–0.42 m plus 0.55 m); for the ball carrier, his
+ * pads and the jersey a hand closes on. The same distance the sim always
+ * had, which the run game's yards before contact and the pass game's yards
+ * after the catch are calibrated on. (From the fitted pads with 0.7–0.8 m
+ * of arm, contact came 0.25 yd earlier on runs, yards a carry 4.7 → 3.5.)
  */
-const ARM_REACH = 0.8 / 0.9144;
+const ARM_REACH = 0.6;
 /** How much further than his arms a defender going by can lunge (yd): a full-length dive at the legs. */
 const LUNGE = 1.0;
 /** ...and only this far past the line (yd). */
@@ -1196,7 +1194,7 @@ function contactStep(s: PlayState): void {
     // runs were first stopped by a man still in a block, tools/sim/rundiag.ts).
     const engaged = blockOf(s, o.i);
     if (engaged) {
-      if (dist(o.pos, c.pos) > o.fx.radius + c.fx.radius + 0.35) continue;
+      if (dist(o.pos, c.pos) > o.fx.reach + c.fx.reach + 0.35) continue;
       if (((o.mem.armAt as number | undefined) ?? -9) > s.t - 1) continue;
       o.mem.armAt = s.t;
     }
@@ -1205,10 +1203,10 @@ function contactStep(s: PlayState): void {
     // pair covers 0.3 yd a tick, so the end-of-tick gap alone lets a runner
     // slip through a tackler's reach).
     const k = sweptGap(o, c);
-    // Arms reach ~0.7 m past the pads (ARM_REACH); a diving tackle ~1 yd more when he can't close on
+    // Hands on him at ARM_REACH past the reach bases; a diving tackle ~1 yd more when he can't close on
     // a runner pulling away (lower odds, and he's on the ground after).
     // In the pocket it takes a hand on him, not a reach past him (Playtest 1: a sack with no contact).
-    const armReach = o.fx.radius + c.fx.radius + (inPocket ? POCKET_REACH : ARM_REACH);
+    const armReach = o.fx.reach + c.fx.reach + (inPocket ? POCKET_REACH : ARM_REACH);
     let dive = false;
     let lunge = -1;
     if (k > armReach) {

@@ -74,6 +74,8 @@ export interface Effects {
   radius: number;
   /** Half-depth of the chest along his facing, yd (bodies.ts). */
   depth: number;
+  /** His reach base, yd: where hands get on him and where his own reach starts (play.ts ARM_REACH). The sim's old body circle, kept for contact distance. */
+  reach: number;
   /** Height, yd (catch window and the ball's release height). */
   height: number;
   /** 0–1 normalized attribute, or 0.5 when the position doesn't carry it. */
@@ -107,6 +109,9 @@ export function effects(p: SimPlayer): Effects {
     // The body as drawn: pad half-width and chest half-depth by position,
     // height and weight (bodies.ts, docs/m65/BODIES.md's fits).
     ...bodyOf(p),
+    // Shoulder half-width ~0.23 m for 200 lb to ~0.3 m at 330 lb, plus pads
+    // and arms' slack: the contact distance every harness is calibrated on.
+    reach: 0.36 + (weight - 200) * 0.0008,
     height: p.heightIn / 36,
     a: (k: string) => (p.attrs[k] ?? carryStandIn(p, k) ?? 50) / 99,
     r,
