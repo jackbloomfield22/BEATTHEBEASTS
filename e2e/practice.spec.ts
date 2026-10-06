@@ -78,7 +78,7 @@ test('a full play: snap, throw, catch, run, tackle or score, result card', async
   expect(errors).toEqual([]);
 });
 
-test('the catch call: 1–3 while the ball is in the air, and the called one lights up', async ({ page }) => {
+test('the catch call: one prompt while the ball is in the air, and the called one lights up', async ({ page }) => {
   await open(page, 2, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
@@ -86,16 +86,14 @@ test('the catch call: 1–3 while the ball is in the air, and the called one lig
   await tick(page, 3);
   await page.keyboard.up('Digit1');
   await tickUntil(page, (x) => x.phase === 'air', 60);
-  // The three prompts are up the moment it's thrown, nothing called yet.
-  await expect(page.locator('.catch-opt')).toHaveCount(3);
+  // The one-button prompt (the owner's one-button catch, 2026-09-28) is up the moment it's thrown, nothing called yet.
+  await expect(page.locator('.catch-opt')).toHaveCount(1);
   await expect(page.locator('.catch-opt.on')).toHaveCount(0);
-  await expect(page.locator('.catch-opt kbd')).toHaveText(['1', '2', '3']);
-  // 2: secure it and go down.
+  // 2 still calls it directly: secure it and go down; the prompt names the call.
   await page.keyboard.press('Digit2');
   await tick(page, 1);
   expect(await page.evaluate(() => (window as unknown as P).__btbPracticeUi.getState().catchType)).toBe('possession');
   await expect(page.locator('.catch-opt.on')).toContainText('Secure');
-  await expect(page.locator('.catch-opt.off')).toHaveCount(2);
 });
 
 test('pre-snap: the prompts, the route preview key, and a hot route the sim runs', async ({ page }) => {
