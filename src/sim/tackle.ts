@@ -219,7 +219,7 @@ export function leverage(c: Agent, o: Agent, low: boolean): number {
 }
 
 /** The hold a tackle is, from how he got there. */
-export function holdKind(c: Agent, o: Agent, headOn: number, closing: number, big: boolean, dive: boolean, low: boolean): HoldKind {
+export function holdKind(headOn: number, closing: number, big: boolean, dive: boolean, low: boolean): HoldKind {
   if (big) return 'big';
   if (dive || (low && headOn < 0.3)) return 'ankle';
   if (headOn < -0.3) return 'drag';
@@ -614,19 +614,19 @@ export function pileStep(s: PlayState, c: Agent, wantX: number, wantY: number): 
     else p.stall = 0;
     if (p.stall >= STALL_T && balanceOf(c) > 0) {
       fallStart(s, c, p, 'held');
-      return { state: 'stood', spot: spotOf(s, c, p) };
+      return { state: 'stood', spot: spotOf(c, p) };
     }
     if (balanceOf(c) <= 0) fallStart(s, c, p, 'fall');
     return { state: 'held', spot: 0 };
   }
   // The ball goes with him as he falls (into the end zone too: lineCheck reads ballNose).
   c.mem.fallReach = Math.min(1, (s.t - p.fallT) / FALL_T) * FALL_REACH * p.fx + Math.min(1, (s.t - p.fallT) / FALL_T) * p.extra * attack;
-  if (s.t - p.fallT >= FALL_T - 1e-9) return { state: 'down', spot: spotOf(s, c, p) };
+  if (s.t - p.fallT >= FALL_T - 1e-9) return { state: 'down', spot: spotOf(c, p) };
   return { state: 'held', spot: 0 };
 }
 
 /** Where the ball is spotted: where it is as he goes down, or his forward progress if he was driven back (yd, x). */
-function spotOf(s: PlayState, c: Agent, p: Pile): number {
+function spotOf(c: Agent, p: Pile): number {
   const attack = c.side === 'off' ? 1 : -1;
   const at = c.pos.x + attack * 0.4 + ((c.mem.fallReach as number | undefined) ?? 0);
   return attack > 0 ? Math.max(p.prog, at) : Math.min(p.prog, at);

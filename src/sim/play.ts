@@ -772,7 +772,7 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     }
   }
   // Bodies on the ground in his path: over them (the AI, or the one button at speed) or through them (tackle.ts).
-  if (!s.pile && feetStep(s, c, !userCarrier || inp.auto, (d) => startMove(s, c, 'hurdle', d))) {
+  if (!s.pile && feetStep(s, c, !userCarrier || !!inp.auto, (d) => startMove(s, c, 'hurdle', d))) {
     whistle(s, 'tackle', attack > 0 ? Math.min(Math.max(s.maxX, ballNose(c)), GOAL_X - 0.05) : Math.max(ballNose(c), 0.05), c.side === 'off');
     return;
   }
@@ -1305,7 +1305,7 @@ function contactStep(s: PlayState): void {
       const cs = len(c.vel);
       const headOn = cs > 0.5 ? -(c.vel.x * dx + c.vel.y * dy) / (cs * dd) : 0;
       const closing = Math.max(0, ((o.vel.x - c.vel.x) * dx + (o.vel.y - c.vel.y) * dy) / dd);
-      const kind = engaged ? 'wrap' : holdKind(c, o, headOn, closing, out === 'bigHit', dive, low);
+      const kind = engaged ? 'wrap' : holdKind(headOn, closing, out === 'bigHit', dive, low);
       grab(s, c, o, kind, { low, force, extra: afterContact(s, c, o, headOn) });
       o.mem.tackleCd = s.t + 1;
       if (fumbles(s, o, c, out === 'bigHit')) {
