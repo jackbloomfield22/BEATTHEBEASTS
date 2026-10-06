@@ -56,3 +56,45 @@ Capture: `BTB_OVERLAY=1 BTB_PORT=<port> npx playwright test -c tools/shots/playw
 - **Settings.** Accessibility → Commentary captions: Off, Small, Medium (default), Large. Off hides the caption bar and the line under a lower third; the lower third itself stays.
 
 `tests/commentary.test.ts` (15 tests): every line filled with every slot, and with every name missing in each way the sim can miss one (null, undefined, empty, "null", blank) never prints null, undefined, NaN or a brace; every event has a line that needs nothing; every line is reachable through its tags; no repeat inside the windows over 50 calls of one event and 200 of a mixed game; a trait line is preferred when it fits; the same seed says the same 60 lines and another seed doesn't; 90 real sim snaps read and said cleanly, every touchdown and turnover with a hero; the Beasts' possessions, kicks and punts; the situation rules; the drive strip's colours and order.
+
+## Before and after
+
+Stills in `docs/m7/shots/`. "Before" is the branch at `95b898a`; for the kick and the play call, M6.6's stills (`docs/screenshots/m6.6/01-call-scorebug.jpg`, `02-presnap-playclock.jpg`, `06-fg-aim.jpg`) show the same HUD.
+
+| State | Before | After |
+|---|---|---|
+| Pre-game | `overlay-before-01-pregame-*`: a two-row box, "CONTENDERS 0 / BEASTS 0 / Q1 5:00", "1ST QUARTER" and the wind on a second row | `overlay-01-pregame-*`: one bar, "CON 0 · BST 0 (ball) · 1ST 5:00 · BEASTS BALL" |
+| Beasts' possession | `overlay-before-02-montage-play-*`: two bugs saying "Beasts ball" (the montage's and the score bug's wind row) | `overlay-02-meanwhile-card-*`: the Meanwhile card as a lower third ("MEANWHILE" tag, BST block, PUNT, 6 plays · 9 yd · 2:05, "The Beasts go nowhere and punt it away.", "Your ball on the CON 23"); the montage's key play now sits on the score bug's down cell (not re-captured, see below) |
+| Play call | M6.6 `01-call-scorebug.jpg` | `overlay-04-playcall-*`: the bar with the play clock, timeouts and the drive strip over the call screen |
+| Pre-snap | M6.6 `02-presnap-playclock.jpg` | `overlay-05-presnap-*`: "1ST & 10 · CON 23", the play clock, and the caption "Here we go: the Contenders' first snap." |
+| A big play | (no lower thirds) | `overlay-06-result-completion-rac-72-*`: "26-YD CATCH", 85, WESLEY WALLS, TE · CAR · 1990s · SURE HANDS, "Allen airs it out... caught by Walls! 26 yards." |
+| An ordinary snap | (no captions) | `overlay-06-result-go-60-*`: the result card and the caption "Diggs gets a hand in there. Incomplete." |
+| Touchdown | the celebration prompt alone | `overlay-07-td-prompt-*`: the bottom left stays empty while the prompt is up; `overlay-08-td-lowerthird-*`: with the celebration, "15-YD TD CATCH … Allen threads it through the window. Walls, touchdown.", the bug "CON 6 · EXTRA POINT" |
+| Fourth down | M6.6 `05-fourth-card.jpg` | `overlay-10-fourth-card-*`: the bug's down cell "4TH & 4 · BST 30" in amber; the card carries the wind flag under its head because a field goal is on offer |
+| Kick | M6.6 `06-fg-aim.jpg`: an arrow glyph and "Wind 11 mph, right to left" | `overlay-11-kick-aim-*`: the bug reads "FG 47 YD · BST 30"; the kick card has the wind flag (dial, 5 MPH, RIGHT TO LEFT) |
+| After the kick | (the Meanwhile card) | `overlay-13-meanwhile-after-kick-*`: the next Beasts possession, "The Contenders' defense holds. The Beasts punt.", the drive strip with three pips (two stops, the Beasts' possession on now outlined in crimson) |
+
+## Honest critique
+
+What works:
+
+- **The lower third is the best part.** "85 / WESLEY WALLS / TE · CAR · 1990s · SURE HANDS" over "Allen threads it through the window. Walls, touchdown." with the scorer mid-celebration reads like a broadcast ID, and it comes up only after the celebration prompt is answered, so the prompt and the plate never share the screen (`07` vs `08`). At 1440p it's the same picture at 1.33×: nothing reflows.
+- **The bug is quieter and says more.** One bar instead of two rows, the abbreviations the GDD asks for, a possession ball, the spot the way a broadcast says it. It no longer carries the wind all game.
+- **The booth reads the play.** The lines name the right men and fit what happened: "Diggs gets a hand in there" on a breakup by Trevon Diggs, "Campbell for 3, Williams makes the stop", "Allen airs it out... caught by Walls! 26 yards" on a 26-yard throw. Trait lines only fire for men who have the trait, after the thing the trait is about.
+- **Restraint.** Most snaps say nothing before the ball is snapped; nothing of the overlay is up during a live play; the Meanwhile card, the montage board and the big-play plate are one plate in one place.
+
+What's weak or unfinished:
+
+- **The caption repeats the result card.** On an ordinary snap the card says "Incomplete / Broken up by Trevon Diggs." and the caption says "Diggs gets a hand in there. Incomplete." It's the booth's voice over the graphic, as on TV, but it's the same fact twice on one screen. The card is a menu (Continue, Replay) and can't go; a later pass could let the caption carry the detail and the card keep only the headline, or hold the caption until the card is dismissed.
+- **The score bug updates late on a touchdown.** At the celebration prompt (`07`) it still reads "0 · 1ST & 10 · BST 15": the game hears a result after the 1.6 s dead-ball hold and the prompt opens at 0.5 s. A broadcast bug flips to 6 at the whistle. Fixing it means scoring the play at the whistle (the game layer's timing), not the overlay; left alone here.
+- **The drive strip is small.** Pips of 1.35 × 0.34 em under a 2.6 em bar read as a progress hint more than a drive chart; whose possession a dim pip was is only in its tooltip. It is legacy's strip as asked, but on a TV screen at three metres a fan won't parse it. A second lane (yours above, theirs below) would be the next try.
+- **Two vocabularies for the spot.** The bug, the montage and the lower thirds say "CON 23 / BST 15"; the play call, the result card and the fourth-down card still say "Own 23 / Opp 15" (the coach's words, `situation.ts spotLabel`). Both read, but it's one broadcast.
+- **Two small things fixed after the last capture, not re-shot:** the decade read "1990S" under the uppercase meta line (now `1990s`), and the plate was narrower than a long line under it, so the lower third's right edge was ragged (the plate now spans the line). Both are CSS only.
+- **The kick's call is not on a still.** The capture's frames are slow and the kick card's reveal and its end run on real-time timers, so by the time the screenshot after the strike was taken the kick had come down (no good, from the score), the card was gone and the next Beasts possession was up (`13`). The field goal and extra-point lines are covered by the unit tests, not seen on screen.
+- **The wind flag is too small at low wind.** At 5 mph (`10`, `11`) the pennant is a short blob inside a 3.1 em dial; "5 MPH / RIGHT TO LEFT" carries it. The pennant needs a longer minimum and the dial more size before it reads at a glance; the turf chevrons from M6.6 remain the in-world cue.
+- **The kick still shows the wide camera.** In `11` the kick view hadn't cut to its behind-the-kicker angle in the 20 frames the capture gives it (M6.6's `06-fg-aim.jpg` shows the intended angle). That's the capture, not the overlay.
+- **Not re-captured after the final change:** the montage with the key play on the score bug's down cell. The montage capture is the slowest part of the run (thousands of frames on this machine) and was cut by the two-hour limit twice. The change is small (the montage's own tag now reads "Meanwhile · Key play" and the down cell shows its down, distance and spot) and the montage e2e spec passes, but nobody has looked at it on screen.
+- **Lines on the 1440p pre-snap still** came out over a black canvas: the scene didn't draw in the two frames after the viewport resize on this software renderer. The overlay itself is correct in it; the 1080p still has the scene.
+- **Commentary limits.** No voice (out of scope). It reads the sim's events, not the pictures, so it can't say "over the middle" or "to the corner". The "deep" tag is air yards ≥ 20 from the throw, so "airs it out" can be said of a 21-yard seam. Some lines presume history ("That's been the knock on him" for a Drops receiver) without checking this game's drops. Kickers aren't named (the Contenders' kicker is generated and unnamed).
+- **60 fps on Medium is not measured.** The overlay is plain DOM, re-rendered on events only (a whistle, a line, the clock's seconds), with no backdrop blur and two small CSS animations (the plate's wipe, the "now" pip's glow, off with reduced motion). It should be free, but there is no measurement on the target hardware.
+- **Fonts in the harness.** The worktree's `node_modules` is a symlink outside the worktree, so vite refused to serve the bundled fonts and every capture fell back to system fonts (M6.6's stills show the same). The captures here were run with the shared `node_modules` on vite's allow list; the game itself is unaffected.
