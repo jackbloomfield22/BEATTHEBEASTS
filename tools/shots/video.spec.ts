@@ -24,12 +24,14 @@ const CONCEPTS = !!process.env.BTB_CONCEPTS;
 // two clips (<pair>-a, <pair>-b: the same play with one man swapped) are
 // recorded, then put side by side in <pair>.mp4.
 const IDENTITY = !!process.env.BTB_IDENTITY;
+// BTB_PHYSICS=1: the tackling videos (docs/physics/TACKLING.md; src/game/clips.ts PHYSICS).
+const PHYSICS = !!process.env.BTB_PHYSICS;
 // BTB_PASSING=1: the passing-game clips (docs/passing/PASSING.md), into
 // docs/passing/<BTB_PASSING_TAG> (before / after), so the same plays can be
 // compared across a change.
 const PASSING = !!process.env.BTB_PASSING;
-const OUT = PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
-const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY || PASSING ? 20 : 30));
+const OUT = PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
+const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY || PASSING || PHYSICS ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
 const LEAD_IN = Math.round(FPS * (PASSING ? 0.6 : 1.2));
@@ -162,8 +164,9 @@ async function record(page: Page, clip: Clip) {
 
 const CONCEPT_IDS = ['slant', 'out', 'curl', 'go', 'post', 'corner', 'crosser', 'screen', 'back-shoulder', 'scramble-drill'];
 const PAIRS = ['speed', 'elusive', 'accuracy', 'rush', 'coverage'];
+const PHYSICS_IDS = ['tackle-fall-forward', 'tackle-gang', 'tackle-arm-broken', 'tackle-big-hit', 'tackle-hurdle', 'tackle-driven-back'];
 const PASSING_IDS = ['pass-slant', 'pass-dig', 'pass-post', 'pass-back-shoulder', 'pass-touch', 'pass-onrun', 'pass-pressure', 'pass-contested', 'pass-drop', 'arm-a', 'arm-b'];
-const IDS = (PASSING ? PASSING_IDS : IDENTITY ? PAIRS.flatMap((p) => [`${p}-a`, `${p}-b`]) : CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || id.startsWith(process.env.BTB_CLIP));
+const IDS = (PHYSICS ? PHYSICS_IDS : PASSING ? PASSING_IDS : IDENTITY ? PAIRS.flatMap((p) => [`${p}-a`, `${p}-b`]) : CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || id.startsWith(process.env.BTB_CLIP));
 test.use({ viewport: { width: W, height: H } });
 for (const id of IDS) {
   test(`feel video · ${id}`, async ({ page }) => {

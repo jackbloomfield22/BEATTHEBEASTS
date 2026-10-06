@@ -12,6 +12,9 @@ import { TICK, type Agent } from './types';
 import { dist, norm, sub, type V2 } from './vec';
 import { has } from './traits';
 import { QB_RUNS } from './plays';
+import { knockDown } from './tackle';
+/** Pancakes a second while a run block is owned, for a blocker at the middle of the scale (see stepBlocks). */
+const PANCAKE = 0.3;
 
 /** Start of an engagement: the blocker is set, a small edge. */
 const LEV0 = -0.35;
@@ -295,6 +298,22 @@ export function stepBlocks(s: PlayState, goal: V2): void {
     // Run blocks resolve faster than pass sets (a drive block is a shorter fight).
     blk.lev += (DRIFT * e * 2 + (blk.kind === 'run' ? BASE * 2.0 : PASS_BASE)) * TICK + NOISE * Math.sqrt(TICK) * gauss(s.rng.block) * 0.35;
     if (blk.lev < -1) blk.lev = -1;
+    // The pancake: a run block the blocker owns can
+    // put the man on his back, by the blocker's Impact Block and Strength
+    // (sim/tackle.ts knockDown: a body in the trash the back has to step
+    // over, go round or hurdle; up again in ~1.6 s). Rate ours: a block owned
+    // (leverage −0.8 or better) for a second ends on the turf ~25% of the time
+    // (more for a blocker with Impact Block); one run in 20–25 has a pancake (a good
+    // line is credited a few a game).
+    if (blk.kind === 'run' && blk.lev <= -0.8 && !d.down && s.rng.block() < PANCAKE * (0.3 + n(b, 'impactBlock') * 0.4 + n(b, 'strength') * 0.3) * TICK) {
+      s.blocks.splice(k, 1);
+      b.busy = Math.max(b.busy, 12);
+      b.anim = 'run';
+      d.mem.shedAt = s.t;
+      knockDown(s, d, d.pos.x - b.pos.x, d.pos.y - b.pos.y);
+      s.events.push({ t: s.t, type: 'shed', who: [d.i, b.i], data: { pancake: true, whiff: true } });
+      continue;
+    }
     if (blk.lev >= 1 || b.down || d.down) {
       // Shed: the defender is free, the blocker lunges and loses a beat.
       s.blocks.splice(k, 1);

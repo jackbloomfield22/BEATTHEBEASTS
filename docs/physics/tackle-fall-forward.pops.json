@@ -1,0 +1,37 @@
+{
+ "frames": 2221,
+ "worst": 47,
+ "p99": 24,
+ "spikes": [
+  {
+   "frame": 68,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 41,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 76,
+   "slot": "RE",
+   "bone": "forearm_l",
+   "rate": 42,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 76,
+   "slot": "RE",
+   "bone": "forearm_r",
+   "rate": 47,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  }
+ ]
+}

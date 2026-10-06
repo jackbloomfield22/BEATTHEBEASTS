@@ -5,6 +5,7 @@
 
 import type { V2 } from './vec';
 import type { Effects } from './effects';
+import type { Lying } from './bodies';
 
 export const TICK = 1 / 60;
 export const FIELD_HALF_W = 160 / 6; // 26.667 yd
@@ -99,6 +100,8 @@ export interface Agent {
   stamina: number;
   /** On the ground (tackled, dove, cut). */
   down: boolean;
+  /** Where and how he lies while he's down (bodies.ts): an obstacle for everyone on their feet. */
+  lie: Lying | null;
   /** Recent positions/velocities for delayed perception (ring buffer, newest last). */
   hist: { pos: V2; vel: V2 }[];
   /** Route runners: world waypoints, which ones are settle points, and the next one. */
