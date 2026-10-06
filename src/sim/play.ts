@@ -521,7 +521,7 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     // A vertical with the corner on top of him (level or deeper, on his
     // hip): the back-shoulder ball, short and behind him, where only he can
     // turn back to it (M6.5 #6).
-    // A deep ball he layers (passing.ts layer: its hang, as the read judged it).
+    // A deep ball he layers (passing.ts layer); the read judged the window on the driven ball.
     const tgt = s.agents[s.icons[pick]!]!;
     const bs = backShoulder(s, tgt);
     start(pick, bs ? 0 : layer(dist(qb.pos, openness(s, qb, tgt, true).at)), bs ? v2(-1, -0.2) : v2());

@@ -112,13 +112,18 @@ export function driveTime(d: number, power: number): number {
  * pass's worth by LAYER_FULL, never more than LAYER_MAX (he still wants it
  * there before the safety). Distances and the cap are ours, sized on that
  * hang. The player's own throws are his: a tap drives it, a hold layers it.
+ * The read (ai.ts openness) still judges the window on the driven ball: he
+ * reads the receiver's leverage, then layers it, and the extra hang is the
+ * deep ball's real risk (the safety gets there). Judging the window on the
+ * layered hang held every deep ball too long: sacks 6.8% → 8.4% of
+ * dropbacks, ypa 8.6 → 7.3 (tools/sim/outcomes.ts; docs/passing/PASSING.md).
  */
 export function layer(d: number): number {
   return LAYER_MAX * Math.max(0, Math.min(1, (d - LAYER_FROM) / (LAYER_FULL - LAYER_FROM)));
 }
-const LAYER_FROM = 28;
+const LAYER_FROM = 24;
 const LAYER_FULL = 44;
-const LAYER_MAX = 0.6;
+const LAYER_MAX = 0.8;
 
 /**
  * A touch pass (the icon held): the driven time stretched by 10% for a
