@@ -1,0 +1,110 @@
+import { test, type Page } from '@playwright/test';
+import { mkdirSync, writeFileSync } from 'node:fs';
+
+// The character pass (docs/characters/CHARACTERS.md): the players at the
+// distances a viewer sees them. The Animation Lab (studio light) close up
+// and every body type front and back; the stadium lineup (?lineup) from the
+// broadcast camera and at huddle distance in two lighting presets; and the
+// draw calls and triangles of 22 players from the broadcast camera, read
+// off the ?perf screen (no GPU here: counts, not frame times).
+// Into tools/shots/out/characters/<BTB_CHARS_TAG>.
+//   BTB_CHARS=1 BTB_CHARS_TAG=before BTB_PORT=5299 npx playwright test -c tools/shots/playwright.config.ts
+// BTB_CHARS_ONLY=lab|stadium|perf runs one group; BTB_CHARS_GREP=<substring> one shot.
+
+const TAG = process.env.BTB_CHARS_TAG ?? 'after';
+const ONLY = process.env.BTB_CHARS_ONLY ?? '';
+const GREP = process.env.BTB_CHARS_GREP ?? '';
+const DIR = `tools/shots/out/characters/${TAG}`;
+
+// Lab cameras (the Lab's player faces +Z, stands at the origin).
+const lab: { name: string; q: string }[] = [
+  { name: 'lab-lineup-front-white', q: 'mode=lineup&speed=0&lod=0&kit=whiteLime&t=0.5&cam=0,1.3,13,0,1.15,0' },
+  { name: 'lab-lineup-back-white', q: 'mode=lineup&speed=0&lod=0&kit=whiteLime&t=0.5&cam=0,1.3,-13,0,1.15,0' },
+  { name: 'lab-lineup-front-beasts', q: 'mode=lineup&speed=0&lod=0&kit=beasts&skin=4&t=0.5&cam=0,1.3,13,0,1.15,0' },
+  { name: 'lab-lineup-front-royal-lod1', q: 'mode=lineup&speed=0&lod=1&kit=royal&skin=1&t=0.5&cam=0,1.3,13,0,1.15,0' },
+  // Huddle distance: the head and pads, three-quarter front.
+  { name: 'lab-head-34', q: 'mode=single&clip=stance_idle&t=0.5&lod=0&kit=whiteLime&cam=0.75,1.82,1.05,0,1.68,0' },
+  { name: 'lab-head-34-royal', q: 'mode=single&clip=stance_idle&t=0.5&lod=0&kit=royal&skin=3&cam=0.75,1.82,1.05,0,1.68,0' },
+  { name: 'lab-torso-34', q: 'mode=single&clip=stance_idle&t=0.5&lod=0&kit=whiteLime&cam=1.1,1.75,1.5,0,1.3,0' },
+  { name: 'lab-back-34', q: 'mode=single&clip=stance_idle&t=0.5&lod=0&kit=royal&cam=-1.2,1.6,-1.9,0,1.25,0' },
+  // The known weak spots: the sleeve hem as the arm swings forward, the
+  // towel at the hip, the back of the knee at the sprint.
+  { name: 'lab-sprint-f4-shoulder', q: 'mode=single&clip=loco_sprint&t=0.1333&lod=0&kit=royal&cam=1.1,1.75,1.5,0,1.3,0' },
+  { name: 'lab-sprint-f0-lod1', q: 'mode=single&clip=loco_sprint&t=0&lod=1&kit=royal&cam=1.1,1.75,1.5,0,1.3,0' },
+  { name: 'lab-sprint-f11-knee', q: 'mode=single&clip=loco_sprint&t=0.3667&lod=0&kit=whiteLime&cam=1.9,0.75,-0.6,0,0.6,0' },
+  { name: 'lab-sprint-body', q: 'mode=single&clip=loco_sprint&t=0.1333&lod=0&kit=whiteLime&cam=2.6,1.6,3.4,0,0.95,0' },
+  { name: 'lab-legs-feet', q: 'mode=single&clip=stance_idle&t=0.5&lod=0&kit=whiteLime&cam=0.9,0.55,1.4,0,0.35,0' },
+  { name: 'lab-gloves', q: 'mode=single&clip=stance_qb_gun&t=0.5&lod=0&kit=whiteLime&cam=0.9,1.3,1.3,0,1.0,0.1' },
+  { name: 'lab-high-point-lod2', q: 'mode=single&clip=catch_high_point&t=0.8333&lod=2&kit=royal&cam=2.6,1.6,3.4,0,0.95,0' },
+  { name: 'lab-sig-qb-lod0', q: 'mode=single&clip=sig_qb&t=1.0&lod=0&kit=royal&cam=2.6,1.6,3.4,0,1.1,0' },
+];
+
+// The stadium lineup (render/players/Lineup.tsx): ball on the north 35
+// (z = -13.7 m), the offense facing -Z.
+const BROADCAST = '-50,14,-13.7,0,0,-11.5,18';
+const stadium: { name: string; q: string }[] = [];
+for (const lighting of ['golden', 'night']) {
+  stadium.push({ name: `stadium-broadcast-${lighting}`, q: `lineup&noui&cam=${BROADCAST}&lighting=${lighting}&quality=medium` });
+  stadium.push({ name: `stadium-field-${lighting}`, q: `lineup&noui&cam=-7,1.2,-13.7,0,0.6,-13.7,40&lighting=${lighting}&quality=medium` });
+  // Huddle distance behind the offense: the quarterback and the line's backs.
+  stadium.push({ name: `stadium-huddle-${lighting}`, q: `lineup&noui&cam=-2.6,1.75,-5.6,0.2,1.0,-10.5,42&lighting=${lighting}&quality=high` });
+  // In front of the defense, across the ball: the linemen in their stances.
+  stadium.push({ name: `stadium-line-${lighting}`, q: `lineup&noui&cam=3.2,1.3,-19.5,0,0.6,-13.7,38&lighting=${lighting}&quality=high` });
+}
+
+const want = (group: string, name: string) => (!ONLY || ONLY === group) && (!GREP || name.includes(GREP));
+
+async function stadiumReady(page: Page, q: string): Promise<void> {
+  await page.goto(`/?screen=main&shot=menu&t=0&${q}`);
+  await page.waitForFunction(() => (window as unknown as { __btbReady?: boolean }).__btbReady === true, null, { timeout: 600_000 });
+  await page.waitForFunction(() => (window as unknown as { __btbLineupReady?: boolean }).__btbLineupReady === true, null, { timeout: 600_000 });
+}
+
+for (const s of lab) {
+  if (!want('lab', s.name)) continue;
+  test(`characters · ${TAG} · ${s.name}`, async ({ page }) => {
+    test.setTimeout(900_000);
+    mkdirSync(DIR, { recursive: true });
+    await page.goto(`/#/dev/anim?${s.q}`);
+    await page.waitForFunction(() => (window as unknown as { __labReady?: boolean }).__labReady === true, null, { timeout: 600_000 });
+    await page.waitForTimeout(3000);
+    await page.locator('.lab-view').screenshot({ path: `${DIR}/${s.name}.png` });
+  });
+}
+
+for (const s of stadium) {
+  if (!want('stadium', s.name)) continue;
+  test(`characters · ${TAG} · ${s.name}`, async ({ page }) => {
+    test.setTimeout(1_800_000);
+    mkdirSync(DIR, { recursive: true });
+    await stadiumReady(page, s.q);
+    await page.addStyleTag({ content: '.ui-root{display:none!important}' });
+    await page.waitForTimeout(4000);
+    await page.screenshot({ path: `${DIR}/${s.name}.png` });
+  });
+}
+
+// Draw calls and triangles from the broadcast camera with 22 players, per
+// quality tier, and with the players hidden (the difference is theirs).
+for (const quality of ['medium', 'ultra']) {
+  if (!want('perf', `perf-${quality}`)) continue;
+  test(`characters · ${TAG} · perf-${quality}`, async ({ page }) => {
+    test.setTimeout(1_800_000);
+    mkdirSync(DIR, { recursive: true });
+    await stadiumReady(page, `lineup&perf&cam=${BROADCAST}&lighting=golden&quality=${quality}`);
+    await page.waitForTimeout(5000);
+    const read = () =>
+      page.evaluate(() => {
+        const out: Record<string, string> = {};
+        const dl = document.querySelector('.perf-rows');
+        if (!dl) return out;
+        const dts = dl.querySelectorAll('dt');
+        const dds = dl.querySelectorAll('dd');
+        dts.forEach((dt, i) => (out[dt.textContent ?? `row${i}`] = dds[i]?.textContent ?? ''));
+        return out;
+      });
+    const withPlayers = await read();
+    writeFileSync(`${DIR}/perf-${quality}.json`, JSON.stringify(withPlayers, null, 2));
+    await page.screenshot({ path: `${DIR}/perf-${quality}.png` });
+  });
+}

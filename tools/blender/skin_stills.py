@@ -3,7 +3,7 @@ rendered from a view, and again with the faces the skin probe flags
 (lib/skin.py: folded through itself, or collapsed below 20% of their
 area) painted yellow, so a sheet shows where the mesh breaks and how badly.
 
-    python3 tools/blender/skin_stills.py <out.png> clip:frame[:view] ... [--lod 0] [--cell 360]
+    python3 tools/blender/skin_stills.py <out.png> clip:frame[:view] ... [--lod 0] [--cell 360] [--file player.glb] [--noreach]
 
 Views are lib/preview.py's plus "shoulder" and "hip" close-ups.
 """
@@ -22,7 +22,7 @@ import numpy as np  # noqa: E402
 
 from lib.anim_rig import Controls  # noqa: E402
 from lib.poses import apply_pose  # noqa: E402
-from lib.preview import VIEWS, import_player, render_views, setup_scene, sheet  # noqa: E402
+from lib.preview import VIEWS, render_views, setup_scene, sheet  # noqa: E402
 from lib.rig import build_armature  # noqa: E402
 from lib.skin import COLLAPSED, FLIP_DEG, SkinProbe  # noqa: E402
 from skin_check import poses_of  # noqa: E402
@@ -93,9 +93,15 @@ def main() -> None:
     cell = int(args[args.index("--cell") + 1]) if "--cell" in args else 360
     args = [a for i, a in enumerate(args) if not a.startswith("--") and (i == 0 or not args[i - 1].startswith("--"))]
     out, specs = args[0], args[1:]
+    if "--file" in sys.argv:
+        import lib.preview
+
+        lib.preview.PLAYER = os.path.abspath(sys.argv[sys.argv.index("--file") + 1])
     bpy.ops.wm.read_factory_settings(use_empty=True)
     rig = build_armature("rig")
-    mesh = import_player(rig, lod=lod)
+    import lib.preview
+
+    mesh = lib.preview.import_player(rig, lod=lod)
     if "--no-rhythm" in sys.argv:
         import lib.poses
 
@@ -121,6 +127,10 @@ def main() -> None:
         views = parts[2].split("+") if len(parts) > 2 else ["shoulder"]
         pose = dict(poses_of(name, clips))[f]
         apply_pose(rig, c, pose)
+        if "--noreach" not in sys.argv:
+            from lib.corrective import set_reach
+
+            set_reach([mesh], rig)  # the arms-overhead correctives, as the runtime drives them
         bpy.context.view_layer.update()
         follow_views(rig)
         files = []

@@ -17,19 +17,23 @@ import type { GearColor, Variety } from './variety';
 export const PART = {
   skin: 0, glove: 1, sock: 2, cleat: 3, jersey: 4, pants: 5, helmet: 6,
   maskSkill: 7, maskCage: 8, maskQb: 9, maskLow: 10, visor: 11, strap: 12, towel: 13, collar: 14,
-  shirt: 15, cap: 16,
+  shirt: 15, cap: 16, helmetTrim: 17,
 } as const;
 const PART_SCALE = 16; // must match tools/blender/lib/gear.py PART_SCALE
-const N = 17;
+const N = 18;
 const MASKS = [PART.maskSkill, PART.maskCage, PART.maskQb, PART.maskLow];
 
 // Finish per part: roughness, metalness. Skin ~0.6 (matte, varied per
 // fragment in the shader); fabric rough; helmet shell a glossy clear-coated
 // plastic (~0.2); facemasks powder-coated steel; the visor a smoked,
 // polished polycarbonate; the chin strap a satin plastic cup; the
-// official's shirt a matte knit and his cap cotton twill.
-const ROUGH = [0.62, 0.62, 0.85, 0.45, 0.72, 0.68, 0.2, 0.35, 0.35, 0.35, 0.35, 0.06, 0.4, 0.92, 0.75, 0.8, 0.86];
-const METAL = [0, 0, 0, 0, 0, 0, 0.05, 0.55, 0.55, 0.55, 0.55, 0.25, 0, 0, 0, 0, 0];
+// official's shirt a matte knit and his cap cotton twill; the helmet's
+// rubber edging and mask clips a satin rubber. The character pass took the
+// shell from 0.2 to 0.14: a painted, clear-coated shell throws a tight
+// highlight and a sharp sky reflection (a clear coat's own roughness is
+// ~0.05-0.1; the base under it shows through as the colour).
+const ROUGH = [0.62, 0.62, 0.85, 0.45, 0.72, 0.68, 0.14, 0.35, 0.35, 0.35, 0.35, 0.06, 0.4, 0.92, 0.75, 0.8, 0.86, 0.55];
+const METAL = [0, 0, 0, 0, 0, 0, 0.05, 0.55, 0.55, 0.55, 0.55, 0.25, 0, 0, 0, 0, 0, 0];
 const GEAR_COLORS: Record<Exclude<GearColor, 'kit' | 'trim'>, string> = { black: '#121314', white: '#ecedef' };
 
 // Lettering on the jersey (sizes from the NFL uniform rules: back numbers
@@ -178,6 +182,14 @@ uniform vec2 uSleeves; // left, right: compression sleeve on
 uniform float uTape;
 uniform float uSockStripes;
 uniform float uSkinVar;
+uniform float uKnit;
+uniform float uEyeBlack;
+uniform vec3 uSole;
+// Turf wear (the character pass): legs (knees, shins, the front of the
+// thighs), torso front, torso back (and the seat), helmet scuffs. 0 clean,
+// 1 a whole game spent on the ground. Player.updateWear raises it each time
+// he goes down.
+uniform vec4 uWear;
 varying float vPart;
 varying vec3 vRest;
 int playerPart() { return int(floor(vPart + 0.001)); }
@@ -190,10 +202,13 @@ float sleeveT(vec3 p) {
 // so it needs no UVs), faded out before it can shimmer (fp: world size of a
 // pixel), and soft folds where the fabric bunches (the tuck at the waist,
 // the sleeve), less over the chest and back where the pads hold it taut.
+// uKnit scales the mesh holes by the jersey's brightness (the character
+// pass, from the M6.6 critique: on white the holes read as a field of dark
+// dots at arm's length; on black they never showed).
 float fabricHeight(vec3 p, float fp) {
   float k = 6.2832 / 0.0045;
   float lat = cos(k * p.x) + cos(k * p.y) + cos(k * p.z);
-  float knit = smoothstep(0.8, 2.2, lat) * (1.0 - smoothstep(0.0008, 0.0022, fp));
+  float knit = smoothstep(0.8, 2.2, lat) * (1.0 - smoothstep(0.0008, 0.0022, fp)) * uKnit;
   float n = pNoise(vec3(p.x * 9.0, p.y * 34.0, p.z * 9.0));
   float ridge = 1.0 - abs(2.0 * n - 1.0);
   float st = sleeveT(p);
@@ -216,9 +231,31 @@ vec3 sleeveNumber(vec3 c, vec3 p) {
   if (uNumW > 0.0 && q.y > -0.1 && q.y < 1.1) c = letter(c, numberSd(q), aa, em, uNumColor, uNumOutline);
   return c;
 }
+// Turf stains: blotches that spread as t (amount x region) grows (0 none,
+// 1 soaked), soil brown with streaks of grass green. Linear colours near
+// the field's soil and grass, darkened for fabric that's been ground into
+// it. Dried soil is lighter than a black jersey, so on dark kits it reads
+// as dust.
+const vec3 SOIL = vec3(0.15, 0.105, 0.065);
+const vec3 TURF = vec3(0.065, 0.12, 0.03);
+vec3 stain(vec3 c, vec3 p, float t, inout float rough) {
+  if (t <= 0.001) return c;
+  float n = pNoise(p * 34.0) * 0.6 + pNoise(p * 105.0) * 0.4;
+  float cover = smoothstep(0.62, 0.86, n * 0.5 + t * 0.62);
+  float g = smoothstep(0.45, 0.75, pNoise(p * vec3(8.0, 30.0, 8.0) + 7.0));
+  rough = mix(rough, 0.92, cover);
+  return mix(c, mix(SOIL, TURF, g * 0.8), cover * 0.78);
+}
+// Ribbed sock knit: a height field around the leg (rest pose, the shin's
+// axis near |x| 0.11), faded out before it can shimmer.
+float sockHeight(vec3 p, float fp) {
+  float a = atan(p.z + 0.01, abs(p.x) - 0.11);
+  return 0.00035 * cos(a * 64.0) * (1.0 - smoothstep(0.0006, 0.0016, fp));
+}
 // The part's color with its trim, a trim mask for the emissive stripe, and
-// the fragment's roughness.
-vec3 playerAlbedo(int part, vec3 p, out float stripe, out float rough) {
+// the fragment's roughness. front: the fragment faces the camera (the
+// inside of the helmet is its padding).
+vec3 playerAlbedo(int part, vec3 p, bool front, out float stripe, out float rough) {
   vec3 c = uPartColor[part];
   stripe = 0.0;
   rough = uPartRough[part];
@@ -246,11 +283,34 @@ vec3 playerAlbedo(int part, vec3 p, out float stripe, out float rough) {
       c = vec3(0.86, 0.86, 0.84);
       rough = 0.8;
     }
+    if (arm) c = stain(c, p, uWear.y * 0.45 * smoothstep(0.1, 0.4, tf), rough);
+    if (p.y > 1.7 && p.z > 0.04) {
+      // The face (rest pose; seen through the facemask): the eye sockets
+      // shadowed under the brow so the face isn't a smooth egg, and eye
+      // black on the cheekbones for the players who wear it.
+      float ex = abs(p.x) - 0.032;
+      c *= 1.0 - 0.45 * exp(-(ex * ex) / 0.00022 - pow(p.y - 1.776, 2.0) / 0.00012);
+      float eb = pow((abs(p.x) - 0.035) / 0.017, 2.0) + pow((p.y - 1.757) / 0.0068, 2.0);
+      float black = uEyeBlack * (1.0 - smoothstep(0.75, 1.0, eb)) * step(0.06, p.z);
+      c = mix(c, vec3(0.012), black);
+      rough = mix(rough, 0.88, black);
+    }
   } else if (part == ${PART.sock}) {
     // Stripes around the sock (trim color).
     float s1 = smoothstep(0.305, 0.31, p.y) * (1.0 - smoothstep(0.33, 0.335, p.y));
     float s2 = smoothstep(0.35, 0.355, p.y) * (1.0 - smoothstep(0.375, 0.38, p.y));
     c = mix(c, uTrim, s1 * step(0.5, uSockStripes) + s2 * step(1.5, uSockStripes));
+    c = stain(c, p, uWear.x * 0.7 * smoothstep(-0.02, 0.05, p.z), rough);
+  } else if (part == ${PART.cleat}) {
+    // Two-tone: the sole and its welt line, the laces down the instep.
+    float sole = 1.0 - smoothstep(0.019, 0.021, p.y);
+    float welt = smoothstep(0.021, 0.022, p.y) * (1.0 - smoothstep(0.025, 0.026, p.y));
+    float lx = abs(abs(p.x) - 0.116);
+    float lace = (1.0 - smoothstep(0.009, 0.011, lx)) * smoothstep(-0.005, 0.0, p.z) * (1.0 - smoothstep(0.1, 0.105, p.z)) * step(0.058 - 0.2 * p.z, p.y) * step(0.5, fract(p.z / 0.0125));
+    c = mix(c, uSole, max(sole, lace * 0.85));
+    c *= 1.0 - 0.45 * welt;
+    rough = mix(rough, 0.7, sole);
+    c = stain(c, p, uWear.x * 0.8 * (1.0 - smoothstep(0.03, 0.07, p.y)), rough);
   } else if (part == ${PART.glove}) {
     // Two-tone gloves: the back in the glove color, a darker grip palm, and
     // a trim-colored cuff, so a hand reads as a hand at mid distance.
@@ -261,25 +321,53 @@ vec3 playerAlbedo(int part, vec3 p, out float stripe, out float rough) {
     float back = dot(p - wr - d * dot(p - wr, d), ft);
     c = mix(c * 0.42 + vec3(0.03), c, smoothstep(-0.006, 0.006, back));
     c = mix(c, uTrim, smoothstep(0.86, 0.87, tf) * (1.0 - smoothstep(0.93, 0.94, tf)));
+    c = stain(c, p, uWear.y * 0.6, rough);
   } else if (part == ${PART.collar}) {
     c = uTrim;
+  } else if (part == ${PART.towel}) {
+    // Terry cloth: matte, a little uneven.
+    float n = pNoise(p * 260.0);
+    c *= 0.9 + 0.1 * n;
+    rough = 0.96;
+    c = stain(c, p, uWear.x * 0.5, rough);
   } else if (part == ${PART.helmet}) {
+    if (!front) {
+      // The inside: black foam padding.
+      rough = 0.9;
+      return vec3(0.02);
+    }
     // Center stripe over the crown, front to back.
     float s = 1.0 - smoothstep(0.011, 0.014, abs(p.x));
     s *= step(1.70, p.y);
     stripe = s;
     c = mix(c, uHelmetStripe, s);
+    // The ear hole (over the ear, tools/blender/lib/body.py) and its ring.
+    float e = length(vec2(p.y - 1.762, p.z + 0.012));
+    if (abs(p.x) > 0.1) c *= mix(0.08, 1.0, smoothstep(0.0095, 0.011, e)) * mix(0.75, 1.0, smoothstep(0.013, 0.015, e));
+    // Scuffs: paint transfer from other helmets and the turf, streaked
+    // front to back over the shell's front and sides.
+    float sc = smoothstep(0.78, 0.9, pNoise(p * vec3(90.0, 260.0, 30.0)) + uWear.w * 0.35) * uWear.w * smoothstep(-0.05, 0.08, p.z);
+    c = mix(c, mix(vec3(0.55), c * 0.5, step(0.4, dot(c, vec3(0.33)))), sc * 0.6);
+    rough = mix(rough, 0.45, sc);
   } else if (part == ${PART.jersey}) {
     // Collar: a ring at the neck opening only (neck axis at z ≈ -0.016).
     float collar = smoothstep(1.55, 1.56, p.y) * (1.0 - smoothstep(0.10, 0.11, length(p.xz - vec2(0.0, -0.016))));
     float t = sleeveT(p);
-    float band = step(0.24, abs(p.x)) * smoothstep(0.40, 0.41, t) * (1.0 - smoothstep(0.47, 0.48, t));
+    // (A soft edge across |x|: a hard step at 0.24 ran along the sleeve's
+    // inner face near the armpit and drew the band's end ragged.)
+    float band = smoothstep(0.232, 0.248, abs(p.x)) * smoothstep(0.40, 0.41, t) * (1.0 - smoothstep(0.47, 0.48, t));
     c = mix(c, uTrim, max(collar, band));
     // Mesh holes and fold valleys a little darker than the knit around them.
     float fp = length(fwidth(p));
     c *= 1.0 + fabricHeight(p, fp) * 28.0;
     c = lettering(c, p);
     c = sleeveNumber(c, p);
+    // Wear: down the front (the belly, a slide), the back (from the
+    // shoulders to the tuck) and the elbows.
+    float wf = smoothstep(0.02, 0.08, p.z) * (1.0 - smoothstep(1.32, 1.45, p.y));
+    float wb = smoothstep(-0.02, -0.08, p.z) * (1.0 - smoothstep(1.45, 1.55, p.y));
+    float we = step(0.24, abs(p.x)) * smoothstep(0.3, 0.5, t) * 0.6;
+    c = stain(c, p, max(max(uWear.y * wf, uWear.z * wb), (uWear.y + uWear.z) * 0.5 * we), rough);
   } else if (part == ${PART.shirt}) {
     // Stripes run down the body and down each sleeve: the arc length around
     // the torso's vertical axis (radius ~0.165 m) or the arm's axis
@@ -308,6 +396,18 @@ vec3 playerAlbedo(int part, vec3 p, out float stripe, out float rough) {
   } else if (part == ${PART.pants}) {
     float side = step(0.12, abs(p.x)) * (1.0 - smoothstep(0.011, 0.015, abs(p.z + 0.005))) * step(p.y, 1.05);
     c = mix(c, uPantsStripe, side);
+    // The belt in the jersey's colour at the waistband (the pants top is at
+    // 1.13 m, gear.PANTS_TOP_Z), with a stitched edge under it.
+    float belt = smoothstep(1.098, 1.101, p.y);
+    c = mix(c, uPartColor[${PART.jersey}], belt);
+    c *= 1.0 - 0.25 * (smoothstep(1.092, 1.094, p.y) * (1.0 - smoothstep(1.096, 1.098, p.y)));
+    rough = mix(rough, 0.55, belt);
+    // Wear: the knees and the front of the thighs, the seat, the outer hip.
+    float knees = exp(-pow((p.y - 0.53) / 0.075, 2.0)) * smoothstep(-0.03, 0.04, p.z);
+    float thighs = smoothstep(0.58, 0.72, p.y) * (1.0 - smoothstep(0.86, 0.95, p.y)) * smoothstep(0.0, 0.06, p.z) * 0.65;
+    float seat = exp(-pow((p.y - 0.95) / 0.1, 2.0)) * smoothstep(0.02, -0.06, p.z);
+    float hip = smoothstep(0.13, 0.17, abs(p.x)) * (1.0 - smoothstep(0.95, 1.05, p.y)) * 0.5;
+    c = stain(c, p, max(max(uWear.x * max(knees, thighs), uWear.z * seat), (uWear.y + uWear.z) * 0.5 * hip), rough);
   }
   return c;
 }
@@ -359,6 +459,10 @@ export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMateri
     uTape: { value: 0 },
     uSockStripes: { value: 0 },
     uSkinVar: { value: 1 },
+    uKnit: { value: 1 },
+    uEyeBlack: { value: 0 },
+    uSole: { value: new THREE.Color() },
+    uWear: { value: new THREE.Vector4() },
   };
   mat.userData.player = uniforms;
   setPlayerLook(mat, look);
@@ -384,21 +488,41 @@ export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMateri
           int pPart = playerPart();
           float pStripe;
           float pRough;
-          diffuseColor.rgb = playerAlbedo(pPart, vRest, pStripe, pRough);`,
+          diffuseColor.rgb = playerAlbedo(pPart, vRest, gl_FrontFacing, pStripe, pRough);
+          // Real cloth and paint, not the hex: a white jersey or shell
+          // reflects ~70-80% (it blew out into a glowing blob under the
+          // golden-hour key and its bloom), and black fabric ~2-4% (at the
+          // hex's 0.6% the Beasts read as silhouettes with no folds or
+          // pads). The character pass; skin and the deliberate blacks (eye
+          // black, the helmet's inside) are left alone.
+          if (pPart != ${PART.skin} && gl_FrontFacing) diffuseColor.rgb = clamp(diffuseColor.rgb, vec3(0.022), vec3(0.72));`,
         )
         .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = pRough;')
         .replace(
           '#include <normal_fragment_maps>',
           `#include <normal_fragment_maps>
-          if (pPart == ${PART.skin} || pPart == ${PART.jersey}) {
+          if (pPart == ${PART.skin} || pPart == ${PART.jersey} || pPart == ${PART.sock}) {
             // Relief as a bump from a rest-pose height field: muscles on
-            // skin, the knit and its folds on the jersey.
-            float mh = pPart == ${PART.skin} ? muscleHeight(vRest) : fabricHeight(vRest, length(fwidth(vRest)));
+            // skin, the knit and its folds on the jersey, the sock's ribs.
+            float fpx = length(fwidth(vRest));
+            float mh = pPart == ${PART.skin} ? muscleHeight(vRest) : pPart == ${PART.jersey} ? fabricHeight(vRest, fpx) : sockHeight(vRest, fpx);
             vec3 dpx = dFdx(vViewPosition), dpy = dFdy(vViewPosition);
             float dhx = dFdx(mh), dhy = dFdy(mh);
             vec3 r1 = cross(dpy, normal), r2 = cross(normal, dpx);
             float det = dot(dpx, r1);
             normal = normalize(abs(det) * normal - sign(det) * (dhx * r1 + dhy * r2));
+          }
+          {
+            // Cloth sheen and skin: knit fabric brightens toward grazing
+            // angles (fibres scatter light forward: the rim a broadcast
+            // shows on jerseys and pants), and skin picks up a warm rim
+            // (light scattered under it). A cheap stand-in for a sheen lobe
+            // and subsurface scattering: one multiply per fragment, no extra
+            // light loop (MeshPhysicalMaterial's sheen would add one).
+            float rim = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+            bool cloth = pPart == ${PART.jersey} || pPart == ${PART.pants} || pPart == ${PART.sock} || pPart == ${PART.towel} || pPart == ${PART.shirt} || pPart == ${PART.collar};
+            if (cloth) diffuseColor.rgb *= 1.0 + 0.4 * rim * rim * rim;
+            else if (pPart == ${PART.skin}) diffuseColor.rgb *= 1.0 + vec3(0.28, 0.07, 0.02) * rim * rim;
           }`,
         )
         .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = uPartMetal[pPart];')
@@ -452,13 +576,16 @@ export function setPlayerLook(mat: THREE.MeshStandardMaterial, { kit, skin, numb
     uSleeves: Uniform<THREE.Vector2>;
     uTape: Uniform<number>;
     uSockStripes: Uniform<number>;
+    uKnit: Uniform<number>;
+    uEyeBlack: Uniform<number>;
+    uSole: Uniform<THREE.Color>;
   };
   const v = variety;
   const glove = v ? gearColor(v.gloveColor, kit, kit.gloves) : kit.gloves;
   // By part id: skin, glove, sock, cleat, jersey, pants, helmet, the four
   // facemasks, visor (smoked), chin strap, towel, collar (trim; the shader),
   // the official's shirt (its stripes are the trim) and cap (the helmet color).
-  const byPart = [skin, glove, kit.socks, kit.cleats, kit.jersey, kit.pants, kit.helmet, kit.facemask, kit.facemask, kit.facemask, kit.facemask, '#16181c', '#e9e9e6', '#f2f2ef', kit.trim, kit.jersey, kit.helmet];
+  const byPart = [skin, glove, kit.socks, kit.cleats, kit.jersey, kit.pants, kit.helmet, kit.facemask, kit.facemask, kit.facemask, kit.facemask, '#16181c', '#e9e9e6', '#f2f2ef', kit.trim, kit.jersey, kit.helmet, '#121315'];
   byPart.forEach((hex, i) => u.uPartColor.value[i]!.copy(linear(hex)));
   const show = u.uPartShow.value;
   show.fill(1);
@@ -471,6 +598,11 @@ export function setPlayerLook(mat: THREE.MeshStandardMaterial, { kit, skin, numb
   u.uSleeves.value.set(v?.sleeves.l ? 1 : 0, v?.sleeves.r ? 1 : 0);
   u.uTape.value = v?.tape ? 1 : 0;
   u.uSockStripes.value = v?.sockStripes ?? 0;
+  u.uEyeBlack.value = v?.eyeBlack ? 1 : 0;
+  // The knit's holes at full depth on a black jersey, a third on white.
+  u.uKnit.value = 1 - 0.65 * Math.min(1, luminance(kit.jersey) / 0.8);
+  // A dark cleat on a white sole, a light one on a dark sole.
+  u.uSole.value.copy(linear(luminance(kit.cleats) < 0.3 ? '#dcdddf' : '#1b1c1f'));
   u.uTrim.value.copy(linear(kit.trim));
   u.uHelmetStripe.value.copy(linear(kit.helmetStripe));
   u.uStripeGlow.value = kit.stripeGlow;

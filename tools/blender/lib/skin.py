@@ -216,6 +216,7 @@ def gate_lods(rig, meshes: list) -> dict:
     """Pose every gate clip on the rig and measure each LOD mesh (shape keys
     at 0: the base body). Returns per region the worst shares and the pass."""
     from .anim_rig import Controls
+    from .corrective import set_reach
     from .poses import apply_pose
 
     for m in meshes:
@@ -232,6 +233,8 @@ def gate_lods(rig, meshes: list) -> dict:
         for name in names:
             for f, pose in enumerate(clip_poses(name)):
                 apply_pose(rig, c, pose)
+                # The arms-overhead correctives at the runtime's weights (lib/corrective.py).
+                set_reach(meshes, rig)
                 bpy.context.view_layer.update()
                 for lod, p in enumerate(probes):
                     co = p.deformed()

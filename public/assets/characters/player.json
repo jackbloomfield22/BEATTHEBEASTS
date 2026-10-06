@@ -3,18 +3,54 @@
   "lods": [
     {
       "lod": 0,
-      "triangles": 24775,
-      "vertices": 13233
+      "triangles": 26965,
+      "vertices": 14421,
+      "reach": {
+        "l": {
+          "weight": 0.797,
+          "mean": 0.0078,
+          "max": 0.0789
+        },
+        "r": {
+          "weight": 0.787,
+          "mean": 0.0083,
+          "max": 0.1059
+        }
+      }
     },
     {
       "lod": 1,
-      "triangles": 12066,
-      "vertices": 6709
+      "triangles": 13215,
+      "vertices": 7368,
+      "reach": {
+        "l": {
+          "weight": 0.797,
+          "mean": 0.0099,
+          "max": 0.1095
+        },
+        "r": {
+          "weight": 0.787,
+          "mean": 0.0101,
+          "max": 0.1055
+        }
+      }
     },
     {
       "lod": 2,
-      "triangles": 3607,
-      "vertices": 2182
+      "triangles": 3836,
+      "vertices": 2325,
+      "reach": {
+        "l": {
+          "weight": 0.797,
+          "mean": 0.0113,
+          "max": 0.0845
+        },
+        "r": {
+          "weight": 0.787,
+          "mean": 0.0122,
+          "max": 0.1204
+        }
+      }
     }
   ],
   "official": [
@@ -89,7 +125,8 @@
     "towel": 13,
     "collar": 14,
     "shirt": 15,
-    "cap": 16
+    "cap": 16,
+    "helmet_trim": 17
   },
   "partScale": 16.0,
   "shapes": [
@@ -102,7 +139,7 @@
     "calves",
     "arms"
   ],
-  "bytes": 3462724,
+  "bytes": 3644392,
   "skinGate": {
     "groups": {
       "speed": {
@@ -127,11 +164,11 @@
             "pass": true
           },
           "elbow": {
-            "collapsed": 0.0468,
-            "flips": 0.0845,
+            "collapsed": 0.0541,
+            "flips": 0.0811,
             "at": {
               "collapsed": "sprint:8 lod1",
-              "flips": "carry_sprint:4 lod2"
+              "flips": "carry_sprint:7 lod1"
             },
             "max": {
               "collapsed": 0.055,
@@ -140,11 +177,11 @@
             "pass": true
           },
           "hip": {
-            "collapsed": 0.0149,
-            "flips": 0.0321,
+            "collapsed": 0.0138,
+            "flips": 0.0193,
             "at": {
-              "collapsed": "cut_plant_sharp_l:8 lod1",
-              "flips": "sprint:11 lod1"
+              "flips": "sprint:4 lod0",
+              "collapsed": "sprint:4 lod2"
             },
             "max": {
               "collapsed": 0.018,
@@ -153,11 +190,11 @@
             "pass": true
           },
           "knee": {
-            "collapsed": 0.0422,
-            "flips": 0.1557,
+            "collapsed": 0.023,
+            "flips": 0.0378,
             "at": {
-              "collapsed": "carry_sprint:7 lod1",
-              "flips": "cut_plant_sharp_l:5 lod0"
+              "collapsed": "cut_plant_sharp_l:17 lod0",
+              "flips": "sprint:0 lod0"
             },
             "max": {
               "collapsed": 0.05,
@@ -180,11 +217,11 @@
         ],
         "regions": {
           "shoulder": {
-            "collapsed": 0.0256,
-            "flips": 0.1832,
+            "collapsed": 0.022,
+            "flips": 0.1758,
             "at": {
-              "collapsed": "catch_high_point:25 lod1",
-              "flips": "dive:5 lod1"
+              "collapsed": "dive:3 lod1",
+              "flips": "catch_high_point:22 lod1"
             },
             "max": {
               "collapsed": 0.03,
@@ -193,11 +230,11 @@
             "pass": true
           },
           "elbow": {
-            "collapsed": 0.0426,
-            "flips": 0.1268,
+            "collapsed": 0.045,
+            "flips": 0.1081,
             "at": {
               "collapsed": "catch_high_point:0 lod1",
-              "flips": "catch_high_point:11 lod2"
+              "flips": "catch_high_point:10 lod1"
             },
             "max": {
               "collapsed": 0.05,
@@ -206,11 +243,11 @@
             "pass": true
           },
           "hip": {
-            "collapsed": 0.0126,
-            "flips": 0.0241,
+            "collapsed": 0.0117,
+            "flips": 0.02,
             "at": {
               "collapsed": "dive:4 lod1",
-              "flips": "catch_high_point:8 lod1"
+              "flips": "dive:4 lod0"
             },
             "max": {
               "collapsed": 0.016,
@@ -219,11 +256,11 @@
             "pass": true
           },
           "knee": {
-            "collapsed": 0.0542,
-            "flips": 0.1393,
+            "collapsed": 0.023,
+            "flips": 0.0329,
             "at": {
-              "collapsed": "dive:9 lod1",
-              "flips": "catch_high_point:41 lod0"
+              "collapsed": "catch_high_point:36 lod0",
+              "flips": "dive:1 lod0"
             },
             "max": {
               "collapsed": 0.065,

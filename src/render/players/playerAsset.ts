@@ -12,6 +12,8 @@ import { OFFICIAL_KIT, REFEREE_KIT } from './kits';
 const PROPORTION_BONES = ['upperarm_l', 'upperarm_r', 'forearm_l', 'forearm_r', 'hand_l', 'hand_r'];
 /** The variety shapes (tools/blender/lib/shapes.py) at rest, for a body with no Variety. */
 const NO_VARIETY = { pads: 0, neck: 0, waist: 0, calves: 0, arms: 0 };
+/** The reach correctives start off (the exporter's default weight is 1); updateReach drives them on the visible LOD. */
+const NO_REACH = { reach_l: 0, reach_r: 0 };
 
 // The player asset (tools/blender/build_character.py → public/assets/
 // characters/player.glb): one armature and three LOD skinned meshes sharing
@@ -31,6 +33,41 @@ export const PLAYER_URL = `${import.meta.env.BASE_URL}assets/characters/player.g
 export const LOD_SCREEN_PX = [240, 64] as const;
 const BASE_HEIGHT_M = 1.88;
 const _camPos = new THREE.Vector3();
+const _v = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+
+/**
+ * Turf wear (the character pass): each time a player goes down (his pelvis
+ * under WEAR_DOWN of his height above the turf: a tackle, a dive, a pile),
+ * his legs pick up WEAR_STEP.legs of grass and soil, the side he landed on
+ * WEAR_STEP.torso (his chest's facing says which), and his helmet a few
+ * scuffs. About ten trips to the turf soak a kit (a back's or a
+ * receiver's game); a lineman who stays up stays cleaner. He has to be
+ * back over WEAR_UP before the next trip counts. The shader draws it
+ * (playerMaterial.ts uWear).
+ */
+/**
+ * The arms-overhead correctives (tools/blender/lib/corrective.py, the
+ * character pass): shape keys reach_l / reach_r fade in as the upper arm
+ * rises past REACH_FROM degrees from the trunk's down axis and are full at
+ * REACH_TO. Must match corrective.py REACH_FROM / REACH_TO, which the
+ * build's skinning gate measures with.
+ */
+export const REACH_FROM = 105;
+export const REACH_TO = 160;
+const _a = new THREE.Vector3();
+const _b = new THREE.Vector3();
+const _c = new THREE.Vector3();
+
+/** Smoothstep weight of a reach corrective for an arm elevation (degrees). */
+export function reachWeight(elevationDeg: number): number {
+  const t = Math.min(1, Math.max(0, (elevationDeg - REACH_FROM) / (REACH_TO - REACH_FROM)));
+  return t * t * (3 - 2 * t);
+}
+
+export const WEAR_DOWN = 0.22;
+export const WEAR_UP = 0.4;
+export const WEAR_STEP = { legs: 0.12, torso: 0.16, side: 0.09, helmet: 0.07 };
 
 export interface PlayerAsset {
   scene: THREE.Group;
@@ -125,6 +162,12 @@ export class Player {
   private readonly restPos = new Map<string, THREE.Vector3>();
 
   readonly variant: PlayerVariant;
+  /** Turf wear: legs, torso front, torso back, helmet scuffs (0..1); the material's uniform. */
+  readonly wear: THREE.Vector4;
+  private wearArmed = true;
+  private wearKey = '';
+  /** The chest's forward axis in the spine_04 bone's frame (from the rest pose). */
+  private readonly chestFwd = new THREE.Vector3(0, 0, 1);
 
   constructor(asset: PlayerAsset, opts: PlayerOptions) {
     this.root = cloneSkinned(asset.scene);
@@ -166,10 +209,24 @@ export class Player {
     this.variety = opts.variety ?? null;
     this.applyShape();
     this.setLod(0);
+    this.wear = (this.material.userData.player as { uWear: { value: THREE.Vector4 } }).uWear.value;
+    this.wearKey = `${opts.number ?? ''}|${opts.name ?? ''}`;
+    if (urlFlags.wear !== null) this.wear.setScalar(Math.min(1, Math.max(0, urlFlags.wear)));
+    const chest = this.bones.get('spine_04');
+    if (chest) {
+      // At rest, the chest faces the root's +Z; keep that axis in the bone's own frame.
+      this.root.updateMatrixWorld(true);
+      const rel = this.root.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(chest.getWorldQuaternion(_q));
+      this.chestFwd.set(0, 0, 1).applyQuaternion(rel.invert());
+    }
   }
 
   setLook(look: PlayerLook): void {
     setPlayerLook(this.material, look);
+    // Another man in the kit (a substitution): he comes on clean.
+    const key = `${look.number ?? ''}|${look.name ?? ''}`;
+    if (key !== this.wearKey && urlFlags.wear === null) this.wear.set(0, 0, 0, 0);
+    this.wearKey = key;
     this.variety = look.variety ?? null;
     this.applyShape();
   }
@@ -188,7 +245,7 @@ export class Player {
     // Every key the file carries is set: its default weight is 1 (the
     // exporter's), so a body without variety (an official) kept the
     // pads, neck, waist, calves and arms shapes all the way on.
-    const weights: Record<string, number> = { heavy: s.heavy, lean: s.lean, belly: s.belly, ...NO_VARIETY, ...(v?.morph ?? {}) };
+    const weights: Record<string, number> = { heavy: s.heavy, lean: s.lean, belly: s.belly, ...NO_VARIETY, ...(v?.morph ?? {}), ...NO_REACH };
     for (const m of [...this.lods, this.shadowProxy]) {
       const dict = m.morphTargetDictionary;
       const inf = m.morphTargetInfluences;
@@ -208,9 +265,71 @@ export class Player {
     }
   }
 
+  /** The per-frame body updates that read the drawn pose: turf wear and the reach correctives (updateLod calls it). */
+  tick(): void {
+    this.updateWear();
+    this.updateReach();
+  }
+
+  /**
+   * The arms-overhead correctives, once a frame (from updateLod): each
+   * arm's elevation from the drawn pose (shoulder to elbow against chest
+   * to pelvis, the same measure as tools/blender/lib/corrective.py), on
+   * the LOD on screen. Zero for nearly every frame of play; the shape only
+   * comes in with an arm above the shoulder.
+   */
+  updateReach(): void {
+    const m = this.lods[this.lod];
+    const dict = m?.morphTargetDictionary;
+    const inf = m?.morphTargetInfluences;
+    if (!dict || !inf || dict.reach_l === undefined) return;
+    const pelvis = this.bones.get('pelvis');
+    const chest = this.bones.get('spine_04');
+    if (!pelvis || !chest) return;
+    const down = pelvis.getWorldPosition(_a).sub(chest.getWorldPosition(_b)).normalize();
+    for (const side of ['l', 'r'] as const) {
+      const up = this.bones.get(`upperarm_${side}`);
+      const fore = this.bones.get(`forearm_${side}`);
+      const k = dict[`reach_${side}`];
+      if (!up || !fore || k === undefined) continue;
+      const arm = fore.getWorldPosition(_c).sub(up.getWorldPosition(_b)).normalize();
+      inf[k] = reachWeight(THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(arm.dot(down), -1, 1))));
+    }
+  }
+
+  /**
+   * Turf wear, once a frame (from updateLod): count a trip to the ground
+   * when the pelvis drops under WEAR_DOWN of his height, and dirty the side
+   * he landed on. Render-only, read from the drawn pose: the sim is untouched.
+   */
+  updateWear(): void {
+    const pelvis = this.bones.get('pelvis');
+    if (!pelvis || this.variant !== 'player') return;
+    const h = BASE_HEIGHT_M * this.shape.scale;
+    const y = pelvis.getWorldPosition(_v).y - this.root.position.y;
+    if (y > WEAR_UP * h) this.wearArmed = true;
+    if (!this.wearArmed || y > WEAR_DOWN * h) return;
+    this.wearArmed = false;
+    const chest = this.bones.get('spine_04');
+    const facing = chest ? _v.copy(this.chestFwd).applyQuaternion(chest.getWorldQuaternion(_q)).y : 0;
+    const w = this.wear;
+    const add = (k: 'x' | 'y' | 'z' | 'w', d: number) => (w[k] = Math.min(1, w[k] + d));
+    add('x', WEAR_STEP.legs);
+    add('w', WEAR_STEP.helmet);
+    if (facing < -0.35) add('y', WEAR_STEP.torso); // face down
+    else if (facing > 0.35) add('z', WEAR_STEP.torso); // on his back
+    else {
+      add('y', WEAR_STEP.side);
+      add('z', WEAR_STEP.side);
+    }
+  }
+
   /** Show one LOD (0 High, 1 Medium, 2 Low); the others stay hidden. */
   setLod(i: number): void {
     if (i === this.lod) return;
+    const old = this.lods[this.lod];
+    const d = old?.morphTargetDictionary;
+    if (old?.morphTargetInfluences && d) for (const k of ['reach_l', 'reach_r']) if (d[k] !== undefined) old.morphTargetInfluences[d[k]!] = 0;
     this.lod = i;
     this.lods.forEach((m, k) => (m.visible = k === i));
   }
@@ -220,6 +339,7 @@ export class Player {
    * render target's height in pixels; bias > 1 prefers lower detail.
    */
   updateLod(camera: THREE.Camera, viewportPx: number, bias = 1): void {
+    this.tick();
     this.setLod(lodForScreenHeight(screenHeightPx(camera, this.root.position, BASE_HEIGHT_M * this.shape.scale, viewportPx) / bias, this.lod));
   }
 }

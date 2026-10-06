@@ -335,7 +335,10 @@ function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibr
         }
       }
       if (s.lod === 'auto') p.updateLod(camera, gl.domElement.height);
-      else p.setLod(Number(s.lod));
+      else {
+        p.setLod(Number(s.lod));
+        p.tick();
+      }
     });
     // Contact markers on the first player's feet.
     const p0 = players[0]!;

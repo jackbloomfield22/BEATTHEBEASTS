@@ -33,17 +33,18 @@ from lib.skinfix import pad_shell  # noqa: E402
 from lib.skeleton import RUNTIME_BONES, J  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-OUT = os.path.join(ROOT, "public", "assets", "characters", "player.glb")
-MANIFEST = os.path.join(ROOT, "public", "assets", "characters", "player.json")
+# BTB_PLAYER_OUT builds somewhere else (iterating without touching the shipped file).
+OUT = os.environ.get("BTB_PLAYER_OUT") or os.path.join(ROOT, "public", "assets", "characters", "player.glb")
+MANIFEST = os.path.splitext(OUT)[0] + ".json"
 
 # Triangle budgets per LOD (TECH_PLAN §5.7: High ~22k, Medium ~9k, Low ~3k).
 # The High LOD carries every facemask style (the runtime hides all but the
 # player's); the Medium LOD too; the Low LOD one generic mask and none of the
 # small extras (visor, strap, towel), which don't read at that distance.
 BUDGET = [
-    {"body": 7000, "jersey": 5000, "pants": 3000, "helmet": 2600, "cleats": 1200, "glove": 900, "collar": 400, "mask": (6, 3), "extras": True},
-    {"body": 3000, "jersey": 2100, "pants": 1300, "helmet": 1100, "cleats": 500, "glove": 260, "collar": 160, "mask": (4, 3), "extras": True},
-    {"body": 1000, "jersey": 700, "pants": 450, "helmet": 380, "cleats": 200, "glove": 70, "collar": 48, "mask": (3, 2), "extras": False},
+    {"body": 7000, "jersey": 5000, "pants": 3000, "helmet": 3000, "trim": (0.012, 6), "clips": 12, "cleats": 1200, "glove": 900, "collar": 400, "mask": (6, 3), "extras": True},
+    {"body": 3000, "jersey": 2100, "pants": 1300, "helmet": 1300, "trim": (0.02, 5), "clips": 8, "cleats": 500, "glove": 260, "collar": 160, "mask": (4, 3), "extras": True},
+    {"body": 1000, "jersey": 700, "pants": 450, "helmet": 400, "trim": (0.045, 3), "clips": 0, "cleats": 200, "glove": 70, "collar": 48, "mask": (3, 2), "extras": False},
 ]
 HAND_BONES = ("forearm", "forearm_twist", "hand", "thumb_01", "thumb_02", "thumb_03", "index_01", "index_02", "index_03", "fingers_01", "fingers_02", "fingers_03")
 
@@ -52,8 +53,12 @@ def covered(co: Vector) -> bool:
     """Body skin that no camera can see: under the jersey, pants or cleats."""
     if co.z < 0.10:
         return True  # inside the cleats
-    if gear.PANTS_HEM_Z + 0.02 < co.z < 1.0 and abs(co.x) < 0.24:
-        return True  # hips and thighs, under the pants (the leg stays 2 cm up inside the hem)
+    if gear.PANTS_HEM_Z + 0.07 < co.z < 1.0 and abs(co.x) < 0.24:
+        # Hips and thighs, under the pants. The leg runs 7 cm up inside the
+        # hem (the character pass; it was 2 cm): at the sprint's knee bend
+        # the hem rides the calf and slid up past the culled skin's ragged
+        # top edge, which showed under it.
+        return True
     # Keep the neck column; everything else under the collar band and pads is
     # hidden (skin lying on the jersey's inside z-fights through its edge).
     if co.z > 1.44 and math.hypot(co.x, co.y - 0.02) < 0.092:
@@ -71,8 +76,12 @@ def covered(co: Vector) -> bool:
         for s in ("l", "r"):
             if (co.x > 0) == (s == "l") and abs(co.x) > 0.16:
                 t, _ = gear.along_upper_arm(co, s)
-                if t > gear.SLEEVE_END + 0.02:
-                    return False  # bare arm below the sleeve (1 cm up inside the hem)
+                # Bare arm below the sleeve, and 3.5 cm of it up inside the hem
+                # (the hem is at SLEEVE_END + 0.05). With 1 cm, an arm swung
+                # forward opened the hem's back edge on the cut skin edge: the
+                # ragged edge in the M6.5 Lab stills (docs/characters).
+                if t > gear.SLEEVE_END - 0.06:
+                    return False
         return abs(co.x) < 0.33  # torso and upper arm, under the jersey
     return False
 
@@ -268,10 +277,14 @@ def traps_to_chest(ob: bpy.types.Object) -> None:
             chest.add([v.index], cur + moved, "REPLACE")
 
 
-def sharpen_knees(ob: bpy.types.Object, half: float = 0.03) -> None:
+def sharpen_knees(ob: bpy.types.Object, half: float = 0.03, half_back: float = 0.065) -> None:
     """A sharp thigh-to-calf hand-over in the pants: blended ~50/50 over a wide
     band, the fabric behind a bent knee averaged into a web that hung from
-    the thigh like a skirt. Here it switches within ±3 cm of the joint."""
+    the thigh like a skirt. Here it switches within ±3 cm of the joint over
+    the knee pad, in front. Behind the knee (the character pass) it blends
+    over ±6.5 cm instead: with the sharp switch all the way round, the back
+    of the knee folded through itself at the sprint's heel recovery (128°)
+    and in the sharp cut; spread wider it compresses into a crease."""
     from lib.geo import smoothstep as ss
 
     groups = ob.vertex_groups
@@ -287,7 +300,9 @@ def sharpen_knees(ob: bpy.types.Object, half: float = 0.03) -> None:
             leg_w = sum(g.weight for g in v.groups if groups[g.group] in leg)
             if leg_w <= 0:
                 continue
-            wc = 1.0 - ss(knee_z - half, knee_z + half, co.z)
+            # Blender frame: the front is -Y; the back of the knee from 2 cm behind the joint.
+            h = half + (half_back - half) * ss(-0.01, 0.035, co.y - J[f"knee_{s}"][1])
+            wc = 1.0 - ss(knee_z - h, knee_z + h, co.z)
             for g in leg:
                 if g is not None:
                     g.remove([v.index])
@@ -353,6 +368,24 @@ def bind_glove(glove: bpy.types.Object, rig: bpy.types.Object, s: str, sigma: fl
                 glove.vertex_groups[name].add([v.index], w / total, "REPLACE")
     glove.parent = rig
     am = glove.modifiers.new("rig", "ARMATURE")
+    am.object = rig
+
+
+def towel_weights(ob: bpy.types.Object, rig: bpy.types.Object) -> None:
+    """The towel hangs from the waistband: the pelvis holds the tuck, and
+    toward the free end the left thigh takes over (it lies on the thigh and
+    swings with it, but never folds round it the way the transferred skin
+    weights made it, which bent it into a white '1' at the sprint)."""
+    pelvis = ob.vertex_groups.new(name="pelvis")
+    thigh = ob.vertex_groups.new(name="thigh_l")
+    for v in ob.data.vertices:
+        t = min(1.0, max(0.0, (1.10 - v.co.z) / 0.17))  # 0 at the belt, 1 at the free end
+        k = 0.45 * t  # linear: a thigh lift spreads the bunching along it
+        pelvis.add([v.index], 1.0 - k, "REPLACE")
+        if k > 0:
+            thigh.add([v.index], k, "REPLACE")
+    ob.parent = rig
+    am = ob.modifiers.new("rig", "ARMATURE")
     am.object = rig
 
 
@@ -445,6 +478,18 @@ def main() -> None:
         tag(helm, lambda co: gear.PARTS["helmet"])
         rigid(helm, rig, "head")
         parts.append(helm)
+        spacing, tsegs = b["trim"]
+        trim = gear.helmet_trim(helm, spacing=spacing, segs=tsegs)
+        trim.name = f"helmet_trim_{i}"
+        tag(trim, lambda co: gear.PARTS["helmet_trim"])
+        rigid(trim, rig, "head")
+        parts.append(trim)
+        if b["clips"]:
+            clips = gear.facemask_clips(b["clips"])
+            clips.name = f"mask_clips_{i}"
+            tag(clips, lambda co: gear.PARTS["helmet_trim"])
+            rigid(clips, rig, "head")
+            parts.append(clips)
         segs, bars = b["mask"]
         styles = ("skill", "cage", "qb") if b["extras"] else ("skill",)
         for style in styles:
@@ -464,7 +509,7 @@ def main() -> None:
             tw = gear.towel()
             tw.name = f"towel_{i}"
             tag(tw, lambda co: gear.PARTS["towel"])
-            transfer_weights(src, tw, rig)
+            towel_weights(tw, rig)
             parts.append(tw)
         ob = join(parts, f"player_lod{i}")
         for m in list(ob.modifiers)[1:]:
@@ -485,6 +530,15 @@ def main() -> None:
         add_shapes(ob)
         stats.append({"lod": i, "triangles": tri_count(ob), "vertices": len(ob.data.vertices)})
         lods.append(ob)
+
+    # The arms-overhead correctives (lib/corrective.py), posed on a
+    # throwaway rig so the exported one stays clean.
+    from lib.corrective import add_reach_correctives
+
+    tmp_rig = build_armature("corrective_rig")
+    for ob, st, iters in zip(lods, stats, (24, 10, 4)):
+        st["reach"] = add_reach_correctives(ob, tmp_rig, iters)
+        print(ob.name, "reach corrective", st["reach"])
 
     official, official_stats = build_official(rig, full_body, src, mat)
     lods += official
