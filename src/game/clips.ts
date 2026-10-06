@@ -149,6 +149,29 @@ export function runAndCut(cutPast: number, cutY: number) {
   };
 }
 
+/**
+ * A designed run the player carries (the tackling videos): upfield, and when
+ * a man is on the turf ahead of him, at the middle of his trunk with the one
+ * button pressed inside a couple of yards: the hurdle over a man on the
+ * ground (sim/tackle.ts feetStep). Pure in the state.
+ */
+export function runAtBody(s: PlayState): InputFrame {
+  if (s.phase === 'presnap') return input({ snap: true });
+  if (s.phase !== 'carrier' || s.carrier < 0) return input({});
+  const c = s.agents[s.carrier]!;
+  let best: { x: number; y: number; d: number } | null = null;
+  for (const g of s.agents) {
+    const L = g.lie;
+    if (!g.down || !L || g.side === c.side) continue;
+    const x = L.x + L.dx * L.torso * 0.5;
+    const y = L.y + L.dy * L.torso * 0.5;
+    const d = Math.hypot(x - c.pos.x, y - c.pos.y);
+    if (x - c.pos.x > 0.8 && d < 7 && (!best || d < best.d)) best = { x, y, d };
+  }
+  if (!best) return input({ move: { x: 1, y: 0 }, sprint: open(s) });
+  return input({ move: { x: (best.x - c.pos.x) / best.d, y: (best.y - c.pos.y) / best.d }, sprint: true, auto: best.d < 2.6 });
+}
+
 /** The QB holds the ball and never throws: the rush gets home. */
 export function holdIt(s: PlayState): InputFrame {
   return input({ snap: s.phase === 'presnap' });

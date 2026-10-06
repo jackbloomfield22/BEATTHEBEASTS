@@ -4,7 +4,7 @@
 // Prints the best few seeds per moment.
 //   node tools/run-ts.mjs tools/sim/findtackles.ts [seeds] [--only=tackle-gang]
 import { input, NEUTRAL, type PlayState, type SimEvent } from '../../src/sim/index.ts';
-import { concept, type Swap } from '../../src/game/clips.ts';
+import { concept, runAtBody, type Swap } from '../../src/game/clips.ts';
 import { playClip } from './findidentity.ts';
 
 const SEEDS = Number(process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 60);
@@ -109,8 +109,8 @@ export const SPECS: Spec[] = [
     swap: { off: 'RB', name: 'Barry Sanders', pos: 'RB' },
     plays: RUNS,
     defs: DEFS,
-    user: false,
-    script: ai,
+    user: true,
+    script: () => runAtBody,
     score: (s) => {
       const h = s.events.find((e) => e.type === 'move' && e.data?.move === 'hurdle' && e.data?.over !== undefined);
       return h ? 10 + yards(s) * 0.1 : null;
