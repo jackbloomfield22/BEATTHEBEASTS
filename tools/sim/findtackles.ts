@@ -75,8 +75,9 @@ export const SPECS: Spec[] = [
       const b = ev(s, 'brokenTackle').find((e) => e.data?.how === 'runThrough' || e.data?.how === 'shed' || e.data?.how === 'runOver');
       if (!b || !s.result) return null;
       const on = s.result.spot - b.at!.x;
-      if (on < 5) return null;
-      return Math.min(on, 25) + (b.data?.flat ? 3 : 0);
+      // (A run that goes on 6–20 yd after it: the break is the moment, and a short video renders.)
+      if (on < 6 || on > 20) return null;
+      return 20 - Math.abs(on - 10) + (b.data?.flat ? 3 : 0);
     },
     note: (s) => {
       const b = ev(s, 'brokenTackle')[0];

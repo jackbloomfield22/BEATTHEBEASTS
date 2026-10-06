@@ -249,4 +249,17 @@ export const IDENTITY: Clip[] = [
 
 // The tackling videos (docs/physics/TACKLING.md): each moment the contact
 // physics is about, found by tools/sim/findtackles.ts.
-export const PHYSICS: Clip[] = [];
+export const PHYSICS: Clip[] = [
+  // The Bus wrapped up from the front on inside zone falls forward for the extra yards.
+  { id: 'tackle-fall-forward', title: 'Falls forward: Jerome Bettis', seed: 12, play: 'singleback-inside-zone', def: 'firezone', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'RB', name: 'Jerome Bettis', pos: 'RB' } },
+  // Three men in on Derrick Henry on the toss: the pile.
+  { id: 'tackle-gang', title: 'Gang tackle: Derrick Henry', seed: 10, play: 'iform-toss', def: 'cover2man', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'RB', name: 'Derrick Henry', pos: 'RB' } },
+  // Barry Sanders runs through an arm (the man on the turf) and goes on for 10 more.
+  { id: 'tackle-arm-broken', title: 'Through an arm tackle: Barry Sanders', seed: 10, play: 'iform-toss', def: 'firezone', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'RB', name: 'Barry Sanders', pos: 'RB' } },
+  // Kam Chancellor at strong safety meets the back in the hole: the big hit.
+  { id: 'tackle-big-hit', title: 'Big hit: Kam Chancellor', seed: 2, play: 'heavy-power', def: 'cover2', los: 30, user: false, script: () => NEUTRAL, swap: { def: 'SS', name: 'Kam Chancellor', pos: 'S' } },
+  // The player runs Barry Sanders at a man on the turf and presses the one button: the hurdle.
+  { id: 'tackle-hurdle', title: 'Over a man on the turf: Barry Sanders', seed: 7, play: 'iform-iso', def: 'cover1', los: 30, script: runAtBody, swap: { off: 'RB', name: 'Barry Sanders', pos: 'RB' } },
+  // The slant met square by Kam coming downhill: driven back, spotted at his forward progress.
+  { id: 'tackle-driven-back', title: 'Driven back: Kam Chancellor', seed: 1, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 30 }), swap: { def: 'SS', name: 'Kam Chancellor', pos: 'S' } },
+];

@@ -160,6 +160,19 @@ describe('the tackle', () => {
   });
 });
 
+describe('the tackling videos (docs/physics): each clip still shows its moment', () => {
+  it('the same snap as the browser sets it up', async () => {
+    const { PHYSICS } = await import('@/game/clips');
+    const { SPECS } = await import('../tools/sim/findtackles');
+    const { playClip } = await import('../tools/sim/findidentity');
+    for (const c of PHYSICS) {
+      const spec = SPECS.find((x) => x.id === c.id)!;
+      const s = playClip(c.play, c.def, c.seed, c.user ?? true, c.swap!, c.script);
+      expect(spec.score(s), `${c.id}: ${spec.note(s)}`).not.toBeNull();
+    }
+  }, 120_000);
+});
+
 describe('bodies on the ground', () => {
   it('an AI carrier with the spring hurdles a man lying across his run; without it he stumbles through', () => {
     for (const [name, pos, over] of [['Saquon Barkley', 'RB', true], ['Jerome Bettis', 'RB', false]] as const) {
