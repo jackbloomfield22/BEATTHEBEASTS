@@ -223,3 +223,17 @@ export const IDENTITY: Clip[] = [
   // (Seed 15 → 20 for the slant squeeze, docs/m66/SLANTS.md; 20 → 67 for the second slant pass, tools/sim/findidentity.ts --only=coverage: the same play and call, Deion's breakup at 1.3 yd, Kam's 70 yd at 2.8 yd of separation. No seed in 1–80 has Deion's pick now.)
   ...pair('coverage', 'Half the field', { seed: 67, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
 ];
+
+// The passing game, end to end (docs/passing/PASSING.md): one clip per
+// moment a fan watches the passing game for, found by
+// tools/sim/findpassing.ts, recorded before and after the passing pass
+// (BTB_VIDEO=1 BTB_PASSING=1, tools/shots/video.spec.ts). The arm pair is
+// the same deep ball from Dan Marino (Throw Power 96) and Joe Montana (72).
+export const PASSING: Clip[] = [
+  // The quick slant against quarters (the slant concept's play).
+  { id: 'pass-slant', title: 'Quick slant', seed: 3, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 30 }) },
+  // The dig over the middle against Cover 3, 11 yd in the air, a step of separation.
+  { id: 'pass-dig', title: 'Dig', seed: 5, play: 'singleback-drive', def: 'cover3', los: 30, script: concept({ icon: 2, at: 90 }) },
+  // The back-shoulder fade against man (the back-shoulder concept's play).
+  { id: 'pass-back-shoulder', title: 'Back-shoulder fade', seed: 4, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 3, at: 48, aim: { x: -1, y: -0.2 }, call: 'aggressive' }) },
+];
