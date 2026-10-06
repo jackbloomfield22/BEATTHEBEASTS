@@ -31,6 +31,18 @@
   - Honest limits:
     - A long sprint costs 0.02–0.04 stamina a second, so a 40-yard breakaway loses ~10–15% of the bar and ~2% of top speed. That's visible on the bar but subtle in the legs. The drive-long model (stamina carried from play to play, Workhorse and the rest) is what gives it teeth.
     - Watched on the recorded broken-tackle clip (below, "Sprint watched").
+- **The passing game, end to end** (2026-10-06, `wip/passing`; agent; `docs/passing/PASSING.md`, before/after videos in `docs/passing/`):
+  - *The throw is the man throwing it.* New in-house throwing clips, picked by release time and pressure: `qb_throw_quick` (Marino, Brees), `qb_throw_long` (Winston) and `qb_throw_fade` (under pressure). A QB wrapped up as he throws gets a slow, wobbling duck. No throw leaves faster than his arm allows.
+  - *The AI layers the deep ball,* but reads the window on the driven ball.
+  - *The ball:* a real ~600-rpm spiral, the nose's attitude on the way down, a wobble by throw quality, the release blended out of the hand, the tumble, and an oblong, seeded bounce in the sim and on the turf. The catch call moved off the ball's flight path.
+  - *The receiver:* catch costs for seeing the ball late and for tracking it over his shoulder, and a drop reaction (`catch_drop`).
+  - Numbers:
+    - Outcomes: completion 68.4% → 65.7%, ypa 8.6 → 8.1, INT 2.0% → 2.4%, sacks 6.8%, completions of 40+ 4.6% → 6.3%.
+    - Most of the completion drop is the layered deep ball being contested. The open-catch rate barely moved (88.5% → 87.8%), so your completion lever is still open.
+    - Passing identity 7/7 (`tools/sim/passidentity.ts`: Marino 57.6 vs Montana 52.2 mph deep; Montana 0.84 vs Namath 1.55 yd off the spot; Harrison 2.5% vs Slayton 16.3% open balls dropped); identity 19/20; trait audit 127/127.
+    - Golden re-pinned (356/900). The e2e seeds were re-found with the Practice Field's chemistry modelled (2, 307, 5).
+  - Honest limits: the spiral and wobble don't read in 20 fps recordings; the arm gap is felt more than seen; completions of 40+ are high at 6.3%.
+  - Still open: the hitch step, a 7-step drop, look-offs, timing-route head turns, bobble and re-catch.
 - **Character pass** (2026-10-06, `wip/characters`; agent; `docs/characters/CHARACTERS.md` with before/after stills). An audit against ref-02 ranked ten gaps: the ball-shaped helmet, blown-out whites and silhouetted blacks, blob cleats, kits that never got dirty, and the known skinning bugs. Changes:
   - a modern helmet shell, scripted in bpy: jaw flaps, a stepped bottom edge, a rear flare, rubber edging, mask clips, an ear hole and black padding inside;
   - the towel rebuilt as cloth (it had read as a number on the hip);

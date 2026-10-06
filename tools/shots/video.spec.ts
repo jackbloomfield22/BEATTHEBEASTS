@@ -24,12 +24,18 @@ const CONCEPTS = !!process.env.BTB_CONCEPTS;
 // two clips (<pair>-a, <pair>-b: the same play with one man swapped) are
 // recorded, then put side by side in <pair>.mp4.
 const IDENTITY = !!process.env.BTB_IDENTITY;
-const OUT = IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
-const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY ? 20 : 30));
+// BTB_PASSING=1: the passing-game clips (docs/passing/PASSING.md), into
+// docs/passing/<BTB_PASSING_TAG> (before / after), so the same plays can be
+// compared across a change.
+const PASSING = !!process.env.BTB_PASSING;
+const OUT = PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
+const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY || PASSING ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
-const LEAD_IN = Math.round(FPS * 1.2);
-const TAIL = Math.round(FPS * 2.5);
+const LEAD_IN = Math.round(FPS * (PASSING ? 0.6 : 1.2));
+const TAIL = Math.round(FPS * (PASSING ? 0.6 : 2.5));
+/** The passing clips stop this long (s) after the ball is caught or dead: the catch and the first steps after it are the moment (this container draws a frame in several seconds). */
+const AFTER_BALL = PASSING ? Number(process.env.BTB_AFTER_BALL ?? 1.8) : Infinity;
 /** Frame size (BTB_VIDEO_W, 16:9): the concepts record at 960 wide here, where a frame takes seconds to draw. */
 const W = Number(process.env.BTB_VIDEO_W ?? 1280);
 const H = Math.round((W * 9) / 16);
@@ -101,7 +107,10 @@ async function record(page: Page, clip: Clip) {
   for (let k = 0; k < LEAD_IN; k++) await shot();
   let tail = -1;
   let whistle = { frames: 0, ticks: 0 };
+  let ballDone = -1;
+  let wasAir = false;
   for (let guard = 0; guard < 60 * 20 && tail < TAIL; guard++) {
+    if (tail < 0 && ballDone >= 0 && n - ballDone >= AFTER_BALL * FPS) break;
     const done = await page.evaluate(
       async ({ id, k }) => {
         const w = window as unknown as Win;
@@ -115,6 +124,9 @@ async function record(page: Page, clip: Clip) {
       },
       { id: clip.id, k: TICKS_PER_FRAME },
     );
+    const phase = await page.evaluate(() => (window as unknown as Win).__btbPractice.runner!.state.phase);
+    if (phase === 'air') wasAir = true;
+    else if (wasAir && ballDone < 0) ballDone = n;
     if (done && tail < 0) {
       tail = 0;
       // The snap to the whistle: frames LEAD_IN .. n (this one included), the sim's ticks to here.
@@ -150,14 +162,15 @@ async function record(page: Page, clip: Clip) {
 
 const CONCEPT_IDS = ['slant', 'out', 'curl', 'go', 'post', 'corner', 'crosser', 'screen', 'back-shoulder', 'scramble-drill'];
 const PAIRS = ['speed', 'elusive', 'accuracy', 'rush', 'coverage'];
-const IDS = (IDENTITY ? PAIRS.flatMap((p) => [`${p}-a`, `${p}-b`]) : CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || id.startsWith(process.env.BTB_CLIP));
+const PASSING_IDS = ['pass-slant', 'pass-dig', 'pass-post', 'pass-back-shoulder', 'pass-touch', 'pass-onrun', 'pass-pressure', 'pass-contested', 'pass-drop', 'arm-a', 'arm-b'];
+const IDS = (PASSING ? PASSING_IDS : IDENTITY ? PAIRS.flatMap((p) => [`${p}-a`, `${p}-b`]) : CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || id.startsWith(process.env.BTB_CLIP));
 test.use({ viewport: { width: W, height: H } });
 for (const id of IDS) {
   test(`feel video · ${id}`, async ({ page }) => {
     if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
     await record(page, { id, title: id });
     // The second of a pair: the two side by side, held on the last frame of the shorter one.
-    if (IDENTITY && id.endsWith('-b')) {
+    if ((IDENTITY || PASSING) && id.endsWith('-b')) {
       const pair = id.slice(0, -2);
       execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-i', `${OUT}/${pair}-a.mp4`, '-i', `${OUT}/${pair}-b.mp4`, '-filter_complex', '[0:v]tpad=stop=-1:stop_mode=clone[a];[1:v]tpad=stop=-1:stop_mode=clone[b];[a][b]hstack=inputs=2:shortest=0[v];[v]trim=duration=12[o]', '-map', '[o]', '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${OUT}/${pair}.mp4`]);
     }

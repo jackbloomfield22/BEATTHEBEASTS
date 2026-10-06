@@ -12,7 +12,7 @@ export interface ResultCard {
 }
 
 /** The card's words for why a catchable ball went down, and why a throw was off. */
-const DROP_WHY: Record<string, string> = { contact: ', hit as it arrived', behind: ', thrown behind him', bullet: ', a fastball from close in', reach: ', at full stretch', hands: '' };
+const DROP_WHY: Record<string, string> = { contact: ', hit as it arrived', behind: ', thrown behind him', bullet: ', a fastball from close in', reach: ', at full stretch', late: ', he found it late', tracking: ', over his shoulder', hands: '' };
 const THROW_WHY: Record<string, string> = { pressure: ' under pressure', 'on the run': ' on the run', 'feet not set': ' with his feet not set', 'long throw': '', clean: '' };
 
 const lastName = (name: string): string => name.split(' ').slice(-1)[0] ?? name;

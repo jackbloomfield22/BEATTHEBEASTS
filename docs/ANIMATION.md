@@ -187,8 +187,12 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `cel_mate_point` | transition | 66 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `cel_five_r` | transition | 48 | 0.0 | 0.00 | 0.00 | 23.0 | — | pass |
 | `cel_five_l` | transition | 48 | 0.0 | 0.00 | 0.00 | 23.0 | — | pass |
+| `qb_throw_quick` | transition | 21 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `qb_throw_long` | transition | 30 | 0.0 | 0.00 | 0.00 | 23.7 | — | pass |
+| `qb_throw_fade` | transition | 23 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_drop` | overlay | 28 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 
-**181 of 181 clips pass.**
+**185 of 185 clips pass.**
 
 ## Joint limits (M7 celebrations)
 
