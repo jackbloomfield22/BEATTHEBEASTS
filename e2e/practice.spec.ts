@@ -49,7 +49,7 @@ async function tickUntil(page: Page, pred: (s: Awaited<ReturnType<typeof state>>
 
 test('a full play: snap, throw, catch, run, tackle or score, result card', async ({ page }) => {
   const errors = trackErrors(page);
-  await open(page, 1, 'fourVerts'); // Four Verticals against the coverage seed 1 draws (Cover 3; seeds re-found for M6 with tools/sim/e2eseeds.ts)
+  await open(page, 2, 'fourVerts'); // Four Verticals against the coverage seed 2 draws (Cover 3; seeds re-found for the passing pass with tools/sim/e2eseeds.ts)
   await page.keyboard.press('Space');
   await tick(page, 1);
   let s = await state(page);
@@ -78,24 +78,23 @@ test('a full play: snap, throw, catch, run, tackle or score, result card', async
   expect(errors).toEqual([]);
 });
 
-test('the catch call: 1–3 while the ball is in the air, and the called one lights up', async ({ page }) => {
-  await open(page, 1, 'fourVerts');
+test('the catch call: one prompt while the ball is in the air, and the call lights it and names it', async ({ page }) => {
+  await open(page, 2, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');
   await tick(page, 3);
   await page.keyboard.up('Digit1');
   await tickUntil(page, (x) => x.phase === 'air', 60);
-  // The three prompts are up the moment it's thrown, nothing called yet.
-  await expect(page.locator('.catch-opt')).toHaveCount(3);
+  // The one-button catch (2026-09-28): one prompt the moment it's thrown, nothing called yet.
+  await expect(page.locator('.catch-opt')).toHaveCount(1);
   await expect(page.locator('.catch-opt.on')).toHaveCount(0);
-  await expect(page.locator('.catch-opt kbd')).toHaveText(['1', '2', '3']);
-  // 2: secure it and go down.
+  await expect(page.locator('.catch-opt kbd')).toHaveText(['Space']);
+  // 2 still calls one directly: secure it and go down, and the prompt names it.
   await page.keyboard.press('Digit2');
   await tick(page, 1);
   expect(await page.evaluate(() => (window as unknown as P).__btbPracticeUi.getState().catchType)).toBe('possession');
   await expect(page.locator('.catch-opt.on')).toContainText('Secure');
-  await expect(page.locator('.catch-opt.off')).toHaveCount(2);
 });
 
 test('pre-snap: the prompts, the route preview key, and a hot route the sim runs', async ({ page }) => {
@@ -169,7 +168,7 @@ test('a tackle: the carrier goes down and the next snap is at the new spot', asy
 });
 
 test('scores: a touchdown run ends the series with a touchdown card', async ({ page }) => {
-  await open(page, 521, 'fourVerts');
+  await open(page, 307, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');
@@ -183,7 +182,7 @@ test('scores: a touchdown run ends the series with a touchdown card', async ({ p
   await page.keyboard.up('ArrowRight');
   const s = await tickUntil(page, (x) => x.result !== null);
   await page.keyboard.up('ArrowUp');
-  // Seed 521 (Cover 2) with these inputs is a 75-yard catch and run (the replay is exact; tools/sim/e2eseeds.ts).
+  // Seed 307 (sim pressure) with these inputs is a 75-yard catch and run (the replay is exact; tools/sim/e2eseeds.ts, with the Practice Field's chemistry).
   expect(s.result!.touchdown).toBe(true);
   expect(s.events.some((e) => e.type === 'touchdown')).toBe(true);
   await tick(page, 120);

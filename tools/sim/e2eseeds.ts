@@ -11,7 +11,16 @@ const r = practiceRosters(snap);
 const max = Number(process.argv[2] ?? 600);
 /** The coverage the Practice Field draws for a session's first snap (src/game/practice.ts callPlay). */
 const coverFor = (seed: number) => DEF_CALLS[(seed >>> 4) % DEF_CALLS.length]!;
-const make = (seed: number) => createPlay({ seed, offense: r.offense, defense: r.defense, play: playById('trips-four-verts'), def: coverFor(seed), los: 25, ballY: 0, toGo: 10, user: true, difficulty: 'pro', fatigue: {} });
+/**
+ * The QB–receiver chemistry the Practice Field gives its first snap
+ * (src/game/practice.ts chemistry: 0.3 for a passing synergy with the QB;
+ * on the practice roster's Four Verticals that's Taylor in the slot and
+ * Jones at tight end). Without it the timing error is a different draw and
+ * the seeds here weren't the browser's: 523 was a touchdown in Node and a
+ * tackle at the 7 in the browser (the passing pass, docs/passing/PASSING.md).
+ */
+const CHEM = { SLOT: 0.3, TE: 0.3 };
+const make = (seed: number) => createPlay({ seed, offense: r.offense, defense: r.defense, play: playById('trips-four-verts'), def: coverFor(seed), los: 25, ballY: 0, toGo: 10, user: true, difficulty: 'pro', fatigue: {}, chem: CHEM });
 
 /** The touchdown test: snap, 100 ticks, icon 1 held 3 ticks, then up-right 20 ticks from the first 10-tick check in the carrier phase, then up. */
 function touchdownRun(seed: number): PlayState {
