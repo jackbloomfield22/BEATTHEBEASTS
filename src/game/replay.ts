@@ -20,7 +20,7 @@
 //
 // Pure: no React, three or DOM (replaySession.ts drives it from the scene).
 
-import { createPlay, mirrorPlay, playById, stepPlay, TICK, type InputFrame, type PlaySetup, type PlayState, type SimEvent } from '@/sim';
+import { createPlay, mirrorPlay, playById, stepPlay, TICK, toStrength, type InputFrame, type PlaySetup, type PlayState, type SimEvent } from '@/sim';
 import { hashPlay } from '@/sim/hash';
 import { decodeFrames, encodeFrames, type ReplayCapsule } from './record';
 import { SimRunner } from './runner';
@@ -130,7 +130,8 @@ export function capsuleOf(s: PlayState, frames: readonly InputFrame[], down = s.
   return {
     seed: st.seed,
     playId: st.play.id,
-    def: st.def,
+    // The call as it was made: createPlay keeps it played by the formation's strength (byStrength), and plays it so again.
+    def: st.byStrength ? { ...st.def, assign: toStrength(st.def.assign, -1) } : st.def,
     los: st.los,
     ballY: st.ballY ?? 0,
     toGo: st.toGo,
