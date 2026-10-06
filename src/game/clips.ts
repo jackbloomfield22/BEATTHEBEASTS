@@ -179,8 +179,8 @@ export function holdIt(s: PlayState): InputFrame {
 
 // Seeds found by tools/sim/findclips.ts (re-found for M6's sim).
 export const CLIPS: Clip[] = [
-  // Four verticals against Cover 2: the slot's seam caught in stride, then a juke and 42 more after the catch to the end zone (re-found for M6.6's ratings: seed 51; for the second slant pass, the lead on the path he really runs and timing: seed 18; for the third, the rhythm read: seed 16, a juke and 41 more to the end zone).
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 16, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'juke') },
+  // Four verticals against Cover 2: the slot's seam caught in stride, then a juke and 42 more after the catch to the end zone (re-found for M6.6's ratings: seed 51; for the second slant pass, the lead on the path he really runs and timing: seed 18; for the third, the rhythm read: seed 16, a juke and 41 more to the end zone; for the passing and tackling passes together: seed 12, 40 more after the catch to the end zone).
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 12, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // Stick against Cover 1: the short catch, a stiff arm sheds the first tackler a second later, down 15 yd on (11 after the catch).
