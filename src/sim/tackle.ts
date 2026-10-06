@@ -106,7 +106,7 @@ const GRIP_N: Record<HoldKind, number> = { arm: 600, ankle: 900, drag: 1600, wra
  * couple of strides (~0.3 s); a man hanging on from behind drags for a
  * second or more; an arm alone rarely takes a man down unless he stops.
  */
-const DRAIN: Record<HoldKind, number> = { arm: 0.45, ankle: 3.2, drag: 1.0, wrap: 1.6, hit: 2.0, big: 99 };
+const DRAIN: Record<HoldKind, number> = { arm: 0.45, ankle: 3.2, drag: 1.8, wrap: 2.2, hit: 2.6, big: 99 };
 /**
  * The share of the closing speed along the line between them the hit takes
  * out (1 = they stick; 1 + e bounces him back, e ~0.25 for a big hit:
@@ -129,13 +129,22 @@ const T_GRAB = 0.18;
 /** His feet back after a broken hold: balance a second (Low Center: +30%, the catalog's line). */
 const RECOVER = 1.2;
 /** The balance a broken tackle takes from him (see shed). */
-const SHED_JOLT = 0.6;
+const SHED_JOLT = 0.85;
 /** Going down (s): from losing his feet to a knee on the turf. Film: ~0.25–0.35 s. */
-const FALL_T = 0.3;
-/** The pile slows on the way down (yd/s²): cleats still in the turf, ~0.7 g. */
-const FALL_DECEL = 0.7 * G_YD;
+const FALL_T = 0.25;
+/** The pile slows on the way down (yd/s²): his cleats still in the turf and a tackler's body on it, ~1 g (a sliding body on grass runs μ ~0.5–0.6; the legs still planted take more). */
+const FALL_DECEL = 1.0 * G_YD;
 /** How far ahead of his feet the ball is when a knee touches, falling forward (yd, ~0.7 m): carried at the chest of a man pitching forward from ~1.85 m, the knee lands under his hips. Film-sized. */
-const FALL_REACH = 0.75;
+const FALL_REACH = 0.55;
+/**
+ * How much of his stride a hold binds (ours, from where the arms go): a
+ * wrap or a shoulder hit locks round the thighs or the waist (0.4), from
+ * behind round the waist with a man's weight on it (0.5), at the ankles
+ * most of it (0.8), an arm a little (0.15). With every hold on him he keeps
+ * at least BIND_MIN: he still churns.
+ */
+const BIND: Record<HoldKind, number> = { arm: 0.15, ankle: 0.8, drag: 0.5, wrap: 0.4, hit: 0.4, big: 1 };
+const BIND_MIN = 0.15;
 /** Held up with no ground gained this long (s): forward progress, whistled. */
 const STALL_T = 0.7;
 /** Driven back, he loses his base this much faster (balance a second). */
@@ -387,10 +396,10 @@ function shed(s: PlayState, c: Agent, o: Agent, how: string, flat: boolean, imp:
   if (o.anim === 'tackle') o.anim = 'run';
   if (flat) knockDown(s, o, o.pos.x - c.pos.x, o.pos.y - c.pos.y);
   // Breaking a tackle costs him his feet for a stride or two (the man got
-  // into his body, his line is knocked off): ~60% of his balance, back in
-  // about half a second. (The sim had taken 38% of his speed at once; with
-  // only the impulse of the hand, broken tackles barely slowed him and runs
-  // of 40+ after the catch went 4.6% → 6.0% of completions.)
+  // into his body, his line is knocked off): 85% of his balance, so a
+  // stride at ~62% of his top speed (BAL_PACE), back in ~0.7 s. (The sim had
+  // taken 38% of his speed at once; with only the impulse of the hand, broken
+  // tackles barely slowed him and yards after the catch rose ~0.4.)
   c.mem.bal = Math.min(balanceOf(c), 1 - SHED_JOLT);
   s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], at: { ...c.pos }, data: { force: 0, move: c.move ?? '', how, flat, imp } });
 }
@@ -480,9 +489,14 @@ export function pileStep(s: PlayState, c: Agent, wantX: number, wantY: number): 
   let fy = 0;
   if (p.fallT < 0) {
     // His legs: his power in a pile, the lower man's traction (leverage), less as his feet go.
+    // (Arms round his thighs or his ankles bind his stride: he can't push off what's held.)
     let levAvg = 0;
-    for (const g of p.grips) levAvg += g.lev / p.grips.length;
-    const fc = legs(c, vAlong, 0.7 + 0.6 * power(c), -levAvg) * (0.5 + 0.5 * balanceOf(c));
+    let bind = 0;
+    for (const g of p.grips) {
+      levAvg += g.lev / p.grips.length;
+      bind += BIND[g.kind];
+    }
+    const fc = legs(c, vAlong, 0.7 + 0.6 * power(c), -levAvg) * (0.5 + 0.5 * balanceOf(c)) * Math.max(BIND_MIN, 1 - bind);
     fx += fc * p.hx;
     fy += fc * p.hy;
   }
@@ -495,10 +509,27 @@ export function pileStep(s: PlayState, c: Agent, wantX: number, wantY: number): 
     let gx = 0;
     let gy = 0;
     if (!g.behind && (g.kind === 'wrap' || g.kind === 'hit' || g.kind === 'big')) {
-      const vInto = p.vx * g.dx + p.vy * g.dy;
+      // He drives through the man and against where the pile is going (a
+      // tackler from the side doesn't let him keep running up the field: he
+      // plants and turns him), half each.
+      let ux = g.dx;
+      let uy = g.dy;
+      if (sp > 0.3) {
+        ux -= p.vx / sp;
+        uy -= p.vy / sp;
+        const ul = Math.sqrt(ux * ux + uy * uy);
+        if (ul > 1e-6) {
+          ux /= ul;
+          uy /= ul;
+        } else {
+          ux = g.dx;
+          uy = g.dy;
+        }
+      }
+      const vInto = p.vx * ux + p.vy * uy;
       const f = legs(o, vInto, 0.6 + 0.8 * finish(o), g.lev);
-      gx = f * g.dx;
-      gy = f * g.dy;
+      gx = f * ux;
+      gy = f * uy;
     } else if (sp > 0.05) {
       // Hanging on: his weight dragging, as much as his grip carries.
       const f = Math.min(g.grip, MU_DRAG * o.fx.mass * G_YD);

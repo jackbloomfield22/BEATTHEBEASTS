@@ -776,6 +776,13 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     whistle(s, 'tackle', attack > 0 ? Math.min(Math.max(s.maxX, ballNose(c)), GOAL_X - 0.05) : Math.max(ballNose(c), 0.05), c.side === 'off');
     return;
   }
+  // In a tackle the bodies move him (tackle.ts pileStep): his legs are in the
+  // pile's push, not a run of his own (a step of his own toward the sideline
+  // had him out of bounds out of a man's arms).
+  if (s.pile && s.pile.c === c.i) {
+    c.impulse = null;
+    return;
+  }
   autoBurst(s, c, ctxPace, want);
   // Committed moves carry him (their velocity change builds over the plant); protecting costs speed.
   applyImpulse(c);
