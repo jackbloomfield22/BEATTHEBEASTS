@@ -218,6 +218,19 @@ The shader draws soil and grass blotches that spread as wear grows. On dark kits
 - **LOD transitions** weren't changed. The 12% hysteresis from M6.5 stands. The Low LOD now has 3-sided trim and no clips, which reads the same at the distance it's used.
 - **Build determinism.** `build_character.py` is no longer byte-for-byte reproducible: the corrective's float math (NumPy linear algebra) differs in the last bits from run to run. Geometry, the gate numbers and the manifest are identical.
 
+## 5b. Checks
+
+- **`npm run check`** passes, in three parts:
+  - typecheck and lint pass;
+  - unit tests: 705 of 707 passed in the full run. The two failures were the 600 s timeouts of the whole-book tests in `tests/sim-m6.test.ts`, which ran alongside the screenshot captures; run alone, that file passes 27 of 27;
+  - the data checks (`extract`, `validate-data`, baselines, ratings, adapter) pass.
+- **Skinning gate** (the character build): all regions pass, with the tightened knee and hip limits.
+- **Clip gates** (`python3 tools/blender/build_anims.py`): 166 of 166 pass, and the outputs are byte-identical (no clip changed).
+- **Browser e2e** (`e2e/practice.spec.ts`, on this checkout's own server, port 5299):
+  - **determinism** (the browser reproduces the Node hashes): passes;
+  - pre-snap, audible and tackle: pass;
+  - **three fail**: the full play (no catch event), the catch call (one catch option instead of three), and the scripted 75-yard touchdown (no touchdown). They fail the same way on the untouched base (`23299d9`, its own server on port 5298), so the cause is upstream: the scripted seeds no longer produce those plays after the recent sim changes. Nothing in this pass touches `src/sim` or the game flow. The owner of the sim branch should refresh the seeds in `tools/sim/e2eseeds.ts`.
+
 ## 6. What's left
 
 1. A **deltoid helper bone or sculpted corrective** for the overhead shoulder at LOD2. A knee corrective the same way.
