@@ -7,6 +7,9 @@ export const chromiumLaunch = {
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
 };
 
+/** The dev server's port (BTB_E2E_PORT): agents in parallel worktrees each run their own, so a run never tests another worktree's server. */
+const PORT = Number(process.env.BTB_E2E_PORT ?? 5174);
+
 export default defineConfig({
   testDir: 'e2e',
   timeout: 180_000,
@@ -15,13 +18,13 @@ export default defineConfig({
   workers: 1,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:5174',
+    baseURL: `http://localhost:${PORT}`,
     viewport: { width: 1280, height: 720 },
     launchOptions: chromiumLaunch,
   },
   webServer: {
-    command: 'npx vite --port 5174 --strictPort',
-    port: 5174,
+    command: `npx vite --port ${PORT} --strictPort`,
+    port: PORT,
     reuseExistingServer: true,
     timeout: 60_000,
   },
