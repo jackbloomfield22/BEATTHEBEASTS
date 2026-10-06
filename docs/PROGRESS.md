@@ -31,6 +31,26 @@
   - Honest limits:
     - A long sprint costs 0.02–0.04 stamina a second, so a 40-yard breakaway loses ~10–15% of the bar and ~2% of top speed. That's visible on the bar but subtle in the legs. The drive-long model (stamina carried from play to play, Workhorse and the rest) is what gives it teeth.
     - Watched on the recorded broken-tackle clip (below, "Sprint watched").
+- **Contact and tackling physics** (2026-10-06, `wip/physics`; agent; `docs/physics/TACKLING.md`, six videos in `docs/physics/`):
+  - *Bodies* (`sim/bodies.ts`): skill players are ellipses fitted to the measured model (BODIES.md); linemen and the QB keep the circle. A man on the turf is a capsule along his fall: runners go round him, hurdle him (Agility or Jumping 84+, or Hurdler) or trip over him. Men get up, and pancakes leave bodies on the ground.
+  - *The tackle as a resolution over several frames* (`sim/tackle.ts`): the calibrated contact roll picks the kind of hold (wrap, shoulder hit, big hit, drag, ankle, arm), then physics plays it out:
+    - an inelastic hit, with tacklers breaking down before contact;
+    - a pile moved by the carrier's force–velocity legs, limited by traction;
+    - grips with a strength in newtons that give way when overloaded;
+    - a balance that drains with the finish, mass, leverage and steadiness.
+
+    He falls the way the pile moves, and the spot is the ball at the knee or his forward progress. Gang tackles add to the pile. The after-contact traits are kept. Every constant is sourced or marked "ours, from film".
+  - *Render:* `hit`, `tackle` and `brokenTackle` events carry the hold, impulse, normal and fall direction. They time the tackle clip and the ragdoll's fall direction, and drive the get-ups and the hurdle.
+  - Numbers, combined with the passing pass:
+    - Runs: yards after contact 3.45 → 2.89 (NFL ~2.9); driven back on 11% of run tackles and 23% after the catch (was 0% / 1%); contact to whistle median 0.35 → 0.52 s; 4.03 yd a carry; 10+ runs 6.6%.
+    - Passing: completion 65.3%, 8.2 ypa, INT 2.5%, sacks 7.1%, completions of 40+ 7.1% (band under 8%).
+    - Identity 19/20, passing identity 7/7, traits 127/127. Kam allows 4.71 yd after contact to Reed's 6.20; Barry makes 0.21 tacklers miss a carry to Bettis's 0.04.
+  - Critique:
+    - Reads on screen: driven back, the gang pile and the drag.
+    - Too small or hidden at broadcast distance: the big hit, the fall-forward and the hurdle.
+    - Every hold plays the same form-tackle clip.
+    - The ragdoll has no hip limits.
+  - Still open: hold-specific clips, a close contact camera, the run game's 1–3 yd peak (yards per carry fell to 4.03), 40+ completions near their band, and gang tackles more frequent than in the NFL.
 - **The passing game, end to end** (2026-10-06, `wip/passing`; agent; `docs/passing/PASSING.md`, before/after videos in `docs/passing/`):
   - *The throw is the man throwing it.* New in-house throwing clips, picked by release time and pressure: `qb_throw_quick` (Marino, Brees), `qb_throw_long` (Winston) and `qb_throw_fade` (under pressure). A QB wrapped up as he throws gets a slow, wobbling duck. No throw leaves faster than his arm allows.
   - *The AI layers the deep ball,* but reads the window on the driven ball.
