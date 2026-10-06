@@ -1,0 +1,37 @@
+{
+ "frames": 2242,
+ "worst": 61,
+ "p99": 26,
+ "spikes": [
+  {
+   "frame": 78,
+   "slot": "SLB",
+   "bone": "upperarm_r",
+   "rate": 43,
+   "clip": "dive",
+   "overlay": "ovl_getoff",
+   "anim": "dive",
+   "phase": "carrier"
+  },
+  {
+   "frame": 80,
+   "slot": "SS",
+   "bone": "forearm_l",
+   "rate": 61,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 80,
+   "slot": "SS",
+   "bone": "forearm_r",
+   "rate": 60,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  }
+ ]
+}

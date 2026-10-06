@@ -1,0 +1,37 @@
+{
+ "frames": 2929,
+ "worst": 43,
+ "p99": 27,
+ "spikes": [
+  {
+   "frame": 90,
+   "slot": "FS",
+   "bone": "upperarm_r",
+   "rate": 43,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 104,
+   "slot": "RCB",
+   "bone": "root-yaw",
+   "rate": 62,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 111,
+   "slot": "FS",
+   "bone": "forearm_r",
+   "rate": 30,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  }
+ ]
+}
