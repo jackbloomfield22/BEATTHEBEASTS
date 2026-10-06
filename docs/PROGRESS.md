@@ -154,6 +154,19 @@
     - Cameras: an orbit around the ball or the key player, the broadcast follow, and an end-zone angle.
     - Touchdowns and turnovers (big hits optional) are flagged and roll by themselves, slowing to 0.3× through the key moment. The results screen's play of the game plays back.
     - Critique: the orbit is the strong part. The end-zone angle isn't a real broadcast end-zone shot yet (an upright crosses the frame; the lens is too wide). No depth of field or motion blur (the settings for them still do nothing). Auto replays use one angle, not the GDD's 2–3. Seeks take ~0.2–0.7 s. Records saved before M7 have no replay.
+  - *Broadcast overlay and commentary* (GDD §11.4, §11.7; agent, `docs/m7/OVERLAY.md`, stills `docs/m7/shots/overlay-*`):
+    - **One package.** The score bug is a single bar: CON/BST, the possession ball, your timeouts, quarter, game clock and play clock, and down and distance with the broadcast spot (amber on 3rd and 4th). Under it, legacy's drive strip is revived: one pip a possession, lime for your scores, crimson for theirs, dim for stops.
+    - **Lower thirds** for big plays: TDs, turnovers, sacks, big hits, safeties, 20+ through the air and 15+ on the ground. Each has the number, name, position, team and decade, the trait badge and the booth's line. A touchdown's lower third waits for the celebration prompt, then rides with the celebration. The Meanwhile card and the montage board now use the same plate.
+    - **The wind flag** is on the kick card and on the cards that offer a kick; it's off the bug.
+    - **Commentary** (`src/game/commentary.ts`): ~250 seeded lines over 47 events, keyed by situation and by the named man's traits. Every slot has a fallback, which fixes legacy bug L8. No line repeats within 12 lines (or the event's last 4). It reads the sim and never writes to it. Tests: `tests/commentary.test.ts`.
+    - **Settings:** captions can be turned Off, and HUD scale now sizes the overlay.
+    - Critique: the lower third is the strong part. Weak parts:
+      - the caption repeats the result card;
+      - on a TD, the bug updates late (game timing);
+      - the drive strip and the low-wind pennant are too small;
+      - the field spot uses two vocabularies (CON/BST and Own/Opp).
+
+      Not measured at 60 fps on Medium.
   - *The tunnel reveal* (agent, `docs/m7/TUNNEL.md`, video `docs/m7/tunnel.mp4`, stills `docs/m7/shots/tunnel-*.png`): the walk-out now hands over at the white to a real tunnel under the north stands, and the game starts loading underneath. Three shots, then the pre-game card:
     - the run-out: a handheld camera behind the eleven in the dark, rising over them as they spread onto the field, with pyro, smoke and the crowd coming up;
     - the Beasts: a low, long-lens dolly ending on their best player with his lower third;
@@ -186,7 +199,7 @@
     - The offense and defense on screen are drawn from the snapshot with legacy's weighted pick and play anonymously: the game has no Beasts offense to name.
     - Critique: the cut grammar reads as a highlight package, and the board shot is the best part. The reaction shot is the weakest: no celebration, only men pulling up after the whistle. The touchdown celebrations being built now should play there. The establishing shot is static. Perf hasn't been measured on the target hardware.
     - Harness bug it found: in `?video` mode, Chromium draws extra frames during each Playwright screenshot, so recordings run fast. The fix (`platform.ts videoGate`) covers only the montage. The feel and replay videos likely have the same problem, so check them before re-recording.
-- **Next in M7** (presentation): pre-game, the broadcast overlay and commentary (in progress, agent), audio.
+- **Next in M7** (presentation): pre-game, audio.
 - **Playtest 1** (owner's notes and decisions, 2026-09-27): `docs/PLAYTEST-1.md` is the plan of record for the M6.5 additions, M6.6 and those M7 items.
 - **Playtest 2** (Daily Challenge, same build, 2026-09-27): `docs/PLAYTEST-2.md`. M6.5 adds throw on the run as a core skill (accuracy by distance outside the pocket and speed), the controller tap-to-throw timed from the button event, deep-play scramble contain, the tackle resolving before the ragdoll (spot where the ball is at the turf; fumbles only on true big hits), the breakaway camera, and the **identity harness** (twenty contrasting pairs, five recorded side by side), which then runs every milestone. M6.6 adds Derrick Henry and the 2020s trait diagnosis to the data audit, best player starts, struck-through filled slots, RB2/TE2 snaps, post-game to the main menu (New Draft first, "My Team"), the auto-loading box score, grades against expectation with labelled columns, ten suggested plays, audibles, the 12-route hot-route grid, readable play action, squeezing the quick-game slants, and aim-then-charge kicking.
 

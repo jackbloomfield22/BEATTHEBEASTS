@@ -34,11 +34,12 @@ export function describe(s: PlayState): ResultCard {
   const y = r.yards;
   // A strip sack (the ball out as he's brought down): the man who stripped him, whoever fell on it.
   const strip = s.events.find((e) => e.type === 'fumble' && e.data?.sack);
-  const stripper = strip ? last(who(strip.who?.[1])) : '';
+  const stripper = (strip ? last(who(strip.who?.[1])) : '') || 'the defense';
   if (!r.offenseBall) {
     const pick = ev('interception');
     const rec = ev('recovery');
-    const by = pick ? who(pick.who?.[0]) : rec ? who(rec.who?.[0]) : '';
+    // (A man the sim can't name reads as the defense, never an empty slot: legacy L8's "Intercepted by null!".)
+    const by = (pick ? who(pick.who?.[0]) : rec ? who(rec.who?.[0]) : '') || 'the defense';
     return {
       headline: pick ? `Intercepted by ${by}` : strip ? `Strip sack by ${stripper}, recovered by ${by}` : `Fumble, recovered by ${by}`,
       detail: r.touchdown ? 'Returned for a touchdown.' : r.reason === 'touchback' ? 'Out the back of the end zone: a touchback.' : `Down at the ${spotLabel(r.spot)}.`,

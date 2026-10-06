@@ -56,6 +56,8 @@ export interface BeastsDrive {
   nextStart: number;
   /** Where the drive started (yards from the Beasts' goal line): presentation only (the montage stages its key play from it). */
   start?: number;
+  /** The game's possession number (0-based, both teams in order): presentation only (the score bug's drive strip). */
+  seq?: number;
 }
 
 export interface UserDrive {
@@ -70,6 +72,8 @@ export interface UserDrive {
   next?: number;
   /** A timed game: the quarter it started in (5: overtime). */
   q?: number;
+  /** The game's possession number (0-based, both teams in order): presentation only (the score bug's drive strip). */
+  seq?: number;
 }
 
 export type MatchPhase =
@@ -568,6 +572,7 @@ function consume(m: Match, secs: number): void {
 export function applyBeastsDrive(m: Match, d: BeastsDrive): void {
   m.event = null;
   if (isTimed(m)) d.q = m.ot ? 5 : m.clock.quarter;
+  d.seq = m.beastsDrives.length + m.userDrives.length;
   m.beastsDrives.push(d);
   const timed = isTimed(m) && !m.ot;
   if (timed) consume(m, d.secs ?? parseClock(d.top));
@@ -951,6 +956,7 @@ function endDrive(m: Match, result: UserDrive['result'], points: number): void {
   const d = m.drive!;
   d.result = result;
   d.points += points;
+  d.seq = m.beastsDrives.length + m.userDrives.length;
   m.userDrives.push(d);
   m.drive = null;
   m.kick = null;

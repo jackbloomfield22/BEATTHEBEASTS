@@ -1,0 +1,117 @@
+/* The broadcast package (M7, GDD §11.4, §11.7): the score bug and its drive
+   strip, the lower thirds, the caption bar and the wind flag. One language:
+   crisp near-black plates, no rounded corners or pills, a team-coloured rule
+   as the only accent (lime for the Contenders, crimson for the Beasts),
+   Bungee only for numerals and the names on a lower third, Barlow Semi
+   Condensed for labels, Barlow for the booth's sentences. Sized in em off the
+   HUD scale setting (--hud-scale), so 1080p and 1440p read the same. */
+
+.bc {
+  --con: var(--lime);
+  --bst: #ff2a4d;
+  --plate: rgba(7, 7, 11, .9);
+  --plate-2: rgba(16, 16, 22, .9);
+  --rule: rgba(255, 255, 255, .1);
+  font-size: calc(1rem * var(--hud-scale, 1));
+  pointer-events: none;
+}
+
+/* ---- The score bug ------------------------------------------------------------------- */
+
+.sb { position: absolute; top: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 30; display: flex; flex-direction: column; align-items: center; }
+.sb-bar { display: flex; align-items: stretch; height: 2.6em; background: var(--plate); box-shadow: 0 .25em 1.2em rgba(0, 0, 0, .35); }
+.sb-team { position: relative; display: flex; align-items: center; gap: .55em; padding: 0 .75em 0 .85em; border-left: .28em solid var(--c); }
+.sb-team.con { --c: var(--con); }
+.sb-team.bst { --c: var(--bst); border-left-width: .28em; }
+.sb-abbr { font-family: var(--font-num); font-weight: 700; font-size: .92em; letter-spacing: .16em; color: var(--ink-2); }
+.sb-team.has .sb-abbr { color: #fff; }
+.sb-pts { font-family: var(--font-display); font-size: 1.55em; line-height: 1; min-width: 1.5ch; text-align: right; font-variant-numeric: tabular-nums; color: #fff; }
+.sb-pts.bump { color: var(--bst); animation: sb-bump 700ms cubic-bezier(.2, .9, .3, 1.2) both; }
+@keyframes sb-bump { 0% { transform: scale(1.6); } 100% { transform: none; } }
+/* The ball by the team that has it; the same space held empty by the other, so nothing jumps. */
+.sb-ball, .sb-ball-space { width: 1.2em; height: .7em; flex: none; }
+.sb-ball ellipse { fill: #f1e6d2; }
+.sb-ball path { stroke: #7a4a22; stroke-width: 1.3; fill: none; }
+/* Your timeouts: three short bars along the bottom of the cell (only with a live clock). */
+.sb-tos { position: absolute; left: .85em; right: .75em; bottom: .22em; display: flex; gap: .2em; }
+.sb-tos i { flex: 1; height: .16em; background: rgba(255, 255, 255, .16); }
+.sb-tos i.on { background: #ffd400; }
+.sb-clock { display: flex; align-items: center; gap: .55em; padding: 0 .8em; border-left: 1px solid var(--rule); }
+.sb-q { font-family: var(--font-num); font-weight: 700; font-size: .92em; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+.sb-time { font-family: var(--font-display); font-size: 1.08em; font-variant-numeric: tabular-nums; min-width: 3.4ch; text-align: right; color: #fff; }
+.sb-time.running { color: var(--con); }
+/* The play clock: its own small box, amber in the last ten, red and pulsing in the last five. */
+.sb-pc { font-family: var(--font-num); font-weight: 700; font-size: .95em; font-variant-numeric: tabular-nums; min-width: 2.4ch; padding: .05em .3em; text-align: center; color: var(--ink-2); border: 1px solid var(--rule); }
+.sb-pc.warn { color: #ffd400; border-color: rgba(255, 212, 0, .45); }
+.sb-pc.hot { color: #fff; background: #d0182f; border-color: #ff2a4d; animation: pc-pulse 1s steps(2, jump-none) infinite; }
+@keyframes pc-pulse { 50% { background: #7a0d1b; } }
+.sb-down { display: flex; align-items: center; gap: .6em; padding: 0 .95em; min-width: 9.6em; background: var(--plate-2); border-left: 1px solid var(--rule); }
+.sb-dd { font-family: var(--font-num); font-weight: 700; font-size: 1em; letter-spacing: .08em; text-transform: uppercase; color: #fff; white-space: nowrap; }
+.sb-spot { font-family: var(--font-num); font-weight: 600; font-size: .86em; letter-spacing: .1em; color: var(--ink-2); white-space: nowrap; }
+.sb-down.big .sb-dd { color: #ffd400; }
+.sb-down.beasts .sb-dd { color: var(--bst); }
+.sb-down.dim .sb-dd { color: var(--ink-2); }
+
+/* The drive strip: one pip a possession, in order. */
+.sb-strip { display: flex; gap: .24em; margin-top: .32em; padding: .2em .35em; background: rgba(7, 7, 11, .55); }
+.sb-strip .pip { width: 1.35em; height: .34em; background: rgba(255, 255, 255, .26); }
+.sb-strip .pip.t-con { background: var(--con); }
+.sb-strip .pip.t-bst { background: var(--bst); }
+.sb-strip .pip.left { background: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16); }
+.sb-strip .pip.now { background: none; box-shadow: inset 0 0 0 1px var(--c); animation: pip-now 1.6s ease-in-out infinite; }
+.sb-strip .pip.now.by-con { --c: var(--con); }
+.sb-strip .pip.now.by-bst { --c: var(--bst); }
+@keyframes pip-now { 50% { box-shadow: inset 0 0 0 1px var(--c), 0 0 .4em var(--c); } }
+
+/* ---- Lower thirds and the caption bar --------------------------------------------------- */
+
+.onair { position: absolute; inset: 0; pointer-events: none; }
+.onair > .bc { position: absolute; left: 3.5rem; bottom: 3.2rem; }
+.lt { --c: var(--ink-3); display: flex; flex-direction: column; align-items: flex-start; width: max-content; max-width: 36em; animation: lt-wipe 340ms cubic-bezier(.2, .7, .2, 1) both; }
+.lt.con { --c: var(--con); --on-c: #0b0b0d; }
+.lt.bst { --c: var(--bst); --on-c: #fff; }
+.lt-tag { padding: .2em .6em .18em; font-family: var(--font-num); font-weight: 700; font-size: .8em; letter-spacing: .2em; text-transform: uppercase; color: var(--on-c, #fff); background: var(--c); }
+.lt-plate { display: flex; align-items: stretch; align-self: stretch; background: var(--plate); min-width: 24em; }
+.lt-block { display: grid; place-items: center; min-width: 2.9em; padding: 0 .45em; font-family: var(--font-display); font-size: 1.7em; line-height: 1; color: var(--on-c, #fff); background: color-mix(in srgb, var(--c) 88%, #000); }
+.lt-block.small { font-size: 1.05em; letter-spacing: .06em; }
+.lt-id { display: flex; flex-direction: column; justify-content: center; gap: .18em; padding: .5em 1.1em .55em .85em; }
+.lt-title { font-family: var(--font-display); font-size: 1.65em; line-height: 1.05; letter-spacing: .02em; color: #fff; white-space: nowrap; text-transform: uppercase; }
+.lt-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0 .9em; font-family: var(--font-num); font-weight: 700; font-size: .84em; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+.lt-meta > span + span::before { content: ''; display: inline-block; width: 1px; height: .8em; margin-right: .9em; background: rgba(255, 255, 255, .22); vertical-align: -.05em; }
+.lt-trait { color: var(--c); }
+/* "1990s", not "1990S". */
+.lt-stint { text-transform: none; }
+/* A Beasts drive's points beside its result (the Meanwhile and montage plates). */
+.lt-pts { margin-left: .6em; color: var(--bst); }
+/* The play's line under the plate: the booth's sentence, sentence case. */
+.lt-line { align-self: stretch; padding: .5em 1.1em .55em .85em; font-family: var(--font-ui); font-weight: 600; line-height: 1.3; color: var(--ink); background: var(--plate-2); border-left: .22em solid var(--c); animation: line-in 300ms 200ms cubic-bezier(.2, .7, .2, 1) both; }
+.lt-foot { align-self: stretch; padding: .32em 1.1em .38em .85em; font-family: var(--font-num); font-weight: 700; font-size: .82em; letter-spacing: .12em; text-transform: uppercase; color: var(--con); background: rgba(7, 7, 11, .78); }
+@keyframes lt-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes line-in { from { opacity: 0; transform: translateY(.4em); } to { opacity: 1; transform: none; } }
+
+/* The caption bar alone (no one to name): the line on its plate. */
+.cap { --c: rgba(255, 255, 255, .35); width: max-content; max-width: 40em; padding: .5em 1.1em .55em .85em; font-family: var(--font-ui); font-weight: 600; line-height: 1.3; color: var(--ink); background: var(--plate); border-left: .22em solid var(--c); animation: line-in 260ms cubic-bezier(.2, .7, .2, 1) both; }
+.cap.con { --c: var(--con); }
+.cap.bst { --c: var(--bst); }
+/* Commentary caption size (Settings, Accessibility). */
+.cap-small { font-size: .95em; }
+.cap-medium { font-size: 1.1em; }
+.cap-large { font-size: 1.35em; }
+
+/* ---- The wind flag ------------------------------------------------------------------------ */
+
+.wind { display: flex; align-items: center; gap: .7em; }
+.wind-dial { width: 3.1em; height: 3.1em; flex: none; }
+.wd-ring { fill: rgba(7, 7, 11, .6); stroke: rgba(255, 255, 255, .28); stroke-width: 1.2; }
+.wd-north { stroke: #fff; stroke-width: 2; }
+.wd-flag { fill: #7fc4ec; stroke: rgba(7, 7, 11, .6); stroke-width: .6; }
+.wd-calm { fill: rgba(255, 255, 255, .5); }
+.wind-txt { display: flex; flex-direction: column; line-height: 1.15; }
+.wind-k { font-family: var(--font-num); font-weight: 700; font-size: .72em; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-3); }
+.wind-mph { font-family: var(--font-display); font-size: 1.2em; color: #9fd3f2; }
+.wind-w { font-family: var(--font-num); font-weight: 600; font-size: .82em; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lt, .lt-line, .cap { animation: none; }
+  .sb-strip .pip.now { animation: none; }
+}
