@@ -129,7 +129,7 @@ const T_GRAB = 0.18;
 /** His feet back after a broken hold: balance a second (Low Center: +30%, the catalog's line). */
 const RECOVER = 1.2;
 /** The balance a broken tackle takes from him (see shed). */
-const SHED_JOLT = 0.75;
+const SHED_JOLT = 0.8;
 /** ...and an arm off a block, a hand and no body (the sim kept 88% of his speed): a stride at ~85%. */
 const SHED_JOLT_ARM = 0.35;
 /** Going down (s): from losing his feet to a knee on the turf. Film: ~0.25–0.35 s. */
@@ -398,11 +398,11 @@ function shed(s: PlayState, c: Agent, o: Agent, how: string, flat: boolean, imp:
   if (o.anim === 'tackle') o.anim = 'run';
   if (flat) knockDown(s, o, o.pos.x - c.pos.x, o.pos.y - c.pos.y);
   // Breaking a tackle costs him his feet for a stride or two (the man got
-  // into his body, his line is knocked off): ~65–80% of his balance, so a
-  // stride at 65–70% of his top speed (BAL_PACE), back in ~0.6 s. (The sim had
+  // into his body, his line is knocked off): 70–85% of his balance, so a
+  // stride at 62–68% of his top speed (BAL_PACE), back in ~0.7 s. (The sim had
   // taken 38% of his speed at once; with only the impulse of the hand, broken
   // tackles barely slowed him and yards after the catch rose ~0.4.)
-  // Break Tackle, Strength and Agility keep his feet under him (steady): a back built to run through contact loses less.
+  // Break Tackle, Strength and Agility keep his feet under him (steady): a power back loses ~70% of it, a receiver ~80–85%.
   c.mem.bal = Math.min(balanceOf(c), 1 - Math.min(0.95, jolt * (1.5 - 0.5 * steady(c))));
   s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], at: { ...c.pos }, data: { force: 0, move: c.move ?? '', how, flat, imp } });
 }
