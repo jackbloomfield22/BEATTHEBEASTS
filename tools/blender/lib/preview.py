@@ -25,6 +25,7 @@ PART_COLORS = [
     (0.6, 0.6, 0.62), (0.6, 0.6, 0.62), (0.6, 0.6, 0.62), (0.03, 0.03, 0.04),
     (0.85, 0.85, 0.85), (0.9, 0.9, 0.88), (0.02, 0.02, 0.02),
     (0.85, 0.85, 0.85), (0.02, 0.02, 0.025),  # the official's shirt (stripes are the runtime's) and cap
+    (0.015, 0.015, 0.017),  # the helmet's rubber edging
 ]
 # Parts a preview player doesn't wear (one mask style, no visor or towel).
 HIDDEN = {8, 9, 11, 13}
@@ -85,10 +86,15 @@ def _part_material(mesh: bpy.types.Object) -> None:
     els[0].position = 0.0
     els[0].color = (*PART_COLORS[0], 1)
     for i in range(1, len(PART_COLORS)):
-        e = els.new(i / 16.0)
+        e = els.new(i / 32.0)
         e.color = (*PART_COLORS[i], 1)
+    # Part ids run past 16 (PART_SCALE), so the ramp spans 0..2 at half scale.
+    half = nt.nodes.new("ShaderNodeMath")
+    half.operation = "MULTIPLY"
+    half.inputs[1].default_value = 0.5
     nt.links.new(uv.outputs["UV"], sep.inputs[0])
-    nt.links.new(sep.outputs["X"], ramp.inputs["Fac"])
+    nt.links.new(sep.outputs["X"], half.inputs[0])
+    nt.links.new(half.outputs["Value"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
     bsdf.inputs["Roughness"].default_value = 0.55
     mesh.data.materials.clear()

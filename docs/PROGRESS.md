@@ -31,6 +31,31 @@
   - Honest limits:
     - A long sprint costs 0.02–0.04 stamina a second, so a 40-yard breakaway loses ~10–15% of the bar and ~2% of top speed. That's visible on the bar but subtle in the legs. The drive-long model (stamina carried from play to play, Workhorse and the rest) is what gives it teeth.
     - Watched on the recorded broken-tackle clip (below, "Sprint watched").
+- **Character pass** (2026-10-06, `wip/characters`; agent; `docs/characters/CHARACTERS.md` with before/after stills). An audit against ref-02 ranked ten gaps: the ball-shaped helmet, blown-out whites and silhouetted blacks, blob cleats, kits that never got dirty, and the known skinning bugs. Changes:
+  - a modern helmet shell, scripted in bpy: jaw flaps, a stepped bottom edge, a rear flare, rubber edging, mask clips, an ear hole and black padding inside;
+  - the towel rebuilt as cloth (it had read as a number on the hip);
+  - skin overlap at the sleeve and pants hems;
+  - a softer hand-over behind the knee: folded faces at the sprint 15.6% → 3.8%;
+  - a pose-space corrective for arms overhead (`lib/corrective.py`, driven by arm elevation);
+  - shading: kit albedo in a physical range, cloth sheen, skin rim, sock ribs, a two-tone cleat sole with laces, a belt, eye black;
+  - turf wear that builds up each time a player goes down (`?wear` for stills).
+
+  Draw calls are unchanged; broadcast-camera triangles rise ~2%; no new textures; `player.glb` +180 KB. Clip gates 166/166; the skinning gate is tightened.
+
+  Still open:
+  - LOD2 horns with the arms overhead;
+  - the pants-hem sawtooth at the calf;
+  - Golden Hour bloom on white kits;
+  - lineman pads (your call);
+  - nameplate glyphs up close.
+
+  Not measured on a GPU: please re-check `?perf` mid-game on Medium.
+- **Test plumbing** (2026-10-06):
+  - `BTB_E2E_PORT` lets each checkout run e2e on its own dev server. With `reuseExistingServer`, parallel runs on 5174 had been testing each other's code.
+  - The dev server now serves a worktree's symlinked `node_modules` (its fonts were 403s).
+  - The practice e2e seeds were re-found after the bubble pass.
+  - The catch-call test now tests the one-button catch (it still expected the old 1/2/3 call).
+  - The sim marks a call already played by strength (`byStrength`), so a replay or re-snap of a stored setup is the same play.
 - **The bubble against zone** (2026-10-03, `wip/sim-bubble`; agent):
   - *Stalks counted at the snap:* the blockers take the men nearest the catch, outside-in (the corner, then the apex or the man over the bubble), never a lineman. Before, they chased the defensive end.
   - *Zone calls played by strength:* the call sheet is written strength-left. With the strength right, the non-corner underneath zones swap sides, and the end and tackle jobs swap. Before, in Cover 2 against bunch right, the weak-side linebacker had the strong curl and ran 15 yd across to it. This hit every flipped 2x1 set, so many per-call cells moved. Against three receivers to a side, the Mike shades over the strong B gap.
@@ -129,6 +154,20 @@
     - Cameras: an orbit around the ball or the key player, the broadcast follow, and an end-zone angle.
     - Touchdowns and turnovers (big hits optional) are flagged and roll by themselves, slowing to 0.3× through the key moment. The results screen's play of the game plays back.
     - Critique: the orbit is the strong part. The end-zone angle isn't a real broadcast end-zone shot yet (an upright crosses the frame; the lens is too wide). No depth of field or motion blur (the settings for them still do nothing). Auto replays use one angle, not the GDD's 2–3. Seeks take ~0.2–0.7 s. Records saved before M7 have no replay.
+  - *The tunnel reveal* (agent, `docs/m7/TUNNEL.md`, video `docs/m7/tunnel.mp4`, stills `docs/m7/shots/tunnel-*.png`): the walk-out now hands over at the white to a real tunnel under the north stands, and the game starts loading underneath. Three shots, then the pre-game card:
+    - the run-out: a handheld camera behind the eleven in the dark, rising over them as they spread onto the field, with pyro, smoke and the crowd coming up;
+    - the Beasts: a low, long-lens dolly ending on their best player with his lower third;
+    - the face-off: over the Contenders' shoulders toward the Beasts and the sea.
+
+    Each player's jog-out pace comes from his own 40, so receivers break away and linemen come last. It can be skipped at any moment by keyboard, mouse or pad, and the skip can't kick off. The fast version (Quick Play / Fast reveal) is the run-out and the face-off. It is render-only; no new clip. Every reveal shot draws fewer calls than the pre-game picture; the tunnel adds 4 draw calls and ~130 triangles.
+
+    Critique: the run-out and the rise are the strongest broadcast moments in the game so far. The weak parts:
+    - the Beasts stand in one identical idle pose (they need waiting clips);
+    - the tunnel interior is a plain grey box;
+    - the face-off is far and scattered;
+    - pyro and smoke are small.
+
+    Not seen on a GPU. Tests: `tests/tunnel-reveal.test.ts`, `e2e/tunnel.spec.ts` (both pass after the merge).
   - *Touchdown celebrations* (Playtest 1 #7; agent, `docs/m7/CELEBRATIONS.md`, video `docs/m7/celebration-td.mp4`, stills `docs/m7/shots/celeb-*.png`):
     - On your touchdown (not a pick-six), three choices come up 0.5 s after the whistle: 1/2/3, A/B/X or a click. If nothing is pressed for 2 s, the first (the best fit) plays. Enter/Space or Y skips. The skip is a new rebindable `celebrate` context, listed in Settings and How to Play.
     - The three are seeded by the play and weighted by who scored: receiver, back, QB or big man. Recent picks are down-weighted, and the chest bump is offered only when a teammate is close.
@@ -147,7 +186,7 @@
     - The offense and defense on screen are drawn from the snapshot with legacy's weighted pick and play anonymously: the game has no Beasts offense to name.
     - Critique: the cut grammar reads as a highlight package, and the board shot is the best part. The reaction shot is the weakest: no celebration, only men pulling up after the whistle. The touchdown celebrations being built now should play there. The establishing shot is static. Perf hasn't been measured on the target hardware.
     - Harness bug it found: in `?video` mode, Chromium draws extra frames during each Playwright screenshot, so recordings run fast. The fix (`platform.ts videoGate`) covers only the montage. The feel and replay videos likely have the same problem, so check them before re-recording.
-- **Next in M7** (presentation): the tunnel reveal grows from the walk-out (in progress, agent), pre-game, broadcast overlay, commentary, audio.
+- **Next in M7** (presentation): pre-game, the broadcast overlay and commentary (in progress, agent), audio.
 - **Playtest 1** (owner's notes and decisions, 2026-09-27): `docs/PLAYTEST-1.md` is the plan of record for the M6.5 additions, M6.6 and those M7 items.
 - **Playtest 2** (Daily Challenge, same build, 2026-09-27): `docs/PLAYTEST-2.md`. M6.5 adds throw on the run as a core skill (accuracy by distance outside the pocket and speed), the controller tap-to-throw timed from the button event, deep-play scramble contain, the tackle resolving before the ragdoll (spot where the ball is at the turf; fumbles only on true big hits), the breakaway camera, and the **identity harness** (twenty contrasting pairs, five recorded side by side), which then runs every milestone. M6.6 adds Derrick Henry and the 2020s trait diagnosis to the data audit, best player starts, struck-through filled slots, RB2/TE2 snaps, post-game to the main menu (New Draft first, "My Team"), the auto-loading box score, grades against expectation with labelled columns, ten suggested plays, audibles, the 12-route hot-route grid, readable play action, squeezing the quick-game slants, and aim-then-charge kicking.
 
