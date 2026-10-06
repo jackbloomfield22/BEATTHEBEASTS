@@ -189,7 +189,7 @@
             },
             "max": {
               "collapsed": 0.018,
-              "flips": 0.04
+              "flips": 0.025
             },
             "pass": true
           },
@@ -201,8 +201,8 @@
               "flips": "sprint:0 lod0"
             },
             "max": {
-              "collapsed": 0.05,
-              "flips": 0.18
+              "collapsed": 0.03,
+              "flips": 0.05
             },
             "pass": true
           }
@@ -267,8 +267,8 @@
               "flips": "dive:1 lod0"
             },
             "max": {
-              "collapsed": 0.065,
-              "flips": 0.17
+              "collapsed": 0.03,
+              "flips": 0.045
             },
             "pass": true
           }

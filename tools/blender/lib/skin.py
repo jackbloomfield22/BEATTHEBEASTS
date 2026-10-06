@@ -186,8 +186,12 @@ GATE = {
     "speed": {
         "shoulder": {"collapsed": 0.022, "flips": 0.11},
         "elbow": {"collapsed": 0.055, "flips": 0.10},
-        "hip": {"collapsed": 0.018, "flips": 0.04},
-        "knee": {"collapsed": 0.05, "flips": 0.18},
+        "hip": {"collapsed": 0.018, "flips": 0.025},
+        # The character pass (docs/characters/CHARACTERS.md): the back of
+        # the knee hands over wider than the front (build_character
+        # sharpen_knees) and the leg skin runs 7 cm up inside the hem;
+        # measured 2.3 / 3.8 (was 4.2 / 15.6). Hip 1.4 / 1.9 (the towel).
+        "knee": {"collapsed": 0.03, "flips": 0.05},
     },
     # Measured: shoulder 2.6 / 18.3 (the armpit under an arm at full
     # extension; 5.2% collapsed before), elbow 4.3 / 12.7, hip 1.3 / 2.4,
@@ -196,7 +200,10 @@ GATE = {
         "shoulder": {"collapsed": 0.03, "flips": 0.21},
         "elbow": {"collapsed": 0.05, "flips": 0.15},
         "hip": {"collapsed": 0.016, "flips": 0.03},
-        "knee": {"collapsed": 0.065, "flips": 0.17},
+        # The character pass: 2.3 / 3.3 (was 5.4 / 13.9). The shoulder,
+        # with the arms-overhead correctives (lib/corrective.py) applied
+        # as the runtime drives them: 2.2 / 17.6 (was 2.6 / 18.3).
+        "knee": {"collapsed": 0.03, "flips": 0.045},
     },
 }
 

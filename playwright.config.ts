@@ -7,6 +7,10 @@ export const chromiumLaunch = {
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
 };
 
+// BTB_PORT moves the dev server off 5174 (another checkout's server can hold it, and
+// reuseExistingServer would then test that checkout's code).
+const PORT = Number(process.env.BTB_PORT ?? 5174);
+
 export default defineConfig({
   testDir: 'e2e',
   timeout: 180_000,
@@ -15,13 +19,13 @@ export default defineConfig({
   workers: 1,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:5174',
+    baseURL: `http://localhost:${PORT}`,
     viewport: { width: 1280, height: 720 },
     launchOptions: chromiumLaunch,
   },
   webServer: {
-    command: 'npx vite --port 5174 --strictPort',
-    port: 5174,
+    command: `npx vite --port ${PORT} --strictPort`,
+    port: PORT,
     reuseExistingServer: true,
     timeout: 60_000,
   },
