@@ -164,6 +164,10 @@ Slayton's 16% was the same before this pass (the Drops trait plus low Catching),
 - Film regenerated. Golden re-pinned (356 of 900 cases).
 - The coverage identity clip was re-found: seed 42, Cover 2 man. Deion now picks it; Kam gives up 32 yd.
 - The feel and concept clips still do what their ids say.
+- `npm run check` passes. Two whole-book files only timed out under load (`sim-m6`, `legacy-diff`) and pass when re-run alone.
+- The whole `e2e/practice.spec.ts` passes on this checkout's own port (`BTB_E2E_PORT=5301`, 7 of 7), including the browser reproducing the Node hashes.
+- Its seeds were re-found with `tools/sim/e2eseeds.ts`, which now models the Practice Field's QB–receiver chemistry; without it, its seeds weren't the browser's. The seeds are now 2, 307 and 5.
+- The catch-call test now reads the one-button prompt.
 
 ## Watched: an honest critique
 
