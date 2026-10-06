@@ -129,13 +129,15 @@ const T_GRAB = 0.18;
 /** His feet back after a broken hold: balance a second (Low Center: +30%, the catalog's line). */
 const RECOVER = 1.2;
 /** The balance a broken tackle takes from him (see shed). */
-const SHED_JOLT = 0.85;
+const SHED_JOLT = 0.75;
+/** ...and an arm off a block, a hand and no body (the sim kept 88% of his speed): a stride at ~85%. */
+const SHED_JOLT_ARM = 0.35;
 /** Going down (s): from losing his feet to a knee on the turf. Film: ~0.25–0.35 s. */
 const FALL_T = 0.25;
 /** The pile slows on the way down (yd/s²): his cleats still in the turf and a tackler's body on it, ~1 g (a sliding body on grass runs μ ~0.5–0.6; the legs still planted take more). */
 const FALL_DECEL = 1.0 * G_YD;
 /** How far ahead of his feet the ball is when a knee touches, falling forward (yd, ~0.7 m): carried at the chest of a man pitching forward from ~1.85 m, the knee lands under his hips. Film-sized. */
-const FALL_REACH = 0.55;
+const FALL_REACH = 0.65;
 /**
  * How much of his stride a hold binds (ours, from where the arms go): a
  * wrap or a shoulder hit locks round the thighs or the waist (0.4), from
@@ -307,7 +309,7 @@ export function grab(s: PlayState, c: Agent, o: Agent, kind: HoldKind, opts: { e
       o.vel.y = o2y * 0.5;
       // Run over: the hand had a third of what it would have taken (a big man through a small one).
       const flat = need > 3 * cap && c.fx.mass > o.fx.mass * 0.95;
-      shed(s, c, o, flat ? 'runOver' : 'runThrough', flat, Math.round(J * 0.9144));
+      shed(s, c, o, flat ? 'runOver' : 'runThrough', flat, Math.round(J * 0.9144), opts.engaged ? SHED_JOLT_ARM : SHED_JOLT);
       return false;
     }
   }
@@ -390,17 +392,18 @@ function jolt(c: Agent, dv: number, lev: number): void {
 }
 
 /** He's shed this man: a broken tackle, the man stumbling off or on the turf. */
-function shed(s: PlayState, c: Agent, o: Agent, how: string, flat: boolean, imp: number): void {
+function shed(s: PlayState, c: Agent, o: Agent, how: string, flat: boolean, imp: number, jolt = SHED_JOLT): void {
   o.busy = flat ? 0 : 28;
   o.mem.tackleCd = s.t + 0.9;
   if (o.anim === 'tackle') o.anim = 'run';
   if (flat) knockDown(s, o, o.pos.x - c.pos.x, o.pos.y - c.pos.y);
   // Breaking a tackle costs him his feet for a stride or two (the man got
-  // into his body, his line is knocked off): 85% of his balance, so a
-  // stride at ~62% of his top speed (BAL_PACE), back in ~0.7 s. (The sim had
+  // into his body, his line is knocked off): ~65–80% of his balance, so a
+  // stride at 65–70% of his top speed (BAL_PACE), back in ~0.6 s. (The sim had
   // taken 38% of his speed at once; with only the impulse of the hand, broken
   // tackles barely slowed him and yards after the catch rose ~0.4.)
-  c.mem.bal = Math.min(balanceOf(c), 1 - SHED_JOLT);
+  // Break Tackle, Strength and Agility keep his feet under him (steady): a back built to run through contact loses less.
+  c.mem.bal = Math.min(balanceOf(c), 1 - Math.min(0.95, jolt * (1.5 - 0.5 * steady(c))));
   s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], at: { ...c.pos }, data: { force: 0, move: c.move ?? '', how, flat, imp } });
 }
 
