@@ -462,7 +462,7 @@ export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMateri
     uKnit: { value: 1 },
     uEyeBlack: { value: 0 },
     uSole: { value: new THREE.Color() },
-    uWear: { value: new THREE.Vector4() },
+    uWear: { value: new THREE.Vector4(0, 0, 0, 0) }, // (Vector4 defaults w to 1)
   };
   mat.userData.player = uniforms;
   setPlayerLook(mat, look);

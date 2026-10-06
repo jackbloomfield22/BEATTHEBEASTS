@@ -61,7 +61,9 @@ def covered(co: Vector) -> bool:
         return True
     # Keep the neck column; everything else under the collar band and pads is
     # hidden (skin lying on the jersey's inside z-fights through its edge).
-    if co.z > 1.44 and math.hypot(co.x, co.y - 0.02) < 0.092:
+    # (0.083, the character pass: at 0.092 flaps of trapezius skin stood
+    # outside the collar band's ring, 0.088 x 0.081, as a torn edge.)
+    if co.z > 1.44 and math.hypot(co.x, co.y - 0.02) < 0.083:
         return False
     # Inside the glove cuff (gear.glove: wrist - 4.5 cm .. + 2 cm): the
     # forearm poked through it when the wrist bent back (QB gun). Keep 1 cm
@@ -379,7 +381,7 @@ def towel_weights(ob: bpy.types.Object, rig: bpy.types.Object) -> None:
     pelvis = ob.vertex_groups.new(name="pelvis")
     thigh = ob.vertex_groups.new(name="thigh_l")
     for v in ob.data.vertices:
-        t = min(1.0, max(0.0, (1.10 - v.co.z) / 0.17))  # 0 at the belt, 1 at the free end
+        t = min(1.0, max(0.0, (1.10 - v.co.z) / 0.13))  # 0 at the belt, 1 at the free end
         k = 0.45 * t  # linear: a thigh lift spreads the bunching along it
         pelvis.add([v.index], 1.0 - k, "REPLACE")
         if k > 0:

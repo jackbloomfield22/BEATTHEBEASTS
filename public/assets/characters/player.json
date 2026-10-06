@@ -4,7 +4,7 @@
     {
       "lod": 0,
       "triangles": 26965,
-      "vertices": 14421,
+      "vertices": 14416,
       "reach": {
         "l": {
           "weight": 0.797,
@@ -20,12 +20,12 @@
     },
     {
       "lod": 1,
-      "triangles": 13215,
-      "vertices": 7368,
+      "triangles": 13216,
+      "vertices": 7366,
       "reach": {
         "l": {
           "weight": 0.797,
-          "mean": 0.0099,
+          "mean": 0.01,
           "max": 0.1095
         },
         "r": {
@@ -37,17 +37,17 @@
     },
     {
       "lod": 2,
-      "triangles": 3836,
-      "vertices": 2325,
+      "triangles": 3838,
+      "vertices": 2332,
       "reach": {
         "l": {
           "weight": 0.797,
-          "mean": 0.0113,
+          "mean": 0.0114,
           "max": 0.0845
         },
         "r": {
           "weight": 0.787,
-          "mean": 0.0122,
+          "mean": 0.0123,
           "max": 0.1204
         }
       }
@@ -139,7 +139,7 @@
     "calves",
     "arms"
   ],
-  "bytes": 3644392,
+  "bytes": 3643400,
   "skinGate": {
     "groups": {
       "speed": {
@@ -190,8 +190,8 @@
             "pass": true
           },
           "knee": {
-            "collapsed": 0.023,
-            "flips": 0.0378,
+            "collapsed": 0.0228,
+            "flips": 0.0375,
             "at": {
               "collapsed": "cut_plant_sharp_l:17 lod0",
               "flips": "sprint:0 lod0"
@@ -256,8 +256,8 @@
             "pass": true
           },
           "knee": {
-            "collapsed": 0.023,
-            "flips": 0.0329,
+            "collapsed": 0.0228,
+            "flips": 0.0326,
             "at": {
               "collapsed": "catch_high_point:36 lod0",
               "flips": "dive:1 lod0"

@@ -451,7 +451,7 @@ def facemask_clips(segs: int = 12):
 
 def towel():
     """A hand towel tucked into the waistband over the left front pocket
-    (a quarterback's or a receiver's), hanging ~19 cm down the thigh.
+    (a quarterback's or a receiver's), hanging ~15 cm down the thigh.
 
     The character pass: it was a flat 8 cm slab skinned like the thigh, and
     at speed it read as a white number on the pants. Now it's cloth: the top
@@ -478,7 +478,7 @@ def towel():
             # down behind it), two soft folds lengthwise.
             w = 0.090 - 0.015 * v
             x = top.x + u * w + 0.010 * v
-            z = top.z - 0.19 * v
+            z = top.z - 0.15 * v
             y = top.y + 0.013 * v  # the thigh falls away under the hip shell
             fold = 0.0035 * math.cos(u * 2 * math.pi * 1.5) * smoothstep(0.1, 0.4, v)
             curl = 0.006 * smoothstep(0.75, 1.0, v) * (2 * abs(u)) ** 2
