@@ -2,12 +2,13 @@ import * as THREE from 'three';
 import { carrierPace, GOAL_X, pullers } from '@/sim';
 import type { PlayerAnimator } from '@/anim/animator';
 import type { Ragdoll } from '@/anim/ragdoll';
-import type { PlayState, SimEvent } from '@/sim';
+import type { Agent, PlayState, SimEvent } from '@/sim';
 import type { Player } from '../players/playerAsset';
 import { YARD } from '../world/constants';
 import { worldDir } from '@/game/coords';
 import { latency } from '@/game/latency';
-import { catchLook, type CatchLook } from '@/sim/passing';
+import { catchLook, releaseOf, type CatchLook } from '@/sim/passing';
+import { pressureOn } from '@/sim/ai';
 import { threatOf } from '@/sim/moves';
 import type { BodyExtent } from './contact';
 
@@ -240,6 +241,28 @@ export function catchClip(s: PlayState, i: number, look: CatchLook): string {
       return aimLeft ? 'catch_one_hand_l' : 'catch_one_hand_r';
   }
 }
+
+/**
+ * The throwing motion for this QB and this throw (tools/blender/lib/actions_pass.py):
+ * with a rusher in his face (pressure past FADE_PRESSURE) standing, the
+ * fade-away off his back foot; else by how quick his release is: the
+ * compact motion for a quick one (Marino, Brees), the loop for a long one,
+ * the M4 throw between. On the run the upper body's version rides over
+ * the legs. An older library without the set: the M4 throw.
+ */
+export function throwClip(b: Body, s: PlayState, qb: Agent, running: boolean): string {
+  const has = (n: string) => !!b.animator.lib.meta[n];
+  if (!running && has('qb_throw_fade') && pressureOn(s, qb) >= FADE_PRESSURE) return 'qb_throw_fade';
+  const rel = releaseOf(qb);
+  if (rel <= QUICK_RELEASE && has('qb_throw_quick')) return 'qb_throw_quick';
+  if (rel >= LONG_RELEASE && has('qb_throw_long')) return 'qb_throw_long';
+  return 'qb_throw';
+}
+/** A rusher this close (the sim's pressure, 0..1: a free man within ~2.4 yd) puts him on his back foot. Ours. */
+const FADE_PRESSURE = 0.6;
+/** Release times (s, effects.ts releaseTime: 0.45 s at 70 Release → 0.30 at 99) that read as quick (~88+) and long (~74 and under). */
+const QUICK_RELEASE = 0.345;
+const LONG_RELEASE = 0.43;
 
 /** A clip event's time (s), or null when the clip or the event is missing. */
 function eventAt(b: Body, clip: string, ev: string): number | null {
@@ -632,6 +655,19 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         } else if (!a.catchClip) a.animator.playOverlay('ovl_catch', { t0: SECURE });
         break;
       }
+      case 'drop':
+      case 'deflection': {
+        // Off his hands (a drop, or the ball knocked out of them): the hands
+        // spring apart and chase it down (actions_pass.py catch_drop). A
+        // full-body catch already under way (the high point, the dive) plays on.
+        const r = e.type === 'drop' ? who[0] : who[1];
+        const rb = r !== undefined ? bodies[r] : undefined;
+        if (!rb || r === undefined || s.agents[r]!.side !== 'off' || !rb.animator.lib.meta.catch_drop) break;
+        if (rb.catchClip && CATCH_FULL.has(rb.catchClip) && catchTime(rb) !== null) break;
+        rb.catchClip = null;
+        rb.animator.playOverlay('catch_drop', { t0: eventAt(rb, 'catch_drop', 'secure') ?? SECURE });
+        break;
+      }
       case 'interception':
         // Already reaching (the catch overlay started before the ball got there)? Let it finish into the tuck.
         if (a && a.animator.overlayAction?.name.startsWith('ovl_catch') !== true) a.animator.playOverlay('ovl_catch', { t0: SECURE });
@@ -716,13 +752,18 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     }
     if (out.backpedal) b.once.add('pedal');
   }
-  // The throw: the release frame lands on the sim's release.
+  // The throw: the release frame lands on the sim's release. The motion is
+  // the man's (throwClip): a quick release's compact one, a long windup's
+  // loop, or the fade-away with a rusher in his face.
   const w = s.windup;
   if (i === s.qb && w && b.throwAt !== w.at) {
     b.throwAt = w.at;
-    const rate = Math.max(0.6, Math.min(1.8, RELEASE_FRAME / Math.max(0.05, w.at - simT)));
-    if (sp * YARD < 1.6) anim.play('qb_throw', { now: true, rate });
-    else anim.playOverlay('qb_throw', { rate, mask: THROW_MASK });
+    const running = sp * YARD >= 1.6;
+    const clip = throwClip(b, s, a, running);
+    const rel = eventAt(b, clip, 'release') ?? RELEASE_FRAME;
+    const rate = Math.max(0.6, Math.min(1.8, rel / Math.max(0.05, w.at - simT)));
+    if (!running) anim.play(clip, { now: true, rate });
+    else anim.playOverlay(clip, { rate, mask: THROW_MASK });
     latency.respond('throwRelease');
   }
   // The handoff (the QB places it, the back's pocket takes it) and the
@@ -763,7 +804,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   }
   // What the hands hold.
   const holder = ball.mode === 'held' && s.phase !== 'presnap' && simT - s.snapT > 0.3 ? ball.holder : -1;
-  const throwing = tr?.name === 'qb_throw' && !tr.done;
+  const throwing = !!tr?.name.startsWith('qb_throw') && !tr.done;
   let carrying = false;
   if (i === holder && !a.down) {
     // (A scrambling QB has it tucked; a play-action or handoff overlay owns the hands while it plays.)
@@ -836,7 +877,7 @@ export function ballInHands(b: Body, s: PlayState, ball: THREE.Object3D): boolea
   hr.getWorldPosition(_h);
   er.getWorldPosition(_e);
   const tr = anim.transition;
-  const throwing = (tr?.name === 'qb_throw' && !tr.done) || anim.overlayAction?.name === 'qb_throw';
+  const throwing = (!!tr?.name.startsWith('qb_throw') && !tr.done) || !!anim.overlayAction?.name.startsWith('qb_throw');
   const holder = s.ball.holder;
   const qbHold = holder === s.qb && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket') && !throwing;
   if (qbHold) {

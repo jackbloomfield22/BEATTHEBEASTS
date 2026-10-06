@@ -35,6 +35,7 @@ import { bodyExtent, ContactSmoother, type ContactBody } from './contact';
 import { loadPlayerAsset, Player, type PlayerAsset } from '../players/playerAsset';
 import { prepareLate, shadowAttach } from '../lighting/shadows';
 import { createFootball } from './football';
+import { ballWorldVel, createBallFlight, heldAt, placeFlight, resetFlight } from './ballFlight';
 import { createFieldMarks } from './fieldMarks';
 import { frameEvents } from './frameEvents';
 import { ballInHands, catchMagnet, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
@@ -213,11 +214,18 @@ function puntMotion(b: Body, los: number, dt: number): number {
 }
 
 const _p = new THREE.Vector3();
-const _q = new THREE.Quaternion();
-const _q2 = new THREE.Quaternion();
-const _X = new THREE.Vector3(1, 0, 0);
 const _dir = new THREE.Vector3();
 const _hands = new THREE.Vector3();
+/**
+ * The ball's readability on the broadcast camera (render only): true size
+ * within BALL_NEAR m of the camera, growing to BALL_GROW× by BALL_FAR. A
+ * real-size football 40 m out is ~5 px across at 1280 wide and disappears
+ * against the grass in the air; broadcast games draw it larger than life the
+ * same way. Ours, sized by eye on the passing recordings.
+ */
+const BALL_NEAR = 12;
+const BALL_FAR = 45;
+const BALL_GROW = 1.6;
 /** Fastest the drawn facing turns (rad/s): a sharp pivot, ~180° in a quarter second. */
 const YAW_MAX = 12;
 const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move: null, down: false, stamina: 1 };
@@ -236,6 +244,7 @@ export function GameScene() {
   const [bodies, setBodies] = useState<Body[] | null>(null);
   const [marks] = useState(createFieldMarks);
   const [ball] = useState(createFootball);
+  const [flight] = useState(createBallFlight);
   const [routeArt] = useState(createRouteArt);
   const shownPlay = useRef(-1);
   const officials = useRef<Officials | null>(null);
@@ -463,7 +472,7 @@ export function GameScene() {
     contact.update(contactBodies, contactPairs, animDt);
 
     officials.current?.update(animDt, cur.ball, s.result, s.result ? s.result.spot - s.setup.los : 0, s.setup.toGo, camera, viewportPx);
-    placeBall(s.snapT, s.t);
+    placeBall(s.snapT, s.t, animDt);
     placeMarks(s.setup.los, s.setup.toGo);
     // The route preview: held key, the hot-route picker, or just after a hot route is called.
     const ui = usePractice.getState();
@@ -481,7 +490,7 @@ export function GameScene() {
     placeHud();
   }, -80);
 
-  function placeBall(snapT: number, t: number) {
+  function placeBall(snapT: number, t: number, dt: number) {
     const r = practice.runner!;
     const { prev, cur } = r;
     const a = r.alpha;
@@ -489,30 +498,30 @@ export function GameScene() {
     const b1 = cur.ball;
     const held = b1.mode === 'held' && b1.holder >= 0;
     const inSnap = cur.phase === 'presnap' || (snapT >= 0 && t - snapT < 0.34);
-    if (held && !inSnap && bodies && ballInHands(bodies[b1.holder]!, r.state, ball)) return;
+    // True size in the hands; in the air and on the turf it grows with distance from the camera (BALL_FAR).
+    ball.scale.setScalar(1);
+    if (held && !inSnap && bodies && ballInHands(bodies[b1.holder]!, r.state, ball)) {
+      heldAt(flight, ball);
+      return;
+    }
     ball.position.set(worldX(b0.y + (b1.y - b0.y) * a), worldY(b0.z + (b1.z - b0.z) * a), worldZ(b0.x + (b1.x - b0.x) * a));
     if (cur.phase === 'presnap') {
       // On the ground, pointing downfield.
       ball.position.y = 0.09;
       ball.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+      resetFlight(flight);
       return;
     }
-    const vx = worldX(b1.vy);
-    const vz = worldZ(b1.vx) - worldZ(0);
-    const vy = worldY(b1.vz);
-    _dir.set(vx, vy, vz);
-    if (_dir.lengthSq() > 1) {
-      _dir.normalize();
-      // A spiral: the long axis along the flight, spinning about it.
-      _q.setFromUnitVectors(_X, _dir);
-      _q2.setFromAxisAngle(_X, b0.spin + (b1.spin - b0.spin) * a);
-      ball.quaternion.copy(_q).multiply(_q2);
-    }
+    if (held) return;
+    // The spiral, its attitude and wobble, the release from the hand, the tumble and the bounce (ballFlight.ts).
+    placeFlight(flight, ball, r.state, ballWorldVel(b1.vx, b1.vy, b1.vz, _dir), dt, t);
     // The last frames of the flight bend into the catcher's hands (M6.5 #5).
     if (b1.mode === 'air' && r.state.ball.target >= 0 && bodies) {
       const k = catchMagnet(bodies[r.state.ball.target]!, ball.position, _hands);
       if (k > 0) ball.position.lerp(_hands, k);
     }
+    const far = THREE.MathUtils.clamp((ball.position.distanceTo(camera.position) - BALL_NEAR) / (BALL_FAR - BALL_NEAR), 0, 1);
+    ball.scale.setScalar(1 + (BALL_GROW - 1) * far);
   }
 
   function placeMarks(los: number, toGo: number) {
