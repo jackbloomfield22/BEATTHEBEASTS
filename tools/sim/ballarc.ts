@@ -14,8 +14,13 @@ for (const power of [75, 95]) {
       const from = { x: 0, y: 0, z: 2.15 };
       const to = { x: d, y: 0, z: 1.25 };
       const vmax = maxThrowSpeed(power);
-      const T = Math.max(driveTime(d, power) * (loft > 0 ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T);
-      const v = solveLaunch(from, to, T);
+      let T = Math.max(driveTime(d, power) * (loft > 0 ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T);
+      let v = solveLaunch(from, to, T);
+      // (planThrow: never faster than his arm.)
+      for (let k = 0; k < 12 && Math.hypot(v.x, v.y, v.z) > vmax; k++) {
+        T *= 1.04;
+        v = solveLaunch(from, to, T);
+      }
       const sp = Math.hypot(v.x, v.y, v.z);
       const p = { ...from };
       const vv = { ...v };

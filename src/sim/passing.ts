@@ -432,9 +432,17 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   }
   const to: V3 = { x: tx, y: ty, z: tz };
   // Air under it when a defender is in the way (a driven ball becomes a touch pass).
-  const Tf = clearLoft(s, from, to, hang(to));
+  let Tf = clearLoft(s, from, to, hang(to));
+  // Never out of the hand faster than his arm: flightTime is solved in a
+  // vacuum, and drag asks a long throw for more speed than that (a 55-yd
+  // ball from a 75 arm left at 58 mph against his 54: tools/sim/ballarc.ts).
+  // A weaker arm has to put more air under it instead.
+  let v0 = solveLaunch(from, to, Tf);
+  for (let k = 0; k < 12 && speed3(v0) > vmax; k++) {
+    Tf *= 1.04;
+    v0 = solveLaunch(from, to, Tf);
+  }
   const kind = touch || Tf > hang(to) * 1.01 ? 'touch' : 'driven';
-  const v0 = solveLaunch(from, to, Tf);
   const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, chem: fChem, place: aim.x, sigma, timing: tSigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
   return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err, spiral: spiralOf(accN, fPressure, offPlatform, moving, missed, hit), rpm: rpmOf(power), hit };
 }
