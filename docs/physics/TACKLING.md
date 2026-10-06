@@ -190,3 +190,21 @@ Recorded with the frame-true video harness from the broadcast camera (Low qualit
 | `node tools/run-ts.mjs tools/sim/findtackles.ts [seeds] [--only=id]` | Seeds for the six videos |
 | `npx vitest run tests/tackle.test.ts` | Bodies, the hit, the hold, the fall, the hurdle, and the videos' plays |
 | `BTB_VIDEO=1 BTB_PHYSICS=1 BTB_PORT=… npx playwright test -c tools/shots/playwright.config.ts` | Records the six videos into `docs/physics/` |
+
+## 9. Merged with the passing pass (2026-10-06)
+
+`claude/m66-polish` (the passing pass, the character pass, the test plumbing) merged into `wip/physics`.
+- **Where the two meet:** the passing pass keeps the throw and the catch. The QB in the pocket still uses the pocket wrap, which is what the passing pass's hit-as-he-throws (`planThrow(..., wrapped(qb))`) reads. A carrier after the catch goes to the pile. Nothing in the sim conflicted.
+- **Rebuilt:** the film was regenerated and the golden re-pinned. completion-rac was re-found (seed 12); every other feel, concept, identity and tackling clip still shows its moment. The e2e seeds (2, 307, 5) still hold under the merged `e2eseeds.ts`.
+- **Passing (`outcomes.ts`, 60 a cell):**
+  - Completion 65.3%, ypa 8.2, INT 2.5%, sacks 7.1%.
+  - Completions of 40+ 7.1%, under the 8% band.
+  - For comparison, the passing pass alone measured 65.7%, 8.1 ypa and 6.3% of 40+, so the tackle physics adds about 0.8 points of 40+, as it did on its own (4.6% → 5.3%).
+- **Runs (`runhist.ts`):** 4.03 a carry; 2.89 yd after contact.
+- **Tackling (`tackling.ts`):**
+  - Runs: driven back 11%; contact to whistle median 0.52 s.
+  - After the catch: yards after first contact 3.17; driven back 23%.
+- **Identity:** 19/20 (Gates vs Lewis, as before). Passing identity: 7/7.
+- **Traits:** 127/127.
+- **`npm run check`:** passes (71 files, 722 tests).
+- **Practice e2e:** 7/7 on port 5297, determinism included.
