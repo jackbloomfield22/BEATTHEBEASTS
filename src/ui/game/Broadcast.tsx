@@ -193,7 +193,7 @@ function PlayerLower({ l }: { l: LowerUi }) {
       meta={
         <>
           <span>{l.pos}</span>
-          {l.stint ? <span>{l.stint}</span> : null}
+          {l.stint ? <span className="lt-stint">{l.stint}</span> : null}
           {l.trait ? <span className="lt-trait">{l.trait}</span> : null}
         </>
       }

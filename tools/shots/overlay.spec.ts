@@ -25,7 +25,7 @@ type Clip = { id: string; seed: number; los: number; script(s: unknown): unknown
 type Win = {
   __btbPractice: { runner: { paused: boolean; state: { result: unknown } } | null; callClip(c: unknown): Promise<void>; tickWith(f: unknown): void };
   __btbPracticeUi: { getState(): { stage: string } };
-  __btbGame: { match: { sit: { los: number; down: number; toGo: number; ballY: number } } | null };
+  __btbGame: { match: { sit: { los: number; down: number; toGo: number; ballY: number }; phase: string } | null; fourth(c: string): void; toPhase(): void };
   __btbGameUi: { getState(): { stage: string; outcome: string | null }; setState(p: object): void };
   __btbCeleb: { choose(n: number, auto: boolean): void; skip(): void };
   __btbCelebUi: { getState(): { phase: string } };
@@ -99,6 +99,35 @@ test('broadcast overlay', async ({ page }) => {
     await page.keyboard.press('Enter');
   }
 
+  // BTB_OVERLAY_KICKS=1: straight to a fourth down in field-goal range (its card carries the wind flag), the kick and its call.
+  if (process.env.BTB_OVERLAY_KICKS) {
+    await until(page, (w) => w.__btbGameUi.getState().stage === 'call', 600);
+    await ev(page, (w) => {
+      const m = w.__btbGame.match!;
+      m.sit = { los: 70, ballY: 0, down: 4, toGo: 4 };
+      m.phase = 'fourth';
+      w.__btbGame.toPhase();
+    });
+    await until(page, (w) => w.__btbGameUi.getState().stage === 'fourth', 300);
+    await frames(page, 4);
+    await still(page, '10-fourth-card');
+    await ev(page, (w) => w.__btbGame.fourth('fg'));
+    await until(page, (w) => w.__btbGameUi.getState().stage === 'kick', 300);
+    await frames(page, 20);
+    await page.waitForTimeout(600);
+    await still(page, '11-kick-aim');
+    await page.keyboard.down('Space');
+    await page.waitForTimeout(900);
+    await page.keyboard.up('Space');
+    for (let k = 0; k < 60; k++) {
+      await frame(page);
+      if (await page.locator('.kick-result').count()) break;
+    }
+    await frames(page, 3);
+    await still(page, '12-kick-result');
+    return;
+  }
+
   // The play call, then pre-snap.
   await until(page, (w) => w.__btbGameUi.getState().stage === 'call', 600);
   await frames(page, 6);
@@ -110,18 +139,21 @@ test('broadcast overlay', async ({ page }) => {
   await page.waitForTimeout(800);
   await still(page, '05-presnap');
 
-  // A big play: a scripted clip run inside the game, from its own spot.
-  const order = (process.env.BTB_OVERLAY_CLIPS ?? 'go,completion-rac,post').split(',');
+  // A big play: a scripted clip run inside the game, from its own spot or one given ("id@los": the drafted
+  // eleven aren't the clip's, so a clip's long gain is placed where it can score).
+  const order = (process.env.BTB_OVERLAY_CLIPS ?? 'completion-rac@72,go@60,cut-run@92,completion-rac@85').split(',');
   let scored = false;
-  for (const id of order) {
-    await ev(page, async (w, cid: string) => {
-      const c = (await w.__btbClips()).find((x) => x.id === cid)!;
+  for (const spec of order) {
+    const [id, at] = spec.split('@') as [string, string | undefined];
+    await ev(page, async (w, a: { cid: string; los: number | null }) => {
+      const c0 = (await w.__btbClips()).find((x) => x.id === a.cid)!;
+      const c = { ...c0, los: a.los ?? c0.los };
       (window as unknown as { __clip: Clip }).__clip = c;
       const m = w.__btbGame.match!;
-      m.sit = { ...m.sit, los: c.los, down: 1, toGo: 10, ballY: 0 };
+      m.sit = { ...m.sit, los: c.los, down: 1, toGo: Math.min(10, 100 - c.los), ballY: 0 };
       await w.__btbPractice.callClip(c);
       w.__btbGameUi.setState({ stage: 'play' });
-    }, id);
+    }, { cid: id, los: at ? Number(at) : null });
     await until(page, (w) => w.__btbGameReady === true && w.__btbPracticeUi.getState().stage === 'presnap', 600);
     await ev(page, (w) => {
       w.__btbPractice.runner!.paused = true;
@@ -139,7 +171,7 @@ test('broadcast overlay', async ({ page }) => {
     }
     // Not a score: its result card (a big gain still gets the lower third), then on.
     await frames(page, 10);
-    await still(page, `06-result-${id}`);
+    await still(page, `06-result-${id}-${at ?? 'spot'}`);
     await page.keyboard.press('Enter');
     await until(page, (w) => w.__btbGameUi.getState().stage === 'call', 600);
   }
