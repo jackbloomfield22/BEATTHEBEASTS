@@ -38,7 +38,7 @@ import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tack
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
 import { aiMove, autoMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
-import { autoCatch, catchLook, findsBallAt, LAP_R, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
+import { autoCatch, catchLook, findsBallAt, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { has } from './traits';
 import { manOf, type PlayState } from './state';
@@ -444,7 +444,8 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
         s.pass = { attempted: true, complete: false, intercepted: false, airYards: 0, target: -1 };
       } else {
         const rec = s.agents[s.icons[w.icon]!]!;
-        const plan = planThrow(s, qb, rec, w.charge, w.aim, pressure, offPlatform);
+        // A rusher wrapped up on him as it leaves his hand: hit as he throws (planThrow's HIT_*).
+        const plan = planThrow(s, qb, rec, w.charge, w.aim, pressure, offPlatform, wrapped(qb));
         release(s, qb, rec, plan);
       }
       qb.busy = 20;
@@ -520,7 +521,10 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     // A vertical with the corner on top of him (level or deeper, on his
     // hip): the back-shoulder ball, short and behind him, where only he can
     // turn back to it (M6.5 #6).
-    start(pick, 0, backShoulder(s, s.agents[s.icons[pick]!]!) ? v2(-1, -0.2) : v2());
+    // A deep ball he layers (passing.ts layer: its hang, as the read judged it).
+    const tgt = s.agents[s.icons[pick]!]!;
+    const bs = backShoulder(s, tgt);
+    start(pick, bs ? 0 : layer(dist(qb.pos, openness(s, qb, tgt, true).at)), bs ? v2(-1, -0.2) : v2());
   } else if ((pressure > 0.9 || s.t - s.snapT - s.setup.play.drop.set > 3) && Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) > 3.5) {
     // Nothing there and he's outside the pocket: throw it away.
     start(0, 0.3, v2(), true);
@@ -1488,8 +1492,7 @@ function ballStep(s: PlayState): void {
     stepFlight(b.pos, b.vel);
     if (b.pos.z <= 0.1) {
       b.pos.z = 0.1;
-      // A football on turf: a low, skidding bounce that loses most of its pace (restitution ~0.25).
-      b.vel = { x: b.vel.x * 0.45 + gauss(s.rng.bounce) * 0.6, y: b.vel.y * 0.45 + gauss(s.rng.bounce) * 0.6, z: Math.abs(b.vel.z) * 0.25 };
+      b.vel = footballBounce(s, b.vel);
     }
     if (Math.abs(b.pos.y) > FIELD_HALF_W) {
       whistle(s, 'fumbleOut', b.pos.x, true);
@@ -1509,6 +1512,33 @@ function ballStep(s: PlayState): void {
     }
   }
 }
+
+/**
+ * A football bouncing on turf (the loose ball): it's oblong, so where it
+ * lands decides the bounce, and that's the seeded lottery. On its belly
+ * (about 3 bounces in 5) it skids low (restitution ~0.2) and keeps on its way
+ * at about half its pace; on a point it kicks up higher (~0.45) and off at an
+ * angle, up to ~60° either way, with less pace kept. The M6 bounce was the
+ * skid every time (a low, straight-on skid with a little scatter), so a
+ * fumble never took the bounce that makes a loose ball a scramble.
+ * Restitutions from the broadcast look of a ball on grass; the odds and the
+ * angle are ours.
+ */
+export function footballBounce(s: PlayState, v: { x: number; y: number; z: number }): { x: number; y: number; z: number } {
+  const u = s.rng.bounce();
+  const k = s.rng.bounce();
+  if (u < BOUNCE_TIP) {
+    const turn = (k - 0.5) * 2 * BOUNCE_TURN;
+    const c = cos(turn);
+    const sn = sin(turn);
+    return { x: (v.x * c - v.y * sn) * 0.35, y: (v.x * sn + v.y * c) * 0.35, z: Math.abs(v.z) * (0.35 + 0.2 * k) };
+  }
+  // (u past the tip's odds, spread back over 0..1, scatters it across.)
+  const w = (u - BOUNCE_TIP) / (1 - BOUNCE_TIP);
+  return { x: v.x * 0.5 + (k - 0.5) * 0.6, y: v.y * 0.5 + (w - 0.5) * 0.6, z: Math.abs(v.z) * (0.15 + 0.1 * k) };
+}
+const BOUNCE_TIP = 0.4;
+const BOUNCE_TURN = 1.05;
 
 /** The rushers a screen lets in: past the line and on their way to the QB, they aren't the releasing linemen's (the second level is). */
 const screenLetIn = (d: Agent): boolean => d.side === 'def' && d.mem.screenLetIn === true;

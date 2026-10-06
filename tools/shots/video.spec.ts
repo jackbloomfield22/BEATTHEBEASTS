@@ -32,8 +32,10 @@ const OUT = PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` :
 const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY || PASSING ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
-const LEAD_IN = Math.round(FPS * 1.2);
-const TAIL = Math.round(FPS * 2.5);
+const LEAD_IN = Math.round(FPS * (PASSING ? 0.6 : 1.2));
+const TAIL = Math.round(FPS * (PASSING ? 0.6 : 2.5));
+/** The passing clips stop this long (s) after the ball is caught or dead: the catch and the first steps after it are the moment (this container draws a frame in several seconds). */
+const AFTER_BALL = PASSING ? Number(process.env.BTB_AFTER_BALL ?? 1.8) : Infinity;
 /** Frame size (BTB_VIDEO_W, 16:9): the concepts record at 960 wide here, where a frame takes seconds to draw. */
 const W = Number(process.env.BTB_VIDEO_W ?? 1280);
 const H = Math.round((W * 9) / 16);
@@ -105,7 +107,10 @@ async function record(page: Page, clip: Clip) {
   for (let k = 0; k < LEAD_IN; k++) await shot();
   let tail = -1;
   let whistle = { frames: 0, ticks: 0 };
+  let ballDone = -1;
+  let wasAir = false;
   for (let guard = 0; guard < 60 * 20 && tail < TAIL; guard++) {
+    if (tail < 0 && ballDone >= 0 && n - ballDone >= AFTER_BALL * FPS) break;
     const done = await page.evaluate(
       async ({ id, k }) => {
         const w = window as unknown as Win;
@@ -119,6 +124,9 @@ async function record(page: Page, clip: Clip) {
       },
       { id: clip.id, k: TICKS_PER_FRAME },
     );
+    const phase = await page.evaluate(() => (window as unknown as Win).__btbPractice.runner!.state.phase);
+    if (phase === 'air') wasAir = true;
+    else if (wasAir && ballDone < 0) ballDone = n;
     if (done && tail < 0) {
       tail = 0;
       // The snap to the whistle: frames LEAD_IN .. n (this one included), the sim's ticks to here.

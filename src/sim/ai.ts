@@ -8,7 +8,7 @@ import { atan2, cos, exp, sin } from '@/engine/math/detmath';
 import { blockOf, engage } from './blocks';
 import { arrive, boundaryGovern, CRUISE, seen, steer, timeTo } from './movement';
 export { boundaryGovern } from './movement';
-import { driveTime, lead, releaseOf } from './passing';
+import { driveTime, layer, lead, releaseOf, touchStretch } from './passing';
 import { has } from './traits';
 import { DRAWS, ROUTE_DELAY, ROUTES, ZONES, type OffPlay, type RouteName, type ZoneName } from './plays';
 import { DIFFICULTY, zoneSpot, type PlayState } from './state';
@@ -999,7 +999,10 @@ export function openness(s: PlayState, qb: Agent, r: Agent, peek = false, why?: 
   let at = lead(r, 0.8);
   let T = 0.8;
   for (let k = 0; k < 3; k++) {
-    T = driveTime(dist(qb.pos, at), power) + 0.05 + rel;
+    // (A deep ball is layered: its hang, as qbThrow will throw it.)
+    const d0 = dist(qb.pos, at);
+    const lf = layer(d0);
+    T = driveTime(d0, power) * (lf > 0 ? touchStretch(lf) : 1) + 0.05 + rel;
     at = lead(r, T);
   }
   // A defender's clock on the throw: a zone defender near the man reads the

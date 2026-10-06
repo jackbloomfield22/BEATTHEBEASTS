@@ -103,6 +103,24 @@ export function driveTime(d: number, power: number): number {
 }
 
 /**
+ * The AI QB's deep ball is layered, not driven (the coaching line on a
+ * vertical: drop it in over the outside shoulder, between the corner and the
+ * safety). M5.5–M6.6 threw every AI ball as the driven one, so a 40-yd post
+ * left at ~60 mph on a 15° line, 4 m at its apex, and landed in ~1.5 s: a
+ * frozen rope no NFL deep ball is (a 50-yd deep ball hangs ~2.2–2.8 s on the
+ * broadcast). Past LAYER_FROM yd of throw he puts air on it, a full touch
+ * pass's worth by LAYER_FULL, never more than LAYER_MAX (he still wants it
+ * there before the safety). Distances and the cap are ours, sized on that
+ * hang. The player's own throws are his: a tap drives it, a hold layers it.
+ */
+export function layer(d: number): number {
+  return LAYER_MAX * Math.max(0, Math.min(1, (d - LAYER_FROM) / (LAYER_FULL - LAYER_FROM)));
+}
+const LAYER_FROM = 24;
+const LAYER_FULL = 44;
+const LAYER_MAX = 0.8;
+
+/**
  * A touch pass (the icon held): the driven time stretched by 10% for a
  * quick hold up to 30% for a full one (Playtest 1: less float than the
  * 15–35% before), and it leads him (HOLD_LEAD).
@@ -243,6 +261,15 @@ export interface ThrowPlan {
   missed: boolean;
   /** Where the error came from (M6.5 #1): each factor on the cone, and the miss. */
   err: ThrowError;
+  /**
+   * How tight the spiral is (1 a tight spiral … 0 a wounded duck) and its
+   * spin (rpm): the throw's own mechanics, for the drawn ball (render only;
+   * the outcome is the error above). See spiralOf.
+   */
+  spiral: number;
+  rpm: number;
+  /** He was hit as he let it go: the arm never finished (HIT_HANG, HIT_CONE). */
+  hit: boolean;
 }
 
 /** A throw's error, by source: the cone's 1σ (yd) and what scaled it; the mechanics miss; the error applied. */
@@ -303,17 +330,20 @@ function leadFor(rec: Agent, hang: (at: V2) => number): { spot: V2; rv: V2; T: n
   return { spot: run.pos, rv: sp > 0.5 ? { x: v.x / sp, y: v.y / sp } : { x: 1, y: 0 }, T, speed: len(run.vel), offScript: run.offScript };
 }
 
-export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2, pressure: number, offPlatform: boolean): ThrowPlan {
+export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2, pressure: number, offPlatform: boolean, hit = false): ThrowPlan {
   const power = qb.fx.r('throwPower');
   const { vmax, range } = arm(qb);
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
-  const hang = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T);
+  const hang0 = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T);
+  // Hit as he throws: he led him for the ball he meant, but the arm never
+  // finishes, so it comes out slow and fluttering (HIT_HANG) and arrives late, behind him.
+  const hang = (to: V3) => hang0(to) * (hit ? HIT_HANG : 1);
   // Lead the receiver: iterate the flight time against where he will be.
   // (M5 to M6.6 led him for 0.05 s more than the ball flies, with no reason
   // given: the driven slant landed ~0.5 yd in front of him, and with the
   // cone on top a fifth of them out of his reach. On time is on him.)
-  const { spot, rv, speed: recSpeed, T: leadT, offScript } = leadFor(rec, (at) => hang({ x: at.x, y: at.y, z: CATCH_Z }));
+  const { spot, rv, speed: recSpeed, T: leadT, offScript } = leadFor(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }));
   // Placement input: lead / back shoulder along his path (the way he'll be running at the catch), high / low.
   const place = 1.6 * aim.x + HOLD_LEAD * Math.max(0, Math.min(1, loft));
   let tx = spot.x + rv.x * place;
@@ -359,7 +389,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
     (placed && !(air < 25 && has(qb, 'surgeon')) ? 1.1 : 1);
   // Chemistry with this receiver (M6.5 #6): a tighter cone, up to CHEM_CONE.
   const fChem = 1 - CHEM_CONE * Math.max(0, Math.min(1, s.setup.chem?.[rec.slot as OffSlot] ?? 0));
-  const sigma = base * coneScale(d) * fMoving * fPressure * fPlatform * fChem * fTrait;
+  const sigma = base * coneScale(d) * fMoving * fPressure * fPlatform * fChem * fTrait * (hit ? HIT_CONE : 1);
   // The mechanics miss: a ball that gets away from him, sailing or dying in
   // the dirt, 2–4 yd off. Only for a reason (M6.5 #1): M6 gave every throw a
   // 13% floor, so 79% of the misses came from a clean pocket and a quarter of
@@ -370,8 +400,8 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const accN = acc / 99;
   const deep = Math.max(0, air - 20) / 20;
   const pMiss = Math.min(
-    0.3,
-    MISS_ACC * (1 - accN) + pressure * 0.25 * (1.3 - qb.fx.a('underPressure')) + (offPlatform ? 0.05 : 0) + moving * 0.06 * (1.1 - qb.fx.a('throwOnRun')) + deep * 0.04 * (1.2 - accN),
+    hit ? 0.6 : 0.3,
+    MISS_ACC * (1 - accN) + pressure * 0.25 * (1.3 - qb.fx.a('underPressure')) + (offPlatform ? 0.05 : 0) + moving * 0.06 * (1.1 - qb.fx.a('throwOnRun')) + deep * 0.04 * (1.2 - accN) + (hit ? HIT_MISS : 0),
   );
   // A sailed ball goes long and high, over his reach; one that dies is
   // short and at his feet (a short hop): either way along the line of the
@@ -406,8 +436,42 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const kind = touch || Tf > hang(to) * 1.01 ? 'touch' : 'driven';
   const v0 = solveLaunch(from, to, Tf);
   const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, chem: fChem, place: aim.x, sigma, timing: tSigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
-  return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err };
+  return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err, spiral: spiralOf(accN, fPressure, offPlatform, moving, missed, hit), rpm: rpmOf(power), hit };
 }
+
+/**
+ * The spiral's tightness (render only: the drawn ball's wobble; the outcome
+ * is the error). A clean throw from a set platform is a tight spiral, a
+ * little less so from a less accurate passer; a rusher in his face, his feet
+ * not set or throwing on the run cost it some; a ball that got away from him
+ * (the mechanics miss) wobbles; a hit as he throws is a wounded duck. Ours,
+ * shaped so a clean throw from a 99 passer is ~0.95 and a duck under 0.2.
+ */
+export function spiralOf(accN: number, fPressure: number, offPlatform: boolean, moving: number, missed: boolean, hit: boolean): number {
+  if (hit) return 0.1;
+  const q = 0.75 + 0.2 * accN - 0.25 * Math.min(1, (fPressure - 1) / 1.5) - (offPlatform ? 0.1 : 0) - 0.08 * moving - (missed ? 0.35 : 0);
+  return Math.round(Math.max(0.15, Math.min(1, q)) * 100) / 100;
+}
+
+/**
+ * The spiral's spin (rpm): ~600 for an NFL pass (Brancazio, "The physics of
+ * football", Phys. Teach. 1985; Rae, Am. J. Phys. 2003, uses 10 rev/s), a
+ * little more from a bigger arm (the ±10% by Throw Power is ours).
+ */
+export function rpmOf(power: number): number {
+  return Math.round(600 * (0.9 + 0.2 * Math.max(0, Math.min(1, (power - 60) / 39))));
+}
+
+/**
+ * Hit as he throws (a rusher wrapped up on him as the ball leaves, play.ts
+ * WRAP_THROW): the arm never finishes. The ball comes out ~25% slower (the
+ * hang × 1.3), the cone nearly doubles and it gets away from him far more
+ * often: the fluttering, short ball that so often ends up picked. Ours, on
+ * the broadcast picture of a QB hit in his motion.
+ */
+const HIT_HANG = 1.3;
+const HIT_CONE = 1.8;
+const HIT_MISS = 0.3;
 
 /**
  * Where a throw to `rec` would land if it went now, before the error cone:
@@ -469,7 +533,7 @@ export function release(s: PlayState, qb: Agent, rec: Agent, plan: ThrowPlan): v
   s.phase = 'air';
   rec.mem.catchLeg = catchLeg(rec, plan.meant);
   s.pass = { attempted: true, complete: false, intercepted: false, airYards: Math.round(plan.airYards * 10) / 10, target: rec.i };
-  s.events.push({ t: s.t, type: 'throw', who: [qb.i, rec.i], at: { x: plan.to.x, y: plan.to.y }, data: { kind: plan.kind, air: Math.round(plan.airYards), ...(plan.missed ? { missed: true } : {}), ...throwErrData(plan) } });
+  s.events.push({ t: s.t, type: 'throw', who: [qb.i, rec.i], at: { x: plan.to.x, y: plan.to.y }, data: { kind: plan.kind, air: Math.round(plan.airYards), ...(plan.missed ? { missed: true } : {}), ...(plan.hit ? { hit: true } : {}), spiral: plan.spiral, rpm: plan.rpm, ...throwErrData(plan) } });
 }
 
 /**
@@ -728,6 +792,15 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
       // 0.6 of the cost at the reaches where it's a ~40% catch); a Body
       // Catcher 10% less often away from his frame.
       ['reach', Math.max(0, off - 0.45) * 0.5 * (1.1 - 0.5 * spect) * (has(a, 'highlight-reel') ? 0.6 : 1) + (off > 0.45 && has(a, 'body-catcher') ? 0.1 : 0)],
+      // On him before he's had his eyes on it long enough to get his hands
+      // right (findsBallAt: sure hands find it sooner): the ball that's in
+      // on him coming out of his break. A good-hands man has ~LOOK_T on a
+      // quick slant; a poor one sees it a beat late and fights it.
+      ['late', LATE_K * Math.max(0, 1 - (s.t - findsBallAt(s, a)) / LOOK_T) * (1.1 - hands)],
+      // Over his shoulder on a deep ball coming from behind him: he has to
+      // track it in the air and catch it where he can't see his hands (PFF
+      // charts deep drop rates well above short ones).
+      ['tracking', overShoulder(s, a) ? TRACK_K * (1.1 - hands) * (1.1 - 0.4 * spect) : 0],
     ];
     // Alligator Arms: a defender closing on a crossing route, −10%.
     if (hit > 0.3 && Math.abs(a.vel.y) > Math.abs(a.vel.x) && has(a, 'alligator-arms')) costs.push(['contact', 0.1]);
@@ -822,6 +895,28 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
   if (u < pInt) return 'int';
   if (u < pInt + pBreak) return 'deflect';
   return 'miss';
+}
+
+/**
+ * Seeing the ball in (resolveCatch's 'late' cost): a ball on him less than
+ * LOOK_T s after he found it costs up to LATE_K (× 1.1 − Catching). Ours,
+ * sized so a sure-handed man on a quick slant (found at ~0.22 s of a ~0.5-s
+ * ball) pays almost nothing and a poor-handed one (found at ~0.33 s) ~2–3
+ * points: NFL drop rates run ~3% of catchable balls for the best hands, ~7%
+ * for the worst, and the quick game's bullets are where they happen.
+ */
+const LOOK_T = 0.3;
+const LATE_K = 0.12;
+/** The over-the-shoulder catch's cost (× 1.1 − Catching): ~1.5 points for sure hands, ~4 for poor ones. Ours, on PFF's deep drop rates. */
+const TRACK_K = 0.07;
+
+/** A deep ball (18+ yd downfield) coming in from behind a receiver running away from the throw: he catches it over his shoulder. */
+function overShoulder(s: PlayState, a: Agent): boolean {
+  const b = s.ball;
+  const sp = len(a.vel);
+  const bv = Math.sqrt(b.vel.x * b.vel.x + b.vel.y * b.vel.y);
+  if (sp < 5 || bv < 1 || b.pos.x - s.setup.los < 18) return false;
+  return (b.vel.x * a.vel.x + b.vel.y * a.vel.y) / (bv * sp) > 0.55;
 }
 
 /** A defender within this (yd) of the receiver and behind him along his run is on his hip (resolveCatch): ai.ts TRAIL_R's trail. */

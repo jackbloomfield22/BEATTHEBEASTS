@@ -236,4 +236,18 @@ export const PASSING: Clip[] = [
   { id: 'pass-dig', title: 'Dig', seed: 5, play: 'singleback-drive', def: 'cover3', los: 30, script: concept({ icon: 2, at: 90 }) },
   // The back-shoulder fade against man (the back-shoulder concept's play).
   { id: 'pass-back-shoulder', title: 'Back-shoulder fade', seed: 4, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 3, at: 48, aim: { x: -1, y: -0.2 }, call: 'aggressive' }) },
+  // The deep post against Cover 2: the X's post off Y-Cross, held for touch, ~45 yd in the air between the safeties.
+  { id: 'pass-post', title: 'Deep post', seed: 2, play: 'trips-y-cross', def: 'cover2', los: 30, script: concept({ icon: 3, at: 150, hold: 12 }) },
+  // Touch over a linebacker: the tight end's seam against Cover 3, held, the hook defender under its path, 25 yd.
+  { id: 'pass-touch', title: 'Touch over the linebacker', seed: 4, play: 'ace-te-seam', def: 'cover3', los: 30, script: concept({ icon: 1, at: 60, hold: 20 }) },
+  // On the run: the boot, thrown at 6.5 yd/s outside the pocket to the sail, 15 yd.
+  { id: 'pass-onrun', title: 'Throw on the run', seed: 6, play: 'pistol-pa-boot', def: 'cover3', los: 30, script: concept({ icon: 1, at: 80 }) },
+  // Under pressure: the fire zone gets home as he throws the cross late (2.9 s), the cone doubled by the rusher in his face.
+  { id: 'pass-pressure', title: 'Throw under pressure', seed: 12, play: 'trips-y-cross', def: 'firezone', los: 30, script: concept({ icon: 1, at: 176 }) },
+  // The contested catch: the X's go against Cover 3, GO UP with the corner on him (contest 1.0), caught at 20 yd.
+  { id: 'pass-contested', title: 'Contested catch', seed: 1, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 60, call: 'aggressive' }) },
+  // The drop: the quick out, open, off his hands.
+  { id: 'pass-drop', title: 'Drop', seed: 1, play: 'doubles-quick-outs', def: 'cover3', los: 30, script: concept({ icon: 1, at: 50 }) },
+  // The arm: the go concept's ball (the Z up the sideline, held for touch) from Dan Marino and from Joe Montana.
+  ...pair('arm', 'The arm', { seed: 17, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) }, { off: 'QB', name: 'Dan Marino', pos: 'QB' }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }),
 ];
