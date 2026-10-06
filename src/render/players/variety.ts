@@ -29,6 +29,8 @@ export interface Variety {
   /** Skeleton: extra shoulder half-width (m) and arm length (factor). */
   shoulder: number;
   arm: number;
+  /** Eye black on the cheekbones (the character pass). */
+  eyeBlack: boolean;
 }
 
 /** mulberry32: small, fast, well-distributed; seeded from a string hash. */
@@ -110,7 +112,10 @@ export function playerVariety(pos: Position, heightM: number, weightKg: number, 
   // varies ~6% at a given height across NFL combine measurements).
   const shoulder = (line ? 0.012 : pos === 'LB' || pos === 'TE' ? 0.007 : skill ? -0.004 : 0.002) + 0.004 * n();
   const arm = 1 + 0.03 * n();
-  return { mask, visor, towel, sleeves, sleeveColor, tape, gloveColor, sockStripes, morph, shoulder, arm };
+  // Eye black: common on backs and receivers, rarer up front (drawn last,
+  // so the picks above stay what they were for every player).
+  const eyeBlack = r() < (pos === 'RB' || skill ? 0.4 : pos === 'LB' || pos === 'DL' || pos === 'TE' ? 0.25 : pos === 'QB' ? 0.15 : 0.1);
+  return { mask, visor, towel, sleeves, sleeveColor, tape, gloveColor, sockStripes, morph, shoulder, arm, eyeBlack };
 }
 
 /** Roster positions (legacy data uses the same short codes, plus a few extras). */
