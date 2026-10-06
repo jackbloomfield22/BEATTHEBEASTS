@@ -1,518 +1,518 @@
 [
  {
   "key": "trips-stick/cover3/11",
-  "hash": 1515527283,
-  "ticks": 286,
+  "hash": 2379437244,
+  "ticks": 208,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover3/4242/user",
-  "hash": 2159575855,
-  "ticks": 203,
+  "hash": 321344414,
+  "ticks": 212,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover1/11",
-  "hash": 170559373,
-  "ticks": 336,
+  "hash": 1578111269,
+  "ticks": 332,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover1/4242/user",
-  "hash": 952243824,
-  "ticks": 172,
+  "hash": 97847485,
+  "ticks": 204,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover2/11",
-  "hash": 1774728809,
+  "hash": 3873952652,
   "ticks": 305,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover2/4242/user",
-  "hash": 776852313,
-  "ticks": 172,
+  "hash": 1619442890,
+  "ticks": 207,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover4/11",
-  "hash": 2602451641,
-  "ticks": 254,
+  "hash": 1992421482,
+  "ticks": 207,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover4/4242/user",
-  "hash": 4276020091,
-  "ticks": 203,
+  "hash": 952390878,
+  "ticks": 212,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover2man/11",
-  "hash": 4260946869,
-  "ticks": 310,
+  "hash": 1561482302,
+  "ticks": 314,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover2man/4242/user",
-  "hash": 3388504577,
-  "ticks": 172,
+  "hash": 1942920814,
+  "ticks": 205,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover1blitz/11",
-  "hash": 2818261430,
-  "ticks": 337,
-  "reason": "tackle"
+  "hash": 2022995771,
+  "ticks": 393,
+  "reason": "incomplete"
  },
  {
   "key": "trips-stick/cover1blitz/4242/user",
-  "hash": 569532815,
-  "ticks": 172,
+  "hash": 82235139,
+  "ticks": 205,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover1off/11",
-  "hash": 2419774150,
-  "ticks": 344,
+  "hash": 1092871256,
+  "ticks": 346,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/cover1off/4242/user",
-  "hash": 3473315145,
-  "ticks": 172,
+  "hash": 2550890581,
+  "ticks": 205,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/tampa2/11",
-  "hash": 3656712123,
-  "ticks": 199,
+  "hash": 2600473908,
+  "ticks": 232,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/tampa2/4242/user",
-  "hash": 2484286705,
-  "ticks": 172,
+  "hash": 636439255,
+  "ticks": 207,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/firezone/11",
-  "hash": 2039603556,
+  "hash": 3547407442,
   "ticks": 326,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/firezone/4242/user",
-  "hash": 4021424356,
+  "hash": 948428255,
   "ticks": 95,
   "reason": "sack"
  },
  {
   "key": "trips-stick/simpressure/11",
-  "hash": 4233089073,
-  "ticks": 186,
+  "hash": 2508913609,
+  "ticks": 223,
   "reason": "tackle"
  },
  {
   "key": "trips-stick/simpressure/4242/user",
-  "hash": 3233883634,
-  "ticks": 203,
+  "hash": 1932020105,
+  "ticks": 213,
   "reason": "tackle"
  },
  {
   "key": "doubles-slants/cover3/11",
-  "hash": 3972510196,
+  "hash": 2502405236,
   "ticks": 211,
   "reason": "incomplete"
  },
  {
   "key": "doubles-slants/cover3/4242/user",
-  "hash": 3260620994,
-  "ticks": 200,
-  "reason": "incomplete"
+  "hash": 2273003700,
+  "ticks": 193,
+  "reason": "tackle"
  },
  {
   "key": "doubles-slants/cover1/11",
-  "hash": 3120633984,
-  "ticks": 102,
+  "hash": 4121431692,
+  "ticks": 154,
   "reason": "tackle"
  },
  {
   "key": "doubles-slants/cover1/4242/user",
-  "hash": 4150532782,
-  "ticks": 178,
+  "hash": 3819793460,
+  "ticks": 179,
   "reason": "incomplete"
  },
  {
   "key": "doubles-slants/cover2/11",
-  "hash": 2995949648,
-  "ticks": 384,
-  "reason": "tackle"
+  "hash": 1897224549,
+  "ticks": 381,
+  "reason": "incomplete"
  },
  {
   "key": "doubles-slants/cover2/4242/user",
-  "hash": 2656045594,
+  "hash": 357236951,
   "ticks": 175,
   "reason": "incomplete"
  },
  {
   "key": "doubles-slants/cover4/11",
-  "hash": 2150818559,
+  "hash": 245149868,
   "ticks": 211,
   "reason": "incomplete"
  },
  {
   "key": "doubles-slants/cover4/4242/user",
-  "hash": 1574661599,
-  "ticks": 175,
-  "reason": "incomplete"
+  "hash": 4221449195,
+  "ticks": 202,
+  "reason": "tackle"
  },
  {
   "key": "doubles-slants/cover2man/11",
-  "hash": 3101828076,
-  "ticks": 116,
+  "hash": 2175297506,
+  "ticks": 137,
   "reason": "tackle"
  },
  {
   "key": "doubles-slants/cover2man/4242/user",
-  "hash": 2735221263,
+  "hash": 4204958752,
   "ticks": 179,
   "reason": "incomplete"
  },
  {
   "key": "doubles-slants/cover1blitz/11",
-  "hash": 3773095877,
-  "ticks": 102,
+  "hash": 553853415,
+  "ticks": 145,
   "reason": "tackle"
  },
  {
   "key": "doubles-slants/cover1blitz/4242/user",
-  "hash": 1722325103,
+  "hash": 2604027772,
   "ticks": 179,
   "reason": "incomplete"
  },
  {
   "key": "doubles-slants/cover1off/11",
-  "hash": 4002459347,
-  "ticks": 126,
+  "hash": 2108119136,
+  "ticks": 132,
   "reason": "tackle"
  },
  {
   "key": "doubles-slants/cover1off/4242/user",
-  "hash": 2483141077,
-  "ticks": 178,
+  "hash": 1401178496,
+  "ticks": 179,
   "reason": "incomplete"
  },
  {
   "key": "doubles-slants/tampa2/11",
-  "hash": 3633684127,
-  "ticks": 152,
+  "hash": 4079991228,
+  "ticks": 155,
   "reason": "tackle"
  },
  {
   "key": "doubles-slants/tampa2/4242/user",
-  "hash": 2805818407,
+  "hash": 1974699064,
   "ticks": 175,
   "reason": "incomplete"
  },
  {
   "key": "doubles-slants/firezone/11",
-  "hash": 3328198475,
-  "ticks": 242,
+  "hash": 3642022242,
+  "ticks": 268,
   "reason": "tackle"
  },
  {
   "key": "doubles-slants/firezone/4242/user",
-  "hash": 3374204069,
-  "ticks": 220,
+  "hash": 1699238660,
+  "ticks": 175,
   "reason": "incomplete"
  },
  {
   "key": "doubles-slants/simpressure/11",
-  "hash": 1236776515,
-  "ticks": 304,
+  "hash": 2701108184,
+  "ticks": 313,
   "reason": "tackle"
  },
  {
   "key": "doubles-slants/simpressure/4242/user",
-  "hash": 326421341,
+  "hash": 270969738,
   "ticks": 175,
   "reason": "incomplete"
  },
  {
   "key": "doubles-quick-outs/cover3/11",
-  "hash": 1927663170,
+  "hash": 4269119964,
   "ticks": 193,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/cover3/4242/user",
-  "hash": 1431373832,
-  "ticks": 248,
+  "hash": 970201829,
+  "ticks": 242,
   "reason": "tackle"
  },
  {
   "key": "doubles-quick-outs/cover1/11",
-  "hash": 2088205766,
-  "ticks": 135,
-  "reason": "tackle"
+  "hash": 3552181253,
+  "ticks": 177,
+  "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/cover1/4242/user",
-  "hash": 2926101678,
-  "ticks": 199,
+  "hash": 2715111066,
+  "ticks": 202,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/cover2/11",
-  "hash": 792686871,
+  "hash": 2563548172,
   "ticks": 182,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/cover2/4242/user",
-  "hash": 3735833786,
+  "hash": 1778885089,
   "ticks": 202,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/cover4/11",
-  "hash": 1801932919,
+  "hash": 3462804889,
   "ticks": 187,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/cover4/4242/user",
-  "hash": 2228044762,
-  "ticks": 257,
+  "hash": 4041162175,
+  "ticks": 261,
   "reason": "tackle"
  },
  {
   "key": "doubles-quick-outs/cover2man/11",
-  "hash": 977663699,
-  "ticks": 159,
-  "reason": "tackle"
+  "hash": 1253900503,
+  "ticks": 182,
+  "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/cover2man/4242/user",
-  "hash": 355793627,
-  "ticks": 202,
+  "hash": 2080061151,
+  "ticks": 206,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/cover1blitz/11",
-  "hash": 2229720450,
-  "ticks": 149,
+  "hash": 3158361415,
+  "ticks": 173,
   "reason": "tackle"
  },
  {
   "key": "doubles-quick-outs/cover1blitz/4242/user",
-  "hash": 4088827750,
-  "ticks": 201,
+  "hash": 3233970349,
+  "ticks": 202,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/cover1off/11",
-  "hash": 1921491513,
-  "ticks": 187,
+  "hash": 4263417080,
+  "ticks": 175,
   "reason": "tackle"
  },
  {
   "key": "doubles-quick-outs/cover1off/4242/user",
-  "hash": 2552536885,
+  "hash": 1589030596,
   "ticks": 204,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/tampa2/11",
-  "hash": 3060136054,
+  "hash": 4025060846,
   "ticks": 182,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/tampa2/4242/user",
-  "hash": 3930904397,
+  "hash": 3606617694,
   "ticks": 202,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/firezone/11",
-  "hash": 3560083322,
+  "hash": 2619758457,
   "ticks": 182,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/firezone/4242/user",
-  "hash": 1668209737,
-  "ticks": 252,
+  "hash": 517852988,
+  "ticks": 258,
   "reason": "tackle"
  },
  {
   "key": "doubles-quick-outs/simpressure/11",
-  "hash": 912303636,
+  "hash": 1258043469,
   "ticks": 181,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-quick-outs/simpressure/4242/user",
-  "hash": 1678608631,
-  "ticks": 234,
-  "reason": "tackle"
+  "hash": 644597695,
+  "ticks": 224,
+  "reason": "outOfBounds"
  },
  {
   "key": "bunch-snag/cover3/11",
-  "hash": 1428451454,
-  "ticks": 244,
+  "hash": 875774163,
+  "ticks": 247,
   "reason": "outOfBounds"
  },
  {
   "key": "bunch-snag/cover3/4242/user",
-  "hash": 4082604168,
-  "ticks": 279,
+  "hash": 3435227625,
+  "ticks": 252,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover1/11",
-  "hash": 2221790993,
-  "ticks": 238,
+  "hash": 1549100921,
+  "ticks": 223,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover1/4242/user",
-  "hash": 525570534,
-  "ticks": 187,
+  "hash": 582690262,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover2/11",
-  "hash": 1010228364,
-  "ticks": 491,
+  "hash": 3590172883,
+  "ticks": 514,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover2/4242/user",
-  "hash": 154118354,
-  "ticks": 188,
+  "hash": 3103969182,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover4/11",
-  "hash": 983064087,
-  "ticks": 244,
+  "hash": 2813063328,
+  "ticks": 247,
   "reason": "outOfBounds"
  },
  {
   "key": "bunch-snag/cover4/4242/user",
-  "hash": 1183234147,
-  "ticks": 240,
+  "hash": 659450985,
+  "ticks": 252,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover2man/11",
-  "hash": 1927399055,
-  "ticks": 301,
+  "hash": 4171800082,
+  "ticks": 300,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover2man/4242/user",
-  "hash": 2531397914,
-  "ticks": 175,
+  "hash": 673535837,
+  "ticks": 201,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover1blitz/11",
-  "hash": 511285503,
-  "ticks": 508,
+  "hash": 3870951604,
+  "ticks": 230,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover1blitz/4242/user",
-  "hash": 3378520899,
-  "ticks": 185,
+  "hash": 2393047924,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover1off/11",
-  "hash": 1330624526,
-  "ticks": 248,
+  "hash": 2749305621,
+  "ticks": 245,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/cover1off/4242/user",
-  "hash": 1089347906,
-  "ticks": 176,
+  "hash": 2431487839,
+  "ticks": 200,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/tampa2/11",
-  "hash": 3108149983,
-  "ticks": 275,
+  "hash": 2619096944,
+  "ticks": 295,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/tampa2/4242/user",
-  "hash": 880463940,
-  "ticks": 188,
+  "hash": 691996956,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "bunch-snag/firezone/11",
-  "hash": 3598651781,
-  "ticks": 239,
-  "reason": "tackle"
+  "hash": 1960974335,
+  "ticks": 236,
+  "reason": "outOfBounds"
  },
  {
   "key": "bunch-snag/firezone/4242/user",
-  "hash": 4161214294,
+  "hash": 206661463,
   "ticks": 95,
   "reason": "sack"
  },
  {
   "key": "bunch-snag/simpressure/11",
-  "hash": 1246068114,
-  "ticks": 253,
-  "reason": "tackle"
+  "hash": 2123164885,
+  "ticks": 245,
+  "reason": "outOfBounds"
  },
  {
   "key": "bunch-snag/simpressure/4242/user",
-  "hash": 3084598330,
-  "ticks": 279,
+  "hash": 353856519,
+  "ticks": 273,
   "reason": "tackle"
  },
  {
   "key": "empty-quick/cover3/11",
-  "hash": 51808833,
+  "hash": 984771981,
   "ticks": 223,
   "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/cover3/4242/user",
-  "hash": 1686937469,
+  "hash": 2885344111,
   "ticks": 212,
   "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/cover1/11",
-  "hash": 3397412631,
-  "ticks": 102,
+  "hash": 4223999952,
+  "ticks": 220,
   "reason": "tackle"
  },
  {
   "key": "empty-quick/cover1/4242/user",
-  "hash": 217207122,
-  "ticks": 217,
-  "reason": "tackle"
+  "hash": 314314704,
+  "ticks": 214,
+  "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/cover2/11",
-  "hash": 2761585438,
-  "ticks": 204,
+  "hash": 2664552047,
+  "ticks": 205,
   "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/cover2/4242/user",
-  "hash": 1673227901,
-  "ticks": 220,
+  "hash": 3649311126,
+  "ticks": 213,
   "reason": "outOfBounds"
  },
  {
@@ -523,4880 +523,4880 @@
  },
  {
   "key": "empty-quick/cover4/4242/user",
-  "hash": 1745027555,
+  "hash": 3576332456,
   "ticks": 212,
   "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/cover2man/11",
-  "hash": 2756164571,
-  "ticks": 103,
+  "hash": 2346816130,
+  "ticks": 143,
   "reason": "tackle"
  },
  {
   "key": "empty-quick/cover2man/4242/user",
-  "hash": 2039611125,
+  "hash": 4156945347,
   "ticks": 212,
-  "reason": "tackle"
+  "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/cover1blitz/11",
-  "hash": 2506038296,
-  "ticks": 201,
+  "hash": 300692005,
+  "ticks": 220,
   "reason": "tackle"
  },
  {
   "key": "empty-quick/cover1blitz/4242/user",
-  "hash": 3162011937,
-  "ticks": 217,
-  "reason": "tackle"
+  "hash": 3904900903,
+  "ticks": 214,
+  "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/cover1off/11",
-  "hash": 3378598919,
-  "ticks": 102,
+  "hash": 631892315,
+  "ticks": 133,
   "reason": "tackle"
  },
  {
   "key": "empty-quick/cover1off/4242/user",
-  "hash": 2689642664,
-  "ticks": 218,
-  "reason": "tackle"
+  "hash": 4189058124,
+  "ticks": 214,
+  "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/tampa2/11",
-  "hash": 2606002115,
-  "ticks": 204,
+  "hash": 3856881672,
+  "ticks": 205,
   "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/tampa2/4242/user",
-  "hash": 40121841,
-  "ticks": 220,
+  "hash": 3030059640,
+  "ticks": 213,
   "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/firezone/11",
-  "hash": 1812544845,
-  "ticks": 170,
+  "hash": 1141593994,
+  "ticks": 159,
   "reason": "tackle"
  },
  {
   "key": "empty-quick/firezone/4242/user",
-  "hash": 1091487636,
+  "hash": 520270611,
   "ticks": 212,
   "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/simpressure/11",
-  "hash": 1489833850,
-  "ticks": 244,
-  "reason": "tackle"
+  "hash": 3470792599,
+  "ticks": 248,
+  "reason": "outOfBounds"
  },
  {
   "key": "empty-quick/simpressure/4242/user",
-  "hash": 776706466,
+  "hash": 1431151661,
   "ticks": 212,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-smash/cover3/11",
-  "hash": 1088403640,
-  "ticks": 175,
+  "hash": 4002897611,
+  "ticks": 209,
   "reason": "tackle"
  },
  {
   "key": "doubles-smash/cover3/4242/user",
-  "hash": 3690618624,
-  "ticks": 199,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/cover1/11",
-  "hash": 1251033580,
-  "ticks": 471,
-  "reason": "touchdown"
- },
- {
-  "key": "doubles-smash/cover1/4242/user",
-  "hash": 3531060832,
-  "ticks": 178,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/cover2/11",
-  "hash": 2563609453,
-  "ticks": 273,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/cover2/4242/user",
-  "hash": 2378593502,
-  "ticks": 171,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/cover4/11",
-  "hash": 4099081973,
-  "ticks": 175,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/cover4/4242/user",
-  "hash": 1058799427,
-  "ticks": 200,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/cover2man/11",
-  "hash": 2274619305,
-  "ticks": 472,
-  "reason": "touchdown"
- },
- {
-  "key": "doubles-smash/cover2man/4242/user",
-  "hash": 397744580,
-  "ticks": 164,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/cover1blitz/11",
-  "hash": 354609920,
-  "ticks": 471,
-  "reason": "touchdown"
- },
- {
-  "key": "doubles-smash/cover1blitz/4242/user",
-  "hash": 1845029284,
-  "ticks": 179,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/cover1off/11",
-  "hash": 216701388,
-  "ticks": 498,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/cover1off/4242/user",
-  "hash": 2115797276,
-  "ticks": 168,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/tampa2/11",
-  "hash": 3007692791,
-  "ticks": 273,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/tampa2/4242/user",
-  "hash": 1608985732,
-  "ticks": 171,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/firezone/11",
-  "hash": 2334338608,
-  "ticks": 253,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/firezone/4242/user",
-  "hash": 2793039201,
-  "ticks": 164,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/simpressure/11",
-  "hash": 1044854920,
-  "ticks": 175,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-smash/simpressure/4242/user",
-  "hash": 1892478070,
-  "ticks": 202,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover3/11",
-  "hash": 1422417527,
-  "ticks": 187,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover3/4242/user",
-  "hash": 805855535,
-  "ticks": 256,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover1/11",
-  "hash": 174583504,
-  "ticks": 237,
-  "reason": "sack"
- },
- {
-  "key": "doubles-mesh/cover1/4242/user",
-  "hash": 3606285864,
-  "ticks": 220,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover2/11",
-  "hash": 2235279779,
-  "ticks": 295,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover2/4242/user",
-  "hash": 3595188099,
-  "ticks": 186,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover4/11",
-  "hash": 1806698622,
-  "ticks": 287,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover4/4242/user",
-  "hash": 991294438,
-  "ticks": 256,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover2man/11",
-  "hash": 2276964888,
-  "ticks": 139,
-  "reason": "incomplete"
- },
- {
-  "key": "doubles-mesh/cover2man/4242/user",
-  "hash": 2415092859,
-  "ticks": 182,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover1blitz/11",
-  "hash": 2076328210,
-  "ticks": 297,
-  "reason": "sack"
- },
- {
-  "key": "doubles-mesh/cover1blitz/4242/user",
-  "hash": 326060810,
-  "ticks": 218,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover1off/11",
-  "hash": 3727651853,
-  "ticks": 174,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-mesh/cover1off/4242/user",
-  "hash": 1489344648,
+  "hash": 1353986641,
   "ticks": 214,
   "reason": "tackle"
  },
  {
+  "key": "doubles-smash/cover1/11",
+  "hash": 3458629512,
+  "ticks": 470,
+  "reason": "touchdown"
+ },
+ {
+  "key": "doubles-smash/cover1/4242/user",
+  "hash": 2457843352,
+  "ticks": 198,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/cover2/11",
+  "hash": 2096592460,
+  "ticks": 318,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/cover2/4242/user",
+  "hash": 1704828190,
+  "ticks": 190,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/cover4/11",
+  "hash": 2411316279,
+  "ticks": 209,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/cover4/4242/user",
+  "hash": 2881321602,
+  "ticks": 214,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/cover2man/11",
+  "hash": 3067932948,
+  "ticks": 306,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/cover2man/4242/user",
+  "hash": 1128676822,
+  "ticks": 197,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/cover1blitz/11",
+  "hash": 3091839147,
+  "ticks": 501,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/cover1blitz/4242/user",
+  "hash": 2273499983,
+  "ticks": 197,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/cover1off/11",
+  "hash": 1825307111,
+  "ticks": 497,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/cover1off/4242/user",
+  "hash": 3820569793,
+  "ticks": 192,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/tampa2/11",
+  "hash": 3176451527,
+  "ticks": 318,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/tampa2/4242/user",
+  "hash": 1631427897,
+  "ticks": 190,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/firezone/11",
+  "hash": 2266450071,
+  "ticks": 277,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/firezone/4242/user",
+  "hash": 461337775,
+  "ticks": 192,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/simpressure/11",
+  "hash": 3419833797,
+  "ticks": 209,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-smash/simpressure/4242/user",
+  "hash": 1231523643,
+  "ticks": 217,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover3/11",
+  "hash": 1325802267,
+  "ticks": 171,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover3/4242/user",
+  "hash": 306512998,
+  "ticks": 252,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover1/11",
+  "hash": 1054289909,
+  "ticks": 272,
+  "reason": "incomplete"
+ },
+ {
+  "key": "doubles-mesh/cover1/4242/user",
+  "hash": 1663349809,
+  "ticks": 308,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover2/11",
+  "hash": 2901035554,
+  "ticks": 336,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover2/4242/user",
+  "hash": 2357345878,
+  "ticks": 209,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover4/11",
+  "hash": 1852696131,
+  "ticks": 270,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover4/4242/user",
+  "hash": 1071457442,
+  "ticks": 243,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover2man/11",
+  "hash": 2119785547,
+  "ticks": 238,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover2man/4242/user",
+  "hash": 615471200,
+  "ticks": 208,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover1blitz/11",
+  "hash": 1388486662,
+  "ticks": 247,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover1blitz/4242/user",
+  "hash": 1821536077,
+  "ticks": 202,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover1off/11",
+  "hash": 1448021240,
+  "ticks": 169,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-mesh/cover1off/4242/user",
+  "hash": 194581481,
+  "ticks": 199,
+  "reason": "tackle"
+ },
+ {
   "key": "doubles-mesh/tampa2/11",
-  "hash": 2457471494,
-  "ticks": 194,
+  "hash": 3331439108,
+  "ticks": 198,
   "reason": "tackle"
  },
  {
   "key": "doubles-mesh/tampa2/4242/user",
-  "hash": 2107121991,
-  "ticks": 186,
+  "hash": 186575031,
+  "ticks": 209,
   "reason": "tackle"
  },
  {
   "key": "doubles-mesh/firezone/11",
-  "hash": 725211472,
-  "ticks": 133,
+  "hash": 1395629377,
+  "ticks": 154,
   "reason": "tackle"
  },
  {
   "key": "doubles-mesh/firezone/4242/user",
-  "hash": 233358720,
-  "ticks": 239,
+  "hash": 4162939559,
+  "ticks": 252,
   "reason": "tackle"
  },
  {
   "key": "doubles-mesh/simpressure/11",
-  "hash": 3780109071,
-  "ticks": 263,
+  "hash": 698907438,
+  "ticks": 261,
   "reason": "tackle"
  },
  {
   "key": "doubles-mesh/simpressure/4242/user",
-  "hash": 1867344956,
-  "ticks": 263,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-curls/cover3/11",
-  "hash": 520557165,
-  "ticks": 263,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-curls/cover3/4242/user",
-  "hash": 1086980995,
-  "ticks": 168,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-curls/cover1/11",
-  "hash": 1219421346,
-  "ticks": 393,
-  "reason": "incomplete"
- },
- {
-  "key": "doubles-curls/cover1/4242/user",
-  "hash": 3559462174,
-  "ticks": 164,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-curls/cover2/11",
-  "hash": 2151305431,
+  "hash": 3640728089,
   "ticks": 257,
   "reason": "tackle"
  },
  {
+  "key": "doubles-curls/cover3/11",
+  "hash": 3145202002,
+  "ticks": 286,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-curls/cover3/4242/user",
+  "hash": 2963387551,
+  "ticks": 191,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-curls/cover1/11",
+  "hash": 3874185458,
+  "ticks": 229,
+  "reason": "sack"
+ },
+ {
+  "key": "doubles-curls/cover1/4242/user",
+  "hash": 2040308414,
+  "ticks": 188,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-curls/cover2/11",
+  "hash": 232113737,
+  "ticks": 271,
+  "reason": "tackle"
+ },
+ {
   "key": "doubles-curls/cover2/4242/user",
-  "hash": 763673519,
-  "ticks": 168,
+  "hash": 1531738613,
+  "ticks": 191,
   "reason": "tackle"
  },
  {
   "key": "doubles-curls/cover4/11",
-  "hash": 757091837,
-  "ticks": 253,
+  "hash": 1122998976,
+  "ticks": 303,
   "reason": "tackle"
  },
  {
   "key": "doubles-curls/cover4/4242/user",
-  "hash": 812298585,
-  "ticks": 181,
+  "hash": 1481818295,
+  "ticks": 203,
   "reason": "tackle"
  },
  {
   "key": "doubles-curls/cover2man/11",
-  "hash": 4184437880,
-  "ticks": 319,
-  "reason": "tackle"
+  "hash": 4016184931,
+  "ticks": 229,
+  "reason": "sack"
  },
  {
   "key": "doubles-curls/cover2man/4242/user",
-  "hash": 1363588993,
-  "ticks": 164,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-curls/cover1blitz/11",
-  "hash": 145714414,
-  "ticks": 386,
-  "reason": "incomplete"
- },
- {
-  "key": "doubles-curls/cover1blitz/4242/user",
-  "hash": 3296819496,
-  "ticks": 164,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-curls/cover1off/11",
-  "hash": 1382458021,
-  "ticks": 263,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-curls/cover1off/4242/user",
-  "hash": 3270730727,
-  "ticks": 173,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-curls/tampa2/11",
-  "hash": 194446964,
-  "ticks": 328,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-curls/tampa2/4242/user",
-  "hash": 1295993365,
-  "ticks": 168,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-curls/firezone/11",
-  "hash": 1112820654,
+  "hash": 269635960,
   "ticks": 187,
   "reason": "tackle"
  },
  {
+  "key": "doubles-curls/cover1blitz/11",
+  "hash": 87133549,
+  "ticks": 299,
+  "reason": "sack"
+ },
+ {
+  "key": "doubles-curls/cover1blitz/4242/user",
+  "hash": 1482030400,
+  "ticks": 188,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-curls/cover1off/11",
+  "hash": 2118753568,
+  "ticks": 229,
+  "reason": "sack"
+ },
+ {
+  "key": "doubles-curls/cover1off/4242/user",
+  "hash": 3248723273,
+  "ticks": 195,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-curls/tampa2/11",
+  "hash": 1764827240,
+  "ticks": 287,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-curls/tampa2/4242/user",
+  "hash": 2544384742,
+  "ticks": 191,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-curls/firezone/11",
+  "hash": 3741668398,
+  "ticks": 211,
+  "reason": "tackle"
+ },
+ {
   "key": "doubles-curls/firezone/4242/user",
-  "hash": 2296230080,
-  "ticks": 177,
+  "hash": 3402301097,
+  "ticks": 199,
   "reason": "tackle"
  },
  {
   "key": "doubles-curls/simpressure/11",
-  "hash": 2715534225,
-  "ticks": 249,
-  "reason": "tackle"
+  "hash": 3184056287,
+  "ticks": 243,
+  "reason": "incomplete"
  },
  {
   "key": "doubles-curls/simpressure/4242/user",
-  "hash": 3979077942,
-  "ticks": 164,
+  "hash": 3309307184,
+  "ticks": 191,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover3/11",
-  "hash": 1313679171,
+  "hash": 2751901673,
   "ticks": 233,
   "reason": "outOfBounds"
  },
  {
   "key": "bunch-flood/cover3/4242/user",
-  "hash": 1254439234,
-  "ticks": 238,
+  "hash": 3217018176,
+  "ticks": 249,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover1/11",
-  "hash": 227520223,
-  "ticks": 228,
+  "hash": 3612002508,
+  "ticks": 257,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover1/4242/user",
-  "hash": 3479883599,
-  "ticks": 187,
+  "hash": 2864034193,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover2/11",
-  "hash": 1450414154,
-  "ticks": 229,
+  "hash": 2952644594,
+  "ticks": 230,
   "reason": "outOfBounds"
  },
  {
   "key": "bunch-flood/cover2/4242/user",
-  "hash": 1571282012,
-  "ticks": 188,
+  "hash": 3467141102,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover4/11",
-  "hash": 670858644,
-  "ticks": 234,
+  "hash": 4256826037,
+  "ticks": 235,
   "reason": "outOfBounds"
  },
  {
   "key": "bunch-flood/cover4/4242/user",
-  "hash": 3926136800,
-  "ticks": 239,
+  "hash": 2970072876,
+  "ticks": 249,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover2man/11",
-  "hash": 1084242337,
-  "ticks": 238,
+  "hash": 1611243915,
+  "ticks": 258,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover2man/4242/user",
-  "hash": 2858539944,
-  "ticks": 175,
+  "hash": 274556394,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover1blitz/11",
-  "hash": 927898059,
-  "ticks": 260,
+  "hash": 1835408496,
+  "ticks": 259,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover1blitz/4242/user",
-  "hash": 2729998439,
-  "ticks": 186,
+  "hash": 133733887,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover1off/11",
-  "hash": 461888451,
-  "ticks": 234,
+  "hash": 1140469767,
+  "ticks": 264,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/cover1off/4242/user",
-  "hash": 2835602890,
-  "ticks": 176,
+  "hash": 3089437829,
+  "ticks": 200,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/tampa2/11",
-  "hash": 265919137,
-  "ticks": 229,
+  "hash": 4110993462,
+  "ticks": 230,
   "reason": "outOfBounds"
  },
  {
   "key": "bunch-flood/tampa2/4242/user",
-  "hash": 4097647470,
-  "ticks": 188,
+  "hash": 3034515073,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "bunch-flood/firezone/11",
-  "hash": 3132931930,
-  "ticks": 234,
+  "hash": 2735527548,
+  "ticks": 235,
   "reason": "outOfBounds"
  },
  {
   "key": "bunch-flood/firezone/4242/user",
-  "hash": 156150999,
+  "hash": 1477187134,
   "ticks": 97,
   "reason": "sack"
  },
  {
   "key": "bunch-flood/simpressure/11",
-  "hash": 2903333518,
-  "ticks": 259,
+  "hash": 2908338702,
+  "ticks": 250,
   "reason": "outOfBounds"
  },
  {
   "key": "bunch-flood/simpressure/4242/user",
-  "hash": 2778127734,
-  "ticks": 236,
+  "hash": 1506300369,
+  "ticks": 248,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/cover3/11",
-  "hash": 4266477494,
-  "ticks": 328,
+  "hash": 1146644690,
+  "ticks": 315,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/cover3/4242/user",
-  "hash": 4251788342,
-  "ticks": 170,
+  "hash": 2234887759,
+  "ticks": 201,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/cover1/11",
-  "hash": 2562131612,
-  "ticks": 303,
+  "hash": 3120652772,
+  "ticks": 219,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/cover1/4242/user",
-  "hash": 2414505603,
+  "hash": 2090202482,
   "ticks": 177,
   "reason": "incomplete"
  },
  {
   "key": "singleback-drive/cover2/11",
-  "hash": 1109860846,
-  "ticks": 194,
+  "hash": 1780781711,
+  "ticks": 229,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/cover2/4242/user",
-  "hash": 2238267998,
+  "hash": 194726265,
   "ticks": 177,
   "reason": "incomplete"
  },
  {
   "key": "singleback-drive/cover4/11",
-  "hash": 1563352077,
-  "ticks": 298,
+  "hash": 1100218068,
+  "ticks": 297,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/cover4/4242/user",
-  "hash": 1830642736,
+  "hash": 4158675978,
   "ticks": 177,
   "reason": "incomplete"
  },
  {
   "key": "singleback-drive/cover2man/11",
-  "hash": 2926154655,
-  "ticks": 271,
-  "reason": "tackle"
+  "hash": 1426534000,
+  "ticks": 209,
+  "reason": "incomplete"
  },
  {
   "key": "singleback-drive/cover2man/4242/user",
-  "hash": 1708992853,
+  "hash": 3659242095,
   "ticks": 177,
   "reason": "incomplete"
  },
  {
   "key": "singleback-drive/cover1blitz/11",
-  "hash": 1620258976,
-  "ticks": 276,
+  "hash": 395063603,
+  "ticks": 219,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/cover1blitz/4242/user",
-  "hash": 854405774,
+  "hash": 2231053035,
   "ticks": 177,
   "reason": "incomplete"
  },
  {
   "key": "singleback-drive/cover1off/11",
-  "hash": 664919761,
-  "ticks": 215,
+  "hash": 3885967701,
+  "ticks": 229,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/cover1off/4242/user",
-  "hash": 3179285960,
+  "hash": 3600262656,
   "ticks": 177,
   "reason": "incomplete"
  },
  {
   "key": "singleback-drive/tampa2/11",
-  "hash": 1987167028,
-  "ticks": 194,
+  "hash": 3894121036,
+  "ticks": 229,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/tampa2/4242/user",
-  "hash": 664335028,
+  "hash": 3316559239,
   "ticks": 177,
   "reason": "incomplete"
  },
  {
   "key": "singleback-drive/firezone/11",
-  "hash": 1203917870,
+  "hash": 3205667897,
   "ticks": 274,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/firezone/4242/user",
-  "hash": 523188800,
-  "ticks": 165,
-  "reason": "tackle"
+  "hash": 2644202492,
+  "ticks": 177,
+  "reason": "incomplete"
  },
  {
   "key": "singleback-drive/simpressure/11",
-  "hash": 740044674,
-  "ticks": 323,
+  "hash": 3630391476,
+  "ticks": 306,
   "reason": "tackle"
  },
  {
   "key": "singleback-drive/simpressure/4242/user",
-  "hash": 1454342577,
+  "hash": 4110248217,
   "ticks": 177,
   "reason": "incomplete"
  },
  {
   "key": "trips-four-verts/cover3/11",
-  "hash": 3556606860,
-  "ticks": 291,
-  "reason": "sack"
+  "hash": 2849786799,
+  "ticks": 331,
+  "reason": "tackle"
  },
  {
   "key": "trips-four-verts/cover3/4242/user",
-  "hash": 1523660854,
-  "ticks": 221,
+  "hash": 3886373418,
+  "ticks": 230,
   "reason": "tackle"
  },
  {
   "key": "trips-four-verts/cover1/11",
-  "hash": 67926580,
-  "ticks": 291,
+  "hash": 1334408782,
+  "ticks": 248,
   "reason": "sack"
  },
  {
   "key": "trips-four-verts/cover1/4242/user",
-  "hash": 2847122041,
-  "ticks": 246,
-  "reason": "tackle"
- },
- {
-  "key": "trips-four-verts/cover2/11",
-  "hash": 837756142,
-  "ticks": 306,
-  "reason": "tackle"
- },
- {
-  "key": "trips-four-verts/cover2/4242/user",
-  "hash": 3877296470,
+  "hash": 704511366,
   "ticks": 238,
   "reason": "tackle"
  },
  {
+  "key": "trips-four-verts/cover2/11",
+  "hash": 2289139387,
+  "ticks": 320,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-four-verts/cover2/4242/user",
+  "hash": 1634239881,
+  "ticks": 234,
+  "reason": "tackle"
+ },
+ {
   "key": "trips-four-verts/cover4/11",
-  "hash": 2842778348,
-  "ticks": 248,
-  "reason": "incomplete"
+  "hash": 3812236576,
+  "ticks": 306,
+  "reason": "tackle"
  },
  {
   "key": "trips-four-verts/cover4/4242/user",
-  "hash": 390767008,
-  "ticks": 217,
-  "reason": "tackle"
- },
- {
-  "key": "trips-four-verts/cover2man/11",
-  "hash": 285801987,
-  "ticks": 334,
-  "reason": "tackle"
- },
- {
-  "key": "trips-four-verts/cover2man/4242/user",
-  "hash": 1515731571,
-  "ticks": 240,
-  "reason": "tackle"
- },
- {
-  "key": "trips-four-verts/cover1blitz/11",
-  "hash": 1562423823,
-  "ticks": 249,
-  "reason": "sack"
- },
- {
-  "key": "trips-four-verts/cover1blitz/4242/user",
-  "hash": 303987889,
+  "hash": 541787721,
   "ticks": 228,
   "reason": "tackle"
  },
  {
+  "key": "trips-four-verts/cover2man/11",
+  "hash": 549315555,
+  "ticks": 340,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-four-verts/cover2man/4242/user",
+  "hash": 1098630794,
+  "ticks": 235,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-four-verts/cover1blitz/11",
+  "hash": 3951368017,
+  "ticks": 221,
+  "reason": "sack"
+ },
+ {
+  "key": "trips-four-verts/cover1blitz/4242/user",
+  "hash": 1846790468,
+  "ticks": 237,
+  "reason": "tackle"
+ },
+ {
   "key": "trips-four-verts/cover1off/11",
-  "hash": 306710363,
-  "ticks": 291,
+  "hash": 3632156257,
+  "ticks": 248,
   "reason": "sack"
  },
  {
   "key": "trips-four-verts/cover1off/4242/user",
-  "hash": 2096556784,
-  "ticks": 229,
+  "hash": 3636194730,
+  "ticks": 237,
   "reason": "tackle"
  },
  {
   "key": "trips-four-verts/tampa2/11",
-  "hash": 1126479273,
-  "ticks": 248,
-  "reason": "incomplete"
+  "hash": 4119388117,
+  "ticks": 318,
+  "reason": "tackle"
  },
  {
   "key": "trips-four-verts/tampa2/4242/user",
-  "hash": 831039443,
-  "ticks": 216,
+  "hash": 343328345,
+  "ticks": 228,
   "reason": "tackle"
  },
  {
   "key": "trips-four-verts/firezone/11",
-  "hash": 2263324199,
-  "ticks": 229,
+  "hash": 3919970699,
+  "ticks": 271,
   "reason": "tackle"
  },
  {
   "key": "trips-four-verts/firezone/4242/user",
-  "hash": 3455488903,
+  "hash": 3174939424,
   "ticks": 97,
   "reason": "sack"
  },
  {
   "key": "trips-four-verts/simpressure/11",
-  "hash": 1438790784,
-  "ticks": 261,
+  "hash": 1033326145,
+  "ticks": 258,
   "reason": "sack"
  },
  {
   "key": "trips-four-verts/simpressure/4242/user",
-  "hash": 2331811288,
-  "ticks": 240,
+  "hash": 3040882750,
+  "ticks": 226,
   "reason": "tackle"
  },
  {
   "key": "doubles-dagger/cover3/11",
-  "hash": 1873702143,
-  "ticks": 294,
+  "hash": 918034793,
+  "ticks": 292,
   "reason": "tackle"
  },
  {
   "key": "doubles-dagger/cover3/4242/user",
-  "hash": 1609182465,
+  "hash": 700740477,
   "ticks": 248,
   "reason": "tackle"
  },
  {
   "key": "doubles-dagger/cover1/11",
-  "hash": 10459083,
-  "ticks": 464,
+  "hash": 809574906,
+  "ticks": 481,
   "reason": "tackle"
  },
  {
   "key": "doubles-dagger/cover1/4242/user",
-  "hash": 175370312,
-  "ticks": 243,
+  "hash": 4271521799,
+  "ticks": 255,
   "reason": "tackle"
  },
  {
   "key": "doubles-dagger/cover2/11",
-  "hash": 2653912017,
-  "ticks": 421,
-  "reason": "tackle"
+  "hash": 880495571,
+  "ticks": 229,
+  "reason": "sack"
  },
  {
   "key": "doubles-dagger/cover2/4242/user",
-  "hash": 795334176,
-  "ticks": 243,
+  "hash": 2070509300,
+  "ticks": 253,
   "reason": "tackle"
  },
  {
   "key": "doubles-dagger/cover4/11",
-  "hash": 778986457,
-  "ticks": 277,
+  "hash": 834639708,
+  "ticks": 278,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-dagger/cover4/4242/user",
-  "hash": 3635005835,
-  "ticks": 230,
+  "hash": 43771004,
+  "ticks": 243,
   "reason": "tackle"
  },
  {
   "key": "doubles-dagger/cover2man/11",
-  "hash": 4266755023,
-  "ticks": 210,
-  "reason": "sack"
+  "hash": 2292055577,
+  "ticks": 284,
+  "reason": "incomplete"
  },
  {
   "key": "doubles-dagger/cover2man/4242/user",
-  "hash": 3888863868,
-  "ticks": 232,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-dagger/cover1blitz/11",
-  "hash": 3771930547,
-  "ticks": 410,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-dagger/cover1blitz/4242/user",
-  "hash": 1644714804,
-  "ticks": 243,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-dagger/cover1off/11",
-  "hash": 2360845887,
-  "ticks": 276,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-dagger/cover1off/4242/user",
-  "hash": 3498284335,
+  "hash": 4279877637,
   "ticks": 248,
   "reason": "tackle"
  },
  {
-  "key": "doubles-dagger/tampa2/11",
-  "hash": 3898568725,
-  "ticks": 270,
+  "key": "doubles-dagger/cover1blitz/11",
+  "hash": 992135085,
+  "ticks": 418,
   "reason": "tackle"
  },
  {
+  "key": "doubles-dagger/cover1blitz/4242/user",
+  "hash": 676918635,
+  "ticks": 255,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-dagger/cover1off/11",
+  "hash": 459954016,
+  "ticks": 298,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-dagger/cover1off/4242/user",
+  "hash": 3289056464,
+  "ticks": 255,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-dagger/tampa2/11",
+  "hash": 1573817305,
+  "ticks": 246,
+  "reason": "incomplete"
+ },
+ {
   "key": "doubles-dagger/tampa2/4242/user",
-  "hash": 473081203,
-  "ticks": 243,
+  "hash": 3441219697,
+  "ticks": 253,
   "reason": "tackle"
  },
  {
   "key": "doubles-dagger/firezone/11",
-  "hash": 2342635847,
-  "ticks": 271,
+  "hash": 3325717605,
+  "ticks": 272,
   "reason": "outOfBounds"
  },
  {
   "key": "doubles-dagger/firezone/4242/user",
-  "hash": 1338630090,
+  "hash": 1966506352,
   "ticks": 248,
   "reason": "tackle"
  },
  {
   "key": "doubles-dagger/simpressure/11",
-  "hash": 3999662873,
-  "ticks": 626,
+  "hash": 2046540712,
+  "ticks": 635,
   "reason": "touchdown"
  },
  {
   "key": "doubles-dagger/simpressure/4242/user",
-  "hash": 1339651441,
+  "hash": 2475088419,
   "ticks": 248,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-post/cover3/11",
-  "hash": 3040362011,
-  "ticks": 277,
+  "hash": 866156135,
+  "ticks": 302,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-post/cover3/4242/user",
-  "hash": 2866363347,
+  "hash": 260610349,
   "ticks": 174,
   "reason": "incomplete"
  },
  {
   "key": "singleback-pa-post/cover1/11",
-  "hash": 3893324536,
-  "ticks": 431,
+  "hash": 3000788845,
+  "ticks": 439,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-post/cover1/4242/user",
-  "hash": 3968422070,
+  "hash": 3586705977,
   "ticks": 173,
   "reason": "incomplete"
  },
  {
   "key": "singleback-pa-post/cover2/11",
-  "hash": 2733385667,
-  "ticks": 245,
+  "hash": 3534218632,
+  "ticks": 272,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-post/cover2/4242/user",
-  "hash": 2468038769,
+  "hash": 1303706769,
   "ticks": 174,
   "reason": "incomplete"
  },
  {
   "key": "singleback-pa-post/cover4/11",
-  "hash": 1821933859,
-  "ticks": 376,
+  "hash": 2126192080,
+  "ticks": 379,
   "reason": "outOfBounds"
  },
  {
   "key": "singleback-pa-post/cover4/4242/user",
-  "hash": 1443575066,
+  "hash": 2277127106,
   "ticks": 174,
   "reason": "incomplete"
  },
  {
   "key": "singleback-pa-post/cover2man/11",
-  "hash": 974933497,
-  "ticks": 382,
+  "hash": 2511282067,
+  "ticks": 385,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-post/cover2man/4242/user",
-  "hash": 3650262569,
+  "hash": 1177046032,
   "ticks": 173,
   "reason": "incomplete"
  },
  {
   "key": "singleback-pa-post/cover1blitz/11",
-  "hash": 2874537821,
-  "ticks": 262,
-  "reason": "incomplete"
+  "hash": 2757424276,
+  "ticks": 383,
+  "reason": "tackle"
  },
  {
   "key": "singleback-pa-post/cover1blitz/4242/user",
-  "hash": 214746278,
+  "hash": 713993623,
   "ticks": 173,
   "reason": "incomplete"
  },
  {
   "key": "singleback-pa-post/cover1off/11",
-  "hash": 694310332,
-  "ticks": 384,
+  "hash": 2844321756,
+  "ticks": 433,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-post/cover1off/4242/user",
-  "hash": 1184333349,
+  "hash": 1055528559,
   "ticks": 173,
   "reason": "incomplete"
  },
  {
   "key": "singleback-pa-post/tampa2/11",
-  "hash": 541688385,
-  "ticks": 245,
+  "hash": 4088625119,
+  "ticks": 272,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-post/tampa2/4242/user",
-  "hash": 1498663942,
+  "hash": 995051534,
   "ticks": 174,
   "reason": "incomplete"
  },
  {
   "key": "singleback-pa-post/firezone/11",
-  "hash": 1082495512,
-  "ticks": 412,
-  "reason": "tackle"
+  "hash": 2103116163,
+  "ticks": 396,
+  "reason": "outOfBounds"
  },
  {
   "key": "singleback-pa-post/firezone/4242/user",
-  "hash": 45923754,
-  "ticks": 175,
+  "hash": 2067933846,
+  "ticks": 174,
   "reason": "incomplete"
  },
  {
   "key": "singleback-pa-post/simpressure/11",
-  "hash": 2307566608,
-  "ticks": 276,
+  "hash": 3685162617,
+  "ticks": 277,
   "reason": "outOfBounds"
  },
  {
   "key": "singleback-pa-post/simpressure/4242/user",
-  "hash": 81945061,
+  "hash": 3260122196,
   "ticks": 174,
   "reason": "incomplete"
  },
  {
   "key": "singleback-pa-yankee/cover3/11",
-  "hash": 1254816200,
-  "ticks": 284,
-  "reason": "tackle"
+  "hash": 2029656209,
+  "ticks": 296,
+  "reason": "outOfBounds"
  },
  {
   "key": "singleback-pa-yankee/cover3/4242/user",
-  "hash": 2117206335,
-  "ticks": 121,
+  "hash": 404813859,
+  "ticks": 165,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover1/11",
-  "hash": 894663191,
-  "ticks": 270,
+  "hash": 3277472163,
+  "ticks": 284,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover1/4242/user",
-  "hash": 1292390155,
-  "ticks": 193,
+  "hash": 1799215728,
+  "ticks": 200,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover2/11",
-  "hash": 4065328991,
-  "ticks": 569,
+  "hash": 4112074869,
+  "ticks": 680,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover2/4242/user",
-  "hash": 1457079107,
-  "ticks": 121,
+  "hash": 2069861850,
+  "ticks": 165,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover4/11",
-  "hash": 3374801036,
-  "ticks": 568,
+  "hash": 1451738047,
+  "ticks": 677,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover4/4242/user",
-  "hash": 968267257,
-  "ticks": 121,
+  "hash": 211081688,
+  "ticks": 165,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover2man/11",
-  "hash": 1200551920,
-  "ticks": 274,
+  "hash": 2332523140,
+  "ticks": 290,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover2man/4242/user",
-  "hash": 975973206,
-  "ticks": 177,
+  "hash": 986730780,
+  "ticks": 199,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover1blitz/11",
-  "hash": 2641083599,
-  "ticks": 287,
+  "hash": 2285971407,
+  "ticks": 234,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover1blitz/4242/user",
-  "hash": 2207023081,
+  "hash": 1072942620,
   "ticks": 216,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover1off/11",
-  "hash": 528377533,
-  "ticks": 273,
+  "hash": 1578438865,
+  "ticks": 284,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/cover1off/4242/user",
-  "hash": 3586764344,
-  "ticks": 121,
+  "hash": 3482970395,
+  "ticks": 166,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/tampa2/11",
-  "hash": 4263274220,
-  "ticks": 567,
+  "hash": 2040807602,
+  "ticks": 584,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/tampa2/4242/user",
-  "hash": 334317408,
-  "ticks": 121,
+  "hash": 3070300577,
+  "ticks": 165,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/firezone/11",
-  "hash": 2905992917,
-  "ticks": 391,
-  "reason": "tackle"
+  "hash": 1578727455,
+  "ticks": 273,
+  "reason": "sack"
  },
  {
   "key": "singleback-pa-yankee/firezone/4242/user",
-  "hash": 842174710,
-  "ticks": 121,
+  "hash": 2654649211,
+  "ticks": 173,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/simpressure/11",
-  "hash": 1743066767,
-  "ticks": 223,
+  "hash": 1643955585,
+  "ticks": 215,
   "reason": "tackle"
  },
  {
   "key": "singleback-pa-yankee/simpressure/4242/user",
-  "hash": 1262981632,
-  "ticks": 197,
+  "hash": 2178469620,
+  "ticks": 204,
   "reason": "tackle"
  },
  {
   "key": "doubles-rb-screen/cover3/11",
-  "hash": 3326539740,
-  "ticks": 239,
-  "reason": "incomplete"
- },
- {
-  "key": "doubles-rb-screen/cover3/4242/user",
-  "hash": 1493222852,
-  "ticks": 202,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-rb-screen/cover1/11",
-  "hash": 3065562593,
-  "ticks": 238,
-  "reason": "incomplete"
- },
- {
-  "key": "doubles-rb-screen/cover1/4242/user",
-  "hash": 1589454461,
-  "ticks": 187,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-rb-screen/cover2/11",
-  "hash": 2733454164,
-  "ticks": 239,
-  "reason": "incomplete"
- },
- {
-  "key": "doubles-rb-screen/cover2/4242/user",
-  "hash": 46898860,
-  "ticks": 209,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-rb-screen/cover4/11",
-  "hash": 871116059,
-  "ticks": 239,
-  "reason": "incomplete"
- },
- {
-  "key": "doubles-rb-screen/cover4/4242/user",
-  "hash": 3948619461,
-  "ticks": 193,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-rb-screen/cover2man/11",
-  "hash": 3666616094,
-  "ticks": 238,
-  "reason": "incomplete"
- },
- {
-  "key": "doubles-rb-screen/cover2man/4242/user",
-  "hash": 3245454955,
-  "ticks": 198,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-rb-screen/cover1blitz/11",
-  "hash": 2938954369,
+  "hash": 1581822028,
   "ticks": 240,
   "reason": "tackle"
  },
  {
-  "key": "doubles-rb-screen/cover1blitz/4242/user",
-  "hash": 2056433385,
+  "key": "doubles-rb-screen/cover3/4242/user",
+  "hash": 1998340741,
+  "ticks": 196,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-rb-screen/cover1/11",
+  "hash": 3587505388,
+  "ticks": 375,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-rb-screen/cover1/4242/user",
+  "hash": 552178508,
   "ticks": 175,
   "reason": "incomplete"
  },
  {
-  "key": "doubles-rb-screen/cover1off/11",
-  "hash": 3036074328,
-  "ticks": 238,
-  "reason": "incomplete"
- },
- {
-  "key": "doubles-rb-screen/cover1off/4242/user",
-  "hash": 2708483691,
-  "ticks": 190,
+  "key": "doubles-rb-screen/cover2/11",
+  "hash": 728774865,
+  "ticks": 230,
   "reason": "tackle"
  },
  {
-  "key": "doubles-rb-screen/tampa2/11",
-  "hash": 831355019,
-  "ticks": 239,
+  "key": "doubles-rb-screen/cover2/4242/user",
+  "hash": 1654747432,
+  "ticks": 189,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-rb-screen/cover4/11",
+  "hash": 3618839698,
+  "ticks": 230,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-rb-screen/cover4/4242/user",
+  "hash": 376191032,
+  "ticks": 189,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-rb-screen/cover2man/11",
+  "hash": 3156800359,
+  "ticks": 333,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-rb-screen/cover2man/4242/user",
+  "hash": 3507264727,
+  "ticks": 175,
   "reason": "incomplete"
  },
  {
+  "key": "doubles-rb-screen/cover1blitz/11",
+  "hash": 1828381498,
+  "ticks": 377,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-rb-screen/cover1blitz/4242/user",
+  "hash": 2639588363,
+  "ticks": 114,
+  "reason": "sack"
+ },
+ {
+  "key": "doubles-rb-screen/cover1off/11",
+  "hash": 974892937,
+  "ticks": 373,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-rb-screen/cover1off/4242/user",
+  "hash": 899326240,
+  "ticks": 175,
+  "reason": "incomplete"
+ },
+ {
+  "key": "doubles-rb-screen/tampa2/11",
+  "hash": 1649286115,
+  "ticks": 229,
+  "reason": "tackle"
+ },
+ {
   "key": "doubles-rb-screen/tampa2/4242/user",
-  "hash": 787131336,
-  "ticks": 220,
+  "hash": 608791980,
+  "ticks": 189,
   "reason": "tackle"
  },
  {
   "key": "doubles-rb-screen/firezone/11",
-  "hash": 4213247026,
-  "ticks": 222,
+  "hash": 861666650,
+  "ticks": 279,
   "reason": "tackle"
  },
  {
   "key": "doubles-rb-screen/firezone/4242/user",
-  "hash": 1682856379,
-  "ticks": 238,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-rb-screen/simpressure/11",
-  "hash": 2622325780,
-  "ticks": 236,
+  "hash": 581024273,
+  "ticks": 173,
   "reason": "incomplete"
  },
  {
+  "key": "doubles-rb-screen/simpressure/11",
+  "hash": 830821270,
+  "ticks": 172,
+  "reason": "tackle"
+ },
+ {
   "key": "doubles-rb-screen/simpressure/4242/user",
-  "hash": 683825430,
-  "ticks": 186,
+  "hash": 1539840384,
+  "ticks": 195,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover3/11",
-  "hash": 2407050061,
+  "hash": 2441210051,
   "ticks": 194,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover3/4242/user",
-  "hash": 3625798222,
-  "ticks": 161,
+  "hash": 4176696702,
+  "ticks": 200,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover1/11",
-  "hash": 4002880080,
-  "ticks": 177,
+  "hash": 907625887,
+  "ticks": 173,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover1/4242/user",
-  "hash": 2710312554,
-  "ticks": 176,
+  "hash": 3571703415,
+  "ticks": 193,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover2/11",
-  "hash": 1991898701,
-  "ticks": 113,
+  "hash": 1345403750,
+  "ticks": 133,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover2/4242/user",
-  "hash": 977785096,
-  "ticks": 161,
-  "reason": "tackle"
- },
- {
-  "key": "bunch-bubble/cover4/11",
-  "hash": 653397904,
+  "hash": 1784611856,
   "ticks": 199,
   "reason": "tackle"
  },
  {
+  "key": "bunch-bubble/cover4/11",
+  "hash": 3138375917,
+  "ticks": 215,
+  "reason": "tackle"
+ },
+ {
   "key": "bunch-bubble/cover4/4242/user",
-  "hash": 2853303886,
-  "ticks": 192,
+  "hash": 1851267842,
+  "ticks": 207,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover2man/11",
-  "hash": 2441744780,
-  "ticks": 98,
+  "hash": 4235214165,
+  "ticks": 135,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover2man/4242/user",
-  "hash": 847495575,
-  "ticks": 171,
+  "hash": 2702360207,
+  "ticks": 194,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover1blitz/11",
-  "hash": 1481749923,
-  "ticks": 170,
+  "hash": 1523360328,
+  "ticks": 166,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover1blitz/4242/user",
-  "hash": 590730043,
-  "ticks": 195,
-  "reason": "incomplete"
+  "hash": 2662778603,
+  "ticks": 372,
+  "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover1off/11",
-  "hash": 2765318879,
-  "ticks": 170,
+  "hash": 3939956234,
+  "ticks": 166,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/cover1off/4242/user",
-  "hash": 939539072,
-  "ticks": 168,
-  "reason": "tackle"
- },
- {
-  "key": "bunch-bubble/tampa2/11",
-  "hash": 314767894,
-  "ticks": 113,
-  "reason": "tackle"
- },
- {
-  "key": "bunch-bubble/tampa2/4242/user",
-  "hash": 1480018290,
-  "ticks": 161,
-  "reason": "tackle"
- },
- {
-  "key": "bunch-bubble/firezone/11",
-  "hash": 1807103882,
+  "hash": 1552888288,
   "ticks": 195,
   "reason": "tackle"
  },
  {
+  "key": "bunch-bubble/tampa2/11",
+  "hash": 2987252540,
+  "ticks": 133,
+  "reason": "tackle"
+ },
+ {
+  "key": "bunch-bubble/tampa2/4242/user",
+  "hash": 2600296819,
+  "ticks": 199,
+  "reason": "tackle"
+ },
+ {
+  "key": "bunch-bubble/firezone/11",
+  "hash": 1729726829,
+  "ticks": 173,
+  "reason": "tackle"
+ },
+ {
   "key": "bunch-bubble/firezone/4242/user",
-  "hash": 2997142210,
+  "hash": 1291817370,
   "ticks": 98,
   "reason": "sack"
  },
  {
   "key": "bunch-bubble/simpressure/11",
-  "hash": 308994982,
+  "hash": 2745130847,
   "ticks": 204,
   "reason": "tackle"
  },
  {
   "key": "bunch-bubble/simpressure/4242/user",
-  "hash": 3836092350,
-  "ticks": 162,
+  "hash": 502194913,
+  "ticks": 200,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover3/11",
-  "hash": 135454003,
-  "ticks": 304,
+  "hash": 86381944,
+  "ticks": 316,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover3/4242/user",
-  "hash": 3144169796,
-  "ticks": 186,
+  "hash": 3503097391,
+  "ticks": 208,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover1/11",
-  "hash": 3088741518,
+  "hash": 3680189612,
   "ticks": 444,
   "reason": "touchdown"
  },
  {
   "key": "doubles-hitch-seam/cover1/4242/user",
-  "hash": 143791319,
-  "ticks": 183,
+  "hash": 2508279891,
+  "ticks": 205,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover2/11",
-  "hash": 2295148785,
+  "hash": 3402099802,
   "ticks": 220,
   "reason": "incomplete"
  },
  {
   "key": "doubles-hitch-seam/cover2/4242/user",
-  "hash": 3908607257,
-  "ticks": 160,
+  "hash": 48831953,
+  "ticks": 184,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover4/11",
-  "hash": 395148241,
-  "ticks": 218,
+  "hash": 1967484581,
+  "ticks": 245,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover4/4242/user",
-  "hash": 2639193563,
-  "ticks": 205,
+  "hash": 2589418311,
+  "ticks": 222,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover2man/11",
-  "hash": 2175569061,
-  "ticks": 310,
+  "hash": 2835104151,
+  "ticks": 311,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover2man/4242/user",
-  "hash": 1021780242,
-  "ticks": 178,
+  "hash": 3780059233,
+  "ticks": 211,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover1blitz/11",
-  "hash": 2487043141,
-  "ticks": 265,
-  "reason": "sack"
+  "hash": 4284786741,
+  "ticks": 390,
+  "reason": "incomplete"
  },
  {
   "key": "doubles-hitch-seam/cover1blitz/4242/user",
-  "hash": 840220534,
-  "ticks": 182,
+  "hash": 87204778,
+  "ticks": 204,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover1off/11",
-  "hash": 1404985201,
-  "ticks": 152,
+  "hash": 2960237365,
+  "ticks": 179,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/cover1off/4242/user",
-  "hash": 1947839452,
-  "ticks": 215,
+  "hash": 4278092385,
+  "ticks": 217,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/tampa2/11",
-  "hash": 3909815410,
+  "hash": 1199143737,
   "ticks": 220,
   "reason": "incomplete"
  },
  {
   "key": "doubles-hitch-seam/tampa2/4242/user",
-  "hash": 3397638339,
-  "ticks": 160,
+  "hash": 2651509541,
+  "ticks": 184,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/firezone/11",
-  "hash": 3030046651,
-  "ticks": 217,
+  "hash": 1193817514,
+  "ticks": 244,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/firezone/4242/user",
-  "hash": 195248252,
-  "ticks": 227,
+  "hash": 3122468416,
+  "ticks": 250,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/simpressure/11",
-  "hash": 3756528417,
-  "ticks": 302,
+  "hash": 787916775,
+  "ticks": 312,
   "reason": "tackle"
  },
  {
   "key": "doubles-hitch-seam/simpressure/4242/user",
-  "hash": 4229699332,
-  "ticks": 182,
+  "hash": 3158489099,
+  "ticks": 203,
   "reason": "tackle"
  },
  {
   "key": "empty-spot/cover3/11",
-  "hash": 636036199,
-  "ticks": 329,
-  "reason": "tackle"
+  "hash": 1867526281,
+  "ticks": 344,
+  "reason": "outOfBounds"
  },
  {
   "key": "empty-spot/cover3/4242/user",
-  "hash": 4197377132,
-  "ticks": 264,
+  "hash": 3970465373,
+  "ticks": 263,
   "reason": "tackle"
  },
  {
   "key": "empty-spot/cover1/11",
-  "hash": 254866078,
-  "ticks": 314,
+  "hash": 4148285008,
+  "ticks": 385,
   "reason": "incomplete"
  },
  {
   "key": "empty-spot/cover1/4242/user",
-  "hash": 3016380363,
-  "ticks": 265,
+  "hash": 2199250213,
+  "ticks": 268,
   "reason": "tackle"
  },
  {
   "key": "empty-spot/cover2/11",
-  "hash": 3616267290,
-  "ticks": 511,
+  "hash": 2686648361,
+  "ticks": 519,
   "reason": "tackle"
  },
  {
   "key": "empty-spot/cover2/4242/user",
-  "hash": 3670312558,
-  "ticks": 276,
-  "reason": "tackle"
+  "hash": 1254100669,
+  "ticks": 275,
+  "reason": "outOfBounds"
  },
  {
   "key": "empty-spot/cover4/11",
-  "hash": 3085928210,
-  "ticks": 293,
-  "reason": "tackle"
- },
- {
-  "key": "empty-spot/cover4/4242/user",
-  "hash": 264709909,
-  "ticks": 245,
-  "reason": "tackle"
- },
- {
-  "key": "empty-spot/cover2man/11",
-  "hash": 157293919,
-  "ticks": 270,
-  "reason": "tackle"
- },
- {
-  "key": "empty-spot/cover2man/4242/user",
-  "hash": 2803304029,
-  "ticks": 245,
-  "reason": "tackle"
- },
- {
-  "key": "empty-spot/cover1blitz/11",
-  "hash": 1468958301,
-  "ticks": 311,
-  "reason": "incomplete"
- },
- {
-  "key": "empty-spot/cover1blitz/4242/user",
-  "hash": 2956453785,
-  "ticks": 265,
-  "reason": "tackle"
- },
- {
-  "key": "empty-spot/cover1off/11",
-  "hash": 1148001609,
-  "ticks": 249,
-  "reason": "tackle"
- },
- {
-  "key": "empty-spot/cover1off/4242/user",
-  "hash": 3079614129,
-  "ticks": 264,
-  "reason": "tackle"
- },
- {
-  "key": "empty-spot/tampa2/11",
-  "hash": 1024172790,
-  "ticks": 226,
-  "reason": "incomplete"
- },
- {
-  "key": "empty-spot/tampa2/4242/user",
-  "hash": 1586057617,
-  "ticks": 276,
-  "reason": "tackle"
- },
- {
-  "key": "empty-spot/firezone/11",
-  "hash": 332088274,
+  "hash": 2701771805,
   "ticks": 292,
   "reason": "outOfBounds"
  },
  {
+  "key": "empty-spot/cover4/4242/user",
+  "hash": 1052321592,
+  "ticks": 255,
+  "reason": "tackle"
+ },
+ {
+  "key": "empty-spot/cover2man/11",
+  "hash": 1355060498,
+  "ticks": 276,
+  "reason": "tackle"
+ },
+ {
+  "key": "empty-spot/cover2man/4242/user",
+  "hash": 1558234575,
+  "ticks": 261,
+  "reason": "tackle"
+ },
+ {
+  "key": "empty-spot/cover1blitz/11",
+  "hash": 2961564964,
+  "ticks": 306,
+  "reason": "tackle"
+ },
+ {
+  "key": "empty-spot/cover1blitz/4242/user",
+  "hash": 2624062693,
+  "ticks": 268,
+  "reason": "tackle"
+ },
+ {
+  "key": "empty-spot/cover1off/11",
+  "hash": 2127864549,
+  "ticks": 273,
+  "reason": "tackle"
+ },
+ {
+  "key": "empty-spot/cover1off/4242/user",
+  "hash": 2265836309,
+  "ticks": 272,
+  "reason": "tackle"
+ },
+ {
+  "key": "empty-spot/tampa2/11",
+  "hash": 2462284183,
+  "ticks": 224,
+  "reason": "incomplete"
+ },
+ {
+  "key": "empty-spot/tampa2/4242/user",
+  "hash": 1325560368,
+  "ticks": 275,
+  "reason": "outOfBounds"
+ },
+ {
+  "key": "empty-spot/firezone/11",
+  "hash": 1801035055,
+  "ticks": 285,
+  "reason": "outOfBounds"
+ },
+ {
   "key": "empty-spot/firezone/4242/user",
-  "hash": 1158818804,
-  "ticks": 264,
+  "hash": 2252275747,
+  "ticks": 263,
   "reason": "tackle"
  },
  {
   "key": "empty-spot/simpressure/11",
-  "hash": 3776084889,
-  "ticks": 278,
+  "hash": 3810812579,
+  "ticks": 552,
   "reason": "tackle"
  },
  {
   "key": "empty-spot/simpressure/4242/user",
-  "hash": 742689691,
-  "ticks": 264,
+  "hash": 3496710081,
+  "ticks": 263,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/cover3/11",
-  "hash": 371542955,
-  "ticks": 285,
+  "hash": 3824060074,
+  "ticks": 332,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/cover3/4242/user",
-  "hash": 1124482801,
-  "ticks": 203,
+  "hash": 1727904637,
+  "ticks": 212,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/cover1/11",
-  "hash": 3680914304,
-  "ticks": 291,
+  "hash": 187263038,
+  "ticks": 300,
   "reason": "outOfBounds"
  },
  {
   "key": "trips-y-cross/cover1/4242/user",
-  "hash": 1036838400,
-  "ticks": 172,
+  "hash": 2472814664,
+  "ticks": 205,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/cover2/11",
-  "hash": 3578256858,
-  "ticks": 319,
+  "hash": 1575545136,
+  "ticks": 328,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/cover2/4242/user",
-  "hash": 3582880753,
-  "ticks": 172,
+  "hash": 2942654450,
+  "ticks": 207,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/cover4/11",
-  "hash": 3365630237,
-  "ticks": 185,
+  "hash": 2078792197,
+  "ticks": 198,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/cover4/4242/user",
-  "hash": 1817772657,
-  "ticks": 203,
+  "hash": 4067678740,
+  "ticks": 212,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/cover2man/11",
-  "hash": 2883529967,
-  "ticks": 277,
-  "reason": "tackle"
+  "hash": 1714657350,
+  "ticks": 248,
+  "reason": "sack"
  },
  {
   "key": "trips-y-cross/cover2man/4242/user",
-  "hash": 1958949298,
-  "ticks": 172,
+  "hash": 1121028155,
+  "ticks": 205,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/cover1blitz/11",
-  "hash": 3944122036,
-  "ticks": 241,
-  "reason": "incomplete"
+  "hash": 1442423280,
+  "ticks": 297,
+  "reason": "outOfBounds"
  },
  {
   "key": "trips-y-cross/cover1blitz/4242/user",
-  "hash": 698583980,
-  "ticks": 172,
+  "hash": 1091929238,
+  "ticks": 205,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/cover1off/11",
-  "hash": 755995119,
-  "ticks": 281,
-  "reason": "tackle"
+  "hash": 1398352222,
+  "ticks": 296,
+  "reason": "outOfBounds"
  },
  {
   "key": "trips-y-cross/cover1off/4242/user",
-  "hash": 641089288,
-  "ticks": 172,
+  "hash": 2324692351,
+  "ticks": 205,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/tampa2/11",
-  "hash": 960618685,
-  "ticks": 295,
+  "hash": 2213369054,
+  "ticks": 315,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/tampa2/4242/user",
-  "hash": 1641805799,
-  "ticks": 172,
+  "hash": 3513968910,
+  "ticks": 207,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/firezone/11",
-  "hash": 958807852,
-  "ticks": 309,
+  "hash": 3758409050,
+  "ticks": 295,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/firezone/4242/user",
-  "hash": 3418867763,
+  "hash": 3421300127,
   "ticks": 98,
   "reason": "sack"
  },
  {
   "key": "trips-y-cross/simpressure/11",
-  "hash": 1525694782,
-  "ticks": 314,
+  "hash": 79553965,
+  "ticks": 302,
   "reason": "tackle"
  },
  {
   "key": "trips-y-cross/simpressure/4242/user",
-  "hash": 4207678580,
-  "ticks": 203,
+  "hash": 1240614793,
+  "ticks": 213,
   "reason": "tackle"
  },
  {
   "key": "empty-levels/cover3/11",
-  "hash": 4175388897,
-  "ticks": 178,
+  "hash": 340982249,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "empty-levels/cover3/4242/user",
-  "hash": 4274795496,
+  "hash": 59467100,
   "ticks": 167,
   "reason": "incomplete"
  },
  {
   "key": "empty-levels/cover1/11",
-  "hash": 3955688179,
+  "hash": 3642275495,
   "ticks": 228,
   "reason": "sack"
  },
  {
   "key": "empty-levels/cover1/4242/user",
-  "hash": 14129903,
+  "hash": 554551829,
   "ticks": 167,
   "reason": "incomplete"
  },
  {
   "key": "empty-levels/cover2/11",
-  "hash": 3616336468,
-  "ticks": 212,
+  "hash": 3796597059,
+  "ticks": 230,
   "reason": "tackle"
  },
  {
   "key": "empty-levels/cover2/4242/user",
-  "hash": 2112432233,
+  "hash": 1607361088,
   "ticks": 167,
   "reason": "incomplete"
  },
  {
   "key": "empty-levels/cover4/11",
-  "hash": 3241441612,
-  "ticks": 213,
+  "hash": 1240830449,
+  "ticks": 230,
   "reason": "tackle"
  },
  {
   "key": "empty-levels/cover4/4242/user",
-  "hash": 1002602170,
+  "hash": 1205921001,
   "ticks": 167,
   "reason": "incomplete"
  },
  {
   "key": "empty-levels/cover2man/11",
-  "hash": 2050662401,
-  "ticks": 432,
+  "hash": 4136399778,
+  "ticks": 456,
   "reason": "tackle"
  },
  {
   "key": "empty-levels/cover2man/4242/user",
-  "hash": 4177583470,
+  "hash": 4183769833,
   "ticks": 167,
   "reason": "incomplete"
  },
  {
   "key": "empty-levels/cover1blitz/11",
-  "hash": 25725589,
-  "ticks": 320,
-  "reason": "incomplete"
+  "hash": 2840888390,
+  "ticks": 266,
+  "reason": "sack"
  },
  {
   "key": "empty-levels/cover1blitz/4242/user",
-  "hash": 1556883261,
+  "hash": 2005243989,
   "ticks": 167,
   "reason": "incomplete"
  },
  {
   "key": "empty-levels/cover1off/11",
-  "hash": 2650296277,
+  "hash": 1923998689,
   "ticks": 228,
   "reason": "sack"
  },
  {
   "key": "empty-levels/cover1off/4242/user",
-  "hash": 3075569831,
+  "hash": 523893956,
   "ticks": 167,
   "reason": "incomplete"
  },
  {
   "key": "empty-levels/tampa2/11",
-  "hash": 3699382564,
-  "ticks": 212,
+  "hash": 2436692344,
+  "ticks": 230,
   "reason": "tackle"
  },
  {
   "key": "empty-levels/tampa2/4242/user",
-  "hash": 757157247,
+  "hash": 1664377231,
   "ticks": 167,
   "reason": "incomplete"
  },
  {
   "key": "empty-levels/firezone/11",
-  "hash": 76702583,
-  "ticks": 192,
+  "hash": 3154573506,
+  "ticks": 222,
   "reason": "tackle"
  },
  {
   "key": "empty-levels/firezone/4242/user",
-  "hash": 272995391,
+  "hash": 881561141,
   "ticks": 167,
   "reason": "incomplete"
  },
  {
   "key": "empty-levels/simpressure/11",
-  "hash": 1776082602,
-  "ticks": 174,
+  "hash": 144794956,
+  "ticks": 203,
   "reason": "tackle"
  },
  {
   "key": "empty-levels/simpressure/4242/user",
-  "hash": 699593250,
+  "hash": 1391542934,
   "ticks": 167,
   "reason": "incomplete"
  },
  {
   "key": "ace-te-seam/cover3/11",
-  "hash": 4096603289,
-  "ticks": 298,
+  "hash": 3491468970,
+  "ticks": 338,
   "reason": "tackle"
  },
  {
   "key": "ace-te-seam/cover3/4242/user",
-  "hash": 3877926520,
-  "ticks": 202,
-  "reason": "incomplete"
+  "hash": 887100343,
+  "ticks": 207,
+  "reason": "tackle"
  },
  {
   "key": "ace-te-seam/cover1/11",
-  "hash": 1946260649,
-  "ticks": 317,
+  "hash": 808003504,
+  "ticks": 331,
   "reason": "tackle"
  },
  {
   "key": "ace-te-seam/cover1/4242/user",
-  "hash": 979173063,
-  "ticks": 176,
-  "reason": "incomplete"
- },
- {
-  "key": "ace-te-seam/cover2/11",
-  "hash": 3020918110,
-  "ticks": 333,
-  "reason": "tackle"
- },
- {
-  "key": "ace-te-seam/cover2/4242/user",
-  "hash": 2080313485,
-  "ticks": 176,
-  "reason": "incomplete"
- },
- {
-  "key": "ace-te-seam/cover4/11",
-  "hash": 2255232984,
-  "ticks": 333,
-  "reason": "tackle"
- },
- {
-  "key": "ace-te-seam/cover4/4242/user",
-  "hash": 693873922,
-  "ticks": 176,
-  "reason": "incomplete"
- },
- {
-  "key": "ace-te-seam/cover2man/11",
-  "hash": 589806010,
-  "ticks": 324,
-  "reason": "tackle"
- },
- {
-  "key": "ace-te-seam/cover2man/4242/user",
-  "hash": 1876797086,
-  "ticks": 176,
-  "reason": "incomplete"
- },
- {
-  "key": "ace-te-seam/cover1blitz/11",
-  "hash": 1144455761,
-  "ticks": 201,
-  "reason": "sack"
- },
- {
-  "key": "ace-te-seam/cover1blitz/4242/user",
-  "hash": 1479409219,
+  "hash": 4273051009,
   "ticks": 177,
   "reason": "incomplete"
  },
  {
+  "key": "ace-te-seam/cover2/11",
+  "hash": 1682621537,
+  "ticks": 331,
+  "reason": "tackle"
+ },
+ {
+  "key": "ace-te-seam/cover2/4242/user",
+  "hash": 1344239146,
+  "ticks": 177,
+  "reason": "incomplete"
+ },
+ {
+  "key": "ace-te-seam/cover4/11",
+  "hash": 633249358,
+  "ticks": 331,
+  "reason": "tackle"
+ },
+ {
+  "key": "ace-te-seam/cover4/4242/user",
+  "hash": 474979781,
+  "ticks": 177,
+  "reason": "incomplete"
+ },
+ {
+  "key": "ace-te-seam/cover2man/11",
+  "hash": 3039885289,
+  "ticks": 328,
+  "reason": "tackle"
+ },
+ {
+  "key": "ace-te-seam/cover2man/4242/user",
+  "hash": 254186927,
+  "ticks": 177,
+  "reason": "incomplete"
+ },
+ {
+  "key": "ace-te-seam/cover1blitz/11",
+  "hash": 3606448950,
+  "ticks": 216,
+  "reason": "sack"
+ },
+ {
+  "key": "ace-te-seam/cover1blitz/4242/user",
+  "hash": 294133349,
+  "ticks": 176,
+  "reason": "incomplete"
+ },
+ {
   "key": "ace-te-seam/cover1off/11",
-  "hash": 2225333816,
+  "hash": 2370992704,
   "ticks": 241,
   "reason": "sack"
  },
  {
   "key": "ace-te-seam/cover1off/4242/user",
-  "hash": 246353821,
-  "ticks": 176,
+  "hash": 2512439390,
+  "ticks": 177,
   "reason": "incomplete"
  },
  {
   "key": "ace-te-seam/tampa2/11",
-  "hash": 815460260,
-  "ticks": 270,
+  "hash": 3839464776,
+  "ticks": 312,
   "reason": "tackle"
  },
  {
   "key": "ace-te-seam/tampa2/4242/user",
-  "hash": 2149864094,
-  "ticks": 176,
+  "hash": 521356855,
+  "ticks": 177,
   "reason": "incomplete"
  },
  {
   "key": "ace-te-seam/firezone/11",
-  "hash": 3089913523,
-  "ticks": 324,
+  "hash": 1432603939,
+  "ticks": 325,
   "reason": "tackle"
  },
  {
   "key": "ace-te-seam/firezone/4242/user",
-  "hash": 2177860842,
+  "hash": 979649114,
   "ticks": 176,
   "reason": "incomplete"
  },
  {
   "key": "ace-te-seam/simpressure/11",
-  "hash": 2633967965,
-  "ticks": 297,
+  "hash": 3346853023,
+  "ticks": 309,
   "reason": "tackle"
  },
  {
   "key": "ace-te-seam/simpressure/4242/user",
-  "hash": 3393779750,
-  "ticks": 177,
+  "hash": 3317165301,
+  "ticks": 176,
   "reason": "incomplete"
  },
  {
   "key": "doubles-hail-mary/cover3/11",
-  "hash": 314685506,
+  "hash": 3991229409,
   "ticks": 506,
   "reason": "incomplete"
  },
  {
   "key": "doubles-hail-mary/cover3/4242/user",
-  "hash": 4203826355,
-  "ticks": 254,
+  "hash": 482928692,
+  "ticks": 253,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/cover1/11",
-  "hash": 2833681196,
-  "ticks": 473,
-  "reason": "tackle"
+  "hash": 1368460856,
+  "ticks": 506,
+  "reason": "incomplete"
  },
  {
   "key": "doubles-hail-mary/cover1/4242/user",
-  "hash": 381956193,
-  "ticks": 251,
+  "hash": 2960431635,
+  "ticks": 258,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/cover2/11",
-  "hash": 2306574047,
-  "ticks": 456,
-  "reason": "tackle"
+  "hash": 2135307977,
+  "ticks": 506,
+  "reason": "incomplete"
  },
  {
   "key": "doubles-hail-mary/cover2/4242/user",
-  "hash": 1295224299,
-  "ticks": 247,
+  "hash": 248656037,
+  "ticks": 258,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/cover4/11",
-  "hash": 3470260464,
-  "ticks": 456,
+  "hash": 1351897970,
+  "ticks": 483,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/cover4/4242/user",
-  "hash": 3097476723,
-  "ticks": 247,
+  "hash": 10597638,
+  "ticks": 253,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/cover2man/11",
-  "hash": 4287298029,
-  "ticks": 456,
+  "hash": 2944824043,
+  "ticks": 478,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/cover2man/4242/user",
-  "hash": 61295198,
-  "ticks": 236,
+  "hash": 923368083,
+  "ticks": 252,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/cover1blitz/11",
-  "hash": 1647001150,
-  "ticks": 456,
+  "hash": 2834533454,
+  "ticks": 474,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/cover1blitz/4242/user",
-  "hash": 4271132125,
-  "ticks": 251,
+  "hash": 78886578,
+  "ticks": 258,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/cover1off/11",
-  "hash": 974250981,
-  "ticks": 456,
-  "reason": "tackle"
+  "hash": 1368750487,
+  "ticks": 512,
+  "reason": "incomplete"
  },
  {
   "key": "doubles-hail-mary/cover1off/4242/user",
-  "hash": 193779932,
-  "ticks": 252,
+  "hash": 1516866308,
+  "ticks": 259,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/tampa2/11",
-  "hash": 477169859,
-  "ticks": 456,
-  "reason": "tackle"
+  "hash": 2892848357,
+  "ticks": 506,
+  "reason": "incomplete"
  },
  {
   "key": "doubles-hail-mary/tampa2/4242/user",
-  "hash": 2881019965,
-  "ticks": 247,
+  "hash": 277537345,
+  "ticks": 258,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/firezone/11",
-  "hash": 787822717,
-  "ticks": 456,
-  "reason": "tackle"
+  "hash": 1989696936,
+  "ticks": 506,
+  "reason": "incomplete"
  },
  {
   "key": "doubles-hail-mary/firezone/4242/user",
-  "hash": 3916207570,
-  "ticks": 252,
+  "hash": 1194767138,
+  "ticks": 253,
   "reason": "tackle"
  },
  {
   "key": "doubles-hail-mary/simpressure/11",
-  "hash": 4142762483,
+  "hash": 2317560335,
   "ticks": 506,
   "reason": "incomplete"
  },
  {
   "key": "doubles-hail-mary/simpressure/4242/user",
-  "hash": 3066003640,
-  "ticks": 252,
+  "hash": 617425348,
+  "ticks": 253,
   "reason": "tackle"
  },
  {
   "key": "ace-pa-crossers/cover3/11",
-  "hash": 971279620,
-  "ticks": 251,
+  "hash": 1056420812,
+  "ticks": 242,
   "reason": "tackle"
  },
  {
   "key": "ace-pa-crossers/cover3/4242/user",
-  "hash": 2592266240,
-  "ticks": 174,
+  "hash": 3847092832,
+  "ticks": 211,
   "reason": "tackle"
  },
  {
   "key": "ace-pa-crossers/cover1/11",
-  "hash": 2338444243,
-  "ticks": 374,
+  "hash": 47680003,
+  "ticks": 272,
   "reason": "tackle"
  },
  {
   "key": "ace-pa-crossers/cover1/4242/user",
-  "hash": 270888937,
-  "ticks": 207,
+  "hash": 65209336,
+  "ticks": 166,
   "reason": "tackle"
  },
  {
   "key": "ace-pa-crossers/cover2/11",
-  "hash": 362946461,
-  "ticks": 249,
+  "hash": 303507836,
+  "ticks": 248,
   "reason": "outOfBounds"
  },
  {
   "key": "ace-pa-crossers/cover2/4242/user",
-  "hash": 2814619719,
-  "ticks": 176,
+  "hash": 1341072153,
+  "ticks": 210,
   "reason": "tackle"
  },
  {
   "key": "ace-pa-crossers/cover4/11",
-  "hash": 3651878067,
+  "hash": 501821215,
   "ticks": 245,
   "reason": "outOfBounds"
  },
  {
   "key": "ace-pa-crossers/cover4/4242/user",
-  "hash": 421007587,
-  "ticks": 176,
+  "hash": 2629518605,
+  "ticks": 231,
   "reason": "tackle"
  },
  {
   "key": "ace-pa-crossers/cover2man/11",
-  "hash": 2143611602,
-  "ticks": 258,
+  "hash": 3509449457,
+  "ticks": 254,
   "reason": "outOfBounds"
  },
  {
   "key": "ace-pa-crossers/cover2man/4242/user",
-  "hash": 627761507,
-  "ticks": 141,
+  "hash": 3004436800,
+  "ticks": 172,
   "reason": "tackle"
  },
  {
   "key": "ace-pa-crossers/cover1blitz/11",
-  "hash": 3200855822,
-  "ticks": 353,
+  "hash": 2094185194,
+  "ticks": 310,
   "reason": "tackle"
  },
  {
   "key": "ace-pa-crossers/cover1blitz/4242/user",
-  "hash": 2695068847,
-  "ticks": 134,
-  "reason": "tackle"
- },
- {
-  "key": "ace-pa-crossers/cover1off/11",
-  "hash": 1463319722,
-  "ticks": 246,
-  "reason": "outOfBounds"
- },
- {
-  "key": "ace-pa-crossers/cover1off/4242/user",
-  "hash": 3645454015,
-  "ticks": 210,
-  "reason": "tackle"
- },
- {
-  "key": "ace-pa-crossers/tampa2/11",
-  "hash": 3727421672,
-  "ticks": 249,
-  "reason": "outOfBounds"
- },
- {
-  "key": "ace-pa-crossers/tampa2/4242/user",
-  "hash": 2563067744,
-  "ticks": 176,
-  "reason": "tackle"
- },
- {
-  "key": "ace-pa-crossers/firezone/11",
-  "hash": 727499467,
-  "ticks": 251,
-  "reason": "outOfBounds"
- },
- {
-  "key": "ace-pa-crossers/firezone/4242/user",
-  "hash": 600922878,
-  "ticks": 186,
-  "reason": "tackle"
- },
- {
-  "key": "ace-pa-crossers/simpressure/11",
-  "hash": 2998341459,
-  "ticks": 251,
-  "reason": "tackle"
- },
- {
-  "key": "ace-pa-crossers/simpressure/4242/user",
-  "hash": 313015062,
-  "ticks": 202,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/cover3/11",
-  "hash": 4267143935,
-  "ticks": 264,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/cover3/4242/user",
-  "hash": 1259483072,
-  "ticks": 122,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/cover1/11",
-  "hash": 3058821607,
-  "ticks": 446,
-  "reason": "incomplete"
- },
- {
-  "key": "iform-pa-deep-shot/cover1/4242/user",
-  "hash": 4250778114,
-  "ticks": 227,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/cover2/11",
-  "hash": 340591742,
-  "ticks": 238,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/cover2/4242/user",
-  "hash": 3509175929,
-  "ticks": 122,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/cover4/11",
-  "hash": 2486186434,
-  "ticks": 238,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/cover4/4242/user",
-  "hash": 4153411194,
-  "ticks": 122,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/cover2man/11",
-  "hash": 1045563775,
-  "ticks": 395,
-  "reason": "incomplete"
- },
- {
-  "key": "iform-pa-deep-shot/cover2man/4242/user",
-  "hash": 3738495107,
-  "ticks": 209,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/cover1blitz/11",
-  "hash": 2913494235,
-  "ticks": 428,
-  "reason": "incomplete"
- },
- {
-  "key": "iform-pa-deep-shot/cover1blitz/4242/user",
-  "hash": 3847406413,
-  "ticks": 228,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/cover1off/11",
-  "hash": 3132814348,
-  "ticks": 444,
-  "reason": "incomplete"
- },
- {
-  "key": "iform-pa-deep-shot/cover1off/4242/user",
-  "hash": 1125467389,
-  "ticks": 122,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/tampa2/11",
-  "hash": 1708010355,
-  "ticks": 238,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/tampa2/4242/user",
-  "hash": 1953401978,
-  "ticks": 122,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/firezone/11",
-  "hash": 3612765117,
-  "ticks": 233,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/firezone/4242/user",
-  "hash": 1869926777,
-  "ticks": 123,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/simpressure/11",
-  "hash": 1683615339,
-  "ticks": 351,
-  "reason": "tackle"
- },
- {
-  "key": "iform-pa-deep-shot/simpressure/4242/user",
-  "hash": 3235239736,
-  "ticks": 236,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover3/11",
-  "hash": 3412908828,
-  "ticks": 202,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover3/4242/user",
-  "hash": 3247882055,
-  "ticks": 182,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover1/11",
-  "hash": 1833874228,
-  "ticks": 266,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover1/4242/user",
-  "hash": 1452341437,
-  "ticks": 182,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover2/11",
-  "hash": 314695561,
-  "ticks": 309,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover2/4242/user",
-  "hash": 2885416485,
-  "ticks": 186,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover4/11",
-  "hash": 1468859903,
-  "ticks": 246,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover4/4242/user",
-  "hash": 4194472907,
-  "ticks": 182,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover2man/11",
-  "hash": 2143630354,
-  "ticks": 173,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover2man/4242/user",
-  "hash": 3325993233,
+  "hash": 391088862,
   "ticks": 164,
   "reason": "tackle"
  },
  {
-  "key": "iform-fb-flat/cover1blitz/11",
-  "hash": 365121380,
-  "ticks": 301,
+  "key": "ace-pa-crossers/cover1off/11",
+  "hash": 1063363228,
+  "ticks": 412,
   "reason": "incomplete"
  },
  {
-  "key": "iform-fb-flat/cover1blitz/4242/user",
-  "hash": 3505384183,
-  "ticks": 213,
+  "key": "ace-pa-crossers/cover1off/4242/user",
+  "hash": 1446598013,
+  "ticks": 162,
   "reason": "tackle"
  },
  {
-  "key": "iform-fb-flat/cover1off/11",
-  "hash": 3950210714,
-  "ticks": 180,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/cover1off/4242/user",
-  "hash": 3057932445,
-  "ticks": 187,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/tampa2/11",
-  "hash": 846756355,
-  "ticks": 309,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/tampa2/4242/user",
-  "hash": 4060813524,
-  "ticks": 186,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/firezone/11",
-  "hash": 3438276807,
-  "ticks": 199,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/firezone/4242/user",
-  "hash": 242164524,
-  "ticks": 213,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/simpressure/11",
-  "hash": 4138165028,
-  "ticks": 293,
-  "reason": "tackle"
- },
- {
-  "key": "iform-fb-flat/simpressure/4242/user",
-  "hash": 390108901,
-  "ticks": 217,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-pa-boot/cover3/11",
-  "hash": 3119701159,
-  "ticks": 271,
+  "key": "ace-pa-crossers/tampa2/11",
+  "hash": 3886926243,
+  "ticks": 248,
   "reason": "outOfBounds"
  },
  {
-  "key": "pistol-pa-boot/cover3/4242/user",
-  "hash": 870280996,
-  "ticks": 189,
+  "key": "ace-pa-crossers/tampa2/4242/user",
+  "hash": 3556045168,
+  "ticks": 210,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/cover1/11",
-  "hash": 2709642166,
-  "ticks": 239,
+  "key": "ace-pa-crossers/firezone/11",
+  "hash": 243313446,
+  "ticks": 248,
   "reason": "outOfBounds"
  },
  {
-  "key": "pistol-pa-boot/cover1/4242/user",
-  "hash": 417940704,
-  "ticks": 188,
+  "key": "ace-pa-crossers/firezone/4242/user",
+  "hash": 516914162,
+  "ticks": 194,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/cover2/11",
-  "hash": 3004312550,
+  "key": "ace-pa-crossers/simpressure/11",
+  "hash": 3829451635,
+  "ticks": 242,
+  "reason": "tackle"
+ },
+ {
+  "key": "ace-pa-crossers/simpressure/4242/user",
+  "hash": 3338386635,
+  "ticks": 209,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-pa-deep-shot/cover3/11",
+  "hash": 2725729195,
+  "ticks": 299,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-pa-deep-shot/cover3/4242/user",
+  "hash": 2414042370,
+  "ticks": 229,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-pa-deep-shot/cover1/11",
+  "hash": 2726638603,
+  "ticks": 330,
+  "reason": "sack"
+ },
+ {
+  "key": "iform-pa-deep-shot/cover1/4242/user",
+  "hash": 3274514459,
   "ticks": 235,
-  "reason": "outOfBounds"
- },
- {
-  "key": "pistol-pa-boot/cover2/4242/user",
-  "hash": 3920308029,
-  "ticks": 212,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/cover4/11",
-  "hash": 4277035961,
-  "ticks": 332,
+  "key": "iform-pa-deep-shot/cover2/11",
+  "hash": 791388441,
+  "ticks": 284,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/cover4/4242/user",
-  "hash": 2077817188,
-  "ticks": 227,
+  "key": "iform-pa-deep-shot/cover2/4242/user",
+  "hash": 2747599082,
+  "ticks": 235,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/cover2man/11",
-  "hash": 2457376475,
-  "ticks": 232,
-  "reason": "outOfBounds"
- },
- {
-  "key": "pistol-pa-boot/cover2man/4242/user",
-  "hash": 753204802,
-  "ticks": 211,
+  "key": "iform-pa-deep-shot/cover4/11",
+  "hash": 205244159,
+  "ticks": 363,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/cover1blitz/11",
-  "hash": 1590152418,
-  "ticks": 239,
-  "reason": "outOfBounds"
- },
- {
-  "key": "pistol-pa-boot/cover1blitz/4242/user",
-  "hash": 280430534,
-  "ticks": 165,
+  "key": "iform-pa-deep-shot/cover4/4242/user",
+  "hash": 1417286992,
+  "ticks": 222,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/cover1off/11",
-  "hash": 1899863529,
-  "ticks": 239,
-  "reason": "outOfBounds"
+  "key": "iform-pa-deep-shot/cover2man/11",
+  "hash": 687600062,
+  "ticks": 330,
+  "reason": "sack"
  },
  {
-  "key": "pistol-pa-boot/cover1off/4242/user",
-  "hash": 118608655,
+  "key": "iform-pa-deep-shot/cover2man/4242/user",
+  "hash": 2980754447,
   "ticks": 226,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/tampa2/11",
-  "hash": 1242355216,
+  "key": "iform-pa-deep-shot/cover1blitz/11",
+  "hash": 2769661956,
+  "ticks": 334,
+  "reason": "sack"
+ },
+ {
+  "key": "iform-pa-deep-shot/cover1blitz/4242/user",
+  "hash": 230368584,
+  "ticks": 236,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-pa-deep-shot/cover1off/11",
+  "hash": 4236504378,
+  "ticks": 282,
+  "reason": "sack"
+ },
+ {
+  "key": "iform-pa-deep-shot/cover1off/4242/user",
+  "hash": 1044464145,
   "ticks": 235,
-  "reason": "outOfBounds"
- },
- {
-  "key": "pistol-pa-boot/tampa2/4242/user",
-  "hash": 2938315549,
-  "ticks": 212,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/firezone/11",
-  "hash": 798002190,
-  "ticks": 252,
+  "key": "iform-pa-deep-shot/tampa2/11",
+  "hash": 3007824635,
+  "ticks": 284,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/firezone/4242/user",
-  "hash": 4016584044,
-  "ticks": 185,
+  "key": "iform-pa-deep-shot/tampa2/4242/user",
+  "hash": 470951945,
+  "ticks": 235,
   "reason": "tackle"
  },
  {
-  "key": "pistol-pa-boot/simpressure/11",
-  "hash": 2674222106,
-  "ticks": 274,
-  "reason": "outOfBounds"
- },
- {
-  "key": "pistol-pa-boot/simpressure/4242/user",
-  "hash": 1312411232,
-  "ticks": 180,
+  "key": "iform-pa-deep-shot/firezone/11",
+  "hash": 1293653519,
+  "ticks": 258,
   "reason": "tackle"
  },
  {
-  "key": "heavy-pa-te-leak/cover3/11",
-  "hash": 1338358727,
+  "key": "iform-pa-deep-shot/firezone/4242/user",
+  "hash": 3524208640,
+  "ticks": 174,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-pa-deep-shot/simpressure/11",
+  "hash": 661179331,
+  "ticks": 240,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-pa-deep-shot/simpressure/4242/user",
+  "hash": 3129830560,
+  "ticks": 234,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover3/11",
+  "hash": 44959058,
+  "ticks": 246,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover3/4242/user",
+  "hash": 704319801,
+  "ticks": 199,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover1/11",
+  "hash": 1953960661,
   "ticks": 290,
   "reason": "tackle"
  },
  {
-  "key": "heavy-pa-te-leak/cover3/4242/user",
-  "hash": 1290345554,
+  "key": "iform-fb-flat/cover1/4242/user",
+  "hash": 516387705,
+  "ticks": 201,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover2/11",
+  "hash": 2307898646,
+  "ticks": 270,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover2/4242/user",
+  "hash": 386095068,
+  "ticks": 390,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover4/11",
+  "hash": 3028833178,
+  "ticks": 272,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover4/4242/user",
+  "hash": 280037857,
+  "ticks": 200,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover2man/11",
+  "hash": 4280912201,
+  "ticks": 216,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover2man/4242/user",
+  "hash": 3712518575,
+  "ticks": 207,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover1blitz/11",
+  "hash": 1004892137,
+  "ticks": 291,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover1blitz/4242/user",
+  "hash": 413501906,
+  "ticks": 200,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover1off/11",
+  "hash": 2368881924,
+  "ticks": 195,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/cover1off/4242/user",
+  "hash": 3147810607,
+  "ticks": 206,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/tampa2/11",
+  "hash": 3009632775,
+  "ticks": 270,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/tampa2/4242/user",
+  "hash": 1665512610,
+  "ticks": 244,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/firezone/11",
+  "hash": 69449605,
+  "ticks": 235,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/firezone/4242/user",
+  "hash": 1680453071,
+  "ticks": 202,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/simpressure/11",
+  "hash": 166127042,
+  "ticks": 297,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-fb-flat/simpressure/4242/user",
+  "hash": 1896800030,
+  "ticks": 202,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/cover3/11",
+  "hash": 1790571165,
+  "ticks": 274,
+  "reason": "outOfBounds"
+ },
+ {
+  "key": "pistol-pa-boot/cover3/4242/user",
+  "hash": 66697930,
+  "ticks": 209,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/cover1/11",
+  "hash": 767892838,
+  "ticks": 244,
+  "reason": "outOfBounds"
+ },
+ {
+  "key": "pistol-pa-boot/cover1/4242/user",
+  "hash": 2094752886,
+  "ticks": 183,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/cover2/11",
+  "hash": 4000764584,
+  "ticks": 233,
+  "reason": "outOfBounds"
+ },
+ {
+  "key": "pistol-pa-boot/cover2/4242/user",
+  "hash": 339963472,
   "ticks": 217,
   "reason": "tackle"
  },
  {
+  "key": "pistol-pa-boot/cover4/11",
+  "hash": 3943893828,
+  "ticks": 300,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/cover4/4242/user",
+  "hash": 3051128457,
+  "ticks": 236,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/cover2man/11",
+  "hash": 1342025599,
+  "ticks": 236,
+  "reason": "outOfBounds"
+ },
+ {
+  "key": "pistol-pa-boot/cover2man/4242/user",
+  "hash": 1295728180,
+  "ticks": 217,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/cover1blitz/11",
+  "hash": 1530904981,
+  "ticks": 246,
+  "reason": "outOfBounds"
+ },
+ {
+  "key": "pistol-pa-boot/cover1blitz/4242/user",
+  "hash": 3737149967,
+  "ticks": 203,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/cover1off/11",
+  "hash": 2490169480,
+  "ticks": 245,
+  "reason": "outOfBounds"
+ },
+ {
+  "key": "pistol-pa-boot/cover1off/4242/user",
+  "hash": 2997092335,
+  "ticks": 243,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/tampa2/11",
+  "hash": 2400980280,
+  "ticks": 233,
+  "reason": "outOfBounds"
+ },
+ {
+  "key": "pistol-pa-boot/tampa2/4242/user",
+  "hash": 3352698546,
+  "ticks": 217,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/firezone/11",
+  "hash": 3272149813,
+  "ticks": 239,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/firezone/4242/user",
+  "hash": 1876550373,
+  "ticks": 206,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-pa-boot/simpressure/11",
+  "hash": 1643006303,
+  "ticks": 272,
+  "reason": "outOfBounds"
+ },
+ {
+  "key": "pistol-pa-boot/simpressure/4242/user",
+  "hash": 1151119709,
+  "ticks": 196,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-pa-te-leak/cover3/11",
+  "hash": 2407934552,
+  "ticks": 271,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-pa-te-leak/cover3/4242/user",
+  "hash": 811790123,
+  "ticks": 212,
+  "reason": "tackle"
+ },
+ {
   "key": "heavy-pa-te-leak/cover1/11",
-  "hash": 1674124711,
-  "ticks": 295,
+  "hash": 2816820616,
+  "ticks": 298,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/cover1/4242/user",
-  "hash": 1498324513,
+  "hash": 3722438095,
   "ticks": 229,
   "reason": "incomplete"
  },
  {
   "key": "heavy-pa-te-leak/cover2/11",
-  "hash": 1375637518,
-  "ticks": 558,
+  "hash": 1159264940,
+  "ticks": 311,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/cover2/4242/user",
-  "hash": 1342686887,
-  "ticks": 229,
+  "hash": 378557404,
+  "ticks": 217,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/cover4/11",
-  "hash": 992662826,
-  "ticks": 183,
+  "hash": 3135886747,
+  "ticks": 208,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/cover4/4242/user",
-  "hash": 2760841193,
-  "ticks": 196,
+  "hash": 1402937580,
+  "ticks": 205,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/cover2man/11",
-  "hash": 1468392745,
-  "ticks": 418,
+  "hash": 386682692,
+  "ticks": 301,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/cover2man/4242/user",
-  "hash": 2916999336,
-  "ticks": 195,
+  "hash": 815173601,
+  "ticks": 212,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/cover1blitz/11",
-  "hash": 2019595944,
-  "ticks": 277,
+  "hash": 1066850261,
+  "ticks": 279,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/cover1blitz/4242/user",
-  "hash": 1515620198,
-  "ticks": 138,
+  "hash": 1343888379,
+  "ticks": 179,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/cover1off/11",
-  "hash": 3871924782,
-  "ticks": 309,
-  "reason": "incomplete"
+  "hash": 3545657663,
+  "ticks": 305,
+  "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/cover1off/4242/user",
-  "hash": 3712837465,
-  "ticks": 214,
+  "hash": 2728127277,
+  "ticks": 216,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/tampa2/11",
-  "hash": 875007550,
-  "ticks": 607,
-  "reason": "incomplete"
+  "hash": 2646383456,
+  "ticks": 311,
+  "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/tampa2/4242/user",
-  "hash": 2414814087,
-  "ticks": 229,
+  "hash": 4240957988,
+  "ticks": 217,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/firezone/11",
-  "hash": 1709950255,
-  "ticks": 296,
+  "hash": 1574038157,
+  "ticks": 293,
   "reason": "outOfBounds"
  },
  {
   "key": "heavy-pa-te-leak/firezone/4242/user",
-  "hash": 2366197099,
-  "ticks": 215,
+  "hash": 3956988069,
+  "ticks": 211,
   "reason": "tackle"
  },
  {
   "key": "heavy-pa-te-leak/simpressure/11",
-  "hash": 2439216476,
+  "hash": 1920602745,
   "ticks": 204,
   "reason": "incomplete"
  },
  {
   "key": "heavy-pa-te-leak/simpressure/4242/user",
-  "hash": 2246025264,
-  "ticks": 180,
+  "hash": 2617318421,
+  "ticks": 189,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover3/11",
-  "hash": 3994594303,
-  "ticks": 564,
-  "reason": "touchdown"
+  "hash": 3650815877,
+  "ticks": 249,
+  "reason": "outOfBounds"
  },
  {
   "key": "h-pa-swing/cover3/4242/user",
-  "hash": 1930800981,
-  "ticks": 192,
+  "hash": 3451298875,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover1/11",
-  "hash": 2794914539,
-  "ticks": 322,
+  "hash": 4063957351,
+  "ticks": 324,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover1/4242/user",
-  "hash": 335775980,
-  "ticks": 193,
+  "hash": 3762736354,
+  "ticks": 203,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover2/11",
-  "hash": 922830633,
-  "ticks": 245,
+  "hash": 4139104709,
+  "ticks": 239,
   "reason": "outOfBounds"
  },
  {
   "key": "h-pa-swing/cover2/4242/user",
-  "hash": 201187684,
-  "ticks": 192,
+  "hash": 3098933266,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover4/11",
-  "hash": 835639271,
-  "ticks": 297,
-  "reason": "tackle"
+  "hash": 4023385541,
+  "ticks": 250,
+  "reason": "outOfBounds"
  },
  {
   "key": "h-pa-swing/cover4/4242/user",
-  "hash": 1406690717,
-  "ticks": 192,
+  "hash": 4025151601,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover2man/11",
-  "hash": 3602291995,
-  "ticks": 311,
+  "hash": 3440817552,
+  "ticks": 395,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover2man/4242/user",
-  "hash": 2261585981,
-  "ticks": 157,
+  "hash": 4273433387,
+  "ticks": 197,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover1blitz/11",
-  "hash": 2358938688,
+  "hash": 429697180,
   "ticks": 322,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover1blitz/4242/user",
-  "hash": 3356350285,
-  "ticks": 207,
+  "hash": 3224657221,
+  "ticks": 211,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover1off/11",
-  "hash": 2536624682,
-  "ticks": 322,
+  "hash": 1720592333,
+  "ticks": 326,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/cover1off/4242/user",
-  "hash": 3433697362,
-  "ticks": 192,
+  "hash": 3790494582,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/tampa2/11",
-  "hash": 497716572,
-  "ticks": 245,
+  "hash": 3046366122,
+  "ticks": 239,
   "reason": "outOfBounds"
  },
  {
   "key": "h-pa-swing/tampa2/4242/user",
-  "hash": 1011393305,
-  "ticks": 192,
+  "hash": 799874189,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/firezone/11",
-  "hash": 1135559249,
-  "ticks": 250,
+  "hash": 1275549331,
+  "ticks": 249,
   "reason": "outOfBounds"
  },
  {
   "key": "h-pa-swing/firezone/4242/user",
-  "hash": 2264094719,
+  "hash": 1777820007,
   "ticks": 208,
   "reason": "tackle"
  },
  {
   "key": "h-pa-swing/simpressure/11",
-  "hash": 3652284312,
-  "ticks": 243,
+  "hash": 3598958791,
+  "ticks": 248,
   "reason": "outOfBounds"
  },
  {
   "key": "h-pa-swing/simpressure/4242/user",
-  "hash": 2383844101,
-  "ticks": 209,
+  "hash": 855071522,
+  "ticks": 207,
   "reason": "tackle"
  },
  {
   "key": "h-chip-flat/cover3/11",
-  "hash": 3202539440,
-  "ticks": 408,
+  "hash": 2325597510,
+  "ticks": 405,
   "reason": "outOfBounds"
  },
  {
   "key": "h-chip-flat/cover3/4242/user",
-  "hash": 1348285198,
+  "hash": 4062909274,
   "ticks": 191,
   "reason": "incomplete"
  },
  {
   "key": "h-chip-flat/cover1/11",
-  "hash": 2731879320,
-  "ticks": 173,
+  "hash": 3150739208,
+  "ticks": 208,
   "reason": "tackle"
  },
  {
   "key": "h-chip-flat/cover1/4242/user",
-  "hash": 2665036485,
-  "ticks": 109,
+  "hash": 235780951,
+  "ticks": 108,
   "reason": "sack"
  },
  {
   "key": "h-chip-flat/cover2/11",
-  "hash": 1917243717,
-  "ticks": 204,
+  "hash": 1417004049,
+  "ticks": 234,
   "reason": "tackle"
  },
  {
   "key": "h-chip-flat/cover2/4242/user",
-  "hash": 529689537,
+  "hash": 4229560712,
   "ticks": 191,
   "reason": "incomplete"
  },
  {
   "key": "h-chip-flat/cover4/11",
-  "hash": 3488754639,
-  "ticks": 201,
+  "hash": 2725060227,
+  "ticks": 230,
   "reason": "tackle"
  },
  {
   "key": "h-chip-flat/cover4/4242/user",
-  "hash": 3927690115,
+  "hash": 1196328211,
   "ticks": 191,
   "reason": "incomplete"
  },
  {
   "key": "h-chip-flat/cover2man/11",
-  "hash": 890659473,
-  "ticks": 176,
+  "hash": 2453860751,
+  "ticks": 222,
   "reason": "tackle"
  },
  {
   "key": "h-chip-flat/cover2man/4242/user",
-  "hash": 3755012081,
-  "ticks": 191,
-  "reason": "incomplete"
+  "hash": 161167991,
+  "ticks": 108,
+  "reason": "sack"
  },
  {
   "key": "h-chip-flat/cover1blitz/11",
-  "hash": 2087330163,
-  "ticks": 156,
+  "hash": 3042696810,
+  "ticks": 206,
   "reason": "tackle"
  },
  {
   "key": "h-chip-flat/cover1blitz/4242/user",
-  "hash": 3865159733,
-  "ticks": 106,
+  "hash": 2678588957,
+  "ticks": 102,
   "reason": "sack"
  },
  {
   "key": "h-chip-flat/cover1off/11",
-  "hash": 2039603714,
+  "hash": 96545091,
   "ticks": 200,
   "reason": "incomplete"
  },
  {
   "key": "h-chip-flat/cover1off/4242/user",
-  "hash": 2006109261,
-  "ticks": 191,
-  "reason": "incomplete"
+  "hash": 2737420184,
+  "ticks": 112,
+  "reason": "sack"
  },
  {
   "key": "h-chip-flat/tampa2/11",
-  "hash": 3721574436,
-  "ticks": 204,
+  "hash": 3714266226,
+  "ticks": 234,
   "reason": "tackle"
  },
  {
   "key": "h-chip-flat/tampa2/4242/user",
-  "hash": 2482002345,
+  "hash": 460031323,
   "ticks": 191,
   "reason": "incomplete"
  },
  {
   "key": "h-chip-flat/firezone/11",
-  "hash": 2397410399,
-  "ticks": 185,
+  "hash": 619649087,
+  "ticks": 232,
   "reason": "tackle"
  },
  {
   "key": "h-chip-flat/firezone/4242/user",
-  "hash": 3464058890,
-  "ticks": 182,
+  "hash": 3795823657,
+  "ticks": 202,
   "reason": "tackle"
  },
  {
   "key": "h-chip-flat/simpressure/11",
-  "hash": 1364289289,
-  "ticks": 331,
+  "hash": 3058978435,
+  "ticks": 291,
   "reason": "tackle"
  },
  {
   "key": "h-chip-flat/simpressure/4242/user",
-  "hash": 4046749799,
-  "ticks": 160,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover3/11",
-  "hash": 1793903547,
-  "ticks": 125,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover3/4242/user",
-  "hash": 1897091467,
-  "ticks": 105,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover1/11",
-  "hash": 1263021425,
-  "ticks": 103,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover1/4242/user",
-  "hash": 4009594395,
-  "ticks": 109,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover2/11",
-  "hash": 2420603749,
-  "ticks": 114,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover2/4242/user",
-  "hash": 2500098226,
-  "ticks": 104,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover4/11",
-  "hash": 951341067,
-  "ticks": 125,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover4/4242/user",
-  "hash": 4261679440,
-  "ticks": 105,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover2man/11",
-  "hash": 2771771633,
-  "ticks": 117,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover2man/4242/user",
-  "hash": 346896109,
-  "ticks": 100,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover1blitz/11",
-  "hash": 3857091255,
-  "ticks": 114,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover1blitz/4242/user",
-  "hash": 3471442084,
-  "ticks": 112,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover1off/11",
-  "hash": 3427132350,
-  "ticks": 104,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/cover1off/4242/user",
-  "hash": 1464937414,
-  "ticks": 103,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/tampa2/11",
-  "hash": 3854416334,
-  "ticks": 113,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/tampa2/4242/user",
-  "hash": 3782562447,
-  "ticks": 104,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/firezone/11",
-  "hash": 2092243619,
-  "ticks": 204,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/firezone/4242/user",
-  "hash": 2656038926,
-  "ticks": 99,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/simpressure/11",
-  "hash": 3671775306,
-  "ticks": 111,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-inside-zone/simpressure/4242/user",
-  "hash": 2586549623,
-  "ticks": 99,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover3/11",
-  "hash": 1595261533,
-  "ticks": 169,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover3/4242/user",
-  "hash": 3752352358,
-  "ticks": 112,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover1/11",
-  "hash": 616911462,
-  "ticks": 123,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover1/4242/user",
-  "hash": 1844222329,
-  "ticks": 181,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover2/11",
-  "hash": 2027296456,
-  "ticks": 205,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover2/4242/user",
-  "hash": 4120024863,
-  "ticks": 111,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover4/11",
-  "hash": 3954053607,
-  "ticks": 278,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover4/4242/user",
-  "hash": 3845571584,
-  "ticks": 112,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover2man/11",
-  "hash": 2868387017,
-  "ticks": 127,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover2man/4242/user",
-  "hash": 1383682500,
-  "ticks": 175,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover1blitz/11",
-  "hash": 950875059,
-  "ticks": 188,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover1blitz/4242/user",
-  "hash": 3670076989,
-  "ticks": 126,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover1off/11",
-  "hash": 137712503,
-  "ticks": 141,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/cover1off/4242/user",
-  "hash": 1311317283,
-  "ticks": 149,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/tampa2/11",
-  "hash": 244106715,
-  "ticks": 147,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/tampa2/4242/user",
-  "hash": 2361738197,
-  "ticks": 112,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/firezone/11",
-  "hash": 643543667,
-  "ticks": 147,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/firezone/4242/user",
-  "hash": 1001767713,
-  "ticks": 114,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/simpressure/11",
-  "hash": 867447587,
-  "ticks": 148,
-  "reason": "tackle"
- },
- {
-  "key": "trips-inside-zone/simpressure/4242/user",
-  "hash": 1029736818,
-  "ticks": 152,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover3/11",
-  "hash": 2626050689,
-  "ticks": 158,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover3/4242/user",
-  "hash": 2336827976,
-  "ticks": 144,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover1/11",
-  "hash": 1567588040,
-  "ticks": 143,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover1/4242/user",
-  "hash": 883547258,
-  "ticks": 104,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover2/11",
-  "hash": 2266752885,
-  "ticks": 171,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover2/4242/user",
-  "hash": 2581776484,
-  "ticks": 112,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover4/11",
-  "hash": 1144212608,
-  "ticks": 266,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover4/4242/user",
-  "hash": 4011204083,
-  "ticks": 145,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover2man/11",
-  "hash": 318434243,
-  "ticks": 532,
-  "reason": "touchdown"
- },
- {
-  "key": "singleback-outside-zone/cover2man/4242/user",
-  "hash": 1406369673,
-  "ticks": 147,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover1blitz/11",
-  "hash": 1603824777,
-  "ticks": 138,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover1blitz/4242/user",
-  "hash": 2072225441,
-  "ticks": 109,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover1off/11",
-  "hash": 2024370630,
-  "ticks": 155,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/cover1off/4242/user",
-  "hash": 2015560232,
-  "ticks": 104,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/tampa2/11",
-  "hash": 3473275663,
-  "ticks": 168,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/tampa2/4242/user",
-  "hash": 2541288077,
-  "ticks": 152,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/firezone/11",
-  "hash": 634662479,
-  "ticks": 138,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/firezone/4242/user",
-  "hash": 246309984,
-  "ticks": 119,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/simpressure/11",
-  "hash": 1005344750,
-  "ticks": 119,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-outside-zone/simpressure/4242/user",
-  "hash": 1882388376,
-  "ticks": 110,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover3/11",
-  "hash": 2672738664,
-  "ticks": 135,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover3/4242/user",
-  "hash": 3964636680,
-  "ticks": 90,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover1/11",
-  "hash": 1089805278,
-  "ticks": 107,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover1/4242/user",
-  "hash": 2166041471,
-  "ticks": 109,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover2/11",
-  "hash": 4187373625,
-  "ticks": 135,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover2/4242/user",
-  "hash": 3398658122,
-  "ticks": 90,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover4/11",
-  "hash": 2653193594,
-  "ticks": 147,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover4/4242/user",
-  "hash": 923731090,
-  "ticks": 90,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover2man/11",
-  "hash": 2213391355,
-  "ticks": 148,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover2man/4242/user",
-  "hash": 675825793,
-  "ticks": 110,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover1blitz/11",
-  "hash": 1659100203,
-  "ticks": 110,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover1blitz/4242/user",
-  "hash": 3479934399,
-  "ticks": 101,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover1off/11",
-  "hash": 3443818861,
-  "ticks": 106,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/cover1off/4242/user",
-  "hash": 292253465,
-  "ticks": 103,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/tampa2/11",
-  "hash": 1700693603,
-  "ticks": 135,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/tampa2/4242/user",
-  "hash": 2676828961,
-  "ticks": 90,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/firezone/11",
-  "hash": 2664122469,
-  "ticks": 136,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/firezone/4242/user",
-  "hash": 4187231101,
-  "ticks": 96,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/simpressure/11",
-  "hash": 31669613,
-  "ticks": 153,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-power/simpressure/4242/user",
-  "hash": 2470866092,
-  "ticks": 93,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover3/11",
-  "hash": 3820065895,
-  "ticks": 164,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover3/4242/user",
-  "hash": 2617232889,
-  "ticks": 98,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover1/11",
-  "hash": 1058424063,
-  "ticks": 120,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover1/4242/user",
-  "hash": 655516374,
-  "ticks": 98,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover2/11",
-  "hash": 1424407722,
-  "ticks": 128,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover2/4242/user",
-  "hash": 1903843205,
-  "ticks": 98,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover4/11",
-  "hash": 740305409,
-  "ticks": 124,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover4/4242/user",
-  "hash": 3373904079,
-  "ticks": 98,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover2man/11",
-  "hash": 549315672,
-  "ticks": 123,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover2man/4242/user",
-  "hash": 3019154851,
-  "ticks": 126,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover1blitz/11",
-  "hash": 3107986625,
-  "ticks": 524,
-  "reason": "touchdown"
- },
- {
-  "key": "singleback-counter/cover1blitz/4242/user",
-  "hash": 2315212706,
-  "ticks": 195,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover1off/11",
-  "hash": 2213822608,
-  "ticks": 116,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/cover1off/4242/user",
-  "hash": 1657507376,
-  "ticks": 98,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/tampa2/11",
-  "hash": 1383442399,
-  "ticks": 140,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/tampa2/4242/user",
-  "hash": 130172627,
-  "ticks": 98,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/firezone/11",
-  "hash": 3390893984,
-  "ticks": 171,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/firezone/4242/user",
-  "hash": 1337699955,
-  "ticks": 168,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/simpressure/11",
-  "hash": 3580490951,
-  "ticks": 132,
-  "reason": "tackle"
- },
- {
-  "key": "singleback-counter/simpressure/4242/user",
-  "hash": 3035116825,
-  "ticks": 98,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover3/11",
-  "hash": 1774473072,
-  "ticks": 228,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover3/4242/user",
-  "hash": 2362724430,
-  "ticks": 158,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover1/11",
-  "hash": 272554630,
-  "ticks": 200,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover1/4242/user",
-  "hash": 2572470437,
-  "ticks": 156,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover2/11",
-  "hash": 265683093,
-  "ticks": 145,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover2/4242/user",
-  "hash": 3611045222,
-  "ticks": 158,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover4/11",
-  "hash": 1468017210,
-  "ticks": 235,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover4/4242/user",
-  "hash": 2821123806,
-  "ticks": 158,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover2man/11",
-  "hash": 323689134,
-  "ticks": 216,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover2man/4242/user",
-  "hash": 1394635911,
-  "ticks": 156,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover1blitz/11",
-  "hash": 3176569824,
-  "ticks": 194,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover1blitz/4242/user",
-  "hash": 926248046,
-  "ticks": 161,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-draw/cover1off/11",
-  "hash": 2171568664,
+  "hash": 1802744774,
   "ticks": 198,
   "reason": "tackle"
  },
  {
-  "key": "doubles-draw/cover1off/4242/user",
-  "hash": 42513889,
-  "ticks": 168,
+  "key": "singleback-inside-zone/cover3/11",
+  "hash": 205740127,
+  "ticks": 134,
   "reason": "tackle"
  },
  {
-  "key": "doubles-draw/tampa2/11",
-  "hash": 2428298443,
-  "ticks": 254,
+  "key": "singleback-inside-zone/cover3/4242/user",
+  "hash": 158783865,
+  "ticks": 123,
   "reason": "tackle"
  },
  {
-  "key": "doubles-draw/tampa2/4242/user",
-  "hash": 3089091756,
-  "ticks": 158,
+  "key": "singleback-inside-zone/cover1/11",
+  "hash": 4073556261,
+  "ticks": 118,
   "reason": "tackle"
  },
  {
-  "key": "doubles-draw/firezone/11",
-  "hash": 1408796784,
-  "ticks": 200,
+  "key": "singleback-inside-zone/cover1/4242/user",
+  "hash": 3823670579,
+  "ticks": 120,
   "reason": "tackle"
  },
  {
-  "key": "doubles-draw/firezone/4242/user",
-  "hash": 744083016,
-  "ticks": 157,
+  "key": "singleback-inside-zone/cover2/11",
+  "hash": 1314302036,
+  "ticks": 159,
   "reason": "tackle"
  },
  {
-  "key": "doubles-draw/simpressure/11",
-  "hash": 2509938973,
-  "ticks": 169,
+  "key": "singleback-inside-zone/cover2/4242/user",
+  "hash": 86357654,
+  "ticks": 122,
   "reason": "tackle"
  },
  {
-  "key": "doubles-draw/simpressure/4242/user",
-  "hash": 3865450689,
-  "ticks": 180,
+  "key": "singleback-inside-zone/cover4/11",
+  "hash": 3803647887,
+  "ticks": 132,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover3/11",
-  "hash": 2359720571,
-  "ticks": 139,
+  "key": "singleback-inside-zone/cover4/4242/user",
+  "hash": 2587040166,
+  "ticks": 123,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover3/4242/user",
-  "hash": 4136044136,
-  "ticks": 150,
+  "key": "singleback-inside-zone/cover2man/11",
+  "hash": 1023144664,
+  "ticks": 136,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover1/11",
-  "hash": 3927284099,
-  "ticks": 111,
+  "key": "singleback-inside-zone/cover2man/4242/user",
+  "hash": 257319528,
+  "ticks": 120,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover1/4242/user",
-  "hash": 41285036,
-  "ticks": 158,
+  "key": "singleback-inside-zone/cover1blitz/11",
+  "hash": 2889452185,
+  "ticks": 120,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover2/11",
-  "hash": 3129767878,
-  "ticks": 143,
+  "key": "singleback-inside-zone/cover1blitz/4242/user",
+  "hash": 690975046,
+  "ticks": 118,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover2/4242/user",
-  "hash": 2045156742,
-  "ticks": 163,
+  "key": "singleback-inside-zone/cover1off/11",
+  "hash": 841237111,
+  "ticks": 120,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover4/11",
-  "hash": 3783036625,
+  "key": "singleback-inside-zone/cover1off/4242/user",
+  "hash": 3994386911,
+  "ticks": 118,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-inside-zone/tampa2/11",
+  "hash": 2816430853,
+  "ticks": 133,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-inside-zone/tampa2/4242/user",
+  "hash": 2261584590,
+  "ticks": 123,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-inside-zone/firezone/11",
+  "hash": 822655760,
+  "ticks": 192,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-inside-zone/firezone/4242/user",
+  "hash": 1169623284,
+  "ticks": 114,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-inside-zone/simpressure/11",
+  "hash": 101329805,
+  "ticks": 136,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-inside-zone/simpressure/4242/user",
+  "hash": 1232718942,
+  "ticks": 114,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover3/11",
+  "hash": 1601495203,
+  "ticks": 148,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover3/4242/user",
+  "hash": 1790378848,
+  "ticks": 127,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover1/11",
+  "hash": 263848710,
+  "ticks": 208,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover1/4242/user",
+  "hash": 3612470461,
+  "ticks": 170,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover2/11",
+  "hash": 3969500948,
+  "ticks": 132,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover2/4242/user",
+  "hash": 3783788261,
+  "ticks": 127,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover4/11",
+  "hash": 1966811251,
+  "ticks": 148,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover4/4242/user",
+  "hash": 1536575955,
+  "ticks": 127,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover2man/11",
+  "hash": 2942305884,
+  "ticks": 126,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover2man/4242/user",
+  "hash": 2724028550,
+  "ticks": 185,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover1blitz/11",
+  "hash": 3967525169,
+  "ticks": 138,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover1blitz/4242/user",
+  "hash": 1941455799,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/cover1off/11",
+  "hash": 4085332950,
   "ticks": 145,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover4/4242/user",
-  "hash": 335359655,
+  "key": "trips-inside-zone/cover1off/4242/user",
+  "hash": 3477026748,
+  "ticks": 147,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/tampa2/11",
+  "hash": 217538398,
+  "ticks": 130,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/tampa2/4242/user",
+  "hash": 198734671,
+  "ticks": 125,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/firezone/11",
+  "hash": 2511898087,
+  "ticks": 144,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/firezone/4242/user",
+  "hash": 4101771348,
+  "ticks": 132,
+  "reason": "tackle"
+ },
+ {
+  "key": "trips-inside-zone/simpressure/11",
+  "hash": 2115816844,
   "ticks": 164,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover2man/11",
-  "hash": 3179941496,
-  "ticks": 115,
+  "key": "trips-inside-zone/simpressure/4242/user",
+  "hash": 3233901376,
+  "ticks": 125,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover2man/4242/user",
-  "hash": 2908500375,
+  "key": "singleback-outside-zone/cover3/11",
+  "hash": 1939790606,
+  "ticks": 156,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover3/4242/user",
+  "hash": 1562186129,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover1/11",
+  "hash": 228549486,
+  "ticks": 130,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover1/4242/user",
+  "hash": 1218815613,
+  "ticks": 122,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover2/11",
+  "hash": 3701480991,
+  "ticks": 141,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover2/4242/user",
+  "hash": 80046450,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover4/11",
+  "hash": 1951740458,
+  "ticks": 257,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover4/4242/user",
+  "hash": 315339262,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover2man/11",
+  "hash": 179651578,
+  "ticks": 144,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover2man/4242/user",
+  "hash": 2401726747,
+  "ticks": 182,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover1blitz/11",
+  "hash": 1116940265,
+  "ticks": 275,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover1blitz/4242/user",
+  "hash": 1735958930,
+  "ticks": 118,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover1off/11",
+  "hash": 2440288132,
+  "ticks": 128,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/cover1off/4242/user",
+  "hash": 1112068710,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/tampa2/11",
+  "hash": 1880249471,
+  "ticks": 141,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/tampa2/4242/user",
+  "hash": 4255089697,
+  "ticks": 136,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/firezone/11",
+  "hash": 3263695391,
+  "ticks": 154,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/firezone/4242/user",
+  "hash": 3742620778,
+  "ticks": 123,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/simpressure/11",
+  "hash": 1280938298,
+  "ticks": 125,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-outside-zone/simpressure/4242/user",
+  "hash": 2995465363,
+  "ticks": 122,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover3/11",
+  "hash": 3384520656,
+  "ticks": 145,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover3/4242/user",
+  "hash": 3275053291,
+  "ticks": 112,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover1/11",
+  "hash": 367325583,
+  "ticks": 117,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover1/4242/user",
+  "hash": 276801936,
+  "ticks": 123,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover2/11",
+  "hash": 487814574,
+  "ticks": 157,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover2/4242/user",
+  "hash": 1608819879,
+  "ticks": 112,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover4/11",
+  "hash": 1877230310,
   "ticks": 158,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover1blitz/11",
-  "hash": 874528131,
-  "ticks": 189,
+  "key": "singleback-power/cover4/4242/user",
+  "hash": 756103622,
+  "ticks": 112,
   "reason": "tackle"
  },
  {
-  "key": "iform-iso/cover1blitz/4242/user",
-  "hash": 2905603801,
+  "key": "singleback-power/cover2man/11",
+  "hash": 4276183144,
+  "ticks": 160,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover2man/4242/user",
+  "hash": 1638837565,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover1blitz/11",
+  "hash": 2784184040,
+  "ticks": 122,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover1blitz/4242/user",
+  "hash": 2698130212,
+  "ticks": 116,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover1off/11",
+  "hash": 3318238903,
+  "ticks": 118,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/cover1off/4242/user",
+  "hash": 498396787,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/tampa2/11",
+  "hash": 4165226241,
+  "ticks": 157,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/tampa2/4242/user",
+  "hash": 4056323172,
+  "ticks": 112,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/firezone/11",
+  "hash": 550216956,
+  "ticks": 107,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/firezone/4242/user",
+  "hash": 722919706,
+  "ticks": 103,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/simpressure/11",
+  "hash": 3701238534,
+  "ticks": 133,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-power/simpressure/4242/user",
+  "hash": 2346521216,
+  "ticks": 115,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover3/11",
+  "hash": 3848814239,
+  "ticks": 134,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover3/4242/user",
+  "hash": 1564198504,
+  "ticks": 113,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover1/11",
+  "hash": 2210943168,
+  "ticks": 135,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover1/4242/user",
+  "hash": 1099102659,
+  "ticks": 125,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover2/11",
+  "hash": 2833013134,
+  "ticks": 138,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover2/4242/user",
+  "hash": 799285353,
+  "ticks": 113,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover4/11",
+  "hash": 651383060,
+  "ticks": 133,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover4/4242/user",
+  "hash": 2770105522,
+  "ticks": 113,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover2man/11",
+  "hash": 4224052714,
+  "ticks": 293,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover2man/4242/user",
+  "hash": 3051399552,
+  "ticks": 128,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover1blitz/11",
+  "hash": 2002579840,
+  "ticks": 147,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover1blitz/4242/user",
+  "hash": 3134289235,
+  "ticks": 148,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover1off/11",
+  "hash": 1501175965,
+  "ticks": 140,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/cover1off/4242/user",
+  "hash": 785714907,
+  "ticks": 112,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/tampa2/11",
+  "hash": 3279797953,
+  "ticks": 158,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/tampa2/4242/user",
+  "hash": 1837050982,
+  "ticks": 113,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/firezone/11",
+  "hash": 2937778210,
+  "ticks": 132,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/firezone/4242/user",
+  "hash": 215109310,
+  "ticks": 173,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/simpressure/11",
+  "hash": 2446159275,
+  "ticks": 135,
+  "reason": "tackle"
+ },
+ {
+  "key": "singleback-counter/simpressure/4242/user",
+  "hash": 824994553,
+  "ticks": 113,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover3/11",
+  "hash": 3370046135,
+  "ticks": 240,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover3/4242/user",
+  "hash": 3557263637,
+  "ticks": 172,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover1/11",
+  "hash": 877810019,
+  "ticks": 227,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover1/4242/user",
+  "hash": 2518943673,
+  "ticks": 171,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover2/11",
+  "hash": 298767595,
+  "ticks": 246,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover2/4242/user",
+  "hash": 2010963457,
+  "ticks": 172,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover4/11",
+  "hash": 2879019024,
   "ticks": 255,
   "reason": "tackle"
  },
  {
+  "key": "doubles-draw/cover4/4242/user",
+  "hash": 464745744,
+  "ticks": 172,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover2man/11",
+  "hash": 3341023968,
+  "ticks": 232,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover2man/4242/user",
+  "hash": 4060342630,
+  "ticks": 173,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover1blitz/11",
+  "hash": 2586862064,
+  "ticks": 219,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover1blitz/4242/user",
+  "hash": 2802797901,
+  "ticks": 166,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover1off/11",
+  "hash": 1864224952,
+  "ticks": 206,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/cover1off/4242/user",
+  "hash": 3490025028,
+  "ticks": 171,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/tampa2/11",
+  "hash": 584939620,
+  "ticks": 276,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/tampa2/4242/user",
+  "hash": 508963225,
+  "ticks": 172,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/firezone/11",
+  "hash": 1615150632,
+  "ticks": 233,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/firezone/4242/user",
+  "hash": 2529402139,
+  "ticks": 166,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/simpressure/11",
+  "hash": 1361548456,
+  "ticks": 180,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-draw/simpressure/4242/user",
+  "hash": 1387492868,
+  "ticks": 169,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover3/11",
+  "hash": 1215532319,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover3/4242/user",
+  "hash": 2194764698,
+  "ticks": 180,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover1/11",
+  "hash": 1243481892,
+  "ticks": 125,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover1/4242/user",
+  "hash": 3635407910,
+  "ticks": 167,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover2/11",
+  "hash": 1304480407,
+  "ticks": 118,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover2/4242/user",
+  "hash": 23715493,
+  "ticks": 198,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover4/11",
+  "hash": 1512687750,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover4/4242/user",
+  "hash": 3942983885,
+  "ticks": 174,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover2man/11",
+  "hash": 3882518367,
+  "ticks": 168,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover2man/4242/user",
+  "hash": 3831290155,
+  "ticks": 165,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover1blitz/11",
+  "hash": 2827224777,
+  "ticks": 155,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/cover1blitz/4242/user",
+  "hash": 3825314326,
+  "ticks": 175,
+  "reason": "tackle"
+ },
+ {
   "key": "iform-iso/cover1off/11",
-  "hash": 427545751,
-  "ticks": 105,
+  "hash": 3637151646,
+  "ticks": 119,
   "reason": "tackle"
  },
  {
   "key": "iform-iso/cover1off/4242/user",
-  "hash": 2199825199,
+  "hash": 828534729,
   "ticks": 133,
   "reason": "tackle"
  },
  {
   "key": "iform-iso/tampa2/11",
-  "hash": 3581262900,
-  "ticks": 112,
+  "hash": 2468154582,
+  "ticks": 131,
   "reason": "tackle"
  },
  {
   "key": "iform-iso/tampa2/4242/user",
-  "hash": 1804457539,
-  "ticks": 170,
+  "hash": 3738530042,
+  "ticks": 180,
   "reason": "tackle"
  },
  {
   "key": "iform-iso/firezone/11",
-  "hash": 1543845468,
-  "ticks": 102,
-  "reason": "tackle"
- },
- {
-  "key": "iform-iso/firezone/4242/user",
-  "hash": 1853876504,
-  "ticks": 104,
-  "reason": "tackle"
- },
- {
-  "key": "iform-iso/simpressure/11",
-  "hash": 957672737,
-  "ticks": 103,
-  "reason": "tackle"
- },
- {
-  "key": "iform-iso/simpressure/4242/user",
-  "hash": 838205700,
-  "ticks": 109,
-  "reason": "tackle"
- },
- {
-  "key": "iform-power/cover3/11",
-  "hash": 2962214025,
+  "hash": 1357447023,
   "ticks": 115,
   "reason": "tackle"
  },
  {
+  "key": "iform-iso/firezone/4242/user",
+  "hash": 3057010862,
+  "ticks": 117,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/simpressure/11",
+  "hash": 583193058,
+  "ticks": 115,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-iso/simpressure/4242/user",
+  "hash": 670938474,
+  "ticks": 114,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-power/cover3/11",
+  "hash": 3146155569,
+  "ticks": 248,
+  "reason": "tackle"
+ },
+ {
   "key": "iform-power/cover3/4242/user",
-  "hash": 1628735450,
-  "ticks": 94,
+  "hash": 11073173,
+  "ticks": 115,
   "reason": "tackle"
  },
  {
   "key": "iform-power/cover1/11",
-  "hash": 197969033,
-  "ticks": 143,
+  "hash": 2370184480,
+  "ticks": 160,
   "reason": "tackle"
  },
  {
   "key": "iform-power/cover1/4242/user",
-  "hash": 1917911254,
-  "ticks": 92,
+  "hash": 2525435706,
+  "ticks": 115,
   "reason": "tackle"
  },
  {
   "key": "iform-power/cover2/11",
-  "hash": 2559902076,
-  "ticks": 158,
-  "reason": "tackle"
+  "hash": 3223497626,
+  "ticks": 573,
+  "reason": "touchdown"
  },
  {
   "key": "iform-power/cover2/4242/user",
-  "hash": 2890343983,
-  "ticks": 93,
+  "hash": 115712380,
+  "ticks": 113,
   "reason": "tackle"
  },
  {
   "key": "iform-power/cover4/11",
-  "hash": 3318311728,
+  "hash": 3273049884,
   "ticks": 272,
   "reason": "tackle"
  },
  {
   "key": "iform-power/cover4/4242/user",
-  "hash": 3884562066,
-  "ticks": 94,
+  "hash": 1156420583,
+  "ticks": 115,
   "reason": "tackle"
  },
  {
   "key": "iform-power/cover2man/11",
-  "hash": 2604093468,
-  "ticks": 109,
+  "hash": 186866970,
+  "ticks": 118,
   "reason": "tackle"
  },
  {
   "key": "iform-power/cover2man/4242/user",
-  "hash": 3030061100,
-  "ticks": 105,
+  "hash": 3864506302,
+  "ticks": 125,
   "reason": "tackle"
  },
  {
   "key": "iform-power/cover1blitz/11",
-  "hash": 1733612348,
-  "ticks": 142,
-  "reason": "tackle"
- },
- {
-  "key": "iform-power/cover1blitz/4242/user",
-  "hash": 382259693,
-  "ticks": 113,
-  "reason": "tackle"
- },
- {
-  "key": "iform-power/cover1off/11",
-  "hash": 1272017727,
+  "hash": 59410663,
   "ticks": 150,
   "reason": "tackle"
  },
  {
+  "key": "iform-power/cover1blitz/4242/user",
+  "hash": 413266952,
+  "ticks": 116,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-power/cover1off/11",
+  "hash": 524496423,
+  "ticks": 143,
+  "reason": "tackle"
+ },
+ {
   "key": "iform-power/cover1off/4242/user",
-  "hash": 2310573016,
-  "ticks": 94,
+  "hash": 3870822131,
+  "ticks": 115,
   "reason": "tackle"
  },
  {
   "key": "iform-power/tampa2/11",
-  "hash": 2705344485,
-  "ticks": 142,
+  "hash": 877747973,
+  "ticks": 116,
   "reason": "tackle"
  },
  {
   "key": "iform-power/tampa2/4242/user",
-  "hash": 140694072,
-  "ticks": 105,
+  "hash": 1128218692,
+  "ticks": 115,
   "reason": "tackle"
  },
  {
   "key": "iform-power/firezone/11",
-  "hash": 2188105438,
+  "hash": 1958877507,
   "ticks": 111,
   "reason": "tackle"
  },
  {
   "key": "iform-power/firezone/4242/user",
-  "hash": 1059570337,
-  "ticks": 102,
-  "reason": "tackle"
- },
- {
-  "key": "iform-power/simpressure/11",
-  "hash": 768155553,
-  "ticks": 156,
-  "reason": "tackle"
- },
- {
-  "key": "iform-power/simpressure/4242/user",
-  "hash": 4184711088,
-  "ticks": 94,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover3/11",
-  "hash": 7961640,
-  "ticks": 221,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover3/4242/user",
-  "hash": 943452317,
-  "ticks": 169,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover1/11",
-  "hash": 3667747821,
-  "ticks": 211,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover1/4242/user",
-  "hash": 236899639,
-  "ticks": 117,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover2/11",
-  "hash": 2047629155,
-  "ticks": 146,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover2/4242/user",
-  "hash": 3942386366,
-  "ticks": 142,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover4/11",
-  "hash": 91958840,
-  "ticks": 303,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover4/4242/user",
-  "hash": 3106638459,
-  "ticks": 153,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover2man/11",
-  "hash": 3529709570,
-  "ticks": 308,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover2man/4242/user",
-  "hash": 948496226,
-  "ticks": 120,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover1blitz/11",
-  "hash": 2222022160,
-  "ticks": 145,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover1blitz/4242/user",
-  "hash": 3590408086,
-  "ticks": 160,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover1off/11",
-  "hash": 1984055363,
-  "ticks": 125,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/cover1off/4242/user",
-  "hash": 2066864376,
-  "ticks": 153,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/tampa2/11",
-  "hash": 4160775465,
-  "ticks": 146,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/tampa2/4242/user",
-  "hash": 226242310,
-  "ticks": 161,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/firezone/11",
-  "hash": 2344674065,
-  "ticks": 283,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/firezone/4242/user",
-  "hash": 430247629,
-  "ticks": 140,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/simpressure/11",
-  "hash": 2051099136,
-  "ticks": 222,
-  "reason": "tackle"
- },
- {
-  "key": "iform-toss/simpressure/4242/user",
-  "hash": 3041781687,
-  "ticks": 244,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover3/11",
-  "hash": 4074056690,
-  "ticks": 132,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover3/4242/user",
-  "hash": 3411954941,
-  "ticks": 114,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover1/11",
-  "hash": 2912194050,
-  "ticks": 407,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover1/4242/user",
-  "hash": 3656499058,
-  "ticks": 102,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover2/11",
-  "hash": 2562213285,
-  "ticks": 146,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover2/4242/user",
-  "hash": 3433786518,
-  "ticks": 114,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover4/11",
-  "hash": 1984135061,
-  "ticks": 147,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover4/4242/user",
-  "hash": 3355706125,
-  "ticks": 114,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover2man/11",
-  "hash": 3250053996,
-  "ticks": 152,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover2man/4242/user",
-  "hash": 3052921617,
-  "ticks": 103,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover1blitz/11",
-  "hash": 1290837585,
-  "ticks": 502,
-  "reason": "touchdown"
- },
- {
-  "key": "pistol-stretch/cover1blitz/4242/user",
-  "hash": 3161082200,
-  "ticks": 146,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover1off/11",
-  "hash": 35962165,
-  "ticks": 155,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/cover1off/4242/user",
-  "hash": 874004681,
-  "ticks": 102,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/tampa2/11",
-  "hash": 3456844837,
-  "ticks": 147,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/tampa2/4242/user",
-  "hash": 3813158382,
-  "ticks": 114,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/firezone/11",
-  "hash": 2301120780,
-  "ticks": 137,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/firezone/4242/user",
-  "hash": 2287575130,
-  "ticks": 100,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/simpressure/11",
-  "hash": 2421193737,
-  "ticks": 141,
-  "reason": "tackle"
- },
- {
-  "key": "pistol-stretch/simpressure/4242/user",
-  "hash": 4221091518,
-  "ticks": 105,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover3/11",
-  "hash": 529816307,
-  "ticks": 119,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover3/4242/user",
-  "hash": 1528803566,
-  "ticks": 140,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover1/11",
-  "hash": 3178907504,
-  "ticks": 144,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover1/4242/user",
-  "hash": 716756700,
-  "ticks": 142,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover2/11",
-  "hash": 2001910544,
-  "ticks": 157,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover2/4242/user",
-  "hash": 2547928848,
-  "ticks": 100,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover4/11",
-  "hash": 215275908,
-  "ticks": 108,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover4/4242/user",
-  "hash": 1045283660,
-  "ticks": 140,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover2man/11",
-  "hash": 3519851444,
-  "ticks": 160,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover2man/4242/user",
-  "hash": 2942159918,
-  "ticks": 153,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover1blitz/11",
-  "hash": 4221447519,
-  "ticks": 126,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover1blitz/4242/user",
-  "hash": 2567477069,
-  "ticks": 110,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover1off/11",
-  "hash": 2039852864,
-  "ticks": 119,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/cover1off/4242/user",
-  "hash": 3272566365,
-  "ticks": 107,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/tampa2/11",
-  "hash": 2873706535,
-  "ticks": 172,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/tampa2/4242/user",
-  "hash": 3550570852,
-  "ticks": 107,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/firezone/11",
-  "hash": 900372645,
-  "ticks": 127,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/firezone/4242/user",
-  "hash": 1536760066,
-  "ticks": 89,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/simpressure/11",
-  "hash": 3408037063,
-  "ticks": 176,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-dive/simpressure/4242/user",
-  "hash": 581020882,
-  "ticks": 73,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover3/11",
-  "hash": 722790417,
-  "ticks": 150,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover3/4242/user",
-  "hash": 5978440,
-  "ticks": 90,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover1/11",
-  "hash": 3110655547,
-  "ticks": 141,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover1/4242/user",
-  "hash": 561450596,
-  "ticks": 100,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover2/11",
-  "hash": 3592212846,
-  "ticks": 129,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover2/4242/user",
-  "hash": 4279989337,
-  "ticks": 104,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover4/11",
-  "hash": 315967031,
-  "ticks": 137,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover4/4242/user",
-  "hash": 211635510,
-  "ticks": 90,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover2man/11",
-  "hash": 4262127106,
-  "ticks": 112,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover2man/4242/user",
-  "hash": 37425248,
-  "ticks": 106,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover1blitz/11",
-  "hash": 2514390068,
-  "ticks": 115,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover1blitz/4242/user",
-  "hash": 2205401864,
-  "ticks": 134,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover1off/11",
-  "hash": 1066454425,
-  "ticks": 118,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/cover1off/4242/user",
-  "hash": 2419560473,
-  "ticks": 106,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/tampa2/11",
-  "hash": 2948044341,
-  "ticks": 141,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/tampa2/4242/user",
-  "hash": 1985114350,
-  "ticks": 109,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/firezone/11",
-  "hash": 840841688,
-  "ticks": 95,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/firezone/4242/user",
-  "hash": 2190240255,
-  "ticks": 149,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/simpressure/11",
-  "hash": 3734310245,
-  "ticks": 134,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-power/simpressure/4242/user",
-  "hash": 3842685794,
-  "ticks": 91,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover3/11",
-  "hash": 1047864992,
-  "ticks": 61,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover3/4242/user",
-  "hash": 1243539388,
-  "ticks": 113,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover1/11",
-  "hash": 1225565178,
-  "ticks": 63,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover1/4242/user",
-  "hash": 3156758670,
-  "ticks": 65,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover2/11",
-  "hash": 3209320716,
-  "ticks": 61,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover2/4242/user",
-  "hash": 3386206009,
-  "ticks": 145,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover4/11",
-  "hash": 716997462,
-  "ticks": 61,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover4/4242/user",
-  "hash": 650135183,
-  "ticks": 142,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover2man/11",
-  "hash": 820731610,
-  "ticks": 59,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover2man/4242/user",
-  "hash": 3784818989,
-  "ticks": 64,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover1blitz/11",
-  "hash": 2374495174,
-  "ticks": 66,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover1blitz/4242/user",
-  "hash": 1058500202,
-  "ticks": 63,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover1off/11",
-  "hash": 107381213,
-  "ticks": 64,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/cover1off/4242/user",
-  "hash": 4205688992,
-  "ticks": 66,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/tampa2/11",
-  "hash": 2682423076,
-  "ticks": 96,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/tampa2/4242/user",
-  "hash": 2580851270,
-  "ticks": 94,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/firezone/11",
-  "hash": 1207872551,
-  "ticks": 239,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/firezone/4242/user",
-  "hash": 3552729385,
-  "ticks": 72,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/simpressure/11",
-  "hash": 1942979543,
-  "ticks": 93,
-  "reason": "tackle"
- },
- {
-  "key": "heavy-sneak/simpressure/4242/user",
-  "hash": 983512921,
-  "ticks": 52,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover3/11",
-  "hash": 1841883866,
-  "ticks": 153,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover3/4242/user",
-  "hash": 1285064580,
-  "ticks": 140,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover1/11",
-  "hash": 2176219621,
-  "ticks": 287,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover1/4242/user",
-  "hash": 2568754363,
-  "ticks": 174,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover2/11",
-  "hash": 1195732187,
-  "ticks": 228,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover2/4242/user",
-  "hash": 3009595446,
-  "ticks": 146,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover4/11",
-  "hash": 3577056461,
-  "ticks": 196,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover4/4242/user",
-  "hash": 4054659606,
-  "ticks": 146,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover2man/11",
-  "hash": 112471408,
-  "ticks": 202,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover2man/4242/user",
-  "hash": 2343648392,
-  "ticks": 169,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover1blitz/11",
-  "hash": 259759118,
-  "ticks": 163,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover1blitz/4242/user",
-  "hash": 3308747729,
-  "ticks": 212,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover1off/11",
-  "hash": 3974509567,
-  "ticks": 285,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/cover1off/4242/user",
-  "hash": 1062660201,
-  "ticks": 165,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/tampa2/11",
-  "hash": 208369761,
-  "ticks": 247,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/tampa2/4242/user",
-  "hash": 3222226567,
-  "ticks": 146,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/firezone/11",
-  "hash": 548688491,
-  "ticks": 176,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/firezone/4242/user",
-  "hash": 3276511750,
-  "ticks": 185,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/simpressure/11",
-  "hash": 1376907787,
-  "ticks": 226,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-qb-draw/simpressure/4242/user",
-  "hash": 13078806,
-  "ticks": 162,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover3/11",
-  "hash": 2356447717,
-  "ticks": 103,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover3/4242/user",
-  "hash": 2938541798,
-  "ticks": 183,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover1/11",
-  "hash": 1440616987,
-  "ticks": 135,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover1/4242/user",
-  "hash": 4015301190,
-  "ticks": 113,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover2/11",
-  "hash": 2421085843,
-  "ticks": 103,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover2/4242/user",
-  "hash": 4117145030,
-  "ticks": 169,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover4/11",
-  "hash": 1492777825,
-  "ticks": 103,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover4/4242/user",
-  "hash": 2627405314,
-  "ticks": 183,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover2man/11",
-  "hash": 2636108312,
-  "ticks": 139,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover2man/4242/user",
-  "hash": 116781562,
-  "ticks": 123,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover1blitz/11",
-  "hash": 2828881036,
-  "ticks": 394,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover1blitz/4242/user",
-  "hash": 3625266745,
-  "ticks": 117,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover1off/11",
-  "hash": 2654011645,
-  "ticks": 123,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/cover1off/4242/user",
-  "hash": 633855501,
+  "hash": 230390774,
   "ticks": 121,
   "reason": "tackle"
  },
  {
-  "key": "doubles-zone-read/tampa2/11",
-  "hash": 3212246324,
-  "ticks": 103,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/tampa2/4242/user",
-  "hash": 606895141,
-  "ticks": 187,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/firezone/11",
-  "hash": 1222256351,
-  "ticks": 129,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/firezone/4242/user",
-  "hash": 3868529489,
-  "ticks": 100,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/simpressure/11",
-  "hash": 3399760981,
-  "ticks": 109,
-  "reason": "tackle"
- },
- {
-  "key": "doubles-zone-read/simpressure/4242/user",
-  "hash": 3396328959,
-  "ticks": 164,
-  "reason": "tackle"
- },
- {
-  "key": "h-iso/cover3/11",
-  "hash": 3394622663,
-  "ticks": 95,
-  "reason": "tackle"
- },
- {
-  "key": "h-iso/cover3/4242/user",
-  "hash": 149605885,
+  "key": "iform-power/simpressure/11",
+  "hash": 1742292102,
   "ticks": 157,
   "reason": "tackle"
  },
  {
+  "key": "iform-power/simpressure/4242/user",
+  "hash": 253913357,
+  "ticks": 115,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover3/11",
+  "hash": 1067507119,
+  "ticks": 228,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover3/4242/user",
+  "hash": 3032013471,
+  "ticks": 155,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover1/11",
+  "hash": 1599198627,
+  "ticks": 137,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover1/4242/user",
+  "hash": 1059875911,
+  "ticks": 170,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover2/11",
+  "hash": 3689475048,
+  "ticks": 154,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover2/4242/user",
+  "hash": 2824221779,
+  "ticks": 176,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover4/11",
+  "hash": 3907699908,
+  "ticks": 303,
+  "reason": "outOfBounds"
+ },
+ {
+  "key": "iform-toss/cover4/4242/user",
+  "hash": 751048352,
+  "ticks": 185,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover2man/11",
+  "hash": 845334270,
+  "ticks": 313,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover2man/4242/user",
+  "hash": 1507296698,
+  "ticks": 144,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover1blitz/11",
+  "hash": 4044752711,
+  "ticks": 150,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover1blitz/4242/user",
+  "hash": 705118526,
+  "ticks": 178,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover1off/11",
+  "hash": 1301188722,
+  "ticks": 138,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/cover1off/4242/user",
+  "hash": 1950266244,
+  "ticks": 161,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/tampa2/11",
+  "hash": 323554804,
+  "ticks": 154,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/tampa2/4242/user",
+  "hash": 1001191856,
+  "ticks": 181,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/firezone/11",
+  "hash": 2779994728,
+  "ticks": 159,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/firezone/4242/user",
+  "hash": 906053181,
+  "ticks": 159,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/simpressure/11",
+  "hash": 3096172096,
+  "ticks": 228,
+  "reason": "tackle"
+ },
+ {
+  "key": "iform-toss/simpressure/4242/user",
+  "hash": 3698637643,
+  "ticks": 179,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover3/11",
+  "hash": 2683660544,
+  "ticks": 144,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover3/4242/user",
+  "hash": 656669785,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover1/11",
+  "hash": 3014591706,
+  "ticks": 428,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover1/4242/user",
+  "hash": 1467402128,
+  "ticks": 124,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover2/11",
+  "hash": 3096822503,
+  "ticks": 145,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover2/4242/user",
+  "hash": 3710566661,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover4/11",
+  "hash": 2236689257,
+  "ticks": 171,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover4/4242/user",
+  "hash": 1520262748,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover2man/11",
+  "hash": 1060145250,
+  "ticks": 143,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover2man/4242/user",
+  "hash": 3884023128,
+  "ticks": 124,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover1blitz/11",
+  "hash": 928866635,
+  "ticks": 139,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover1blitz/4242/user",
+  "hash": 4074733731,
+  "ticks": 151,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover1off/11",
+  "hash": 4285590800,
+  "ticks": 140,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/cover1off/4242/user",
+  "hash": 3791600560,
+  "ticks": 124,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/tampa2/11",
+  "hash": 3424327987,
+  "ticks": 145,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/tampa2/4242/user",
+  "hash": 2790737517,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/firezone/11",
+  "hash": 3759258598,
+  "ticks": 151,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/firezone/4242/user",
+  "hash": 1197415738,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/simpressure/11",
+  "hash": 2139557806,
+  "ticks": 144,
+  "reason": "tackle"
+ },
+ {
+  "key": "pistol-stretch/simpressure/4242/user",
+  "hash": 1555416798,
+  "ticks": 119,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover3/11",
+  "hash": 830388488,
+  "ticks": 143,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover3/4242/user",
+  "hash": 2131366303,
+  "ticks": 141,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover1/11",
+  "hash": 417487267,
+  "ticks": 122,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover1/4242/user",
+  "hash": 2736642169,
+  "ticks": 114,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover2/11",
+  "hash": 2881247077,
+  "ticks": 138,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover2/4242/user",
+  "hash": 245628314,
+  "ticks": 116,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover4/11",
+  "hash": 3396755840,
+  "ticks": 162,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover4/4242/user",
+  "hash": 3406981604,
+  "ticks": 144,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover2man/11",
+  "hash": 3003745748,
+  "ticks": 97,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover2man/4242/user",
+  "hash": 3718809519,
+  "ticks": 146,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover1blitz/11",
+  "hash": 2371037906,
+  "ticks": 123,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover1blitz/4242/user",
+  "hash": 533349108,
+  "ticks": 117,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover1off/11",
+  "hash": 1724031497,
+  "ticks": 131,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/cover1off/4242/user",
+  "hash": 2567216159,
+  "ticks": 115,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/tampa2/11",
+  "hash": 2489622423,
+  "ticks": 160,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/tampa2/4242/user",
+  "hash": 3276133113,
+  "ticks": 111,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/firezone/11",
+  "hash": 3379723061,
+  "ticks": 135,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/firezone/4242/user",
+  "hash": 3431157727,
+  "ticks": 88,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/simpressure/11",
+  "hash": 1547509735,
+  "ticks": 122,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-dive/simpressure/4242/user",
+  "hash": 2717145254,
+  "ticks": 90,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover3/11",
+  "hash": 3177406651,
+  "ticks": 147,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover3/4242/user",
+  "hash": 1856465810,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover1/11",
+  "hash": 4147362033,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover1/4242/user",
+  "hash": 1881611857,
+  "ticks": 110,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover2/11",
+  "hash": 3579044344,
+  "ticks": 154,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover2/4242/user",
+  "hash": 2565419785,
+  "ticks": 113,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover4/11",
+  "hash": 2854766744,
+  "ticks": 148,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover4/4242/user",
+  "hash": 2580683558,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover2man/11",
+  "hash": 917896487,
+  "ticks": 118,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover2man/4242/user",
+  "hash": 290754305,
+  "ticks": 123,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover1blitz/11",
+  "hash": 3771703347,
+  "ticks": 114,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover1blitz/4242/user",
+  "hash": 3056261139,
+  "ticks": 129,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover1off/11",
+  "hash": 3025173946,
+  "ticks": 122,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/cover1off/4242/user",
+  "hash": 2023972121,
+  "ticks": 121,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/tampa2/11",
+  "hash": 1791277035,
+  "ticks": 122,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/tampa2/4242/user",
+  "hash": 2591106777,
+  "ticks": 114,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/firezone/11",
+  "hash": 2873345179,
+  "ticks": 108,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/firezone/4242/user",
+  "hash": 3410336011,
+  "ticks": 136,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/simpressure/11",
+  "hash": 1352553782,
+  "ticks": 116,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-power/simpressure/4242/user",
+  "hash": 607602706,
+  "ticks": 114,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover3/11",
+  "hash": 3402889829,
+  "ticks": 85,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover3/4242/user",
+  "hash": 1649268395,
+  "ticks": 89,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover1/11",
+  "hash": 3133111660,
+  "ticks": 80,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover1/4242/user",
+  "hash": 3167797468,
+  "ticks": 82,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover2/11",
+  "hash": 3047534983,
+  "ticks": 85,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover2/4242/user",
+  "hash": 3388905627,
+  "ticks": 89,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover4/11",
+  "hash": 1081736943,
+  "ticks": 85,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover4/4242/user",
+  "hash": 1073999480,
+  "ticks": 89,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover2man/11",
+  "hash": 1628634578,
+  "ticks": 75,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover2man/4242/user",
+  "hash": 3781705088,
+  "ticks": 83,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover1blitz/11",
+  "hash": 2749715020,
+  "ticks": 85,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover1blitz/4242/user",
+  "hash": 1136346075,
+  "ticks": 79,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover1off/11",
+  "hash": 1008638077,
+  "ticks": 88,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/cover1off/4242/user",
+  "hash": 3146072491,
+  "ticks": 82,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/tampa2/11",
+  "hash": 4144100764,
+  "ticks": 124,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/tampa2/4242/user",
+  "hash": 2559904769,
+  "ticks": 148,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/firezone/11",
+  "hash": 1064669130,
+  "ticks": 255,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/firezone/4242/user",
+  "hash": 3927825033,
+  "ticks": 67,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/simpressure/11",
+  "hash": 2090919723,
+  "ticks": 143,
+  "reason": "tackle"
+ },
+ {
+  "key": "heavy-sneak/simpressure/4242/user",
+  "hash": 1730258667,
+  "ticks": 70,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover3/11",
+  "hash": 1482174437,
+  "ticks": 262,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover3/4242/user",
+  "hash": 3372443725,
+  "ticks": 158,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover1/11",
+  "hash": 3027261556,
+  "ticks": 184,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover1/4242/user",
+  "hash": 4199121050,
+  "ticks": 183,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover2/11",
+  "hash": 3875543224,
+  "ticks": 219,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover2/4242/user",
+  "hash": 157635683,
+  "ticks": 163,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover4/11",
+  "hash": 2794694412,
+  "ticks": 217,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover4/4242/user",
+  "hash": 1843796778,
+  "ticks": 163,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover2man/11",
+  "hash": 3634965206,
+  "ticks": 227,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover2man/4242/user",
+  "hash": 83235228,
+  "ticks": 168,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover1blitz/11",
+  "hash": 2173229201,
+  "ticks": 179,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover1blitz/4242/user",
+  "hash": 1147323951,
+  "ticks": 173,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover1off/11",
+  "hash": 2696499455,
+  "ticks": 266,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/cover1off/4242/user",
+  "hash": 2671834650,
+  "ticks": 185,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/tampa2/11",
+  "hash": 607946595,
+  "ticks": 219,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/tampa2/4242/user",
+  "hash": 2426944336,
+  "ticks": 163,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/firezone/11",
+  "hash": 358234557,
+  "ticks": 243,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/firezone/4242/user",
+  "hash": 1273891340,
+  "ticks": 138,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/simpressure/11",
+  "hash": 705887680,
+  "ticks": 188,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-qb-draw/simpressure/4242/user",
+  "hash": 4242774657,
+  "ticks": 169,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover3/11",
+  "hash": 183984656,
+  "ticks": 130,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover3/4242/user",
+  "hash": 3242680342,
+  "ticks": 156,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover1/11",
+  "hash": 4094969858,
+  "ticks": 131,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover1/4242/user",
+  "hash": 398173297,
+  "ticks": 123,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover2/11",
+  "hash": 3921953218,
+  "ticks": 130,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover2/4242/user",
+  "hash": 3816152649,
+  "ticks": 163,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover4/11",
+  "hash": 2372586989,
+  "ticks": 130,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover4/4242/user",
+  "hash": 4159,
+  "ticks": 156,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover2man/11",
+  "hash": 1729032717,
+  "ticks": 171,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover2man/4242/user",
+  "hash": 1187010487,
+  "ticks": 147,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover1blitz/11",
+  "hash": 294769850,
+  "ticks": 131,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover1blitz/4242/user",
+  "hash": 2795417100,
+  "ticks": 127,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover1off/11",
+  "hash": 2695137006,
+  "ticks": 164,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/cover1off/4242/user",
+  "hash": 3734284604,
+  "ticks": 122,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/tampa2/11",
+  "hash": 3413887115,
+  "ticks": 130,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/tampa2/4242/user",
+  "hash": 1013390446,
+  "ticks": 168,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/firezone/11",
+  "hash": 1443803268,
+  "ticks": 153,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/firezone/4242/user",
+  "hash": 3824773104,
+  "ticks": 115,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/simpressure/11",
+  "hash": 2038804175,
+  "ticks": 131,
+  "reason": "tackle"
+ },
+ {
+  "key": "doubles-zone-read/simpressure/4242/user",
+  "hash": 936196437,
+  "ticks": 115,
+  "reason": "tackle"
+ },
+ {
+  "key": "h-iso/cover3/11",
+  "hash": 710952423,
+  "ticks": 112,
+  "reason": "tackle"
+ },
+ {
+  "key": "h-iso/cover3/4242/user",
+  "hash": 3736790216,
+  "ticks": 215,
+  "reason": "tackle"
+ },
+ {
   "key": "h-iso/cover1/11",
-  "hash": 4251741208,
-  "ticks": 100,
+  "hash": 2735302598,
+  "ticks": 118,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover1/4242/user",
-  "hash": 2663832100,
+  "hash": 3985763378,
   "ticks": 118,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover2/11",
-  "hash": 3329785836,
-  "ticks": 95,
+  "hash": 3384611239,
+  "ticks": 116,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover2/4242/user",
-  "hash": 258439076,
-  "ticks": 158,
+  "hash": 4157343962,
+  "ticks": 143,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover4/11",
-  "hash": 1485666024,
-  "ticks": 96,
+  "hash": 3135932287,
+  "ticks": 133,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover4/4242/user",
-  "hash": 1603043468,
-  "ticks": 158,
+  "hash": 4116187598,
+  "ticks": 201,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover2man/11",
-  "hash": 3010345952,
-  "ticks": 105,
+  "hash": 3347273780,
+  "ticks": 114,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover2man/4242/user",
-  "hash": 3176343917,
-  "ticks": 212,
+  "hash": 3027200661,
+  "ticks": 191,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover1blitz/11",
-  "hash": 375078579,
-  "ticks": 167,
+  "hash": 3819693255,
+  "ticks": 171,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover1blitz/4242/user",
-  "hash": 3676804977,
-  "ticks": 181,
+  "hash": 2208382905,
+  "ticks": 159,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover1off/11",
-  "hash": 570486014,
-  "ticks": 105,
+  "hash": 2280173950,
+  "ticks": 116,
   "reason": "tackle"
  },
  {
   "key": "h-iso/cover1off/4242/user",
-  "hash": 583375738,
-  "ticks": 102,
+  "hash": 1623326660,
+  "ticks": 118,
   "reason": "tackle"
  },
  {
   "key": "h-iso/tampa2/11",
-  "hash": 581664963,
-  "ticks": 90,
+  "hash": 923523951,
+  "ticks": 112,
   "reason": "tackle"
  },
  {
   "key": "h-iso/tampa2/4242/user",
-  "hash": 1754976507,
-  "ticks": 229,
+  "hash": 2313396601,
+  "ticks": 166,
   "reason": "tackle"
  },
  {
   "key": "h-iso/firezone/11",
-  "hash": 1593491273,
-  "ticks": 140,
+  "hash": 554328837,
+  "ticks": 132,
   "reason": "tackle"
  },
  {
   "key": "h-iso/firezone/4242/user",
-  "hash": 2271554560,
-  "ticks": 134,
+  "hash": 3308523244,
+  "ticks": 149,
   "reason": "tackle"
  },
  {
   "key": "h-iso/simpressure/11",
-  "hash": 2218451670,
-  "ticks": 186,
+  "hash": 3855316618,
+  "ticks": 169,
   "reason": "tackle"
  },
  {
   "key": "h-iso/simpressure/4242/user",
-  "hash": 3258652017,
-  "ticks": 155,
+  "hash": 2175091591,
+  "ticks": 166,
   "reason": "tackle"
  }
 ]

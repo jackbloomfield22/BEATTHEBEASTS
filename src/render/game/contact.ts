@@ -14,6 +14,7 @@
 // the offsets and leans so nothing pops. The sim is only read.
 
 import type { Position } from '../players/variety';
+import { BODY_FIT } from '@/sim/bodies';
 
 /** Trunk extent at the pads: half-width across the shoulders and half-depth, metres. */
 export interface BodyExtent {
@@ -25,21 +26,10 @@ export interface BodyExtent {
  * Least-squares fits over each position's roster range of height and weight
  * (tools/blender/measure_bodies.py sweep: the shipped mesh at the idle pose,
  * shaped as bodyShape.ts and variety.ts shape it; max error ≤ 0.7 cm):
- * extent = a + b (lb − 200) + c (in − 74). The pad half-width is the widest
- * point across the pad caps and sleeves; the half-depth is the jersey's
- * front-to-back half at the chest.
+ * extent = a + b (lb − 200) + c (in − 74). One table for the sim's bodies
+ * and the drawn trunks (sim/bodies.ts BODY_FIT).
  */
-const FIT: Record<Exclude<Position, 'K'>, { hw: [number, number, number]; hd: [number, number, number] }> = {
-  WR: { hw: [0.2895, 0.000157, 0.00305], hd: [0.1646, 0.000346, 0.00018] },
-  CB: { hw: [0.288, 0.000185, 0.00289], hd: [0.1608, 0.000337, 0.00035] },
-  S: { hw: [0.2876, 0.000213, 0.00271], hd: [0.16, 0.000397, -0.00005] },
-  RB: { hw: [0.3348, 0.000185, 0.00355], hd: [0.1651, 0.00045, -0.00042] },
-  QB: { hw: [0.3131, 0.000181, 0.0032], hd: [0.1624, 0.000354, 0.00012] },
-  LB: { hw: [0.3497, 0.000202, 0.00348], hd: [0.1648, 0.000509, -0.00088] },
-  TE: { hw: [0.3507, 0.000166, 0.00384], hd: [0.1698, 0.000433, -0.00022] },
-  DL: { hw: [0.379, 0.000139, 0.00437], hd: [0.1743, 0.00046, -0.00045] },
-  OL: { hw: [0.3811, 0.000102, 0.00457], hd: [0.1771, 0.000396, 0.00024] },
-};
+const FIT: Record<Exclude<Position, 'K'>, { hw: [number, number, number]; hd: [number, number, number] }> = BODY_FIT;
 
 const LB_PER_KG = 1 / 0.45359237;
 const IN_PER_M = 1 / 0.0254;

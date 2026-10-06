@@ -6,7 +6,9 @@
 // loose (Ball Security against Hit Power). The sim decides; the render's
 // ragdoll only shows the fall.
 
-import { exp } from '@/engine/math/detmath';
+import { cos, exp, sin } from '@/engine/math/detmath';
+import { DOWN_R, reachDir } from './bodies';
+import { heldTogether } from './tackle';
 import { blockOf } from './blocks';
 import type { PlayState } from './state';
 import { TICK, type Agent, type Move } from './types';
@@ -55,32 +57,72 @@ const TRUCK0 = 1.2;
 const QB_BACK_EDGE = 0.8;
 const logistic = (x: number): number => 1 / (1 + exp(-x));
 
-/** Push overlapping bodies apart (not engaged pairs), heavier players move less. */
+/**
+ * Push overlapping bodies apart (not engaged pairs, nor a tackler riding
+ * the man he has hold of), heavier players move less. Standing bodies are
+ * the ellipses of bodies.ts (pads across, chest along his facing), measured
+ * along the line between their centres. A man on the ground pushes anyone
+ * standing on his trunk off it (his legs get stepped over; his trunk
+ * doesn't), except a man in the air over him (a hurdle).
+ */
 export function separate(s: PlayState): void {
   const A = s.agents;
-  for (let i = 0; i < A.length; i++) {
+  const n = A.length;
+  for (let i = 0; i < n; i++) {
+    CF[i] = cos(A[i]!.face);
+    SF[i] = sin(A[i]!.face);
+  }
+  for (let i = 0; i < n; i++) {
     const a = A[i]!;
-    for (let j = i + 1; j < A.length; j++) {
+    for (let j = i + 1; j < n; j++) {
       const b = A[j]!;
-      const min = a.fx.radius + b.fx.radius;
       const dx = b.pos.x - a.pos.x;
       const dy = b.pos.y - a.pos.y;
       const d2 = dx * dx + dy * dy;
-      if (d2 >= min * min || d2 < 1e-10) continue;
+      // (The sum of the half-widths bounds the ellipses: nothing to do past it.)
+      const outer = a.fx.radius + b.fx.radius;
+      if (d2 >= outer * outer || d2 < 1e-10) continue;
+      if (a.down || b.down) continue;
       const blk = blockOf(s, a.i);
       if (blk && (blk.b === b.i || blk.d === b.i)) continue;
-      if (a.down || b.down) continue;
+      if (heldTogether(s, a.i, b.i)) continue;
       const d = Math.sqrt(d2);
+      const ux = dx / d;
+      const uy = dy / d;
+      const min = reachDir(a, CF[i]!, SF[i]!, ux, uy) + reachDir(b, CF[j]!, SF[j]!, -ux, -uy);
+      if (d >= min) continue;
       const push = (min - d) * 0.5;
       const wa = b.fx.mass / (a.fx.mass + b.fx.mass);
       const wb = 1 - wa;
-      a.pos.x -= (dx / d) * push * wa * 2;
-      a.pos.y -= (dy / d) * push * wa * 2;
-      b.pos.x += (dx / d) * push * wb * 2;
-      b.pos.y += (dy / d) * push * wb * 2;
+      a.pos.x -= ux * push * wa * 2;
+      a.pos.y -= uy * push * wa * 2;
+      b.pos.x += ux * push * wb * 2;
+      b.pos.y += uy * push * wb * 2;
+    }
+  }
+  // Off the bodies on the ground: anyone standing on a man's trunk steps off it.
+  for (const g of A) {
+    const L = g.lie;
+    if (!g.down || !L) continue;
+    for (const a of A) {
+      if (a.down || a === g || (a.move === 'hurdle' && a.busy > 0) || heldTogether(s, a.i, g.i)) continue;
+      const rx = a.pos.x - L.x;
+      const ry = a.pos.y - L.y;
+      const t = Math.max(0, Math.min(L.torso, rx * L.dx + ry * L.dy));
+      const ex = rx - L.dx * t;
+      const ey = ry - L.dy * t;
+      const k = Math.sqrt(ex * ex + ey * ey);
+      // His feet beside the trunk: DOWN_R and the near half of his stance (~0.6 of the pad half-width).
+      const min = DOWN_R + a.fx.radius * 0.6;
+      if (k >= min || k < 1e-6) continue;
+      // Half the overlap a tick: he steps off over a few frames, not a shove.
+      a.pos.x += (ex / k) * (min - k) * 0.5;
+      a.pos.y += (ey / k) * (min - k) * 0.5;
     }
   }
 }
+const CF: number[] = [];
+const SF: number[] = [];
 
 export type TackleOutcome = 'tackle' | 'bigHit' | 'broken' | 'missed';
 
@@ -268,12 +310,14 @@ const PLANT: Record<string, number> = { jukeL: 5, jukeR: 5, spin: 6, hurdle: 6, 
 export const slides = (c: Agent): boolean => c.slot === 'QB' && c.side === 'off' && !c.mem.designed;
 
 /** A carrier's move: commits him for a few frames and sets a cooldown. False if he can't start it now. */
-export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>): boolean {
+export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>, data: Record<string, number | string | boolean> = {}): boolean {
   if (c.busy > 0 || c.moveCooldown > 0 || c.down) return false;
   // The hurdle: gather, takeoff and flight to the landing (the clip's 0.96 s, tools/blender actions_m65_carrier.py hurdle).
   const frames: Record<string, number> = { jukeL: 16, jukeR: 16, spin: 24, stiffArm: 20, truck: 18, hurdle: 58, dive: 30, protect: 1 };
   c.move = mv;
   c.busy = frames[mv] ?? 12;
+  // (When it began: a move begun inside a tackle gets its own try against the holds, tackle.ts.)
+  c.mem.moveT = s.t;
   // Spin Cycle: spins chain (two in a run); Human Joystick: any move chains with no recovery (the trait catalog's lines).
   c.moveCooldown = c.busy + (has(c, 'human-joystick') ? 0 : mv === 'spin' && has(c, 'spin-cycle') ? 8 : 24);
   c.moveFatigue = Math.min(3, c.moveFatigue + 1);
@@ -312,7 +356,7 @@ export function startMove(s: PlayState, c: Agent, mv: NonNullable<Agent['move']>
   }
   const n = PLANT[mv];
   if (n) c.impulse = { x: (tx - c.vel.x) / n, y: (ty - c.vel.y) / n, left: n };
-  s.events.push({ t: s.t, type: 'move', who: [c.i], data: { move: mv === 'dive' && slides(c) ? 'slide' : mv } });
+  s.events.push({ t: s.t, type: 'move', who: [c.i], data: { move: mv === 'dive' && slides(c) ? 'slide' : mv, ...data } });
   return true;
 }
 

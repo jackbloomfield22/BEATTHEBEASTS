@@ -1,0 +1,17 @@
+{
+ "frames": 2290,
+ "worst": 48,
+ "p99": 24,
+ "spikes": [
+  {
+   "frame": 45,
+   "slot": "RCB",
+   "bone": "thigh_l",
+   "rate": 48,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  }
+ ]
+}

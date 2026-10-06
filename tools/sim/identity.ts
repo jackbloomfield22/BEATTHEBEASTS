@@ -236,13 +236,20 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
       const man = manOf(s, me);
       runToWhistle(s, () => NEUTRAL);
       // His tackle rolls: won (a hit that isn't him joining a pile), missed, or broken.
+      // (sim/tackle.ts: a hold he had and then lost is one try, not made: the hit, then the broken tackle.)
+      let holding = false;
       for (const ev of s.events) {
         if (ev.type === 'hit' && ev.who?.[0] === me.i && !ev.data?.join) {
           tries++;
           made++;
+          holding = true;
         }
         if (ev.type === 'missedTackle' && ev.who?.[0] === me.i) tries++;
-        if (ev.type === 'brokenTackle' && ev.who?.[1] === me.i) tries++;
+        if (ev.type === 'brokenTackle' && ev.who?.[1] === me.i) {
+          if (holding) made--;
+          else tries++;
+          holding = false;
+        }
       }
       const p = s.result?.pass;
       if (!man || !p?.attempted || p.target !== man.i) continue;

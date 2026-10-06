@@ -257,6 +257,19 @@ export class PlayerAnimator {
     this.loco = 1;
   }
 
+  /**
+   * Re-time the transition playing now (if it's `name`): jump ahead to `t`
+   * (never back) and/or change its rate. A tackle clip is timed to the sim's
+   * hold as it goes: slowed while he rides the ball carrier, caught up to its
+   * going-down key when the sim puts them down.
+   */
+  retime(name: string, opts: { t?: number; rate?: number }): void {
+    const tr = this.trans;
+    if (!tr || tr.done || tr.name !== name) return;
+    if (opts.t !== undefined && opts.t > tr.t) tr.t = opts.t;
+    if (opts.rate !== undefined) tr.rate = opts.rate;
+  }
+
   /** The transition playing now and its time (s), or null. */
   get transition(): { name: string; t: number; done: boolean } | null {
     return this.trans ? { name: this.trans.name, t: this.trans.t, done: this.trans.done } : null;
