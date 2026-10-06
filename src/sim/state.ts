@@ -55,6 +55,13 @@ export interface PlaySetup {
   /** Run the play flipped (its mirror image: the strength, the run and the fake to the other side; the line stays put). */
   flip?: boolean;
   /**
+   * The call's assignments are already played by the formation's strength
+   * (toStrength). createPlay sets it on the setup it keeps, so running that
+   * setup again (a replay, a re-snap) doesn't swap the underneath zones a
+   * second time, as flip: false does for a flipped call's mirrored play.
+   */
+  byStrength?: boolean;
+  /**
    * QB–receiver chemistry, 0–1 per receiver slot (M6.5 #6): a roster
    * synergy between them to start with, growing as the QB keeps going to
    * him over a game (src/game). It tightens the throw to him a little and
@@ -354,7 +361,7 @@ export function createPlay(setup: PlaySetup): PlayState {
   }
   // The call by the formation's strength (toStrength).
   const strength = strengthOf(offPos, by);
-  const s: PlaySetup = strength > 0 ? s0 : { ...s0, def: { ...s0.def, assign: toStrength(s0.def.assign, strength) } };
+  const s: PlaySetup = strength > 0 || s0.byStrength ? s0 : { ...s0, byStrength: true, def: { ...s0.def, assign: toStrength(s0.def.assign, strength) } };
   for (const k of OFF_SLOTS) {
     const ag = makeAgent(agents.length, 'off', k, s.offense[k], offPos[k], 0);
     slot[k] = ag.i;
