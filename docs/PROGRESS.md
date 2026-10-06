@@ -31,6 +31,43 @@
   - Honest limits:
     - A long sprint costs 0.02–0.04 stamina a second, so a 40-yard breakaway loses ~10–15% of the bar and ~2% of top speed. That's visible on the bar but subtle in the legs. The drive-long model (stamina carried from play to play, Workhorse and the rest) is what gives it teeth.
     - Watched on the recorded broken-tackle clip (below, "Sprint watched").
+- **The passing game, end to end** (2026-10-06, `wip/passing`; agent; `docs/passing/PASSING.md`, before/after videos in `docs/passing/`):
+  - *The throw is the man throwing it.* New in-house throwing clips, picked by release time and pressure: `qb_throw_quick` (Marino, Brees), `qb_throw_long` (Winston) and `qb_throw_fade` (under pressure). A QB wrapped up as he throws gets a slow, wobbling duck. No throw leaves faster than his arm allows.
+  - *The AI layers the deep ball,* but reads the window on the driven ball.
+  - *The ball:* a real ~600-rpm spiral, the nose's attitude on the way down, a wobble by throw quality, the release blended out of the hand, the tumble, and an oblong, seeded bounce in the sim and on the turf. The catch call moved off the ball's flight path.
+  - *The receiver:* catch costs for seeing the ball late and for tracking it over his shoulder, and a drop reaction (`catch_drop`).
+  - Numbers:
+    - Outcomes: completion 68.4% → 65.7%, ypa 8.6 → 8.1, INT 2.0% → 2.4%, sacks 6.8%, completions of 40+ 4.6% → 6.3%.
+    - Most of the completion drop is the layered deep ball being contested. The open-catch rate barely moved (88.5% → 87.8%), so your completion lever is still open.
+    - Passing identity 7/7 (`tools/sim/passidentity.ts`: Marino 57.6 vs Montana 52.2 mph deep; Montana 0.84 vs Namath 1.55 yd off the spot; Harrison 2.5% vs Slayton 16.3% open balls dropped); identity 19/20; trait audit 127/127.
+    - Golden re-pinned (356/900). The e2e seeds were re-found with the Practice Field's chemistry modelled (2, 307, 5).
+  - Honest limits: the spiral and wobble don't read in 20 fps recordings; the arm gap is felt more than seen; completions of 40+ are high at 6.3%.
+  - Still open: the hitch step, a 7-step drop, look-offs, timing-route head turns, bobble and re-catch.
+- **Character pass** (2026-10-06, `wip/characters`; agent; `docs/characters/CHARACTERS.md` with before/after stills). An audit against ref-02 ranked ten gaps: the ball-shaped helmet, blown-out whites and silhouetted blacks, blob cleats, kits that never got dirty, and the known skinning bugs. Changes:
+  - a modern helmet shell, scripted in bpy: jaw flaps, a stepped bottom edge, a rear flare, rubber edging, mask clips, an ear hole and black padding inside;
+  - the towel rebuilt as cloth (it had read as a number on the hip);
+  - skin overlap at the sleeve and pants hems;
+  - a softer hand-over behind the knee: folded faces at the sprint 15.6% → 3.8%;
+  - a pose-space corrective for arms overhead (`lib/corrective.py`, driven by arm elevation);
+  - shading: kit albedo in a physical range, cloth sheen, skin rim, sock ribs, a two-tone cleat sole with laces, a belt, eye black;
+  - turf wear that builds up each time a player goes down (`?wear` for stills).
+
+  Draw calls are unchanged; broadcast-camera triangles rise ~2%; no new textures; `player.glb` +180 KB. Clip gates 166/166; the skinning gate is tightened.
+
+  Still open:
+  - LOD2 horns with the arms overhead;
+  - the pants-hem sawtooth at the calf;
+  - Golden Hour bloom on white kits;
+  - lineman pads (your call);
+  - nameplate glyphs up close.
+
+  Not measured on a GPU: please re-check `?perf` mid-game on Medium.
+- **Test plumbing** (2026-10-06):
+  - `BTB_E2E_PORT` lets each checkout run e2e on its own dev server. With `reuseExistingServer`, parallel runs on 5174 had been testing each other's code.
+  - The dev server now serves a worktree's symlinked `node_modules` (its fonts were 403s).
+  - The practice e2e seeds were re-found after the bubble pass.
+  - The catch-call test now tests the one-button catch (it still expected the old 1/2/3 call).
+  - The sim marks a call already played by strength (`byStrength`), so a replay or re-snap of a stored setup is the same play.
 - **The bubble against zone** (2026-10-03, `wip/sim-bubble`; agent):
   - *Stalks counted at the snap:* the blockers take the men nearest the catch, outside-in (the corner, then the apex or the man over the bubble), never a lineman. Before, they chased the defensive end.
   - *Zone calls played by strength:* the call sheet is written strength-left. With the strength right, the non-corner underneath zones swap sides, and the end and tackle jobs swap. Before, in Cover 2 against bunch right, the weak-side linebacker had the strong curl and ran 15 yd across to it. This hit every flipped 2x1 set, so many per-call cells moved. Against three receivers to a side, the Mike shades over the strong B gap.

@@ -13,12 +13,12 @@ import { chromiumLaunch } from '../../playwright.config';
 // move options in a scripted run (carrierhud.spec.ts); BTB_CARRIER=1 the carrier
 // clips in the Lab (carrier.spec.ts), BTB_CARRIERGAME=1 scripted carries (carriergame.spec.ts),
 // BTB_BODIES=1 the skinning and contact stills (bodies.spec.ts, M6.5 #12), BTB_CLOCKKICK=1 the M6.6
-// clock and kicking stills (clockkick.spec.ts), BTB_TRAITS=1 the play-call and pre-snap traits (traits.spec.ts). BTB_PORT moves the dev server off 5174 (another
+// clock and kicking stills (clockkick.spec.ts), BTB_TRAITS=1 the play-call and pre-snap traits (traits.spec.ts), BTB_CHARS=1 the character pass (characters.spec.ts). BTB_PORT moves the dev server off 5174 (another
 // checkout's server can hold it).
 const PORT = Number(process.env.BTB_PORT ?? 5174);
 export default defineConfig({
   testDir: '.',
-  testMatch: process.env.BTB_TRAITS ? 'traits.spec.ts' : process.env.BTB_M66DRAFT ? 'm66-draft.spec.ts' : process.env.BTB_M66 ? 'm66.spec.ts' : process.env.BTB_BODIES ? 'bodies.spec.ts' : process.env.BTB_CLOCKKICK ? 'clockkick.spec.ts' : process.env.BTB_HUD ? 'carrierhud.spec.ts' : process.env.BTB_CARRIERGAME ? 'carriergame.spec.ts' : process.env.BTB_CARRIER ? 'carrier.spec.ts' : process.env.BTB_CATCHGAME ? 'catchgame.spec.ts' : process.env.BTB_CATCH ? 'catch.spec.ts' : process.env.BTB_GAME ? 'game.spec.ts' : process.env.BTB_M6VIDEO ? 'm6video.spec.ts' : process.env.BTB_LOCKER ? 'locker.spec.ts' : process.env.BTB_CONTACT ? 'contact.spec.ts' : process.env.BTB_PRACTICE ? 'practice.spec.ts' : process.env.BTB_VIDEO ? 'video.spec.ts' : 'matrix.spec.ts',
+  testMatch: process.env.BTB_CHARS ? 'characters.spec.ts' : process.env.BTB_TRAITS ? 'traits.spec.ts' : process.env.BTB_M66DRAFT ? 'm66-draft.spec.ts' : process.env.BTB_M66 ? 'm66.spec.ts' : process.env.BTB_BODIES ? 'bodies.spec.ts' : process.env.BTB_CLOCKKICK ? 'clockkick.spec.ts' : process.env.BTB_HUD ? 'carrierhud.spec.ts' : process.env.BTB_CARRIERGAME ? 'carriergame.spec.ts' : process.env.BTB_CARRIER ? 'carrier.spec.ts' : process.env.BTB_CATCHGAME ? 'catchgame.spec.ts' : process.env.BTB_CATCH ? 'catch.spec.ts' : process.env.BTB_GAME ? 'game.spec.ts' : process.env.BTB_M6VIDEO ? 'm6video.spec.ts' : process.env.BTB_LOCKER ? 'locker.spec.ts' : process.env.BTB_CONTACT ? 'contact.spec.ts' : process.env.BTB_PRACTICE ? 'practice.spec.ts' : process.env.BTB_VIDEO ? 'video.spec.ts' : 'matrix.spec.ts',
   timeout: process.env.BTB_VIDEO || process.env.BTB_M6VIDEO ? 14_400_000 : 600_000,
   workers: 1,
   reporter: [['list']],

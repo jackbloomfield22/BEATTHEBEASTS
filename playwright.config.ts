@@ -7,7 +7,8 @@ export const chromiumLaunch = {
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
 };
 
-/** The dev server's port (BTB_E2E_PORT): agents in parallel worktrees each run their own, so a run never tests another worktree's server. */
+// BTB_E2E_PORT moves the dev server off 5174. Parallel checkouts (worktrees) must each use their own port:
+// with reuseExistingServer a second run on 5174 would test the other checkout's code.
 const PORT = Number(process.env.BTB_E2E_PORT ?? 5174);
 
 export default defineConfig({
