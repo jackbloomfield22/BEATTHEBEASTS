@@ -346,7 +346,7 @@ vec3 playerAlbedo(int part, vec3 p, bool front, out float stripe, out float roug
     if (abs(p.x) > 0.1) c *= mix(0.08, 1.0, smoothstep(0.0095, 0.011, e)) * mix(0.75, 1.0, smoothstep(0.013, 0.015, e));
     // Scuffs: paint transfer from other helmets and the turf, streaked
     // front to back over the shell's front and sides.
-    float sc = smoothstep(0.78, 0.9, pNoise(p * vec3(90.0, 260.0, 30.0)) + uWear.w * 0.35) * uWear.w * smoothstep(-0.05, 0.08, p.z);
+    float sc = smoothstep(0.86, 0.96, pNoise(p * vec3(140.0, 520.0, 40.0)) * 0.7 + pNoise(p * 37.0) * 0.3 + uWear.w * 0.12) * min(1.0, uWear.w * 1.5) * smoothstep(-0.05, 0.08, p.z);
     c = mix(c, mix(vec3(0.55), c * 0.5, step(0.4, dot(c, vec3(0.33)))), sc * 0.6);
     rough = mix(rough, 0.45, sc);
   } else if (part == ${PART.jersey}) {

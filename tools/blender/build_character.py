@@ -583,6 +583,8 @@ def main() -> None:
         "parts": gear.PARTS,
         "partScale": gear.PART_SCALE,
         "shapes": list(SHAPES),
+        # Pose-space correctives on the player LODs (lib/corrective.py), driven by arm elevation at runtime.
+        "correctives": ["reach_l", "reach_r"],
         "bytes": os.path.getsize(OUT),
         "skinGate": skin_gate,
     }

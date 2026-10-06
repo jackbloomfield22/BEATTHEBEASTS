@@ -17,7 +17,7 @@ const GREP = process.env.BTB_CHARS_GREP ?? '';
 const DIR = `tools/shots/out/characters/${TAG}`;
 
 // Lab cameras (the Lab's player faces +Z, stands at the origin).
-const lab: { name: string; q: string }[] = [
+const lab: { name: string; q: string; pre?: string }[] = [
   { name: 'lab-lineup-front-white', q: 'mode=lineup&speed=0&lod=0&kit=whiteLime&t=0.5&cam=0,1.3,13,0,1.15,0' },
   { name: 'lab-lineup-back-white', q: 'mode=lineup&speed=0&lod=0&kit=whiteLime&t=0.5&cam=0,1.3,-13,0,1.15,0' },
   { name: 'lab-lineup-front-beasts', q: 'mode=lineup&speed=0&lod=0&kit=beasts&skin=4&t=0.5&cam=0,1.3,13,0,1.15,0' },
@@ -37,6 +37,9 @@ const lab: { name: string; q: string }[] = [
   { name: 'lab-gloves', q: 'mode=single&clip=stance_qb_gun&t=0.5&lod=0&kit=whiteLime&cam=0.9,1.3,1.3,0,1.0,0.1' },
   { name: 'lab-high-point-lod2', q: 'mode=single&clip=catch_high_point&t=0.8333&lod=2&kit=royal&cam=2.6,1.6,3.4,0,0.95,0' },
   { name: 'lab-sig-qb-lod0', q: 'mode=single&clip=sig_qb&t=1.0&lod=0&kit=royal&cam=2.6,1.6,3.4,0,1.1,0' },
+  // Turf wear (?wear: every kit worn this much; the game raises it each trip to the ground).
+  { name: 'lab-wear-white', pre: '?wear=0.75', q: 'mode=single&clip=stance_idle&t=0.5&lod=0&kit=whiteLime&cam=1.5,1.3,2.2,0,0.95,0' },
+  { name: 'lab-wear-royal-back', pre: '?wear=0.75', q: 'mode=single&clip=stance_idle&t=0.5&lod=0&kit=royal&cam=-1.5,1.3,-2.2,0,0.95,0' },
 ];
 
 // The stadium lineup (render/players/Lineup.tsx): ball on the north 35
@@ -51,6 +54,7 @@ for (const lighting of ['golden', 'night']) {
   // In front of the defense, across the ball: the linemen in their stances.
   stadium.push({ name: `stadium-line-${lighting}`, q: `lineup&noui&cam=3.2,1.3,-19.5,0,0.6,-13.7,38&lighting=${lighting}&quality=high` });
 }
+stadium.push({ name: 'stadium-huddle-golden-wear', q: 'lineup&noui&wear=0.6&cam=-2.6,1.75,-5.6,0.2,1.0,-10.5,42&lighting=golden&quality=high' });
 
 const want = (group: string, name: string) => (!ONLY || ONLY === group) && (!GREP || name.includes(GREP));
 
@@ -65,7 +69,7 @@ for (const s of lab) {
   test(`characters · ${TAG} · ${s.name}`, async ({ page }) => {
     test.setTimeout(900_000);
     mkdirSync(DIR, { recursive: true });
-    await page.goto(`/#/dev/anim?${s.q}`);
+    await page.goto(`/${s.pre ?? ''}#/dev/anim?${s.q}`);
     await page.waitForFunction(() => (window as unknown as { __labReady?: boolean }).__labReady === true, null, { timeout: 600_000 });
     await page.waitForTimeout(3000);
     await page.locator('.lab-view').screenshot({ path: `${DIR}/${s.name}.png` });
@@ -103,8 +107,21 @@ for (const quality of ['medium', 'ultra']) {
         dts.forEach((dt, i) => (out[dt.textContent ?? `row${i}`] = dds[i]?.textContent ?? ''));
         return out;
       });
-    const withPlayers = await read();
-    writeFileSync(`${DIR}/perf-${quality}.json`, JSON.stringify(withPlayers, null, 2));
+    // Three successive frames: the far shadow cascades redraw every third
+    // frame (lighting/shadows.ts), so one frame's counts depend on its phase.
+    // A new frame shows as a new frame-time average on the perf screen.
+    const samples: Record<string, string>[] = [];
+    for (let i = 0; i < 3; i++) {
+      const prev = samples[samples.length - 1]?.['Frame time avg'];
+      const t0 = Date.now();
+      let r = await read();
+      while (prev !== undefined && r['Frame time avg'] === prev && Date.now() - t0 < 300_000) {
+        await page.waitForTimeout(500);
+        r = await read();
+      }
+      samples.push(r);
+    }
+    writeFileSync(`${DIR}/perf-${quality}.json`, JSON.stringify(samples, null, 2));
     await page.screenshot({ path: `${DIR}/perf-${quality}.png` });
   });
 }
