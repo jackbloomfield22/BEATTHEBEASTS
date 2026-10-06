@@ -5,6 +5,7 @@
 
 import { exp } from '@/engine/math/detmath';
 import type { SimPlayer } from './types';
+import { bodyOf } from './bodies';
 
 const LB_TO_KG = 0.45359237;
 
@@ -69,8 +70,10 @@ export interface Effects {
   turnRate: number;
   /** Body mass for contact, kg (era-equivalent weight). */
   mass: number;
-  /** Collision radius, yd. */
+  /** Half-width across the pads, yd (bodies.ts: fitted to the drawn model). */
   radius: number;
+  /** Half-depth of the chest along his facing, yd (bodies.ts). */
+  depth: number;
   /** Height, yd (catch window and the ball's release height). */
   height: number;
   /** 0–1 normalized attribute, or 0.5 when the position doesn't carry it. */
@@ -101,8 +104,9 @@ export function effects(p: SimPlayer): Effects {
     cutAccel: (9 + (agility - 60) * (6 / 39)) * (tr.includes('one-cut') ? 1.25 : 1) * (tr.includes('straight-line') ? 0.8 : 1),
     turnRate: 5 + (agility - 60) * (4 / 39),
     mass: weight * LB_TO_KG,
-    // Shoulder half-width ~0.23 m for 200 lb to ~0.3 m at 330 lb, plus pads.
-    radius: 0.36 + (weight - 200) * 0.0008,
+    // The body as drawn: pad half-width and chest half-depth by position,
+    // height and weight (bodies.ts, docs/m65/BODIES.md's fits).
+    ...bodyOf(p),
     height: p.heightIn / 36,
     a: (k: string) => (p.attrs[k] ?? carryStandIn(p, k) ?? 50) / 99,
     r,

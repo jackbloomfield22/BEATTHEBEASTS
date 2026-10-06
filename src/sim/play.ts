@@ -34,7 +34,8 @@ import {
 } from './ai';
 import { stepFlight } from './ball';
 import { blockOf, stepBlocks } from './blocks';
-import { applyImpulse, fumbles, resolveTackle, separate, slides, startMove, tackleOdds, tickMoves } from './contact';
+import { applyImpulse, fumbles, goesLow, resolveTackle, separate, slides, startMove, tackleOdds, tickMoves } from './contact';
+import { feetStep, grab, holdKind, knockDown, pileStep, tickDowned } from './tackle';
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
 import { aiMove, autoMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
@@ -53,18 +54,19 @@ const HITCH = 0.3;
 /** The window (yd, openness()) a scrambling AI QB still throws into: a man running free. */
 const SCRAMBLE_THROW = 5;
 
-/** The most a tackled runner carries the pile on (yd). */
-const FALL_MAX = 2.5;
 /**
- * How much of his speed downhill a tackled runner carries on (× his share of
- * the pair's mass, s), and how much a tackler coming the other way takes off
- * it. M6.5 #8: 0.55 and 0.15 gave every short run the same yard and a half
- * after contact wherever he was hit; a back at speed now falls for two and
- * more, one met square by a linebacker filling downhill stops where he is
- * (4–7 yd runs 24% → 27% of carries, tools/sim/runhist.ts).
+ * How far a tackler's arms reach past the two bodies (yd), from pads to
+ * pads (bodies.ts: the widest part of a man, and what a wrap closes round
+ * from any side): ~0.7 m. An arm is ~0.75 m from the shoulder to the
+ * fingertips, the shoulder ~0.2 m inside the pad's edge, and a tackler
+ * leans into a wrap; docs/m65/BODIES.md measured the model's hands 0.9–1.0
+ * m out to the side of the root. (The sim had 0.6 yd past circles ~5 cm a
+ * side too big for the skill players: about the same reach between two of
+ * them, which every harness is calibrated on. Measured from the chests'
+ * depth head on instead, the reach fell ~0.2 yd and yards a throw rose
+ * 8.5 → 9.0.)
  */
-const FALL_K = 0.7;
-const FALL_STOP = 0.45;
+const ARM_REACH = 0.8 / 0.9144;
 /** How much further than his arms a defender going by can lunge (yd): a full-length dive at the legs. */
 const LUNGE = 1.0;
 /** ...and only this far past the line (yd). */
@@ -99,7 +101,8 @@ const BALL_NOSE = 0.4;
 const DIVE_REACH = 0.4;
 export function ballNose(c: Agent, x = c.pos.x): number {
   const attack = c.side === 'off' ? 1 : -1;
-  return x + attack * (BALL_NOSE + (c.move === 'dive' ? DIVE_REACH : 0));
+  // (Going down in a tackle, the ball goes with him: tackle.ts fallReach, along x the way he attacks.)
+  return x + attack * (BALL_NOSE + (c.move === 'dive' ? DIVE_REACH : 0)) + ((c.mem.fallReach as number | undefined) ?? 0);
 }
 
 function whistle(s: PlayState, reason: WhistleReason, spot: number, offenseBall: boolean, touchdown = false): void {
@@ -682,6 +685,9 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
     // (the thumb was on the catch button) he coasted to a stop, so every
     // catch began with him slowing down in front of the pursuit.
     steering = dir.x !== 0 || dir.y !== 0;
+    // In a tackle, the stick is where he drives the pile (tackle.ts pileStep).
+    c.mem.wantX = steering ? dir.x : 0;
+    c.mem.wantY = steering ? dir.y : 0;
     if (steering) c.mem.steered = true;
     else if (s.t < ((c.mem.cutHold as number | undefined) ?? -1)) {
       // A tapped cut (the arrow let go in the plant) runs on out of it along its new line.
@@ -766,6 +772,11 @@ function carrierStep(s: PlayState, inp: InputFrame): void {
         }
       }
     }
+  }
+  // Bodies on the ground in his path: over them (the AI, or the one button at speed) or through them (tackle.ts).
+  if (!s.pile && feetStep(s, c, !userCarrier || inp.auto, (d) => startMove(s, c, 'hurdle', d))) {
+    whistle(s, 'tackle', attack > 0 ? Math.min(Math.max(s.maxX, ballNose(c)), GOAL_X - 0.05) : Math.max(ballNose(c), 0.05), c.side === 'off');
+    return;
   }
   autoBurst(s, c, ctxPace, want);
   // Committed moves carry him (their velocity change builds over the plant); protecting costs speed.
@@ -1031,62 +1042,15 @@ function wrapped(c: Agent): boolean {
 }
 
 /**
- * Leg drive in the wrap (Playtest 2, identity harness): how much of his
- * momentum he turns into yards with a man on him. The fall forward was his
- * share of the pair's mass times his speed and nothing else, so with a
- * defender wrapped up Gronk (Trucking stand-in 83, Strength 71) carried a
- * linebacker no further than Tony Gonzalez (74, 65), and Jerome Bettis
- * (Trucking 94) no further than Barry Sanders (70): yards after contact were
- * the elusive backs' stat. Now the runner's power (Trucking, the rating for
- * running through a man, and Strength) against the tackler's anchor
- * (Tackle, Strength) scales it: even power is the momentum alone, as before.
- * LEG_K is ours, sized so a power back on a safety carries him about half
- * again as far and a small back wrapped by a linebacker about a quarter less
- * (NFL yards after contact per carry run ~2.3 for the lightest backs to
- * ~3.3 for the power backs, PFF); the most a pile is carried grows with it.
+ * The wrap in the pocket begins: the rusher has the quarterback. He drives
+ * on a step or so (a quarter of his speed, at most a yard) while a throw
+ * already leaving his hand still gets away (WRAP_THROW); then he's down.
+ * (Ball carriers are tackled by the bodies in tackle.ts.)
  */
-const LEG_K = 2;
-const LEG_MIN = 0.5;
-const LEG_MAX = 1.6;
-function legDrive(c: Agent, o: Agent): number {
-  const power = 0.5 * c.fx.a('trucking') + 0.5 * c.fx.a('strength');
-  const anchor = 0.5 * o.fx.a('tackle') + 0.5 * o.fx.a('strength');
-  return Math.max(LEG_MIN, Math.min(LEG_MAX, 1 + LEG_K * (power - anchor)));
-}
-
-/**
- * The wrap begins: the tackler has him. How far he drives on is the
- * fall-forward distance the harness is calibrated on (M6.5 #8: his share of
- * the pair's mass times his speed downhill, less the tackler's coming the
- * other way), run out as a steady slowing along his run.
- */
-function startWrap(s: PlayState, c: Agent, o: Agent, inPocket: boolean): void {
+function startWrap(s: PlayState, c: Agent, o: Agent): void {
   const attack = c.side === 'off' ? 1 : -1;
-  const mr = c.fx.mass / (c.fx.mass + o.fx.mass);
-  const legs = legDrive(c, o);
-  let drive = FALL_K * Math.max(0, c.vel.x * attack) * mr * legs - FALL_STOP * Math.max(0, -o.vel.x * attack) * (1 - mr);
-  drive = Math.max(0, Math.min(FALL_MAX * Math.max(1, legs), drive));
-  // After contact, as the trait catalog words it: a Battering Ram meeting
-  // him head on +0.8 yd; a Goal-Line Hammer inside the 5 falls forward
-  // +1 yd; a Thumper in the hole takes 0.5 yd back between the tackles; an
-  // Undersized tackler gives up 0.5 yd.
   const sp = len(c.vel);
-  const ohx = o.pos.x - c.pos.x;
-  const ohy = o.pos.y - c.pos.y;
-  const headOn = sp > 0.5 ? (c.vel.x * ohx + c.vel.y * ohy) / (sp * Math.max(1e-6, Math.sqrt(ohx * ohx + ohy * ohy))) : 0;
-  const inside = Math.abs(c.pos.y - (s.setup.ballY ?? 0)) < 4;
-  let extra = (headOn > 0.3 && has(c, 'battering-ram') ? 0.8 : 0) + (c.pos.x * attack > (attack > 0 ? GOAL_X - 5 : -5) && has(c, 'goal-line-hammer') ? 1 : 0) - (inside && has(o, 'thumper') ? 0.5 : 0) + (has(o, 'undersized') ? 0.5 : 0);
-  // A Grinder never loses yards inside: a stuffed run falls forward a yard.
-  const stuffed = (c.pos.x - s.setup.los) * attack < 0.5 && inside && !!s.setup.play.run && has(c, 'grinder');
-  if (stuffed) {
-    c.vel.x = attack * Math.max(sp, 2);
-    c.vel.y = 0;
-    extra = Math.max(extra, 1);
-  }
-  if (!inPocket) drive = Math.max(0, drive + extra);
-  // Along his run: the forward share of his heading sets how far he goes to make the drive downfield.
-  const hx = sp > 0.3 ? Math.abs(c.vel.x) / sp : 1;
-  const path = inPocket ? Math.min(1, sp * 0.25) : drive / Math.max(0.5, hx);
+  const path = Math.min(1, sp * 0.25);
   // Slowing from his speed to a stop over that path: v² = 2·a·path (capped so it's done inside WRAP_MAX).
   const v0 = Math.max(sp, 0.01);
   const T = Math.min(WRAP_MAX, path > 0.02 ? (2 * path) / v0 : 0.1);
@@ -1204,6 +1168,8 @@ function contactStep(s: PlayState): void {
     qb.anim = 'tackled';
   }
   const holder = s.ball.mode === 'held' ? s.ball.holder : -1;
+  // The ball came out of a pile, or changed hands: the pile is over.
+  if (s.pile && s.pile.c !== holder) s.pile = null;
   if (holder < 0) return;
   const c = s.agents[holder]!;
   if (c.down || s.result) return;
@@ -1211,8 +1177,17 @@ function contactStep(s: PlayState): void {
   if (s.t - s.snapT < 0.4) return;
   // A sliding quarterback has given himself up: nobody may hit him.
   if (c.move === 'dive' && slides(c) && !inPocket) return;
-  // In a wrap: he drives on, the tackler rides him down (wrapStep).
+  // In a wrap in the pocket: he drives on, the rusher rides him down (wrapStep).
   if (wrapped(c) && wrapStep(s, c, inPocket)) return;
+  const attack = c.side === 'off' ? 1 : -1;
+  // A tackle being decided (tackle.ts): the bodies settle it, then he's down where the ball is.
+  if (s.pile) {
+    const r = pileStep(s, c, (c.mem.wantX as number | undefined) ?? 0, (c.mem.wantY as number | undefined) ?? 0);
+    if (r.state === 'down' || r.state === 'stood') {
+      downInPile(s, c, r.spot, r.state === 'stood');
+      return;
+    }
+  }
   for (const o of s.agents) {
     if (o.side === c.side || o.down || o.busy > 0 || o.mem.outOfPlay) continue;
     // Engaged defenders can come off a block for an arm tackle as he passes:
@@ -1230,10 +1205,10 @@ function contactStep(s: PlayState): void {
     // pair covers 0.3 yd a tick, so the end-of-tick gap alone lets a runner
     // slip through a tackler's reach).
     const k = sweptGap(o, c);
-    // Arms reach ~0.45 yd past the bodies; a diving tackle ~1 yd more when he
-    // can't close on a runner pulling away (lower odds, and he's on the ground after).
+    // Arms reach ~0.7 m past the pads (ARM_REACH); a diving tackle ~1 yd more when he can't close on
+    // a runner pulling away (lower odds, and he's on the ground after).
     // In the pocket it takes a hand on him, not a reach past him (Playtest 1: a sack with no contact).
-    const armReach = o.fx.radius + c.fx.radius + (inPocket ? POCKET_REACH : 0.6);
+    const armReach = o.fx.radius + c.fx.radius + (inPocket ? POCKET_REACH : ARM_REACH);
     let dive = false;
     let lunge = -1;
     if (k > armReach) {
@@ -1249,7 +1224,7 @@ function contactStep(s: PlayState): void {
       const attacking = s.t - ((o.mem.attackT as number | undefined) ?? -9) < 0.5;
       const lungeAt = (o.mem.lungeAt as number | undefined) ?? -9;
       // In the open field only: in the trash at the line a back going by a man a yard and a half off is past him.
-      const openField = !inPocket && (c.pos.x - s.setup.los) * (c.side === 'off' ? 1 : -1) > LUNGE_PAST;
+      const openField = !inPocket && (c.pos.x - s.setup.los) * attack > LUNGE_PAST;
       if (!engaged && openField && k < armReach + LUNGE && closing < 0.6 && attacking && s.t - lungeAt > 1.5) {
         o.mem.lungeAt = s.t;
         lunge = (k - armReach) / LUNGE;
@@ -1259,8 +1234,8 @@ function contactStep(s: PlayState): void {
     }
     const { out: out0, force } = resolveTackle(s, o, c);
     let out = out0;
-    // Joining a wrap: only a man who gets him (or lays him out) counts; one who bounces off the pile does nothing.
-    if (wrapped(c) && out !== 'tackle' && out !== 'bigHit') {
+    // Joining a pile: only a man who gets him (or lays him out) counts; one who bounces off it does nothing.
+    if ((s.pile || wrapped(c)) && out !== 'tackle' && out !== 'bigHit') {
       o.mem.tackleCd = s.t + 0.5;
       continue;
     }
@@ -1281,7 +1256,8 @@ function contactStep(s: PlayState): void {
       // a man going by, LUNGE_KEEP at the fingertips down to 0.3 less at full stretch.
       if ((out === 'tackle' || out === 'bigHit') && s.rng.contact() > (lunge >= 0 ? LUNGE_KEEP - 0.3 * lunge : 0.65)) out = 'broken';
       if (out !== 'tackle' && out !== 'bigHit') {
-        o.down = true;
+        // On the turf where he dove: a body in the way until he's up (tackle.ts).
+        knockDown(s, o, c.pos.x - o.pos.x, c.pos.y - o.pos.y);
         o.anim = 'down';
         s.events.push({ t: s.t, type: 'missedTackle', who: [o.i, c.i], at: { ...c.pos }, data: { dive: true } });
         continue;
@@ -1292,7 +1268,17 @@ function contactStep(s: PlayState): void {
       o.vel.x *= 0.3;
       o.vel.y *= 0.3;
       o.mem.tackleCd = s.t + 1;
-      s.events.push({ t: s.t, type: 'missedTackle', who: [o.i, c.i], at: { ...c.pos } });
+      // Ankle Breaker: a defender who bites on his juke falls down (the catalog's line).
+      const bit = (c.move === 'jukeL' || c.move === 'jukeR') && has(c, 'ankle-breaker');
+      if (bit) knockDown(s, o, o.vel.x - c.vel.x, o.vel.y - c.vel.y);
+      s.events.push({ t: s.t, type: 'missedTackle', who: [o.i, c.i], at: { ...c.pos }, ...(bit ? { data: { fell: true } } : {}) });
+      continue;
+    }
+    const low = goesLow(s, c, o);
+    if (out === 'broken' && !inPocket) {
+      // A hand on him (tackle.ts): run through at once, or dragged until the hand gives or help arrives.
+      grab(s, c, o, 'arm', { engaged: !!engaged, low, force });
+      if (c.down || s.result) return;
       continue;
     }
     if (out === 'broken') {
@@ -1305,62 +1291,87 @@ function contactStep(s: PlayState): void {
       s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10, move: c.move ?? '' } });
       continue;
     }
-    // Down he goes (or the ball comes out).
-    s.events.push({ t: s.t, type: 'hit', who: [o.i, c.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10, big: out === 'bigHit', ...(out === 'bigHit' ? {} : { wrap: true }) } });
     if (out === 'bigHit') s.bigHit = { by: o.i, on: c.i, force: Math.round(force * 10) / 10 };
-    o.anim = 'tackle';
-    if (!inPocket && fumbles(s, o, c, out === 'bigHit')) {
-      s.ball.mode = 'loose';
-      s.ball.holder = -1;
-      s.ball.pos = { x: c.pos.x, y: c.pos.y, z: 1 };
-      s.ball.vel = { x: c.vel.x * 0.5 + gauss(s.rng.bounce) * 2, y: c.vel.y * 0.5 + gauss(s.rng.bounce) * 2, z: 2.5 };
-      s.phase = 'loose';
-      s.carrier = -1;
-      c.down = true;
-      c.anim = 'tackled';
-      s.events.push({ t: s.t, type: 'fumble', who: [c.i, o.i], at: { ...c.pos } });
-      return;
+    if (!inPocket) {
+      // The hit and the hold (tackle.ts): how he got there sets it.
+      const dx = c.pos.x - o.pos.x;
+      const dy = c.pos.y - o.pos.y;
+      const dd = Math.max(1e-6, Math.sqrt(dx * dx + dy * dy));
+      const cs = len(c.vel);
+      const headOn = cs > 0.5 ? -(c.vel.x * dx + c.vel.y * dy) / (cs * dd) : 0;
+      const closing = Math.max(0, ((o.vel.x - c.vel.x) * dx + (o.vel.y - c.vel.y) * dy) / dd);
+      const kind = engaged ? 'wrap' : holdKind(c, o, headOn, closing, out === 'bigHit', dive, low);
+      grab(s, c, o, kind, { low, force, extra: afterContact(s, c, o, headOn) });
+      o.mem.tackleCd = s.t + 1;
+      if (fumbles(s, o, c, out === 'bigHit')) {
+        s.pile = null;
+        s.ball.mode = 'loose';
+        s.ball.holder = -1;
+        s.ball.pos = { x: c.pos.x, y: c.pos.y, z: 1 };
+        s.ball.vel = { x: c.vel.x * 0.5 + gauss(s.rng.bounce) * 2, y: c.vel.y * 0.5 + gauss(s.rng.bounce) * 2, z: 2.5 };
+        s.phase = 'loose';
+        s.carrier = -1;
+        c.down = true;
+        c.anim = 'tackled';
+        s.events.push({ t: s.t, type: 'fumble', who: [c.i, o.i], at: { ...c.pos } });
+        return;
+      }
+      continue;
     }
-    const attack = c.side === 'off' ? 1 : -1;
+    // In the pocket: the rusher has him (the sack, or a big hit that ends it there).
+    s.events.push({ t: s.t, type: 'hit', who: [o.i, c.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10, big: out === 'bigHit', ...(out === 'bigHit' ? { kind: 'big' } : { wrap: true, kind: 'wrap' }) } });
+    o.anim = 'tackle';
     if (out !== 'bigHit') {
-      // A tackle, not a big hit: the wrap. He drives on the yard or two his
-      // momentum carries against the tackler's (the fall-forward distance,
-      // FALL_K / FALL_STOP, now run out as motion), slowing to a stop with
-      // the tackler riding him; then down, spotted where the ball is when he
-      // lands (Playtest 1: he stopped dead where he was touched and the spot
-      // was put a yard or two on). A second man joining finishes it sooner;
-      // a move of his own early in the wrap can still break it.
       if (wrapped(c)) {
         joinWrap(s, c, o);
         continue;
       }
-      startWrap(s, c, o, inPocket);
+      startWrap(s, c, o);
       return;
     }
     c.down = true;
     c.anim = 'tackled';
     o.down = false;
-    if (inPocket) {
-      s.sack = true;
-      s.events.push({ t: s.t, type: 'sack', who: [o.i, c.i], at: { ...c.pos } });
-      whistle(s, c.pos.x <= 0 ? 'safety' : 'sack', c.pos.x, true);
-    } else {
-      s.events.push({ t: s.t, type: 'tackle', who: [o.i, c.i], at: { ...c.pos }, data: { big: out === 'bigHit' } });
-      // Falling forward: a runner going downhill carries the tackle on a
-      // yard or two (his share of the pair's momentum, less the tackler's
-      // coming the other way); a big hit stops him where he's hit. NFL backs
-      // average ~2.8–3 yd after contact (PFF/NGS), most of it this.
-      let drive = 0;
-      if (out !== 'bigHit') {
-        const mr = c.fx.mass / (c.fx.mass + o.fx.mass);
-        drive = FALL_K * Math.max(0, c.vel.x * attack) * mr - FALL_STOP * Math.max(0, -o.vel.x * attack) * (1 - mr);
-        drive = Math.max(0, Math.min(FALL_MAX, drive));
-      }
-      const at = attack > 0 ? Math.max(s.maxX, ballNose(c)) + drive : c.pos.x - drive;
-      whistle(s, 'tackle', attack > 0 ? Math.min(at, GOAL_X - 0.05) : Math.max(at, 0.05), c.side === 'off');
-    }
+    s.sack = true;
+    s.events.push({ t: s.t, type: 'sack', who: [o.i, c.i], at: { ...c.pos } });
+    whistle(s, c.pos.x <= 0 ? 'safety' : 'sack', c.pos.x, true);
     return;
   }
+}
+
+/**
+ * The after-contact yards the trait catalog promises, put on the fall: a
+ * Battering Ram meeting him head on +0.8 yd; a Goal-Line Hammer inside the
+ * 5 falls forward +1 yd; a Thumper in the hole takes 0.5 yd back between
+ * the tackles; an Undersized tackler gives up 0.5 yd; a Grinder's stuffed
+ * inside run falls forward a yard.
+ */
+function afterContact(s: PlayState, c: Agent, o: Agent, headOn: number): number {
+  const attack = c.side === 'off' ? 1 : -1;
+  const inside = Math.abs(c.pos.y - (s.setup.ballY ?? 0)) < 4;
+  let extra = (headOn > 0.3 && has(c, 'battering-ram') ? 0.8 : 0) + (c.pos.x * attack > (attack > 0 ? GOAL_X - 5 : -5) && has(c, 'goal-line-hammer') ? 1 : 0) - (inside && has(o, 'thumper') ? 0.5 : 0) + (has(o, 'undersized') ? 0.5 : 0);
+  const stuffed = (c.pos.x - s.setup.los) * attack < 0.5 && inside && !!s.setup.play.run && has(c, 'grinder');
+  if (stuffed) extra = Math.max(extra, 1);
+  return extra;
+}
+
+/** Down in the pile (or held up and whistled): the tackle, and the ball spotted. */
+function downInPile(s: PlayState, c: Agent, spot: number, stood: boolean): void {
+  const p = s.pile!;
+  const attack = c.side === 'off' ? 1 : -1;
+  if (!stood) {
+    c.down = true;
+    c.anim = 'tackled';
+    // The men who had him go down with him (not the hitter who laid him out).
+    for (const g of p.grips) {
+      const o = s.agents[g.by]!;
+      if (g.kind === 'big') continue;
+      if (!o.down) knockDown(s, o, p.fx * attack, p.fy);
+      o.anim = 'tackle';
+    }
+  }
+  s.pile = null;
+  whistle(s, 'tackle', attack > 0 ? Math.min(spot, GOAL_X - 0.05) : Math.max(spot, 0.05), c.side === 'off');
 }
 
 /** The ball: in hands, in the air, or loose. */
@@ -2063,6 +2074,7 @@ export function stepPlay(s: PlayState, inp: InputFrame): void {
   // The QB with the ball in the pocket (a drop or a scramble behind the line) is a runner at the lines too.
   else if (s.carrier < 0 && s.snapT >= 0 && s.ball.mode === 'held' && s.ball.holder === s.qb && !s.result && s.t - s.snapT > 0.4) lineCheck(s, s.agents[s.qb]!);
   contactStep(s);
+  tickDowned(s);
   keepInBounds(s);
   if (!s.result && s.t - s.snapT > MAX_PLAY) whistle(s, 'timeout', Number.isFinite(s.maxX) ? s.maxX : s.setup.los, true);
   for (const a of s.agents) remember(a);

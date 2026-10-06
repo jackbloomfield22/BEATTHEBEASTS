@@ -10,6 +10,8 @@ import { arrive, boundaryGovern, CRUISE, seen, steer, timeTo } from './movement'
 export { boundaryGovern } from './movement';
 import { driveTime, lead, releaseOf } from './passing';
 import { has } from './traits';
+import { heldTogether } from './tackle';
+import { runMeets } from './bodies';
 import { DRAWS, ROUTE_DELAY, ROUTES, ZONES, type OffPlay, type RouteName, type ZoneName } from './plays';
 import { DIFFICULTY, zoneSpot, type PlayState } from './state';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, TICK, type Agent, type OffSlot } from './types';
@@ -1205,6 +1207,10 @@ export function pressureFrom(s: PlayState, qb: Agent, i: number): number {
   if (blockOf(s, i)) return 0.6 * Math.max(0, Math.min(1, 1 - (k - COLLAPSE) / 1.6));
   return Math.max(0, 1 - (k - 1) / 3.5);
 }
+/** A body on the ground within this (yd) along a lane is seen, and costs the lane up to BODY_LANE (a free tackler's threat close up runs ~1–1.5). */
+const BODY_SEE = 4;
+const BODY_LANE = 1.5;
+
 
 /** Ball-carrier AI: pick the best running lane toward the goal line. */
 export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
@@ -1272,6 +1278,13 @@ export function carrierAI(s: PlayState, c: Agent, attack: 1 | -1): V2 {
       const threat = Math.max(0, reach + 1.2 - perp) / (1 + along * 0.15);
       score -= threat * 1.1;
       threats += threat;
+    }
+    // A man on the ground across the lane (bodies.ts): round him rather than
+    // over or through him, worth about a free tackler's threat close up.
+    for (const g of s.agents) {
+      if (!g.down || !g.lie || g === c || heldTogether(s, g.i, c.i)) continue;
+      const m = runMeets(g.lie, c.pos.x, c.pos.y, dir.x, dir.y, 0.25, BODY_SEE);
+      if (m !== null) score -= BODY_LANE * (1 - m / (2 * BODY_SEE));
     }
     const side = c.pos.y + dir.y * 5;
     if (Math.abs(side) > FIELD_HALF_W - 1.5) score -= 3;

@@ -68,6 +68,12 @@ export const THROW_MASK = [
 const RELEASE_FRAME = 11 / 30;
 const SECURE = 0.2;
 const TACKLE_CONTACT = 8 / 30;
+/** The tackle clip's going-down key (tools/blender/lib/actions.py tackle: `going` at 0.6 s). */
+const TACKLE_GOING = 0.6;
+/** The sim's fall, from his feet going to a knee down (sim/tackle.ts FALL_T). */
+const SIM_FALL_T = 0.3;
+/** The dive's reach, when the clip has no `reach` event (actions.py dive: the hands at the legs ~0.3 s). */
+const DIVE_REACH_T = 0.3;
 
 const _v = new THREE.Vector3();
 const _w = new THREE.Vector3();
@@ -339,10 +345,6 @@ const LOOK_R = 9;
 /** An AI carrier whose run turns faster than this (rad/s) at speed (yd/s) plays the light cut. */
 const AI_CUT_RATE = 2.5;
 const AI_CUT_SPEED = 5;
-/** The hurdle: at speed (yd/s) over a downed man whose body he'll cross (within BODY_R yd) this far ahead (s). */
-const HURDLE_SPEED = 5;
-const HURDLE_AHEAD = [0.3, 0.62] as const;
-const BODY_R = 0.8;
 /** A dive reaches the ball out within this (yd) of the goal line or the line to gain. */
 const REACH_R = 2.2;
 /** The ball's nose ahead of his body (yd): sim/play.ts BALL_NOSE. */
@@ -450,22 +452,6 @@ function carrierDrive(b: Body, i: number, s: PlayState, simT: number, out: Drive
       if (Math.abs(turn) > AI_CUT_RATE && simT - b.cutAt > 0.8) playCut(b, turn > 0 ? 'L' : 'R', 45, null, simT);
     }
   } else b.headT = -1;
-  // The hurdle over a man on the turf in his path (render only: the sim doesn't block on downed players).
-  if (sp > HURDLE_SPEED && moving && anim.lib.meta.hurdle) {
-    for (let j = 0; j < s.agents.length; j++) {
-      const o = s.agents[j]!;
-      if (j === i || !o.down || b.hurdled.has(j)) continue;
-      const rx = o.pos.x - a.pos.x;
-      const ry = o.pos.y - a.pos.y;
-      const tc = (rx * a.vel.x + ry * a.vel.y) / (sp * sp);
-      if (tc < HURDLE_AHEAD[0] || tc > HURDLE_AHEAD[1]) continue;
-      if (Math.hypot(rx - a.vel.x * tc, ry - a.vel.y * tc) > BODY_R) continue;
-      b.hurdled.add(j);
-      const over = eventAt(b, 'hurdle', 'over') ?? 0.6;
-      anim.play('hurdle', { now: true, t0: Math.max(0, Math.min(0.3, over - tc)) });
-      break;
-    }
-  }
   // Eyes: on the nearest free tackler in front of him or beside him, else scanning upfield.
   const d = threatOf(s, a);
   if (d && Math.hypot(d.pos.x - a.pos.x, d.pos.y - a.pos.y) < LOOK_R) out.look = _look.set(-d.pos.y * YARD, 1.7, (50 - d.pos.x) * YARD);
@@ -475,6 +461,25 @@ function carrierDrive(b: Body, i: number, s: PlayState, simT: number, out: Drive
     out.look = _look.set(-ay * YARD, 1.6, (50 - ax) * YARD);
   }
 }
+
+/** Up off the turf mid-play (the sim's get-up): from wherever the fall or the clip left him. */
+function getUp(b: Body): void {
+  if (!b.fallen) return;
+  if (b.ragdoll.active) {
+    b.lie = b.ragdoll.handOff();
+    b.animator.reset();
+  }
+  if (!b.lie) {
+    const r = b.player.root;
+    b.lie = { x: r.position.x, z: r.position.z, yaw: r.rotation.y, prone: true };
+  }
+  b.lyingClip = false;
+  b.lie.up = true;
+  b.animator.play(b.lie.prone ? 'getup_prone' : 'getup_supine', { now: true });
+}
+
+const _s3 = new THREE.Vector3();
+const sub3 = (a: THREE.Vector3, b: THREE.Vector3): THREE.Vector3 => _s3.subVectors(a, b);
 
 function fall(b: Body, vel: THREE.Vector3, push: THREE.Vector3, big = false): void {
   if (b.fallen && !b.lyingClip) return;
@@ -604,13 +609,17 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         }
         else if (mv === 'hurdle' && a.animator.lib.meta.hurdle) {
           // Over the man in front (the sim's hurdle move): the clip starts so its flight's `over` frame comes as he meets him.
+          // (Over a man on the turf, the sim says when he gets there: `tc`.)
           const c = s.agents[who[0]!]!;
           const d = threatOf(s, c);
           const sp = Math.hypot(c.vel.x, c.vel.y);
-          const tc = d && sp > 1 ? Math.hypot(d.pos.x - c.pos.x, d.pos.y - c.pos.y) / (sp + Math.max(0, Math.hypot(d.vel.x, d.vel.y) * 0.5)) : 0.4;
+          const tc = e.data?.tc !== undefined ? Number(e.data.tc) : d && sp > 1 ? Math.hypot(d.pos.x - c.pos.x, d.pos.y - c.pos.y) / (sp + Math.max(0, Math.hypot(d.vel.x, d.vel.y) * 0.5)) : 0.4;
+          if (e.data?.over !== undefined) a.hurdled.add(Number(e.data.over));
           const over = eventAt(a, 'hurdle', 'over') ?? 0.6;
           a.animator.play('hurdle', { now: true, t0: Math.max(0, Math.min(0.35, over - tc)) });
         } else if (mv === 'pumpFake') a.animator.playOverlay('ovl_pump');
+        else if (mv === 'stumble') a.animator.playOverlay(Number(e.data?.over ?? 0) % 2 ? 'ovl_dip_l' : 'ovl_dip_r');
+        else if (mv === 'getup') getUp(a);
         else if (mv === 'secureDown') {
           // SECURE in traffic: the cradle turns into going down with it (from the catch's secure frame on).
           a.animator.stopOverlay();
@@ -638,30 +647,91 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         break;
       case 'missedTackle':
         if (a && e.data?.dive) lyingClip(a, 'dive');
+        // An Ankle Breaker's juke: the man who bit is on the turf (the sim knocked him down).
+        else if (a && e.data?.fell && who[0] !== undefined) fall(a, worldVel(s, who[0]).clone().multiplyScalar(0.6), _w.set(0, 0.3, 0));
         break;
-      case 'hit':
+      case 'brokenTackle': {
+        // He's out of it (sim/tackle.ts): through an arm, out of a hold, or a man put on the turf.
+        const t = who[1] !== undefined ? bodies[who[1]] : undefined;
+        if (!t || who[0] === undefined || who[1] === undefined) break;
+        const how = String(e.data?.how ?? '');
+        if (e.data?.flat) {
+          // Run over, stiff-armed or spun to the ground: off his feet, away from the ball carrier.
+          if (!t.fallen || t.lyingClip) {
+            const away = sub3(t.player.root.position, bodies[who[0]]!.player.root.position);
+            away.y = 0;
+            if (away.lengthSq() < 1e-4) away.set(1, 0, 0);
+            away.normalize().multiplyScalar(how === 'truck' || how === 'runOver' ? 2.6 : 1.8);
+            away.y = 0.5;
+            fall(t, worldVel(s, who[1]).clone().multiplyScalar(0.5), away);
+          }
+        } else if (how === 'runThrough' && !t.fallen) {
+          // A hand on him that didn't hold: the reach across and the rake (the contest overlay's arm).
+          const c = s.agents[who[0]]!;
+          const d = s.agents[who[1]]!;
+          const side = (c.pos.y - d.pos.y) * Math.cos(d.face) - (c.pos.x - d.pos.x) * Math.sin(d.face) > 0 ? 'l' : 'r';
+          const clip = `def_contest_${side}`;
+          if (t.animator.lib.meta[clip]) t.animator.playOverlay(clip, { t0: eventAt(t, clip, 'contact') ?? 0.3 });
+        }
+        break;
+      }
+      case 'hit': {
+        // Contact (sim/tackle.ts): the tackler's clip lands on the hit and is
+        // timed to the hold. The ball carrier stays up and fights; he falls
+        // when the sim says his feet are gone (the tackle event).
+        const t = a;
+        if (!t || t.fallen) break;
+        const kind = String(e.data?.kind ?? 'wrap');
+        if (kind === 'ankle') {
+          // At his shoestrings: the dive, from its reach.
+          lyingClip(t, 'dive', eventAt(t, 'dive', 'reach') ?? DIVE_REACH_T);
+          break;
+        }
+        lyingClip(t, 'tackle', TACKLE_CONTACT);
+        // Slowed while he rides him, so the clip's going-down lands on the sim's fall (`eta`, s from now).
+        const eta = Number(e.data?.eta ?? 0.6);
+        const rate = Math.max(0.35, Math.min(1.4, (TACKLE_GOING - TACKLE_CONTACT) / Math.max(0.05, eta - SIM_FALL_T)));
+        t.animator.retime('tackle', { rate });
+        if (kind === 'big' && who[1] !== undefined) {
+          const c = bodies[who[1]];
+          if (c) c.animator.stopOverlay();
+        }
+        break;
+      }
       case 'tackle':
       case 'sack': {
         const t = a;
         const c = who[1] !== undefined ? bodies[who[1]] : undefined;
-        // Contact: the tackler's clip. On a wrap (Playtest 1/2) the carrier
-        // stays up and drives on; he falls when the sim puts him down (the
-        // tackle or sack event), where the ball is spotted.
-        if (e.type === 'hit' && t && !t.fallen) lyingClip(t, 'tackle', TACKLE_CONTACT);
-        if (e.type === 'hit' && e.data?.wrap) break;
+        // The men who had him go down with him: their tackle clips catch up to going down.
+        for (const k of [who[0], ...String(e.data?.assists ?? '').split(',').filter((x) => x !== '').map(Number)]) {
+          const b = k !== undefined && k >= 0 ? bodies[k] : undefined;
+          if (b) {
+            b.animator.retime('tackle', { t: TACKLE_GOING, rate: 1 });
+          }
+        }
+        if (e.data?.fall === 'held') break;
         if (c && c.fallen) break;
-        if (c && who[1] !== undefined && who[0] !== undefined) {
-          // The fall: the carrier's run plus the hit's push, along the tackler's line.
+        if (c && who[1] !== undefined) {
+          // The fall the sim decided: his momentum, and his upper body thrown the way he's going down
+          // (forward over a man at his legs, back off a square hit, sideways off a hit from the side).
           const vel = worldVel(s, who[1]).clone();
-          const tv = worldVel(s, who[0]);
-          const force = Number(e.data?.force ?? 5);
-          const push = _w.copy(tv).setY(0);
-          if (push.lengthSq() < 1e-4) push.subVectors(c.player.root.position, t!.player.root.position).setY(0);
+          const big = !!e.data?.big;
+          const fx = Number(e.data?.fx ?? NaN);
+          const fy = Number(e.data?.fy ?? NaN);
+          const push = _w.set(0, 0, 0);
+          if (Number.isFinite(fx) && Number.isFinite(fy)) {
+            const [x, z] = worldDir(fx, fy);
+            push.set(x, 0, z);
+          } else if (t && who[0] !== undefined && who[0] >= 0) {
+            push.subVectors(c.player.root.position, t.player.root.position).setY(0);
+          }
+          if (push.lengthSq() < 1e-4) push.set(0, 0, 1);
           // The launch: harder on a big hit, but capped (4.5 m/s across, a little lift): a
           // man is knocked off his feet and back, not thrown across the field.
-          const big = !!e.data?.big;
-          push.normalize().multiplyScalar(Math.min(4.5, 1.5 + Math.min(4, force * 0.35) * (big ? 1.5 : 1)));
-          push.y = big ? 1.1 : 0.6;
+          const force = Number(e.data?.force ?? s.bigHit?.force ?? 5);
+          const mag = big ? Math.min(4.5, 1.5 + Math.min(4, force * 0.35) * 1.5) : e.data?.fall === 'forward' ? 2.2 : 1.8;
+          push.normalize().multiplyScalar(mag);
+          push.y = big ? 1.1 : 0.5;
           fall(c, vel.multiplyScalar(0.8), push, big);
         }
         break;
@@ -800,6 +870,12 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     anim.setStance(b.lie.prone ? 'stance_down_prone' : 'stance_down_supine');
   }
   const gettingUp = tr?.name.startsWith('getup') ?? false;
+  // Up again mid-play (sim/tackle.ts tickDowned): back on his sim spot once the get-up is done.
+  if (b.lie?.up && !a.down && s.phase !== 'dead' && !(gettingUp && !tr!.done)) {
+    b.lie = null;
+    b.fallen = false;
+    b.lyingClip = false;
+  }
   if (b.fallen && !gettingUp && !(b.lie?.up && !tr)) out.speed = 0;
   // After the whistle, a player lying down gets up (once).
   if (s.phase === 'dead' && simT - s.whistleT > 1.3 && b.lie && !b.lie.up && !b.ragdoll.active && (!tr || tr.done)) {
@@ -811,6 +887,13 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   else if (i === s.qb && s.phase !== 'presnap' && s.phase !== 'carrier') out.look = _look.set(-s.eyes.y * YARD, 1.6, (50 - s.eyes.x) * YARD);
   // The ball carrier runs like one (M6.5 #11): the carry gaits, and his eyes up.
   if (carrying && !b.fallen) carrierDrive(b, i, s, simT, out, clipBusy(b, tr));
+  // In a tackle (sim/tackle.ts): pads low, legs churning, both hands on the ball.
+  if (carrying && !b.fallen && s.pile?.c === i) {
+    out.drive = 1;
+    out.press = 1;
+    out.traffic = 1;
+    anim.setHold('ovl_protect');
+  }
   return out;
 }
 

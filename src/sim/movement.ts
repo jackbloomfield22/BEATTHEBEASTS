@@ -36,6 +36,9 @@ export interface SteerOpts {
   burst?: boolean;
 }
 
+/** The share of his top speed a man has with no balance left (stumbling out of a broken tackle; ours, film-sized: a couple of strides to get going again). */
+const BAL_PACE = 0.55;
+
 export function steer(a: Agent, want0: V2, opts: SteerOpts = {}): void {
   const fx = a.fx;
   // Everyone but the ball carrier plays inside the lines (stepPlay sets the room each tick).
@@ -43,7 +46,10 @@ export function steer(a: Agent, want0: V2, opts: SteerOpts = {}): void {
   const want = typeof room === 'number' ? boundaryGovern(a, want0, room) : want0;
   const vTop = fx.vmax;
   const tau = fx.tau * (opts.burst ? 0.55 : 1);
-  const cap = vTop * (opts.pace ?? 1) * (opts.mult ?? 1) * (0.86 + 0.14 * a.stamina);
+  // Off balance (a broken tackle, a stumble: tackle.ts), he can't run at his
+  // full speed until his feet are back under him: 55% with no balance left.
+  const bal = (a.mem.bal as number | undefined) ?? 1;
+  const cap = vTop * (opts.pace ?? 1) * (opts.mult ?? 1) * (0.86 + 0.14 * a.stamina) * (BAL_PACE + (1 - BAL_PACE) * bal);
   let wx = want.x;
   let wy = want.y;
   const wl = Math.sqrt(wx * wx + wy * wy);

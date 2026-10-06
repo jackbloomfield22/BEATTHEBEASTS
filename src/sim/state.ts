@@ -8,6 +8,7 @@ import type { RushMove } from './blocks';
 import { type Streams, streams } from './rand';
 import { defById, DEF_SLOTS, mirrorPlay, OFF_SLOTS, type DefCall, type OffPlay, type RouteName, type ZoneName, ZONES } from './plays';
 import type { CatchType } from './input';
+import type { Pile } from './tackle';
 import { FIELD_HALF_W, type Agent, type Ball, type DefSlot, type OffSlot, type Phase, type PlayResult, type SimEvent, type SimPlayer } from './types';
 import { v2, type V2 } from './vec';
 
@@ -147,6 +148,8 @@ export interface PlayState {
   read: { idx: number; since: number; noise: number; noiseFor: number };
   /** Man assignments resolved to this formation (resolveMan). */
   man: Partial<Record<DefSlot, OffSlot>>;
+  /** The ball carrier in a tackle that's still being decided (tackle.ts): who has hold of him, the pile's motion, his feet. */
+  pile: Pile | null;
   /** The coordinator's bracket, resolved to this play: the receiver (agent index), who brackets him and how. */
   bracket: { r: number; by: DefSlot; how: 'shade' | 'lurk' } | null;
 }
@@ -172,6 +175,7 @@ function makeAgent(i: number, side: 'off' | 'def', slot: OffSlot | DefSlot, p: S
     impulse: null,
     stamina: 1,
     down: false,
+    lie: null,
     hist: [],
     route: null,
     mem: {},
@@ -436,6 +440,7 @@ export function createPlay(setup: PlaySetup): PlayState {
     sack: false,
     bigHit: undefined,
     read: { idx: 0, since: 0, noise: 0, noiseFor: -1 },
+    pile: null,
     bracket: bk && s.def.bracket ? { r: slot[bk]!, by: s.def.bracket.by, how: s.def.bracket.how } : null,
     man: resolveMan(s.def.assign, offPos, by),
   };
