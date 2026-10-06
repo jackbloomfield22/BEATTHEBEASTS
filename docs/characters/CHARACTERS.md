@@ -140,7 +140,7 @@ The shader draws soil and grass blotches that spread as wear grows. On dark kits
   - `BTB_PLAYER_OUT` builds somewhere other than `public/` (iterating without touching the shipped file);
   - the manifest lists the correctives.
 - `tools/shots/characters.spec.ts` (new, `BTB_CHARS=1`): the stills here and the perf counts. The perf test reads three successive frames, because the far shadow cascades redraw every third frame.
-- `playwright.config.ts` (the e2e suite): takes `BTB_PORT` like the shots harness. Another checkout's server held 5174, and `reuseExistingServer` would have tested that checkout's code.
+- `playwright.config.ts` (the e2e suite): takes `BTB_E2E_PORT`, the lead's change from the physics branch (`e2798db`), applied verbatim. Another checkout's server held 5174, and `reuseExistingServer` would have tested that checkout's code. The e2e results below ran on this checkout's own server (port 5299).
 
 ## 3. Performance (counts, not frame times: no GPU here)
 
