@@ -103,7 +103,12 @@ order (so nobody crosses through anybody), brake over the last strides at
   touches the match, the sim or a stream; its clock is the scene's frame
   step (a recording's game time). `tests/tunnel-reveal.test.ts` covers the
   hold, the shot order (normal and fast), the beats, the skip, the give-up
-  and the crowd's rise.
+  and the crowd's rise. `e2e/tunnel.spec.ts` plays it in the browser by the
+  keyboard: a Classic Auto-Draft, Walk out, the room's walk handing over to
+  the reveal in the stadium (the HUD up, the pre-game card held back),
+  Enter to skip to the card without kicking off, Enter to kick off; and
+  Enter during the room's walk going straight to the game with no reveal
+  (both pass, 14.6 min on the software renderer).
 
 ## Cost
 
