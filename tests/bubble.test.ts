@@ -4,7 +4,7 @@
 // runs it at scale (60 a call).
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { createPlay, defById, NEUTRAL, playById, practiceRosters, runToWhistle, stepPlay, toStrength, type SnapshotLike } from '@/sim';
+import { createPlay, defById, hashPlay, NEUTRAL, playById, practiceRosters, runToWhistle, stepPlay, toStrength, type SnapshotLike } from '@/sim';
 import { cellSeed, sidesFor } from '@/sim/outcomes';
 
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
@@ -29,6 +29,14 @@ describe('the bubble: zone calls by strength, stalks counted, a 3–6 yd play ag
     expect(fz.LE).toEqual({ kind: 'zone', zone: 'curlL' });
     expect(fz.RE).toEqual({ kind: 'rush' });
     expect(toStrength(defById('cover3').assign, 1)).toBe(defById('cover3').assign);
+  });
+
+  it('a play run again from the setup it keeps (a replay, a re-snap) is the same play: the call is played by strength once, not twice', () => {
+    const s = rep('cover2', 0);
+    expect(s.setup.byStrength).toBe(true);
+    const again = createPlay(s.setup);
+    expect(again.setup.def.assign).toEqual(s.setup.def.assign);
+    expect(hashPlay(runToWhistle(again, () => NEUTRAL))).toBe(hashPlay(runToWhistle(s, () => NEUTRAL)));
   });
 
   it('against bunch right the curl defender to the bunch lines up on its side, and the stalks take the corner and the man inside him, never a lineman', () => {
