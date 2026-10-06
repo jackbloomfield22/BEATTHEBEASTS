@@ -172,5 +172,9 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `ovl_dip_r` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `def_contest_l` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `def_contest_r` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `qb_throw_quick` | transition | 21 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `qb_throw_long` | transition | 30 | 0.0 | 0.00 | 0.00 | 23.7 | — | pass |
+| `qb_throw_fade` | transition | 23 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_drop` | overlay | 28 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 
-**166 of 166 clips pass.**
+**170 of 170 clips pass.**
