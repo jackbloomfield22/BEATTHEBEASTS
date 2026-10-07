@@ -8,13 +8,13 @@
       "reach": {
         "l": {
           "weight": 0.797,
-          "mean": 0.0078,
-          "max": 0.0789
+          "mean": 0.0087,
+          "max": 0.0903
         },
         "r": {
           "weight": 0.787,
-          "mean": 0.0083,
-          "max": 0.1059
+          "mean": 0.0088,
+          "max": 0.0968
         }
       }
     },
@@ -25,13 +25,13 @@
       "reach": {
         "l": {
           "weight": 0.797,
-          "mean": 0.01,
-          "max": 0.1095
+          "mean": 0.0082,
+          "max": 0.0878
         },
         "r": {
           "weight": 0.787,
-          "mean": 0.0101,
-          "max": 0.1055
+          "mean": 0.0084,
+          "max": 0.0899
         }
       }
     },
@@ -42,13 +42,13 @@
       "reach": {
         "l": {
           "weight": 0.797,
-          "mean": 0.0114,
-          "max": 0.0845
+          "mean": 0.0067,
+          "max": 0.0591
         },
         "r": {
           "weight": 0.787,
-          "mean": 0.0123,
-          "max": 0.1204
+          "mean": 0.0073,
+          "max": 0.097
         }
       }
     }
@@ -70,7 +70,7 @@
       "vertices": 1655
     }
   ],
-  "bones": 52,
+  "bones": 56,
   "runtimeBones": [
     "root",
     "pelvis",
@@ -143,7 +143,21 @@
     "reach_l",
     "reach_r"
   ],
-  "bytes": 3643400,
+  "helpers": {
+    "epaulet": {
+      "parent": "clavicle",
+      "child": "upperarm",
+      "from": 95.0,
+      "to": 165.0,
+      "max": 0.6
+    },
+    "elbow_helper": {
+      "parent": "upperarm",
+      "child": "forearm",
+      "share": 0.5
+    }
+  },
+  "bytes": 3644668,
   "skinGate": {
     "groups": {
       "speed": {
@@ -156,9 +170,9 @@
         "regions": {
           "shoulder": {
             "collapsed": 0.0183,
-            "flips": 0.0952,
+            "flips": 0.1026,
             "at": {
-              "collapsed": "run:0 lod1",
+              "collapsed": "run:19 lod1",
               "flips": "sprint:0 lod1"
             },
             "max": {
@@ -168,11 +182,11 @@
             "pass": true
           },
           "elbow": {
-            "collapsed": 0.0541,
-            "flips": 0.0811,
+            "collapsed": 0.0266,
+            "flips": 0.0392,
             "at": {
-              "collapsed": "sprint:8 lod1",
-              "flips": "carry_sprint:7 lod1"
+              "collapsed": "carry_sprint:6 lod1",
+              "flips": "carry_sprint:6 lod0"
             },
             "max": {
               "collapsed": 0.055,
@@ -208,7 +222,7 @@
           }
         },
         "capLift": {
-          "m": 0.0229,
+          "m": 0.0287,
           "at": "sprint:7 lod0",
           "max": 0.04,
           "pass": true
@@ -221,11 +235,11 @@
         ],
         "regions": {
           "shoulder": {
-            "collapsed": 0.022,
-            "flips": 0.1758,
+            "collapsed": 0.0204,
+            "flips": 0.1722,
             "at": {
-              "collapsed": "dive:3 lod1",
-              "flips": "catch_high_point:22 lod1"
+              "collapsed": "catch_high_point:10 lod2",
+              "flips": "dive:4 lod1"
             },
             "max": {
               "collapsed": 0.03,
@@ -234,11 +248,11 @@
             "pass": true
           },
           "elbow": {
-            "collapsed": 0.045,
-            "flips": 0.1081,
+            "collapsed": 0.0452,
+            "flips": 0.0783,
             "at": {
-              "collapsed": "catch_high_point:0 lod1",
-              "flips": "catch_high_point:10 lod1"
+              "collapsed": "catch_high_point:32 lod1",
+              "flips": "catch_high_point:32 lod0"
             },
             "max": {
               "collapsed": 0.05,

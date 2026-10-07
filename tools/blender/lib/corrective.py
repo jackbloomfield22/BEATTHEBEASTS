@@ -116,7 +116,53 @@ def _deformed(ob) -> np.ndarray:
     return co.reshape(-1, 3)
 
 
-def add_reach_correctives(target, rig, iterations: int = ITERATIONS) -> dict:
+def _transfer(src: dict, rest: np.ndarray, parts: np.ndarray, mask: np.ndarray, P: np.ndarray) -> np.ndarray:
+    """Each masked vertex of a coarse LOD to where the source LOD's relaxed
+    surface carries the same rest point: the nearest point on the source's
+    rest surface (same part: jersey to jersey, skin to skin), its
+    barycentric position in that triangle carried to the relaxed pose, and
+    the vertex's own offset off that surface along the posed normal (the
+    LODs' surfaces differ by millimetres after decimation; the offset keeps
+    the jersey over the skin). Faded by the region mask."""
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+
+    Q = P.copy()
+    srest, stris, sparts, sQ = src["rest"], src["tris"], src["parts"], src["Q"]
+    for pid in np.unique(parts[mask > 0]):
+        sel = np.where((sparts[stris] == pid).all(axis=1))[0]
+        if sel.size == 0:
+            continue
+        tri = stris[sel]
+        bvh = BVHTree.FromPolygons([Vector(p) for p in srest], tri.tolist())
+        for vi in np.where((mask > 0) & (parts == pid))[0]:
+            hit, _n, fi, _d = bvh.find_nearest(Vector(rest[vi]))
+            if hit is None:
+                continue
+            a, b, c = (srest[k] for k in tri[fi])
+            h = np.array(hit)
+            # Barycentric coordinates of the hit in its triangle.
+            v0, v1, v2 = b - a, c - a, h - a
+            d00, d01, d11 = v0 @ v0, v0 @ v1, v1 @ v1
+            d20, d21 = v2 @ v0, v2 @ v1
+            den = d00 * d11 - d01 * d01
+            if abs(den) < 1e-14:
+                continue
+            bv = (d11 * d20 - d01 * d21) / den
+            bw = (d00 * d21 - d01 * d20) / den
+            bu = 1.0 - bv - bw
+            nr = np.cross(b - a, c - a)
+            nr /= max(1e-12, np.linalg.norm(nr))
+            off = float((rest[vi] - h) @ nr)
+            qa, qb, qc = (sQ[k] for k in tri[fi])
+            npz = np.cross(qb - qa, qc - qa)
+            npz /= max(1e-12, np.linalg.norm(npz))
+            want = bu * qa + bv * qb + bw * qc + npz * off
+            Q[vi] = P[vi] + mask[vi] * (want - P[vi])
+    return Q
+
+
+def add_reach_correctives(target, rig, iterations: int = ITERATIONS, source: dict | None = None, sculpt_out: dict | None = None) -> dict:
     """Add reach_l and reach_r to a player LOD (after its body shapes).
     `rig` is a throwaway armature the caller built for posing (posing adds
     IK constraints and control empties, which the exported rig must not
@@ -139,7 +185,9 @@ def add_reach_correctives(target, rig, iterations: int = ITERATIONS) -> dict:
     for kb in keys:
         kb.value = 0.0
     apply_pose(rig, Controls(rig), clip_poses(REF_CLIP)[REF_FRAME])
-    bpy.context.view_layer.update()
+    from .helpers import drive_helpers
+
+    drive_helpers(rig)  # the half-angle helpers (lib/helpers.py), as the runtime drives them
     part = me.attributes["part"]
     n = len(me.vertices)
     mask = np.zeros(n)
@@ -161,9 +209,30 @@ def add_reach_correctives(target, rig, iterations: int = ITERATIONS) -> dict:
         return acc / np.maximum(deg, 1.0)[:, None] - X
 
     m = mask[:, None]
-    for _ in range(iterations):
-        Q = Q + LAMBDA * m * lap(Q)
-        Q = Q + MU * m * lap(Q)
+    rest = np.empty(n * 3)
+    me.vertices.foreach_get("co", rest)
+    rest = rest.reshape(-1, 3)
+    parts = np.empty(n, dtype=np.int64)
+    part.data.foreach_get("value", parts)
+    if source is None:
+        for _ in range(iterations):
+            Q = Q + LAMBDA * m * lap(Q)
+            Q = Q + MU * m * lap(Q)
+    else:
+        # Round two: a coarse LOD takes the finest LOD's relaxed surface
+        # (sculpted once, on the mesh that resolves it) instead of
+        # relaxing its own: four Taubin passes on LOD2's 3,800 triangles
+        # barely moved the fold, and the "horns" stayed.
+        Q = _transfer(source, rest, parts, mask, P)
+        # A few passes of its own smooth what the coarse mesh can't follow.
+        for _ in range(iterations):
+            Q = Q + LAMBDA * m * lap(Q)
+            Q = Q + MU * m * lap(Q)
+    if sculpt_out is not None:
+        me.calc_loop_triangles()
+        tris = np.empty(len(me.loop_triangles) * 3, dtype=np.int64)
+        me.loop_triangles.foreach_get("vertices", tris)
+        sculpt_out.update({"rest": rest, "tris": tris.reshape(-1, 3), "parts": parts, "Q": Q.copy(), "P": P.copy()})
     dpose = Q - P
     S = _skin_matrices(ob, rig)
     drest = np.einsum("vij,vj->vi", np.linalg.inv(S), dpose)

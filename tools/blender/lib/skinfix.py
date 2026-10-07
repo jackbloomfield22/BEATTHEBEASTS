@@ -78,3 +78,14 @@ def pad_shell(ob: bpy.types.Object, where=None) -> int:
                     groups[n].add([v.index], w, "REPLACE")
             changed += 1
     return changed
+
+
+def shell_share(co) -> float:
+    """How much of a jersey vertex (rest, Blender frame) pad_shell makes shell (0..1)."""
+    ax = abs(co.x)
+    if ax < CHEST_X * 0.5:
+        return 1.0 if co.z > LIP_BAND[0] else 0.0
+    k = smoothstep(LIP_BAND[0], LIP_BAND[1], co.z) * (1.0 - smoothstep(SHELL_X[0], SHELL_X[1], ax))
+    if ax < CHEST_X:
+        k = max(k, smoothstep(LIP_BAND[0] - 0.04, LIP_BAND[0] + 0.02, co.z))
+    return k

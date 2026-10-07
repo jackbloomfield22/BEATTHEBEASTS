@@ -34,6 +34,7 @@ from lib.anim_rig import Controls  # noqa: E402
 from lib.gait import GAITS, gait_pose  # noqa: E402
 from lib.poses import apply_pose  # noqa: E402
 from lib.preview import PLAYER  # noqa: E402
+from lib.helpers import add_helpers, drive_helpers  # noqa: E402
 from lib.rig import build_armature  # noqa: E402
 from lib.skin import REGIONS, SkinProbe  # noqa: E402
 
@@ -114,6 +115,7 @@ def main() -> None:
     out = args[args.index("--json") + 1] if "--json" in args else None
     bpy.ops.wm.read_factory_settings(use_empty=True)
     rig = build_armature("rig")
+    add_helpers(rig)  # the half-angle helpers (lib/helpers.py); no effect on a file without them
     c = Controls(rig)
     meshes = import_lods(rig, lods)
     if "--no-rhythm" in args:
@@ -154,6 +156,7 @@ def main() -> None:
                     c.arm_ik(side, 0.0)
             else:
                 apply_pose(rig, c, pose)
+                drive_helpers(rig)
             bpy.context.view_layer.update()
             for i, p in probes.items():
                 for r, m in p.measure().items():
