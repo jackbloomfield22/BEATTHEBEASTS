@@ -2012,8 +2012,9 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
     // read late (his reaction). A look-off moves him away from the throw, a
     // stare-down toward it (pocket.ts eyesBeforeRead). Deep thirds play their
     // third. How far he leans is how far he trusts the eyes: less for an
-    // aware safety (EYE_AWARE), less again with a man to carry.
-    if (zone === 'deepM' || zone === 'halfL' || zone === 'halfR' || role === 'tampa') {
+    // aware safety (EYE_AWARE), less again with a man to carry. Only while
+    // the QB has the ball to throw: on a run he reads his run keys.
+    if ((zone === 'deepM' || zone === 'halfL' || zone === 'halfR' || role === 'tampa') && !s.setup.play.run && (s.phase === 'dropback' || s.phase === 'pocket')) {
       const lag = Math.max(0.1, reaction(s, d));
       const ey0 = (d.mem.eyeY as number | undefined) ?? s.eyes.y;
       const ey = ey0 + (s.eyes.y - ey0) * Math.min(1, TICK / lag);

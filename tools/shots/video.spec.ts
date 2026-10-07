@@ -177,6 +177,8 @@ async function record(page: Page, clip: Clip) {
   writeFileSync(`${OUT}/${clip.id}.pops.json`, JSON.stringify(pops, null, 1) + '\n');
   execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', `${dir}/%04d.jpg`, '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${OUT}/${clip.id}.mp4`]);
   console.log(`${clip.id}: ${n} frames, pops worst ${pops.worst} rad/s, ${pops.spikes.length} spikes`);
+  // BTB_KEEP_FRAMES unset: the frames go once they're encoded (a 20-fps clip is ~20 MB of JPEGs; disk was tight in passing round 2).
+  if (!process.env.BTB_KEEP_FRAMES && PASSING2) rmSync(dir, { recursive: true, force: true });
 }
 
 const CONCEPT_IDS = ['slant', 'out', 'curl', 'go', 'post', 'corner', 'crosser', 'screen', 'back-shoulder', 'scramble-drill'];

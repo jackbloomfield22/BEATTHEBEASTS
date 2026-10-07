@@ -291,7 +291,8 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     // Eye slower than the look: the lens leads, the dolly follows.
     // In the air the whole rig tightens up so it keeps pace with the ball.
     const air = practice.runner?.cur.phase === 'air' && modeSetting === 'broadcast';
-    const w = air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
+    // (?follow rides its man close: a stiff rig, or a man on the move leaves the frame.)
+    const w = urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));
     // Shake: hits kick it, it rings down in ~0.3 s.
     for (const e of frameEvents) {

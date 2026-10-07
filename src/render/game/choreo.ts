@@ -875,6 +875,9 @@ function eyesFor(i: number, s: PlayState, simT: number, out: Drive): void {
     at(qb.pos.x, qb.pos.y, 1.6);
   }
 }
+/** A QB stepping up faster than this (yd/s along his facing) is climbing the pocket, not shuffling in it. Ours. */
+const CLIMB_ALONG = 0.8;
+
 /** Routes that come back to the QB out of their break (the ball's on him as he turns): every break but the verticals. */
 const TIMING_ROUTES = new Set(['slant', 'out', 'qout', 'in', 'qin', 'dig', 'curl', 'hitch', 'stick', 'comeback', 'spot', 'sit', 'option', 'angle', 'drag', 'cross', 'flat', 'checkdown', 'swing', 'arrow', 'sail', 'leak', 'chip', 'slip', 'bubble']);
 
@@ -1038,6 +1041,13 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   }
   // Eyes (passing round 2): see eyesFor.
   eyesFor(i, s, simT, out);
+  // Climbing the pocket (passing round 2): moving up in it after the set, the QB's steps are the short, choppy, hips-down
+  // ones of the carrier's traffic gaits (stride-matched to the sim's pace), the ball still in both hands at the numbers
+  // (his hold overlay owns the arms) and his eyes downfield.
+  if (i === s.qb && s.phase === 'pocket' && s.scrambleT < 0 && !w && along > CLIMB_ALONG && (!tr || tr.done)) {
+    out.carry = 1;
+    out.traffic = 1;
+  }
   // The ball carrier runs like one (M6.5 #11): the carry gaits, and his eyes up.
   if (carrying && !b.fallen) carrierDrive(b, i, s, simT, out, clipBusy(b, tr));
   // In a tackle (sim/tackle.ts): pads low, legs churning, both hands on the ball.
