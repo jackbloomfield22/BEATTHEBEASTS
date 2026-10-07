@@ -1032,6 +1032,9 @@ function overShoulder(s: PlayState, a: Agent): boolean {
   return (b.vel.x * a.vel.x + b.vel.y * a.vel.y) / (bv * sp) > 0.55;
 }
 
+/** Seconds out of the hand before a teammate other than the target can touch it (a tip drill, not his own blocker). */
+const OWN_CLEAR = 0.25;
+
 /** A defender within this (yd) of the receiver and behind him along his run is on his hip (resolveCatch): ai.ts TRAIL_R's trail. */
 const HIP_R = 3;
 /** ...on a ball no more than this (yd) behind the receiver along his run: further behind him, it's thrown to the trailer. */
@@ -1058,7 +1061,11 @@ export function stepAir(s: PlayState): number {
     // Defenders only play the ball once they've read it (mem.onBall).
     if (a.side === 'def' && !a.mem.onBall && dh > 0.55) continue;
     // Linemen are ineligible: they never play a pass (they can't be the target either).
-    if (a.side === 'off' && a.i !== b.target && (dh > 0.6 || a.p.pos === 'OL')) continue;
+    // Nor does a man blocking for him (no route) or anyone in the ball's first
+    // tenths out of the hand: a fullback in front of the QB on a play-action
+    // shot "caught" the 30-yd post 0.07 s after the release (passing round 2,
+    // tools/sim/findpassing2.ts), the ball still over his helmet at his set.
+    if (a.side === 'off' && a.i !== b.target && (dh > 0.6 || a.p.pos === 'OL' || !a.route || s.t - b.releaseT < OWN_CLEAR)) continue;
     if (dh < r && dh < bestD) {
       best = a.i;
       bestD = dh;

@@ -38,7 +38,7 @@ import math
 from dataclasses import replace
 
 from .actions import GRIP, IDLE, RELAXED, SPINE_UP, SPREAD, STANCES, Clip, arm_mask, hands_of, keyed, shift, with_upper
-from .actions_m65 import DIAMOND_WRIST, ready_pose, upper
+from .actions_m65 import DIAMOND_WRIST, ready_pose, tuck_pose, upper
 from .gait import FPS, smoothstep
 from .transitions import Plant, Steps
 
@@ -149,5 +149,42 @@ def catch_drop() -> Clip:
     return Clip("catch_drop", "overlay", T, lambda t: keyed(keys, t), mask=ARMS + SPINE_UP, events={"secure": round(ts * FPS)})
 
 
+def catch_bobble() -> Clip:
+    """Passing round 2: the ball in his hands but not secured (the sim's
+    bobble, play.ts atHands). The diamond meets it (secure, frame 8), it pops
+    up off the heels of the hands, the hands spring open and follow it up
+    with the eyes (the runtime's look-at stays on the ball), then come back
+    together under it as it drops: the regrab event (frame 20, 0.4 s after the
+    pop: the sim's pop at ~2.2 yd/s comes back to the hands in ~0.41 s) lands
+    on the sim's second chance, and catch_resecure or catch_drop takes it from
+    there. Overlay: the legs keep running."""
+    T = 0.8
+    ts = 8 / FPS
+    tr = 20 / FPS
+    z = 1.30
+    reach = upper({"l": (0.065, -0.50, z), "r": (-0.065, -0.50, z)}, {**SPREAD, **DIAMOND_WRIST}, {"l": (0.7, 0.0, z - 0.4), "r": (-0.7, 0.0, z - 0.4)})
+    # Off the heels of the hands: they open, the palms turned up after it.
+    pop = upper({"l": (0.13, -0.47, z + 0.10), "r": (-0.13, -0.47, z + 0.10)}, {**SPREAD, "hand_l": (-55, 0, 25), "hand_r": (-55, 0, -25)}, {"l": (0.7, 0.1, z - 0.3), "r": (-0.7, 0.1, z - 0.3)})
+    # Following it up: the hands at the face, apart, fingers up, the chest lifting with them.
+    follow = upper({"l": (0.11, -0.44, 1.52), "r": (-0.11, -0.44, 1.52)}, {**SPREAD, "hand_l": (-35, 0, 15), "hand_r": (-35, 0, -15)}, {"l": (0.7, 0.1, 1.1), "r": (-0.7, 0.1, 1.1)})
+    follow.joints.update({"spine_03": (-4, 0, 0), "spine_04": (-3, 0, 0)})
+    # Back together under it as it comes down: the regrab.
+    regrab = upper({"l": (0.055, -0.45, 1.36), "r": (-0.055, -0.45, 1.36)}, {**GRIP, **DIAMOND_WRIST}, {"l": (0.7, 0.05, 0.95), "r": (-0.7, 0.05, 0.95)})
+    keys = [(0.0, ready_pose()), (ts - 0.09, reach), (ts, reach), (ts + 0.07, pop), (ts + 0.2, follow), (tr, regrab), (T, regrab)]
+    return Clip("catch_bobble", "overlay", T, lambda t: keyed(keys, t), mask=ARMS + SPINE_UP, events={"secure": round(ts * FPS), "regrab": round(tr * FPS)})
+
+
+def catch_resecure() -> Clip:
+    """The bobble secured: from the regrab (secure, frame 1) the hands squeeze
+    it and pull it in to the chest, then high and tight (tuck, frame 10)."""
+    T = 0.5
+    ts, tt = 1 / FPS, 10 / FPS
+    regrab = upper({"l": (0.055, -0.45, 1.36), "r": (-0.055, -0.45, 1.36)}, {**GRIP, **DIAMOND_WRIST}, {"l": (0.7, 0.05, 0.95), "r": (-0.7, 0.05, 0.95)})
+    chest = upper({"l": (0.05, -0.30, 1.28), "r": (-0.05, -0.30, 1.28)}, {**GRIP, "hand_l": (-10, 0, 0), "hand_r": (-10, 0, 0)}, {"l": (0.6, 0.2, 0.95), "r": (-0.6, 0.2, 0.95)})
+    chest.joints.update({"spine_03": (6, 0, 0), "spine_04": (4, 0, 0)})
+    keys = [(0.0, regrab), (ts, regrab), (ts + 0.14, chest), (tt, tuck_pose()), (T, tuck_pose())]
+    return Clip("catch_resecure", "overlay", T, lambda t: keyed(keys, t), mask=ARMS + SPINE_UP, events={"secure": round(ts * FPS), "tuck": round(tt * FPS)})
+
+
 def pass_clips() -> list[Clip]:
-    return [qb_throw_quick(), qb_throw_long(), qb_throw_fade(), catch_drop()]
+    return [qb_throw_quick(), qb_throw_long(), qb_throw_fade(), catch_drop(), catch_bobble(), catch_resecure()]

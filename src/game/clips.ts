@@ -277,6 +277,31 @@ export const PASSING: Clip[] = [
   ...pair('arm', 'The arm', { seed: 17, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) }, { off: 'QB', name: 'Dan Marino', pos: 'QB' }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }),
 ];
 
+// Passing round 2 (docs/passing/PASSING2.md): the QB's feet and eyes, the
+// receiver's head and hands, the bobble and the arm, found by
+// tools/sim/findpassing2.ts and recorded with a close camera on the man
+// (tools/shots/video.spec.ts BTB_PASSING2: each clip's `follow`).
+export const PASSING2: (Clip & { follow?: string })[] = [
+  // The 5-step from under center and the hitch, the ball out on the dig's break (cover 3, caught for 15).
+  { id: 'p2-drop5', title: '5-step, hitch, dig', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: concept({ icon: 2, at: 100 }), follow: 'QB,3,-6,2.2,38' },
+  // The 3-step from under center: the quick out on the plant.
+  { id: 'p2-drop3', title: '3-step, quick out', seed: 3, play: 'singleback-quick-outs', def: 'cover3', los: 30, script: concept({ icon: 1, at: 58 }), follow: 'QB,3,-6,2.2,38' },
+  // The 7-step off play action: the post against Cover 3.
+  { id: 'p2-drop7', title: 'Play action 7-step, post', seed: 8, play: 'iform-pa-deep-shot', def: 'cover3', los: 30, script: concept({ icon: 1, at: 118 }), follow: 'QB,3,-7,2.4,40' },
+  // From the gun: the catch, the step and the slant on rhythm.
+  { id: 'p2-gun-slant', title: 'Gun quick slant', seed: 6, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 36 }), follow: 'QB,3,-6,2.2,38' },
+  // The same slant on the receiver: the head round to the QB out of the break, the hands late, the eyes into the hands.
+  { id: 'p2-head-slant', title: 'Slant: the head and hands', seed: 6, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 36 }), follow: 'X,5,-5,2,42' },
+  // The go route: eyes up the field, then back over the shoulder for the layered ball.
+  { id: 'p2-shoulder', title: 'Go: over the shoulder', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }), follow: 'Z,7,5,2.4,45' },
+  // The juggle: the slant off his hands and back in.
+  { id: 'p2-bobble', title: 'Bobble and re-catch', seed: 28, play: 'doubles-slants', def: 'cover3', los: 30, script: concept({ icon: 1, at: 36 }), follow: 'X,5,-5,2,42' },
+  // The eyes: the play-action post from a field general (Marino looks the safety off) and from Winston (stares his man down).
+  ...pair('p2-lookoff', 'The eyes', { seed: 2, play: 'singleback-pa-post', def: 'cover3', los: 30, script: concept({ icon: 1, at: 108 }) }, { off: 'QB', name: 'Dan Marino', pos: 'QB' }, { off: 'QB', name: 'Jameis Winston', pos: 'QB' }).map((c) => ({ ...c, follow: 'QB,-13,0,13,55,13' })),
+  // The arm from the sideline: the go ball from Marino (96) and Montana (72).
+  ...pair('p2-arm', 'The arm', { seed: 4, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) }, { off: 'QB', name: 'Dan Marino', pos: 'QB' }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }).map((c) => ({ ...c, follow: 'QB,22,36,8,50,22' })),
+];
+
 // The tackling videos (docs/physics/TACKLING.md): each moment the contact
 // physics is about, found by tools/sim/findtackles.ts.
 export const PHYSICS: Clip[] = [

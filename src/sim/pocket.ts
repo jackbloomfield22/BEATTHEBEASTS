@@ -87,8 +87,11 @@ export interface DropPlan {
 export function dropPlan(s: PlayState, qb: Agent): DropPlan | null {
   const m = qb.mem;
   if (m.dropT0 === undefined) return null;
-  const x0 = m.dropX0 as number;
-  const t0 = m.dropT0 as number;
+  return planFrom(s, qb, m.dropX0 as number, m.dropT0 as number);
+}
+
+/** The drop from `x0` starting `t0` s after the snap (the render asks it at the snap, before the sim's first drop step). */
+export function planFrom(s: PlayState, qb: Agent, x0: number, t0: number): DropPlan {
   const drop = s.setup.play.drop;
   const depth = Math.max(0, x0 - (s.setup.los - drop.depth));
   const T = Math.max(0.2, drop.set - t0);
@@ -98,7 +101,7 @@ export function dropPlan(s: PlayState, qb: Agent): DropPlan | null {
 }
 
 /** When the drop starts (s after the snap): after the exchange, the catch, or the fake. */
-function dropStart(s: PlayState, drop: Drop): number {
+export function dropStart(s: PlayState, drop: Drop): number {
   const pa = s.setup.play.pa;
   if (pa) return 0.2 + pa.fake;
   return s.setup.play.formation.center ? UC_EXCHANGE : drop.kind.startsWith('gun') ? GUN_CATCH : UC_EXCHANGE;

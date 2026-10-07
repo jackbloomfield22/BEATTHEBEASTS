@@ -117,6 +117,14 @@ function targetPose(mode: Mode): Pose | null {
   const los = s.setup.los;
   const by = s.setup.ballY ?? 0;
   const qb = cur.agents[s.qb]!;
+  // ?follow=slot[,dx,dy,h,fov,ax]: a close camera (ax: looking that far downfield of him) on one man (dev and the passing round 2 recordings), so footwork, eyes and hands can be judged.
+  if (urlFlags.follow) {
+    const [slot, ...o] = urlFlags.follow.split(',');
+    const i = s.agents.findIndex((a) => a.slot === slot);
+    const a = i >= 0 ? cur.agents[i]! : qb;
+    const [dx = 4, dy = -7, h = 2.4, fov = 40, ax = 0] = o.map(Number);
+    return { ex: a.x + dx, ey: a.y + dy, eh: h, lx: a.x + ax, ly: a.y, lh: 1.1, fov };
+  }
   const c = cur.carrier >= 0 ? cur.agents[cur.carrier]! : null;
   const ball = cur.ball;
   const focus = c ?? qb;

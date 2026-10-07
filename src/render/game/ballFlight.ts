@@ -133,7 +133,8 @@ function spiralOf(s: PlayState): { spiral: number; rpm: number } {
  */
 export function placeFlight(f: BallFlight, ball: THREE.Object3D, s: PlayState, vel: THREE.Vector3, dt: number, simT: number): void {
   const b = s.ball;
-  const loose = b.mode === 'loose' || (b.mode === 'air' && b.target === -2);
+  // (A bobble juggled over his hands turns end over end too: passing round 2.)
+  const loose = b.mode === 'loose' || (b.mode === 'air' && (b.target === -2 || s.bobble !== null));
   const dead = s.phase === 'dead' && b.mode !== 'held';
   // A new throw: its spiral, its spin, and the hand it left from.
   if (b.mode === 'air' && b.releaseT !== f.throwT && !loose) {

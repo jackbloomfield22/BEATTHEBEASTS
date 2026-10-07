@@ -96,6 +96,8 @@ export const urlFlags = (() => {
     lineup: p.has('lineup'), // dev: 22 players at the line of scrimmage (render/players/Lineup.tsx)
     // Fixed camera for screenshots and dev: x,y,z,lookX,lookY,lookZ[,fov].
     cam: p.get('cam')?.split(',').map(Number) ?? null,
+    // Dev and recordings: a close camera on one player through the play: slot[,dx,dy,h,fov] (the eye's offset from him in yd along and across the field, its height in m; render/game/GameCamera.tsx).
+    follow: p.get('follow'),
     // Ambient crowd energy 0..1 (screenshots of a quiet or a rocking bowl).
     crowd: p.has('crowd') ? Number(p.get('crowd')) : null,
     shotTime: p.has('t') ? Number(p.get('t')) : null, // freeze the cinematic clock (screenshots)

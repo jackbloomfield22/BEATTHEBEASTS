@@ -57,8 +57,16 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `stop_jog` | transition | 33 | 0.0 | 0.01 | 0.00 | 16.1 | — | pass |
 | `stop_run` | transition | 42 | 0.0 | 0.00 | 0.00 | 17.4 | — | pass |
 | `stop_sprint` | transition | 51 | 0.0 | 0.00 | 0.00 | 18.4 | — | pass |
-| `qb_drop_gun3` | transition | 22 | 0.0 | 0.00 | 0.00 | 28.0 | — | pass |
-| `qb_drop_gun5` | transition | 32 | 0.0 | 0.00 | 0.00 | 27.3 | — | pass |
+| `qb_drop_uc3` | transition | 28 | 0.0 | 0.00 | 0.00 | 8.6 | — | pass |
+| `qb_drop_uc5` | transition | 39 | 0.0 | 0.00 | 0.00 | 8.2 | — | pass |
+| `qb_drop_uc7` | transition | 50 | 0.0 | 0.00 | 0.00 | 11.9 | — | pass |
+| `qb_drop_gun3` | transition | 18 | 0.0 | 0.00 | 0.00 | 26.4 | — | pass |
+| `qb_drop_gun5` | transition | 32 | 0.0 | 0.00 | 0.00 | 10.2 | — | pass |
+| `qb_drop_gun7` | transition | 39 | 0.0 | 0.00 | 0.00 | 11.3 | — | pass |
+| `qb_drop_uc3_pedal` | transition | 28 | 0.0 | 0.00 | 0.00 | 24.7 | — | pass |
+| `qb_drop_gun5_pedal` | transition | 32 | 0.0 | 0.00 | 0.00 | 24.5 | — | pass |
+| `qb_drop_gun7_pedal` | transition | 39 | 0.0 | 0.00 | 0.00 | 25.7 | — | pass |
+| `qb_hitch` | transition | 9 | 0.0 | 0.00 | 0.00 | 32.4 | — | pass |
 | `qb_throw` | transition | 24 | 0.0 | 0.00 | 0.00 | 23.7 | — | pass |
 | `ovl_carry_r` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `ovl_protect` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
@@ -75,8 +83,6 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `tackle` | transition | 27 | 0.0 | 0.00 | 0.00 | 15.7 | — | pass |
 | `getup_prone` | transition | 33 | 0.0 | 0.50 | 0.00 | 23.8 | — | pass |
 | `getup_supine` | transition | 36 | 0.0 | 0.01 | 0.00 | 22.0 | — | pass |
-| `qb_drop_uc3` | transition | 28 | 0.0 | 0.00 | 0.00 | 28.5 | — | pass |
-| `qb_drop_uc5` | transition | 39 | 0.0 | 0.00 | 0.00 | 27.0 | — | pass |
 | `ovl_handoff_r` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `ovl_handoff_l` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `ovl_pa_fake_r` | overlay | 21 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
@@ -176,5 +182,7 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `qb_throw_long` | transition | 30 | 0.0 | 0.00 | 0.00 | 23.7 | — | pass |
 | `qb_throw_fade` | transition | 23 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_drop` | overlay | 28 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_bobble` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_resecure` | overlay | 15 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 
-**170 of 170 clips pass.**
+**178 of 178 clips pass.**
