@@ -146,6 +146,12 @@ export interface PlayState {
   pressures: { by: number; beat: number; t: number }[];
   /** The defenders who rally to this throw (decided at the release, keyed by it); the rest keep their men and zones. */
   rally: { at: number; who: number[] } | null;
+  /**
+   * A bobble in the air (passing.ts resolveCatch): the man juggling it, the
+   * odds he secures it when it comes back down to his hands, and when it
+   * left them; null otherwise.
+   */
+  bobble: { who: number; q: number; t: number } | null;
   /** Throw bookkeeping for the result. */
   pass: PlayResult['pass'];
   sack: boolean;
@@ -443,6 +449,7 @@ export function createPlay(setup: PlaySetup): PlayState {
     pressureT: -1,
     pressures: [],
     rally: null,
+    bobble: null,
     pass: undefined,
     sack: false,
     bigHit: undefined,

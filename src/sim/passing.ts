@@ -6,7 +6,7 @@
 // reaches a pair of hands: base Catching, ball speed, how far the ball is
 // from the ideal spot, defenders in the catch window, and the catch type.
 
-import { flightTime, G, solveLaunch, speed3, stepFlight, type V3 } from './ball';
+import { fitArm, G, solveLaunch, speed3, stepFlight, type V3 } from './ball';
 import { errorAt20, maxRange, maxThrowSpeed, releaseTime } from './effects';
 import { stepRoute } from './ai';
 import { steer } from './movement';
@@ -103,6 +103,68 @@ export function driveTime(d: number, power: number): number {
 }
 
 /**
+ * The quickest his arm can get a ball `d` yd (release height to the catch,
+ * with drag): the flat solution at his top speed. Short of ~30 yd it's well
+ * under the driven time and changes nothing; on a long throw it's the arm
+ * that sets the arc, and the gap between arms grows with the distance (the
+ * ball has to go up to get there): a 46-yd throw is ~2.0 s from a 96 arm
+ * and ~2.5 s from a 72 (tools/sim/ballarc.ts). Passing round 2: the QB's
+ * read (ai.ts openness) judged a deep window on driveTime alone, so a
+ * 72 arm read a 46-yd seam as a 2.15-s ball and threw a 2.5-s one into the
+ * safety; now the read and the throw use the same clock (throwTime).
+ */
+export function armTime(d: number, vmax: number): number {
+  const key = Math.round(vmax * 1000);
+  let tab = ARM_T.get(key);
+  if (!tab) {
+    tab = armTable(vmax);
+    ARM_T.set(key, tab);
+  }
+  const f = Math.max(0, Math.min(ARM_D - 1, d));
+  const i = Math.min(ARM_D - 2, Math.floor(f));
+  return tab[i]! + (tab[i + 1]! - tab[i]!) * (f - i);
+}
+/** The arm tables' reach (yd, 1-yd steps) and the tables by top speed (a pure function of it, filled on first use). */
+const ARM_D = 81;
+const ARM_T = new Map<number, number[]>();
+function armTable(vmax: number): number[] {
+  const out: number[] = [];
+  for (let d = 0; d < ARM_D; d++) {
+    const from: V3 = { x: 0, y: 0, z: RELEASE_Z };
+    const to: V3 = { x: Math.max(0.5, d), y: 0, z: CATCH_Z };
+    const sp = (t: number) => speed3(solveLaunch(from, to, t));
+    // The bottom of the speed curve; the flat solution lies between a bullet and it.
+    let lo = 0.05;
+    let hi = 7;
+    for (let k = 0; k < 26; k++) {
+      const m1 = lo + (hi - lo) * 0.382;
+      const m2 = lo + (hi - lo) * 0.618;
+      if (sp(m1) < sp(m2)) hi = m2;
+      else lo = m1;
+    }
+    const tMin = (lo + hi) / 2;
+    if (sp(tMin) > vmax) {
+      out.push(tMin);
+      continue;
+    }
+    let a = 0.05;
+    let b = tMin;
+    for (let k = 0; k < 22; k++) {
+      const m = (a + b) / 2;
+      if (sp(m) > vmax) a = m;
+      else b = m;
+    }
+    out.push(b);
+  }
+  return out;
+}
+
+/** The hang of the throw he'd make to a spot `d` yd away, driven: the arm's driven time, or longer when his arm can't get it there that fast. */
+export function throwTime(d: number, qb: Agent): number {
+  return Math.max(driveTime(d, qb.fx.r('throwPower')), armTime(d, arm(qb).vmax));
+}
+
+/**
  * The AI QB's deep ball is layered, not driven (the coaching line on a
  * vertical: drop it in over the outside shoulder, between the corner and the
  * safety). M5.5–M6.6 threw every AI ball as the driven one, so a 40-yd post
@@ -167,6 +229,12 @@ function clearLoft(s: PlayState, from: V3, to: V3, T0: number): number {
         const t = u * T;
         const px = d.pos.x + d.vel.x * Math.min(t, 0.4);
         const py = d.pos.y + d.vel.y * Math.min(t, 0.4);
+        // The man covering at the catch point isn't under the path: air
+        // can't take the ball over him there, it comes down into his hands
+        // whatever its arc. (Lofted over him, a 20–30 yd throw with the
+        // corner trailing became a 3–5 s moon ball: passing round 2,
+        // tools/sim/deeptail.ts.)
+        if ((px - to.x) * (px - to.x) + (py - to.y) * (py - to.y) < AT_CATCH * AT_CATCH) continue;
         const bx = from.x + dx * u;
         const by = from.y + dy * u;
         if ((px - bx) * (px - bx) + (py - by) * (py - by) > 0.81) continue;
@@ -186,6 +254,8 @@ function clearLoft(s: PlayState, from: V3, to: V3, T0: number): number {
   // a line, into the window as it is.
   return T0;
 }
+/** A defender this close to the catch point (yd) is at it, not under the path: CONTEST_R's reach, where he plays the ball at the hands. */
+const AT_CATCH = 2.6;
 
 /**
  * The error cone's growth with distance (× the 20-yd error). Past 20 yd it
@@ -340,7 +410,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const { vmax, range } = arm(qb);
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
-  const hang0 = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T);
+  const hang0 = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
   // Hit as he throws: he led him for the ball he meant, but the arm never
   // finishes, so it comes out slow and fluttering (HIT_HANG) and arrives late, behind him.
   const hang = (to: V3) => hang0(to) * (hit ? HIT_HANG : 1);
@@ -437,16 +507,11 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   }
   const to: V3 = { x: tx, y: ty, z: tz };
   // Air under it when a defender is in the way (a driven ball becomes a touch pass).
-  let Tf = clearLoft(s, from, to, hang(to));
   // Never out of the hand faster than his arm: flightTime is solved in a
   // vacuum, and drag asks a long throw for more speed than that (a 55-yd
   // ball from a 75 arm left at 58 mph against his 54: tools/sim/ballarc.ts).
-  // A weaker arm has to put more air under it instead.
-  let v0 = solveLaunch(from, to, Tf);
-  for (let k = 0; k < 12 && speed3(v0) > vmax; k++) {
-    Tf *= 1.04;
-    v0 = solveLaunch(from, to, Tf);
-  }
+  // A weaker arm has to put more air under it instead (ball.ts fitArm).
+  const { T: Tf, v0 } = fitArm(from, to, clearLoft(s, from, to, hang(to)), vmax);
   const kind = touch || Tf > hang(to) * 1.01 ? 'touch' : 'driven';
   const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, chem: fChem, place: aim.x, sigma, timing: tSigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
   return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err, spiral: spiralOf(accN, fPressure, offPlatform, moving, missed, hit), rpm: rpmOf(power), hit };
@@ -499,7 +564,7 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
   const run = leadFor(rec, (at) => {
     const to = { x: at.x, y: at.y, z: CATCH_Z };
-    return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), flightTime(from, to, vmax, 0).T);
+    return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
   });
   const { spot, rv } = run;
   let x = spot.x + rv.x * 1.6 * aim.x;
@@ -715,7 +780,7 @@ const worstOf = (costs: readonly [CatchHard, number][]): number => costs.reduce(
  * Resolve a ball arriving at an agent. Returns what happened; the caller
  * applies it (possession, a live deflection, or the ball flying on).
  */
-export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflect' | 'int' | 'miss' {
+export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop' | 'deflect' | 'int' | 'miss' {
   const b = s.ball;
   const rng = s.rng.catch;
   const vs = speed3(b.vel);
@@ -872,7 +937,24 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
     if (routine && contest < 0.3 && has(a, 'glue-hands')) p = Math.max(p, 0.985);
     if (a.fx.r('catching', -1) < 0) p -= 0.3; // linemen and QBs
     p = Math.max(0.02, Math.min(0.985, p));
-    if (rng() < p) return 'catch';
+    const u = rng();
+    // A bobble (passing round 2): the ball in his hands but not secured, the
+    // marginal catch either side of the line. It pops up off his hands and
+    // he gets a second chance at it as it comes down (play.ts ballStep):
+    // `q` his odds then, before whoever has closed on him by then. The band
+    // is set so his odds over both chances are the ones above (a bobble
+    // isn't a new way to drop it: it's how the close ones look), wider for
+    // poorer hands, a faster ball and a hit as it arrives.
+    if (off < 0.8 && a.fx.r('catching', -1) >= 0) {
+      const q = resecureOdds(a);
+      const lo = Math.min(p, BOB_BASE * (1.2 - hands) + BOB_SPEED * Math.max(0, vs - BOB_FAST) + BOB_HIT * hit);
+      const hi = (lo * (1 - q)) / q;
+      if (u >= p - lo && u < p + hi) {
+        s.bobble = { who: a.i, q, t: s.t };
+        return 'bobble';
+      }
+    }
+    if (u < p) return 'catch';
     // A contested ball is mostly broken up; an open one that's missed is a drop (or off his fingertips).
     return contest > 0.4 && rng() < 0.8 ? 'deflect' : off < 0.8 ? 'drop' : 'miss';
   }
@@ -908,6 +990,24 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'drop' | 'deflec
   if (u < pInt) return 'int';
   if (u < pInt + pBreak) return 'deflect';
   return 'miss';
+}
+
+/**
+ * The bobble's band below the catch line (resolveCatch): BOB_BASE × (1.2 −
+ * Catching), plus BOB_SPEED per yd/s past BOB_FAST (a bullet), plus BOB_HIT
+ * for a hit as it arrives. About 1.5% of balls to a sure-handed man in the
+ * open, 3–4% to a poor one, more on a fastball or through contact: the
+ * broadcast's juggles. Ours (no public bobble rate; PFF counts only the
+ * drops), sized so the juggle is something a fan sees a few times a game.
+ */
+const BOB_BASE = 0.05;
+const BOB_SPEED = 0.003;
+const BOB_FAST = 22;
+const BOB_HIT = 0.04;
+
+/** His odds of securing a bobble as it comes back down, before contact (play.ts takes off for a man on him then): 60% for poor hands to ~85% for sure ones; Glue Hands and Sure Hands hold on more. */
+export function resecureOdds(a: Agent): number {
+  return Math.min(0.95, 0.3 + 0.6 * a.fx.a('catching') + (has(a, 'glue-hands') || has(a, 'sure-hands') ? 0.08 : 0));
 }
 
 /**

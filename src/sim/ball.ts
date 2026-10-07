@@ -96,3 +96,48 @@ export function solveLaunch(from: V3, to: V3, T: number): V3 {
 }
 
 export { speed as speed3 };
+
+/**
+ * The flight time nearest `T` whose launch (with drag) his arm can make:
+ * launch speed no more than `vmax`. The speed a throw needs falls as its
+ * flight time grows from a bullet, bottoms out at the longest throw's
+ * angle, then climbs again for a lob, so a throw too fast for him is made
+ * slower (more air) on the flat side and quicker (less air) on the lob
+ * side. Out of his reach at any angle, it's the time that needs the least
+ * speed (planThrow has already pulled the spot in to his range, effects.ts
+ * maxRange, so this is the last yard or two of drag that formula doesn't
+ * know about: the plan stays the one the catch is timed on).
+ *
+ * passing.ts planThrow stretched every too-fast throw by 4% at a time; past
+ * the bottom of the curve that only asked for more speed, so a long ball
+ * lofted over a defender came out at up to 45° and 5–6 s of hang, far faster
+ * than the arm (passing round 2, tools/sim/deeptail.ts: the 40+ air-yard
+ * attempts hung 4.3 s on average).
+ */
+export function fitArm(from: V3, to: V3, T: number, vmax: number): { T: number; v0: V3 } {
+  const at = (t: number) => solveLaunch(from, to, t);
+  let v0 = at(T);
+  if (speed(v0) <= vmax) return { T, v0 };
+  // The bottom of the speed curve (golden section on the drag solution).
+  let lo = 0.1;
+  let hi = 7;
+  for (let i = 0; i < 28; i++) {
+    const m1 = lo + (hi - lo) * 0.382;
+    const m2 = lo + (hi - lo) * 0.618;
+    if (speed(at(m1)) < speed(at(m2))) hi = m2;
+    else lo = m1;
+  }
+  const tMin = (lo + hi) / 2;
+  const vMin = at(tMin);
+  if (speed(vMin) > vmax) return { T: tMin, v0: vMin };
+  // Bisect between the asked time (too fast) and the bottom (fast enough), on the asked side.
+  let a = T;
+  let b = tMin;
+  for (let i = 0; i < 24; i++) {
+    const m = (a + b) / 2;
+    if (speed(at(m)) > vmax) a = m;
+    else b = m;
+  }
+  v0 = at(b);
+  return { T: b, v0 };
+}

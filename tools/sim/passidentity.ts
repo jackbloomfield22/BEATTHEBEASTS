@@ -51,6 +51,10 @@ function throwScript(icon: number, at: number, hold: number, seen: (s: PlayState
 
 interface Flight {
   mph: number;
+  /** The arc's top (yd above the turf: the vacuum apex from the launch, close enough to compare arms). */
+  apex: number;
+  /** The deep safety's distance across the field from the man it's thrown to as the ball leaves (yd): the middle-of-field safety, or the nearer half safety. */
+  safety: number;
   hang: number;
   dist: number;
   off: number;
@@ -78,7 +82,13 @@ function flights(qb: SimPlayer, plays: [string, number, number, number][]): Flig
               const b = st.ball;
               const th = [...st.events].reverse().find((e) => e.type === 'throw');
               const v = Math.hypot(b.vel.x, b.vel.y, b.vel.z);
-              out.push({ mph: v * MPH, hang: b.arrive - b.releaseT, dist: Math.hypot(b.aim.x - b.pos.x, b.aim.y - b.pos.y), off: Number(th?.data?.off ?? 0), spiral: Number(th?.data?.spiral ?? 1), rpm: Number(th?.data?.rpm ?? 0), windup });
+              const G = 9.81 / 0.9144;
+              let safety = 99;
+              for (const i of st.def) {
+                const a = st.setup.def.assign[st.agents[i]!.slot as keyof typeof st.setup.def.assign];
+                if (a.kind === 'zone' && (a.zone === 'deepM' || a.zone === 'halfL' || a.zone === 'halfR')) safety = Math.min(safety, Math.abs(st.agents[i]!.pos.y - st.agents[b.target]!.pos.y));
+              }
+              out.push({ apex: b.pos.z + (b.vel.z * b.vel.z) / (2 * G), safety, mph: v * MPH, hang: b.arrive - b.releaseT, dist: Math.hypot(b.aim.x - b.pos.x, b.aim.y - b.pos.y), off: Number(th?.data?.off ?? 0), spiral: Number(th?.data?.spiral ?? 1), rpm: Number(th?.data?.rpm ?? 0), windup });
             },
             (w) => (windup = w),
           ),
@@ -140,7 +150,16 @@ const fMar = flights(MARINO, DEEP).filter((f) => f.dist > 28);
 const fMon = flights(MONTANA, DEEP).filter((f) => f.dist > 28);
 rows.push({ pair: 'Arm: Marino (96) vs Montana (72)', metric: 'deep ball launch speed (mph)', a: mean(fMar.map((f) => f.mph)), b: mean(fMon.map((f) => f.mph)), need: 4, dir: 1 });
 rows.push({ pair: 'Arm: Marino (96) vs Montana (72)', metric: 'deep ball hang per 10 yd (s)', a: mean(fMar.map((f) => (10 * f.hang) / f.dist)), b: mean(fMon.map((f) => (10 * f.hang) / f.dist)), need: 0.04, dir: -1 });
+rows.push({ pair: 'Arm: Marino (96) vs Montana (72)', metric: 'deep ball apex (yd)', a: mean(fMar.map((f) => f.apex)), b: mean(fMon.map((f) => f.apex)), need: 1, dir: -1 });
 rows.push({ pair: 'Arm: Marino (96) vs Montana (72)', metric: 'spiral (rpm)', a: mean(fMar.map((f) => f.rpm)), b: mean(fMon.map((f) => f.rpm)), need: 40, dir: 1 });
+// The eyes (passing round 2): the same deep throws at the same tick from the same big arm; a field general looks the deep
+// safety off, a QB who stares his man down pulls him to the throw (pocket.ts eyesBeforeRead, ai.ts zoneCover).
+const LOOK: [string, number, number, number][] = [
+  ['singleback-pa-post', 1, 108, 3],
+  ['trips-four-verts', 3, 96, 3],
+  ['doubles-dagger', 2, 96, 3],
+];
+rows.push({ pair: 'Eyes: Marino (99 Aw) vs Winston (63)', metric: 'deep safety off his man (yd)', a: mean(flights(MARINO, LOOK).map((f) => f.safety)), b: mean(flights(WINSTON, LOOK).map((f) => f.safety)), need: 0.7, dir: 1 });
 // The release: the same big arm, a quick trigger against a long windup.
 // Placement: the same intermediate throws.
 const MID: [string, number, number, number][] = [
