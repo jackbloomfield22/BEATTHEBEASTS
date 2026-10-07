@@ -102,7 +102,8 @@ def qb_drop(kind: str, style: str = "open") -> Clip:
     if style == "pedal":
         turn = PEDAL_TURN
     D = depth_yd * YD
-    T = ts + td
+    # A whole frame past the plant: the clip ends standing (it hands over to the set stance at rest).
+    T = math.ceil((ts + td) * FPS + 1e-6) / FPS + 1 / FPS
     start, qset = copy.deepcopy(STANCES[stance]), copy.deepcopy(STANCES["qb_set"])
     gun = stance == "qb_gun"
 
@@ -195,12 +196,13 @@ def qb_drop(kind: str, style: str = "open") -> Clip:
 
 def qb_hitch() -> Clip:
     """Off the plant: the front foot steps up, the back foot gathers under him; ball at the numbers."""
-    T = 0.3
+    TH = 0.3  # the sim's hitch (play.ts HITCH)
+    T = TH + 1 / FPS  # and a frame standing on it
     S = 0.7 * YD
     qset = copy.deepcopy(STANCES["qb_set"])
 
     def fwd(t):
-        return S * profile(t / T)
+        return S * profile(t / TH)
 
     def travel(t):
         return (0.0, -fwd(t))
@@ -216,7 +218,7 @@ def qb_hitch() -> Clip:
     def pose(t):
         p = shift(qset, 0.0, -fwd(t))
         # A little rise and settle through the step (the weight forward onto the front foot, then back to balance).
-        p.pelvis["up"] = p.pelvis.get("up", 0.0) + 0.015 * math.sin(math.pi * min(1.0, t / T))
+        p.pelvis["up"] = p.pelvis.get("up", 0.0) + 0.015 * math.sin(math.pi * min(1.0, t / TH))
         p.feet = {s: steps.foot(s, t) for s in "lr"}
         return p
 

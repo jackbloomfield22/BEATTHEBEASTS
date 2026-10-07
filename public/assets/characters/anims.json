@@ -2668,8 +2668,8 @@
     },
     "qb_drop_uc3": {
       "kind": "transition",
-      "frames": 28,
-      "duration": 0.9333333333333333,
+      "frames": 30,
+      "duration": 1.0,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -2695,6 +2695,10 @@
           [
             11,
             15
+          ],
+          [
+            28,
+            30
           ]
         ]
       },
@@ -2735,15 +2739,17 @@
         3.2326,
         3.3288,
         3.3929,
-        3.425
+        3.425,
+        3.429,
+        3.429
       ],
       "from": "stance_qb_center",
       "to": "stance_qb_set"
     },
     "qb_drop_uc5": {
       "kind": "transition",
-      "frames": 39,
-      "duration": 1.3,
+      "frames": 41,
+      "duration": 1.3666666666666667,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -2777,6 +2783,10 @@
           [
             24,
             27
+          ],
+          [
+            39,
+            41
           ]
         ]
       },
@@ -2828,6 +2838,8 @@
         5.1438,
         5.2071,
         5.2451,
+        5.2578,
+        5.2578,
         5.2578
       ],
       "from": "stance_qb_center",
@@ -2835,8 +2847,8 @@
     },
     "qb_drop_uc7": {
       "kind": "transition",
-      "frames": 50,
-      "duration": 1.6666666666666667,
+      "frames": 51,
+      "duration": 1.7,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -2881,7 +2893,7 @@
           ],
           [
             49,
-            50
+            51
           ]
         ]
       },
@@ -2944,6 +2956,7 @@
         7.0217,
         7.0632,
         7.084,
+        7.0866,
         7.0866
       ],
       "from": "stance_qb_center",
@@ -2951,8 +2964,8 @@
     },
     "qb_drop_gun3": {
       "kind": "transition",
-      "frames": 18,
-      "duration": 0.6,
+      "frames": 20,
+      "duration": 0.6666666666666666,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -2964,6 +2977,10 @@
           [
             0,
             11
+          ],
+          [
+            18,
+            20
           ]
         ],
         "r": [
@@ -2980,7 +2997,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 26.4,
+        "clear_cm": 24.5,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -3004,6 +3021,8 @@
         0.983,
         1.1735,
         1.322,
+        1.3716,
+        1.3716,
         1.3716
       ],
       "from": "stance_qb_gun",
@@ -3011,8 +3030,8 @@
     },
     "qb_drop_gun5": {
       "kind": "transition",
-      "frames": 32,
-      "duration": 1.0666666666666667,
+      "frames": 33,
+      "duration": 1.1,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -3041,7 +3060,7 @@
           ],
           [
             31,
-            32
+            33
           ]
         ]
       },
@@ -3086,6 +3105,7 @@
         2.6361,
         2.7046,
         2.7389,
+        2.7432,
         2.7432
       ],
       "from": "stance_qb_gun",
@@ -3093,8 +3113,8 @@
     },
     "qb_drop_gun7": {
       "kind": "transition",
-      "frames": 39,
-      "duration": 1.3,
+      "frames": 41,
+      "duration": 1.3666666666666667,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -3128,6 +3148,10 @@
           [
             27,
             30
+          ],
+          [
+            39,
+            41
           ]
         ]
       },
@@ -3179,6 +3203,8 @@
         3.5404,
         3.6055,
         3.6446,
+        3.6576,
+        3.6576,
         3.6576
       ],
       "from": "stance_qb_gun",
@@ -3186,8 +3212,8 @@
     },
     "qb_drop_uc3_pedal": {
       "kind": "transition",
-      "frames": 28,
-      "duration": 0.9333333333333333,
+      "frames": 30,
+      "duration": 1.0,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -3213,6 +3239,10 @@
           [
             11,
             15
+          ],
+          [
+            28,
+            30
           ]
         ]
       },
@@ -3253,15 +3283,17 @@
         3.2326,
         3.3288,
         3.3929,
-        3.425
+        3.425,
+        3.429,
+        3.429
       ],
       "from": "stance_qb_center",
       "to": "stance_qb_set"
     },
     "qb_drop_gun5_pedal": {
       "kind": "transition",
-      "frames": 32,
-      "duration": 1.0666666666666667,
+      "frames": 33,
+      "duration": 1.1,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -3290,7 +3322,7 @@
           ],
           [
             31,
-            32
+            33
           ]
         ]
       },
@@ -3335,6 +3367,7 @@
         2.6361,
         2.7046,
         2.7389,
+        2.7432,
         2.7432
       ],
       "from": "stance_qb_gun",
@@ -3342,8 +3375,8 @@
     },
     "qb_drop_gun7_pedal": {
       "kind": "transition",
-      "frames": 39,
-      "duration": 1.3,
+      "frames": 41,
+      "duration": 1.3666666666666667,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -3377,6 +3410,10 @@
           [
             27,
             30
+          ],
+          [
+            39,
+            41
           ]
         ]
       },
@@ -3428,6 +3465,8 @@
         3.5404,
         3.6055,
         3.6446,
+        3.6576,
+        3.6576,
         3.6576
       ],
       "from": "stance_qb_gun",
@@ -3435,8 +3474,8 @@
     },
     "qb_hitch": {
       "kind": "transition",
-      "frames": 9,
-      "duration": 0.3,
+      "frames": 10,
+      "duration": 0.3333333333333333,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -3451,13 +3490,17 @@
           ],
           [
             5,
-            9
+            10
           ]
         ],
         "r": [
           [
             0,
             4
+          ],
+          [
+            9,
+            10
           ]
         ]
       },
@@ -3479,6 +3522,7 @@
         0.4409,
         0.5358,
         0.6137,
+        0.6401,
         0.6401
       ],
       "from": "stance_qb_set",
@@ -12426,5 +12470,5 @@
       ]
     }
   },
-  "bytes": 7606356
+  "bytes": 7615728
 }

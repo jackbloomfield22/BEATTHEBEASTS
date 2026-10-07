@@ -389,10 +389,14 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
     // The drop, on its rhythm (pocket.ts): to his depth by the set, the clip's steps on the sim's.
     dropStep(s, qb, 0);
     qb.anim = 'drop';
-  } else if (!play.drop.boot && hitches(s) && since < play.drop.set + HITCH && !s.windup && qb.mem.dropT0 !== undefined && qb.mem.noHitch === undefined && !freeRusherNear(s, qb)) {
+  } else if (!s.setup.user && !play.drop.boot && hitches(s) && since < play.drop.set + HITCH && !s.windup && qb.mem.dropT0 !== undefined && qb.mem.noHitch === undefined && !freeRusherNear(s, qb)) {
     // The hitch: off a five- or seven-step drop, a step up into the pocket
     // (pocket.ts HITCH_D), unless a free rusher is already on him: then he
     // gets away from him (the pocket's slide or climb, below), not up into him.
+    // The AI's: the player's QB steps up with the stick (an automatic step
+    // there put him a yard nearer the rush on every dropback, and his
+    // scrambles a step behind his own blockers: Steve Young's averaged 0 yd).
+
     hitchStep(s, qb, HITCH, qbFace(s, qb));
     qb.anim = 'drop';
   } else if (!s.setup.user && play.drop.boot && s.windup === null) {

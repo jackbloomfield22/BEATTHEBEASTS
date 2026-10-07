@@ -37,6 +37,8 @@ const FOLLOW: Record<string, string> = {
   'p2-drop5': 'QB,3,-6,2.2,38',
   'p2-drop3': 'QB,3,-6,2.2,38',
   'p2-drop7': 'QB,3,-7,2.4,40',
+  'p2-drop5-ai': 'QB,3,-6,2.2,38',
+  'p2-drop7-ai': 'QB,3,-7,2.4,40',
   'p2-gun-slant': 'QB,3,-6,2.2,38',
   'p2-head-slant': 'X,5,-5,2,42',
   'p2-shoulder': 'Z,7,5,2.4,45',

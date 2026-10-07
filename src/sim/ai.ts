@@ -2218,10 +2218,10 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
  * doesn't chase them). Ours, sized so a field general's look-off is worth
  * a step (~0.7 yd) of the deep safety's position at the release against a
  * QB with the same arm who stares his man down (tools/sim/passidentity.ts:
- * Marino against Winston on the same deep throws; 0.25 of the gap and 60%
+ * Marino against Winston on the same deep throws, 0.76 yd at 0.35 of the gap; 0.25 and 60%
  * off for awareness gave 0.3 yd, a lean nobody would see).
  */
-const EYE_PULL = 0.3;
+const EYE_PULL = 0.35;
 const EYE_LEAN = 3;
 const EYE_LEAN_MAN = 2;
 const EYE_AWARE = 0.4;
