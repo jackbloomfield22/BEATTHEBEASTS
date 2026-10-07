@@ -37,8 +37,18 @@ def _mass_region(p: Vector) -> float:
     return max(torso * near_axis, legs, arms, neck)
 
 
-def heavy(p: Vector, n: Vector) -> Vector:
-    return n * (0.030 * _mass_region(p))
+def heavy(p: Vector, n: Vector, part: int = SKIN) -> Vector:
+    d = n * (0.030 * _mass_region(p))
+    if PADS_V != "v1" and part == JERSEY:
+        # Round two: the pads' front and back plates are a hard shell, and
+        # the body under them is culled (build_character.covered), so they
+        # needn't grow with the man's mass the way skin does: pushed out
+        # 3-4 cm on a lineman they ballooned in profile. The plates over
+        # the chest and back (front- and back-facing normals, above the
+        # chest line, away from the collar) take a third of it.
+        plate = smoothstep(1.30, 1.42, p.z) * abs(n.y) * smoothstep(0.13, 0.17, math.hypot(p.x, p.y - 0.012))
+        d *= 1.0 - (2.0 / 3.0) * plate
+    return d
 
 
 def lean(p: Vector, n: Vector) -> Vector:
@@ -128,4 +138,4 @@ def thighs(p: Vector, n: Vector, part: int = SKIN) -> Vector:
 
 SHAPES = {"heavy": heavy, "lean": lean, "belly": belly, "pads": pads, "neck": neck, "waist": waist, "calves": calves, "arms": arms, "thighs": thighs}
 # The variety shapes read the part id (the frame shapes apply to everything).
-PART_AWARE = {"pads", "neck", "waist", "calves", "arms", "thighs"}
+PART_AWARE = {"heavy", "pads", "neck", "waist", "calves", "arms", "thighs"}

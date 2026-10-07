@@ -190,6 +190,8 @@ uniform vec3 uSole;
 // 1 a whole game spent on the ground. Player.updateWear raises it each time
 // he goes down.
 uniform vec4 uWear;
+uniform float uKitKnee;
+uniform float uKitRange;
 varying float vPart;
 varying vec3 vRest;
 int playerPart() { return int(floor(vPart + 0.001)); }
@@ -245,6 +247,20 @@ vec3 stain(vec3 c, vec3 p, float t, inout float rough) {
   float g = smoothstep(0.45, 0.75, pNoise(p * vec3(8.0, 30.0, 8.0) + 7.0));
   rough = mix(rough, 0.92, cover);
   return mix(c, mix(SOIL, TURF, g * 0.8), cover * 0.78);
+}
+// Game pants (round two): stretch fabric over thigh and knee pads, smooth
+// as plastic until now. Soft creases bunch round the back of the knee and
+// the front of the hip, a little drape down the thigh; faded out with the
+// pixel footprint so they can't shimmer at broadcast distance.
+float pantsHeight(vec3 p, float fp) {
+  float knee = exp(-pow((p.y - 0.53) / 0.07, 2.0)) * (0.35 + 0.65 * smoothstep(-0.02, 0.06, -p.z));
+  float hip = exp(-pow((p.y - 0.97) / 0.07, 2.0)) * smoothstep(0.0, 0.08, p.z);
+  float n1 = pNoise(vec3(p.x * 30.0, p.y * 85.0, p.z * 30.0));
+  float n2 = pNoise(vec3(p.x * 22.0, p.y * 9.0, p.z * 22.0) + 3.0);
+  float crease = 1.0 - abs(2.0 * n1 - 1.0);
+  float drape = 1.0 - abs(2.0 * n2 - 1.0);
+  float h = 0.0018 * crease * crease * (knee + hip * 0.8) + 0.0009 * drape * drape * smoothstep(0.55, 0.7, p.y) * (1.0 - smoothstep(1.0, 1.08, p.y));
+  return h * (1.0 - smoothstep(0.0012, 0.003, fp));
 }
 // Ribbed sock knit: a height field around the leg (rest pose, the shin's
 // axis near |x| 0.11), faded out before it can shimmer.
@@ -397,6 +413,8 @@ vec3 playerAlbedo(int part, vec3 p, bool front, out float stripe, out float roug
     float hem = step(0.21, abs(p.x)) * smoothstep(${(OFFICIAL_SLEEVE_END - 0.07).toFixed(3)}, ${(OFFICIAL_SLEEVE_END - 0.065).toFixed(3)}, st);
     c = mix(c, uTrim, max(collar, hem));
   } else if (part == ${PART.pants}) {
+    // The creases' valleys a little darker (pantsHeight; the bump does the rest).
+    c *= 1.0 + (pantsHeight(p, length(fwidth(p))) - 0.0012) * 40.0;
     float side = step(0.12, abs(p.x)) * (1.0 - smoothstep(0.011, 0.015, abs(p.z + 0.005))) * step(p.y, 1.05);
     c = mix(c, uPantsStripe, side);
     // The belt in the jersey's colour at the waistband (the pants top is at
@@ -415,6 +433,21 @@ vec3 playerAlbedo(int part, vec3 p, bool front, out float stripe, out float roug
   return c;
 }
 `;
+
+/**
+ * The kit's highlight knee (round two, docs/characters/CHARACTERS2.md),
+ * shared by every player material and set each frame from the lighting
+ * (Stage.tsx: a share of the active bloom threshold; 0 turns it off, as in
+ * the Lab). A white kit facing the golden-hour sun is ~12x brighter than
+ * the grazing-lit turf, so it rode far over the bloom threshold and glowed
+ * with a halo, and every white sat on the tone curve's shoulder (display
+ * 200-235 in every preset: the folds and shading had nowhere to go). Gear
+ * radiance above uKitKnee rolls off toward uKitKnee + uKitRange, about the
+ * threshold: a broadcast camera's knee, on the subject only.
+ */
+export const PLAYER_LIGHT = { uKitKnee: { value: 0 }, uKitRange: { value: 1 } };
+export const KIT_KNEE = 0.55; // of the bloom threshold
+export const KIT_RANGE = 0.55; // of it: the brightest sunlit white tops out at ~1.1x the threshold (a faint bloom, no halo)
 
 export interface PlayerLook {
   kit: Kit;
@@ -472,7 +505,7 @@ export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMateri
   return patchMaterial(
     mat,
     (shader) => {
-      Object.assign(shader.uniforms, uniforms);
+      Object.assign(shader.uniforms, uniforms, PLAYER_LIGHT);
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>\nattribute vec2 aPart;\nvarying float vPart;\nvarying vec3 vRest;\nuniform float uPartShow[${N}];`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>\nvPart = aPart.x * ${PART_SCALE.toFixed(1)};\nvRest = position;`)
@@ -504,11 +537,12 @@ export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMateri
         .replace(
           '#include <normal_fragment_maps>',
           `#include <normal_fragment_maps>
-          if (pPart == ${PART.skin} || pPart == ${PART.jersey} || pPart == ${PART.sock}) {
+          if (pPart == ${PART.skin} || pPart == ${PART.jersey} || pPart == ${PART.sock} || pPart == ${PART.pants}) {
             // Relief as a bump from a rest-pose height field: muscles on
-            // skin, the knit and its folds on the jersey, the sock's ribs.
+            // skin, the knit and its folds on the jersey, the sock's ribs,
+            // the creases in the pants.
             float fpx = length(fwidth(vRest));
-            float mh = pPart == ${PART.skin} ? muscleHeight(vRest) : pPart == ${PART.jersey} ? fabricHeight(vRest, fpx) : sockHeight(vRest, fpx);
+            float mh = pPart == ${PART.skin} ? muscleHeight(vRest) : pPart == ${PART.jersey} ? fabricHeight(vRest, fpx) : pPart == ${PART.pants} ? pantsHeight(vRest, fpx) : sockHeight(vRest, fpx);
             vec3 dpx = dFdx(vViewPosition), dpy = dFdy(vViewPosition);
             float dhx = dFdx(mh), dhy = dFdy(mh);
             vec3 r1 = cross(dpy, normal), r2 = cross(normal, dpx);
@@ -529,6 +563,18 @@ export function createPlayerMaterial(look: PlayerLook): THREE.MeshStandardMateri
           }`,
         )
         .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = uPartMetal[pPart];')
+        .replace(
+          '#include <opaque_fragment>',
+          `if (uKitKnee > 0.0 && pPart != ${PART.skin} && gl_FrontFacing && pStripe < 0.5) {
+            // The kit's highlight knee (PLAYER_LIGHT).
+            float kl = dot(outgoingLight, vec3(0.2126, 0.7152, 0.0722));
+            if (kl > uKitKnee) {
+              float kx = kl - uKitKnee;
+              outgoingLight *= (uKitKnee + kx / (1.0 + kx / uKitRange)) / kl;
+            }
+          }
+          #include <opaque_fragment>`,
+        )
         .replace(
           '#include <emissivemap_fragment>',
           `#include <emissivemap_fragment>

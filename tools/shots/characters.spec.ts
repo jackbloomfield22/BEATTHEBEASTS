@@ -1,5 +1,5 @@
 import { test, type Page } from '@playwright/test';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 
 // The character pass (docs/characters/CHARACTERS.md): the players at the
 // distances a viewer sees them. The Animation Lab (studio light) close up
@@ -94,7 +94,10 @@ for (const lighting of ['golden', 'night']) {
 }
 stadium.push({ name: 'stadium-huddle-golden-wear', q: 'lineup&noui&wear=0.6&cam=-2.6,1.75,-5.6,0.2,1.0,-10.5,42&lighting=golden&quality=high' });
 
-const want = (group: string, name: string) => (!ONLY || ONLY === group) && (!GREP || name.includes(GREP));
+// BTB_CHARS_RESUME=1 skips shots already in the folder (a run cut off part-way).
+const RESUME = !!process.env.BTB_CHARS_RESUME;
+const done = (name: string) => RESUME && (existsSync(`${DIR}/${name}.${EXT}`) || existsSync(`${DIR}/${name}.json`));
+const want = (group: string, name: string) => (!ONLY || ONLY === group) && (!GREP || GREP.split("|").some((g) => name.includes(g))) && !done(name);
 
 async function stadiumReady(page: Page, q: string): Promise<void> {
   await page.goto(`/?screen=main&shot=menu&t=0&${q}`);
