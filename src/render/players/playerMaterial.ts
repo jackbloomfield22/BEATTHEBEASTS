@@ -302,13 +302,16 @@ vec3 playerAlbedo(int part, vec3 p, bool front, out float stripe, out float roug
     c = mix(c, uTrim, s1 * step(0.5, uSockStripes) + s2 * step(1.5, uSockStripes));
     c = stain(c, p, uWear.x * 0.7 * smoothstep(-0.02, 0.05, p.z), rough);
   } else if (part == ${PART.cleat}) {
-    // Two-tone: the sole and its welt line, the laces down the instep.
-    float sole = 1.0 - smoothstep(0.019, 0.021, p.y);
-    float welt = smoothstep(0.021, 0.022, p.y) * (1.0 - smoothstep(0.025, 0.026, p.y));
+    // Two-tone: the outsole plate (its top at 1.6 cm, gear.SOLE_TOP; round
+    // two made it real geometry with a lip and studs), a welt line just
+    // above it, the laces down the instep. The studs a shade darker.
+    float sole = 1.0 - smoothstep(0.0158, 0.0168, p.y);
+    float welt = smoothstep(0.0168, 0.0175, p.y) * (1.0 - smoothstep(0.0195, 0.0205, p.y));
     float lx = abs(abs(p.x) - 0.116);
     float lace = (1.0 - smoothstep(0.009, 0.011, lx)) * smoothstep(-0.005, 0.0, p.z) * (1.0 - smoothstep(0.1, 0.105, p.z)) * step(0.058 - 0.2 * p.z, p.y) * step(0.5, fract(p.z / 0.0125));
     c = mix(c, uSole, max(sole, lace * 0.85));
     c *= 1.0 - 0.45 * welt;
+    c *= 1.0 - 0.4 * (1.0 - smoothstep(0.0015, 0.0025, p.y));
     rough = mix(rough, 0.7, sole);
     c = stain(c, p, uWear.x * 0.8 * (1.0 - smoothstep(0.03, 0.07, p.y)), rough);
   } else if (part == ${PART.glove}) {

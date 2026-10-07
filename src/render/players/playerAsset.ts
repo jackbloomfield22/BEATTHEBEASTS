@@ -11,7 +11,7 @@ import { OFFICIAL_KIT, REFEREE_KIT } from './kits';
 /** Bones whose rest position variety.ts scales: upperarm (shoulder width), forearm and hand (arm length). */
 const PROPORTION_BONES = ['upperarm_l', 'upperarm_r', 'forearm_l', 'forearm_r', 'hand_l', 'hand_r'];
 /** The variety shapes (tools/blender/lib/shapes.py) at rest, for a body with no Variety. */
-const NO_VARIETY = { pads: 0, neck: 0, waist: 0, calves: 0, arms: 0 };
+const NO_VARIETY = { pads: 0, neck: 0, waist: 0, calves: 0, arms: 0, thighs: 0 };
 /** The reach correctives start off (the exporter's default weight is 1); updateReach drives them on the visible LOD. */
 const NO_REACH = { reach_l: 0, reach_r: 0 };
 
@@ -153,6 +153,21 @@ export function loadPlayerAsset(url = PLAYER_URL): Promise<PlayerAsset> {
 const SHADOW_ONLY = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
 
 /**
+ * How far the shadow proxy (the Low LOD) is drawn inside its own surface in
+ * the shadow map, m (round two). The Low LOD's surface strays up to ~1 cm
+ * outside the High or Medium LOD drawn on screen, and where it did it
+ * shadowed the visible mesh from inside: acne and a lit, stair-stepped patch
+ * on the inner thigh at the sprint (the "flat patch behind the knee" in the
+ * Lab, round one's open item 3). Inset, a limb still shadows the next.
+ */
+export const SHADOW_INSET = 0.012;
+const PROXY_DEPTH = new THREE.MeshDepthMaterial();
+PROXY_DEPTH.onBeforeCompile = (shader) => {
+  shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\ntransformed -= normal * ${SHADOW_INSET.toFixed(4)};`);
+};
+PROXY_DEPTH.customProgramCacheKey = () => 'player-shadow-inset';
+
+/**
  * Which body the asset's meshes dress: a player (player_lod<i>: pads,
  * helmet, facemasks) or an official (official_lod<i>: striped shirt,
  * cap, long pants; tools/blender/build_character.py). Same skeleton and
@@ -253,6 +268,7 @@ export class Player {
     this.shadowProxy.morphTargetDictionary = low.morphTargetDictionary;
     this.shadowProxy.frustumCulled = false;
     this.shadowProxy.castShadow = true;
+    this.shadowProxy.customDepthMaterial = PROXY_DEPTH;
     this.shadowProxy.receiveShadow = false;
     this.shadowProxy.renderOrder = -1;
     low.parent!.add(this.shadowProxy);

@@ -38,6 +38,8 @@ FOLLOW = {
     "shoulder_close_back": ("spine_04", (0.75, 0.75, 0.35), 50),
     # Close behind the left knee, and on the left elbow from outside.
     "knee_back": ("calf_l", (0.45, 0.8, 0.1), 50),
+    # The Lab's lab-knee-back-sprint camera, about.
+    "lab_knee": ("pelvis", (0.9, 0.9, -0.35), 40),
     "elbow": ("forearm_l", (0.75, -0.25, 0.1), 50),
     # Side on, the hips and knees.
     "hip": ("pelvis", (2.0, -0.2, -0.15), 45),

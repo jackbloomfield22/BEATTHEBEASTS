@@ -4,13 +4,21 @@
 // Height scales the whole body. Weight is judged relative to height: body
 // mass index at the base is 98 / 1.88² ≈ 27.7. The roster runs from ~23
 // (a 5'9" 170 lb corner) to ~41 (a 6'3" 340 lb nose tackle), so:
-//   BMI ≤ 27.7 → `lean` rises to 1 at BMI 23;
-//   BMI ≥ 27.7 → `heavy` rises to 1 at BMI 36, and `belly` starts at BMI 32
-//   (the lineman gut) and reaches 1 at BMI 41.
+//   BMI ≤ 27.7 → `lean` rises to 1 at BMI 24.5;
+//   BMI ≥ 27.7 → `heavy` rises to 1 at BMI 36 and on to HEAVY_MAX at BMI
+//   40, and `belly` starts at BMI 32 (the lineman gut) and reaches 1 at 41.
+// Round two (docs/characters/CHARACTERS2.md): receivers and corners sit at
+// BMI 25-27, so with lean full only at 23 they drew within a few
+// millimetres of the base body (a 5'9" 175 lb slot was lean 0.4); and
+// every lineman over BMI 36 (most of them) drew the same heavy 1. Lean is
+// full at 24.5 and heavy keeps growing to 1.3, so a 6'6" 320 lb tackle and
+// a 5'9" 175 lb slot read as different men at broadcast distance.
 // Pure function; tested in tests/body-shape.test.ts.
 
 export const BASE_HEIGHT = 1.88;
 export const BASE_BMI = 98 / (1.88 * 1.88);
+export const LEAN_FULL_BMI = 24.5;
+export const HEAVY_MAX = 1.3;
 
 export interface BodyShape {
   scale: number;
@@ -25,8 +33,8 @@ export function bodyShape(heightM: number, weightKg: number): BodyShape {
   const bmi = weightKg / (heightM * heightM);
   return {
     scale: heightM / BASE_HEIGHT,
-    lean: clamp01((BASE_BMI - bmi) / (BASE_BMI - 23)),
-    heavy: clamp01((bmi - BASE_BMI) / (36 - BASE_BMI)),
+    lean: clamp01((BASE_BMI - bmi) / (BASE_BMI - LEAN_FULL_BMI)),
+    heavy: Math.min(HEAVY_MAX, Math.max(0, bmi < 36 ? (bmi - BASE_BMI) / (36 - BASE_BMI) : 1 + ((bmi - 36) / (40 - 36)) * (HEAVY_MAX - 1))),
     belly: clamp01((bmi - 32) / (41 - 32)),
   };
 }

@@ -23,8 +23,8 @@ player.glb that no clip keys:
   sits on the elbow with the forearm's rest orientation and turns by HALF
   of the forearm's swing (its rotation off its rest axis, the twist about
   its length removed: the forearm twist bone carries that). Part of the
-  elbow's blend band moves onto it (ELBOW_STRENGTH: a 50/50 vertex becomes
-  half helper), with the band itself widened first
+  elbow's blend band moves onto it (ELBOW_STRENGTH 0.4: a 50/50 vertex becomes
+  40% helper), with the band itself widened first
   (build_character.near_elbow).
 
 The runtime drives both every frame after the pose
@@ -52,7 +52,7 @@ HELPERS = {
 }
 # Mirrored in playerAsset.ts (HELPER_*); a test checks they agree.
 ELBOW_SHARE = 0.5
-ELBOW_STRENGTH = float(os.environ.get("BTB_ELBOW_STRENGTH", "0.5"))
+ELBOW_STRENGTH = float(os.environ.get("BTB_ELBOW_STRENGTH", "0.4"))
 EPAULET_FROM = float(os.environ.get("BTB_EPAULET_FROM", "95"))
 EPAULET_TO = float(os.environ.get("BTB_EPAULET_TO", "165"))
 EPAULET_MAX = float(os.environ.get("BTB_EPAULET_MAX", "0.6"))

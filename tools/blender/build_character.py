@@ -42,10 +42,14 @@ MANIFEST = os.path.splitext(OUT)[0] + ".json"
 # player's); the Medium LOD too; the Low LOD one generic mask and none of the
 # small extras (visor, strap, towel), which don't read at that distance.
 BUDGET = [
-    {"body": 7000, "jersey": 5000, "pants": 3000, "helmet": 3000, "trim": (0.012, 6), "clips": 12, "cleats": 1200, "glove": 900, "collar": 400, "mask": (6, 3), "extras": True},
-    {"body": 3000, "jersey": 2100, "pants": 1300, "helmet": 1300, "trim": (0.02, 5), "clips": 8, "cleats": 500, "glove": 260, "collar": 160, "mask": (4, 3), "extras": True},
-    {"body": 1000, "jersey": 700, "pants": 450, "helmet": 400, "trim": (0.045, 3), "clips": 0, "cleats": 200, "glove": 70, "collar": 48, "mask": (3, 2), "extras": False},
+    {"body": 7000, "jersey": 5000, "pants": 3000, "helmet": 3000, "trim": (0.012, 6), "clips": 12, "cleats": 1200, "sole": (32, 8), "glove": 900, "collar": 400, "mask": (6, 3), "extras": True},
+    {"body": 3000, "jersey": 2100, "pants": 1300, "helmet": 1300, "trim": (0.02, 5), "clips": 8, "cleats": 500, "sole": (20, 5), "glove": 260, "collar": 160, "mask": (4, 3), "extras": True},
+    {"body": 1000, "jersey": 700, "pants": 450, "helmet": 400, "trim": (0.045, 3), "clips": 0, "cleats": 200, "sole": (12, 0), "glove": 70, "collar": 48, "mask": (3, 2), "extras": False},
 ]
+for _spec in filter(None, os.environ.get("BTB_BUDGET", "").split(",")):
+    # Experiments: BTB_BUDGET=body2=1100,jersey2=800 (part + LOD = triangles).
+    _k, _n = _spec.split("=")
+    BUDGET[int(_k[-1])][_k[:-1]] = int(_n)
 HAND_BONES = ("forearm", "forearm_twist", "hand", "thumb_01", "thumb_02", "thumb_03", "index_01", "index_02", "index_03", "fingers_01", "fingers_02", "fingers_03")
 
 
@@ -64,6 +68,11 @@ def covered(co: Vector) -> bool:
     # (0.083, the character pass: at 0.092 flaps of trapezius skin stood
     # outside the collar band's ring, 0.088 x 0.081, as a torn edge.)
     if co.z > 1.44 and math.hypot(co.x, co.y - 0.02) < 0.083:
+        return False
+    # Round two: the trapezius slopes above the collar are kept too and
+    # pulled into the neck column (shrink_neck). Cut at the collar's top
+    # (1.62 m) they left a torn flap standing beside the neck.
+    if co.z > 1.56 and math.hypot(co.x, co.y - 0.02) < 0.13:
         return False
     # Inside the glove cuff (gear.glove: wrist - 4.5 cm .. + 2 cm): the
     # forearm poked through it when the wrist bent back (QB gun). Keep 1 cm
@@ -86,6 +95,58 @@ def covered(co: Vector) -> bool:
                     return False
         return abs(co.x) < 0.33  # torso and upper arm, under the jersey
     return False
+
+
+# The neck column the skin is held inside between the collar and the skull
+# (round two): an ellipse round the neck's axis (body.neck: 0.080 x 0.074 at
+# its base), the collar band's inner ring less a few millimetres, widening
+# from NECK_HOLD_Z[1] to the skull base so the neck still flares into the head.
+NECK_HOLD = (0.079, 0.073, 0.02)  # half-width, half-depth, y of the axis (m)
+NECK_HOLD_Z = (1.50, 1.60, 1.70)  # from, held to here, free by here
+
+
+def shrink_neck(ob: bpy.types.Object) -> int:
+    """Pull the kept skin between the collar and the skull base inside the
+    neck column: the trapezius slopes rise out to 0.13 m from the neck's axis
+    and would stand outside the collar band (0.090 x 0.083). Returns how
+    many vertices moved."""
+    from lib.geo import smoothstep as ss
+
+    a, b, y0 = NECK_HOLD
+    n = 0
+    for v in ob.data.vertices:
+        z = v.co.z
+        if not NECK_HOLD_Z[0] < z < NECK_HOLD_Z[2]:
+            continue
+        dx, dy = v.co.x, v.co.y - y0
+        if dy < 0 and z > 1.62:
+            continue  # the throat and the jaw: never flaps, and the face starts here
+        r = math.hypot(dx / a, dy / b)
+        # Held to the ellipse up to 1.60, then the limit opens up to 1.35x by
+        # the skull base (and stops applying there).
+        lim = 1.0 + 0.35 * ss(NECK_HOLD_Z[1], NECK_HOLD_Z[2], z)
+        k = 1.0 - ss(NECK_HOLD_Z[2] - 0.02, NECK_HOLD_Z[2], z)
+        if r <= lim or k <= 0:
+            continue
+        s = 1.0 + (lim / r - 1.0) * k
+        v.co.x, v.co.y = dx * s, y0 + dy * s
+        n += 1
+    return n
+
+
+def shrink_under_hem(ob: bpy.types.Object, depth: float = 0.004) -> int:
+    """Sink the leg skin up inside the pants hem a few millimetres (round
+    two): it overlaps 7 cm so no gap opens at the sprint, and where it
+    stood within a centimetre of the fabric it z-fought through the hem."""
+    from lib.geo import smoothstep as ss
+
+    z0 = gear.PANTS_HEM_Z
+    n = 0
+    for v in ob.data.vertices:
+        if z0 - 0.005 < v.co.z < z0 + 0.08 and abs(v.co.x) < 0.24:
+            v.co -= v.normal * (depth * ss(z0 - 0.005, z0 + 0.015, v.co.z))
+            n += 1
+    return n
 
 
 def covered_official(co: Vector) -> bool:
@@ -457,6 +518,8 @@ def main() -> None:
 
     visible = duplicate(full_body, "body_visible")
     delete_verts(visible, covered)
+    shrink_neck(visible)  # round two: the trapezius slopes inside the collar
+    shrink_under_hem(visible)  # round two: the leg skin clear of the pants hem
 
     pieces = {
         "jersey": gear.jersey(),
@@ -488,6 +551,9 @@ def main() -> None:
         for name, pid in (("jersey", "jersey"), ("pants", "pants"), ("cleats", "cleat")):
             p = decimate_to(duplicate(pieces[name], f"{name}_{i}"), b[name])
             finish[name](p)
+            if name == "cleats":
+                # Round two: the outsole plate and studs (gear.cleat_soles).
+                p = join([p, gear.cleat_soles(*b["sole"])], f"cleats_{i}")
             tag(p, lambda co, pid=pid: gear.PARTS[pid])
             transfer_weights(src, p, rig)
             if name == "jersey":
