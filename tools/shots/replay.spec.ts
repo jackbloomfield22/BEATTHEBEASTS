@@ -10,7 +10,7 @@ import { test, type Page } from '@playwright/test';
 // play of the game. Stills into docs/m7/shots; with BTB_REPLAY_VIDEO=1 the
 // touchdown's replay is recorded instead (docs/m7/replay-quick.mp4): it
 // plays at 1x through the moment, Shift is held for a beat, then Space
-// skips it. Every drawn frame is 1/30 s of game time (?video=30), so the
+// skips it just short of its end. Every drawn frame is 1/30 s of game time (?video=30), so the
 // replay runs at its own speeds however slowly this machine draws.
 //   BTB_REPLAY=1 BTB_PORT=5391 npx playwright test -c tools/shots/playwright.config.ts
 // BTB_REPLAY_ONLY=td,hit,results limits the parts; BTB_REPLAY_CLIP picks the
@@ -131,15 +131,15 @@ test('replay · a touchdown: the offer, the replay angle through the moment, hel
     // 1x from the open (the wipe), through the moment and its slow motion, to 0.4 s after it.
     // (A play with nothing flagged: to a second before it would close by itself.)
     await until(page, (w) => { const p = w.__btbReplay.player; return !p || (!p.seeking && p.tick >= (p.key ? p.key.tick + 24 : w.__btbReplay.stopAt - 60)); }, 600, shoot);
-    // Shift held for 0.6 s: 3x.
+    // Shift held for 0.27 s: 3x (24 ticks of play; held longer it reaches its own end before the skip).
     await page.keyboard.down('Shift');
-    for (let k = 0; k < 18; k++) {
+    for (let k = 0; k < 8; k++) {
       await frame(page);
       await shoot();
     }
     await page.keyboard.up('Shift');
-    // A beat at 1x, then Space skips it: the hand-back, and a second of the card.
-    for (let k = 0; k < 8; k++) {
+    // A beat at 1x, then Space skips it (just short of its end): the hand-back, and a second of the card.
+    for (let k = 0; k < 6; k++) {
       await frame(page);
       await shoot();
     }
