@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { carrierPace, GOAL_X, manOf, pullers, TICK } from '@/sim';
+import { carrierPace, GOAL_X, manOf, pullers, TAP_MAX, TICK } from '@/sim';
 import type { PlayerAnimator } from '@/anim/animator';
 import type { Ragdoll } from '@/anim/ragdoll';
 import type { Agent, PlayState, SimEvent } from '@/sim';
@@ -1019,8 +1019,10 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // its release frame on the sim's release, slowing at the top (the ball
   // cocked behind his ear) while the key is held past his own release.
   const w = s.windup;
-  // (A key pressed on the drop throws on the plant: the arm starts a release's length before it, at its own pace.)
-  if (i === s.qb && w && b.throwAt !== w.from && (w.held || w.at - simT <= (eventAt(b, throwClip(b, s, a, sp * YARD >= 1.6), 'release') ?? RELEASE_FRAME) + TICK)) {
+  // The arm starts a release's length before the ball goes, at its own pace (a key pressed on the drop
+  // throws on the plant), or at once on a hold past a tap (the touch: it comes up and waits at the top).
+  const touchHold = !!w && w.held && s.hold.ticks * TICK > (s.setup.tapMax ?? TAP_MAX);
+  if (i === s.qb && w && b.throwAt !== w.from && (touchHold || w.at - simT <= (eventAt(b, throwClip(b, s, a, sp * YARD >= 1.6), 'release') ?? RELEASE_FRAME) + TICK)) {
     b.throwAt = w.from;
     const running = sp * YARD >= 1.6;
     const clip = throwClip(b, s, a, running);
@@ -1041,7 +1043,10 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
       if (tr && tr.name === clip) anim.retime(clip, { rate });
       else anim.retimeOverlay(clip, rate);
     }
-  } else if (i === s.qb && !w && b.throwClip) {
+  }
+  // The key's release answered (passing round 3: the arm starts on the press, so the release shows as the throw going, no longer held).
+  if (i === s.qb && w && !w.held) latency.respond('throwRelease');
+  if (i === s.qb && !w && b.throwClip) {
     // Out of his hand: the follow-through at the clip's own pace.
     const clip = b.throwClip;
     b.throwClip = null;

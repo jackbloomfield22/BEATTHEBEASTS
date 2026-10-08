@@ -294,11 +294,33 @@ export function findsBallAt(s: PlayState, a: Agent): number {
  * straight legs while he ran it round, so every throw to a man on a bend
  * landed ~1 yd off him whoever threw it or ran it.
  */
-export function timingSigma(s: PlayState, rec: Agent, air: number, speed: number, horizon: number): number {
+export function timingSigma(s: PlayState, rec: Agent, air: number, speed: number, horizon: number, acc: number): number {
   const rr = Math.max(air < 12 ? rec.fx.a('shortRoute') : rec.fx.a('deepRoute'), rec.fx.a('routeRunning'));
   const chem = Math.max(0, Math.min(1, s.setup.chem?.[rec.slot as OffSlot] ?? 0));
-  return TIMING * (1 - TIMING_RR * rr) * (1 - CHEM_TIMING * chem) * speed * horizon * Math.min(1, horizon / TIMING_H);
+  return TIMING * timingQb(acc, air) * (1 - TIMING_RR * rr) * (1 - CHEM_TIMING * chem) * speed * horizon * Math.min(1, horizon / TIMING_H);
 }
+/**
+ * The QB's share of the timing (passing round 3): on a ball down the field,
+ * how well he puts it where his man will be, by his accuracy for the throw's
+ * depth. Round two's timing was the receiver's and the chemistry's alone, so
+ * Joe Montana's deep ball missed its man along his run by as much as
+ * anyone's: ~2.7 yd at 1σ on a 1.7-s go to Jerry Rice, four times his cone,
+ * and the player watched a great passer's deep balls land a couple of yards
+ * behind or past his man (tools/sim/passing3.ts). An accurate passer leads
+ * him: × TIMING_QB_TOP at 99, 1 at TIMING_QB_REF, growing past it for a
+ * scattershot arm. It comes in with the depth (none by TIMING_QB_FROM air
+ * yards, all of it by TIMING_QB_FULL): on a short ball the timing is the
+ * route's (a few tenths of a yard either way), and the AI pass game's
+ * completion, held up by the short game, stays in its band. Ours.
+ */
+export function timingQb(acc: number, air: number): number {
+  const k = Math.max(0, Math.min(1, (air - TIMING_QB_FROM) / (TIMING_QB_FULL - TIMING_QB_FROM)));
+  return 1 + (TIMING_QB_TOP - 1 + (1 - TIMING_QB_TOP) * Math.max(0, (99 - acc) / (99 - TIMING_QB_REF))) * k;
+}
+const TIMING_QB_TOP = 0.6;
+const TIMING_QB_REF = 85;
+const TIMING_QB_FROM = 8;
+const TIMING_QB_FULL = 20;
 /**
  * Calibrated on the AI pass game (tools/sim/outcomes.ts, 20 a cell): with
  * the lead running his real path and no timing, the 80s 49ers completed
@@ -429,9 +451,12 @@ function leadFor(rec: Agent, hang: (at: V2) => number, from: V2): { spot: V2; rv
  * the air (the owner: "a comeback comes back to the ball").
  */
 export function comeBackTo(rec: Agent, at: V2, settled: number, from: V2): V2 {
-  if (settled <= COME_SET || !rec.route || !comesBack(rec.route)) return at;
+  if (settled <= 0 || !rec.route || !comesBack(rec.route)) return at;
+  // Sat down already, he takes a beat (COME_SET) to go; still on his way into the settle, he carries on through it.
+  const sat = rec.route.idx >= rec.route.pts.length;
   const rr = Math.max(rec.fx.a('shortRoute'), rec.fx.a('routeRunning'));
-  const d = Math.min(COME_MAX * (0.6 + 0.4 * rr), COME_V * (settled - COME_SET));
+  const d = Math.min(COME_MAX * (0.6 + 0.4 * rr), COME_V * Math.max(0, settled - (sat ? COME_SET : 0)));
+  if (d <= 0) return at;
   const dx = from.x - at.x;
   const dy = from.y - at.y;
   const k = Math.sqrt(dx * dx + dy * dy);
@@ -540,7 +565,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   // how close he is to it is how long he's been led for (the flight, and any
   // time he's been running on past his route), his speed, his route running
   // and their chemistry (timingSigma). Along his run: a step early or late.
-  const tSigma = timingSigma(s, rec, air, recSpeed, leadT + offScript);
+  const tSigma = timingSigma(s, rec, air, recSpeed, leadT + offScript, acc);
   const late = gauss(s.rng.throw) * tSigma;
   const ex = gauss(s.rng.throw) * sigma + along * ux + late * rv.x;
   const ey = gauss(s.rng.throw) * sigma + along * uy + late * rv.y;
@@ -641,7 +666,7 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   // (The same moving cost as planThrow, Off Platform included, so the reticle tells the truth.)
   const cone = errorAt20(acc) * coneScale(d) * (1 + (has(qb, 'off-platform') ? 0.5 : 1) * moving * (0.15 + 0.9 * (1 - qb.fx.a('throwOnRun'))));
   // ...and the timing along his run, folded in (the reticle is a circle).
-  const timing = timingSigma(s, rec, air, run.speed, run.T + run.offScript);
+  const timing = timingSigma(s, rec, air, run.speed, run.T + run.offScript, acc);
   return { x, y, sigma: Math.sqrt(cone * cone + timing * timing) };
 }
 

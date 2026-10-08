@@ -47,7 +47,7 @@ import { dropStep, eyesBeforeRead, hitchStep, qbFace } from './pocket';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
 import { DRAWS, HOT_ROUTES, ZONES } from './plays';
 import { dist, len, norm, sub, v2, type V2 } from './vec';
-import { readTag, routePoints, stepRoute } from './ai';
+import { readTag, routePoints } from './ai';
 
 /** The hitch off a dropback (s): a step up into the pocket before the throw (the rhythm of a five-step drop and hitch). */
 const HITCH = 0.3;
@@ -1908,14 +1908,21 @@ function runToBall(s: PlayState, a: Agent): void {
     }
     const qb = s.agents[b.thrower] ?? s.agents[s.qb]!;
     const faceQb = atan2(qb.pos.y - a.pos.y, qb.pos.x - a.pos.x);
-    if (rt.idx < rt.pts.length) {
-      // Into the settle (a ball out on the break), unless it's thrown off it:
-      // well off, or off at all once he's found it in the air (he works to it).
-      if (dist(to, rt.pts[rt.pts.length - 1]!) < (read > 0 ? COME_ADJ : COME_OFF) && stepRoute(a)) return;
-      steer(a, boundaryGovern(a, arrive(a, to, 1, 1), 0.25));
-      return;
-    }
     const need = d / Math.max(left, TICK);
+    if (rt.idx < rt.pts.length) {
+      // On his way into the settle with it in the air (a ball out on the
+      // break): he carries on through the spot to where it meets him, at the
+      // pace that gets him there with it (he doesn't brake to a stop on the
+      // spot first, then come back); well off it, straight to it.
+      if (dist(to, rt.pts[rt.pts.length - 1]!) < COME_OFF && left > 0.1 && d > 0.25) {
+        steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * Math.min(a.fx.vmax, need), y: ((to.y - a.pos.y) / d) * Math.min(a.fx.vmax, need) }, 0.25), { face: faceQb });
+        return;
+      }
+      if (left > 0.1 && d > 0.25) {
+        steer(a, boundaryGovern(a, arrive(a, to, 1, 1), 0.25));
+        return;
+      }
+    }
     if (left > 0.1 && d > 0.25) {
       if (need < COME_V * 0.9) steer(a, { x: 0, y: 0 }, { face: faceQb });
       else steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * Math.min(a.fx.vmax, need), y: ((to.y - a.pos.y) / d) * Math.min(a.fx.vmax, need) }, 0.25), { face: faceQb });
@@ -1979,8 +1986,6 @@ const THROTTLE_ROOM = 1;
 
 /** A ball thrown this far (yd) off a come-back man's settle point he goes to straight off, not through his settle first. Ours: about two strides. */
 const COME_OFF = 2;
-/** ...and once he's found it in the air, this far (yd): half a stride. Ours. */
-const COME_ADJ = 0.5;
 
 /** Defenders who rally to a throw: at most two (round-two feedback: four or five used to arrive at once). */
 const MAX_RALLY = 2;
