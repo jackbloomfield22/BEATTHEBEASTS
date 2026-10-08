@@ -4,7 +4,7 @@ import { trackErrors } from './helpers';
 // M7 touchdown celebrations (Playtest 1 #7): a touchdown in the Practice
 // Field brings up three choices (1/2/3 on the keys), the pick plays on the
 // field, and the result card comes after it. The scripted
-// touchdown is src/game/clips.ts completion-rac; the sim is stepped in the
+// touchdown is src/game/clips.ts's touchdown clip; the sim is stepped in the
 // page to the whistle, then the frames are drawn on demand, each a tenth of
 // a second of game time (?video=10: software rendering draws a frame in
 // seconds here, so a celebration at 60 frames a second would take an hour),
@@ -51,7 +51,7 @@ async function touchdown(page: Page) {
     { timeout: 150_000, polling: 500 },
   );
   await ev(page, async (w) => {
-    const c = (await w.__btbClips()).find((x) => x.id === 'completion-rac')!;
+    const c = (await w.__btbClips()).find((x) => x.id === 'touchdown')!;
     (window as unknown as { __clip: Clip }).__clip = c;
     await w.__btbPractice.callClip(c);
   });
