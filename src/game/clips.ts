@@ -361,6 +361,8 @@ export const PASSING3: Clip[] = [
   { id: 'p3-dig', title: 'Dig', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 93 }) },
   { id: 'p3-curl', title: 'Curl', seed: 1, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 97 }) },
   { id: 'p3-post', title: 'Post', seed: 2, play: 'singleback-pa-post', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 85, hold: 14 }) },
+  // (A second post, seed 4: round three's after recording of seed 2 is batted at the line; this one is caught deep, ~30 yd.)
+  { id: 'p3-post-b', title: 'Post (2)', seed: 4, play: 'singleback-pa-post', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 86, hold: 14 }) },
   { id: 'p3-go', title: 'Go', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: userThrow({ icon: 4, at: 71, hold: 16 }) },
   { id: 'p3-cross', title: 'Crosser', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 115 }) },
   { id: 'p3-comeback', title: 'Comeback', seed: 1, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 117, hot: 'comeback' }) },
