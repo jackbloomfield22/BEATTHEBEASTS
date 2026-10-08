@@ -4,11 +4,12 @@
 //   node tools/run-ts.mjs tools/sim/p3trace.ts p3-slant [every=3]
 import { readFileSync } from 'node:fs';
 import { createPlay, defById, playById, practiceRosters, stepPlay, type SnapshotLike } from '../../src/sim/index.ts';
-import { PASSING3 } from '../../src/game/clips.ts';
+import { PASSING3, userThrow } from '../../src/game/clips.ts';
+import type { RouteName } from '../../src/sim/plays.ts';
 
 const id = process.argv[2] ?? 'p3-slant';
 const every = Number(process.argv[3] ?? 3);
-const c = PASSING3.find((x) => x.id === id)!;
+const c = PASSING3.find((x) => x.id === id) ?? (() => { const [play, icon, at, seed, def, hot] = id.split(':'); return { id, title: id, play: play!, def: def ?? 'cover3', seed: Number(seed ?? 1), los: 30, script: userThrow({ icon: Number(icon), at: Number(at), hot: (hot || undefined) as RouteName | undefined }) }; })();
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const r = practiceRosters(snap);
 const s = createPlay({ seed: c.seed, offense: r.offense, defense: r.defense, play: playById(c.play), def: defById(c.def), los: c.los, toGo: 10, user: true });

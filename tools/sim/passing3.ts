@@ -35,7 +35,7 @@ interface Case {
   /** Hold (ticks): touch. */
   hold?: number;
 }
-const CASES: Case[] = [
+const CASES: Case[] = ([
   { id: 'slant', play: 'doubles-slants', icon: 1, brk: 0 },
   { id: 'out', play: 'doubles-curls', icon: 1, hot: 'out', brk: 0 },
   { id: 'dig', play: 'singleback-drive', icon: 2, brk: 0 },
@@ -44,7 +44,8 @@ const CASES: Case[] = [
   { id: 'go', play: 'trips-four-verts', icon: 4, brk: -1, hold: 16 },
   { id: 'cross', play: 'trips-y-cross', icon: 1, brk: 1 },
   { id: 'comeback', play: 'doubles-curls', icon: 1, hot: 'comeback', brk: 0 },
-].filter((c) => !ONLY || c.id === ONLY);
+  { id: 'flat', play: 'doubles-curls', icon: 3, brk: 1 },
+] as Case[]).filter((c) => !ONLY || c.id === ONLY);
 
 const since = (s: PlayState) => (s.snapT < 0 ? -1 : Math.round((s.t - s.snapT) * 60));
 
@@ -96,6 +97,10 @@ interface Row {
   othersDev: number;
   othersSlow: number;
   catchOff: number;
+  /** The ball's aim against where he'd have been unthrown at the arrival, along his run there (yd; − behind him). */
+  behind: number;
+  /** The meant point (the lead, before any error) against his unthrown path at the arrival, along it. */
+  meantVsBase: number;
   catchEarly: number;
   vCatch: number;
   vAfter: number;
@@ -140,7 +145,7 @@ for (const c of CASES) {
         const Pb = (tick: number, i: number) => base.tr[Math.min(base.tr.length - 1, Math.max(0, tick - 1))]![i]!;
         const ce = s.events.find((e) => e.who?.[0] !== undefined && ['catch', 'drop', 'deflection', 'interception', 'bobble'].includes(e.type));
         // The arrival as planned: the release plus the flight (the throw event doesn't carry T; arrive is overwritten by a bobble).
-        let arrTick = -1;
+        let arrTick: number;
         // Find the planned arrival from the flight: the tick the ball's z first crosses down through the aim's height near the aim.
         const flightT = Number(th.data?.T ?? NaN);
         void flightT;
@@ -196,6 +201,8 @@ for (const c of CASES) {
           dev: d2(atArr, baseArr),
           othersDev: n ? odev / n : NaN,
           othersSlow: n ? oslow / n : NaN,
+          meantVsBase: base.tr.length >= arrTick && sp(baseArr) > 1 ? ((meant.x - baseArr.x) * baseArr.vx + (meant.y - baseArr.y) * baseArr.vy) / sp(baseArr) : NaN,
+          behind: base.tr.length >= arrTick && sp(baseArr) > 1 ? ((aimed.x - baseArr.x) * baseArr.vx + (aimed.y - baseArr.y) * baseArr.vy) / sp(baseArr) : NaN,
           catchOff: catchTick >= 0 ? (ce!.at ? d2(ce!.at, { x: s.ball.pos.x, y: s.ball.pos.y }) : NaN) : NaN,
           catchEarly: catchTick >= 0 ? (arrTick - catchTick) / 60 : NaN,
           vCatch: catchTick >= 0 ? sp(P(catchTick, tgt)) : NaN,
@@ -214,11 +221,15 @@ for (const c of CASES) {
   }
 }
 
+const pct = (R: Row[], f: (x: Row) => boolean) => {
+  const v = R.filter((x) => Number.isFinite(x.behind));
+  return v.length ? `${((v.filter(f).length / v.length) * 100).toFixed(0).padStart(3)}%` : '  -';
+};
 const mean = (xs: number[]) => {
   const v = xs.filter((x) => Number.isFinite(x));
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN;
 };
-console.log('\ncase      when    n  press  rel   brk   T    | lead  run   leadErr along across ball  | v0   vmin  vArr  dev  | oDev oPace | cEarly vC   vAfter | cmp   yds');
+console.log('\ncase      when    n  press  rel   brk   T    | lead  run   leadErr along across ball  | v0   vmin  vArr  dev  | oDev oPace | cEarly vC   vAfter | cmp   yds  | behind>1 ahead>1');
 for (const c of CASES)
   for (const when of ['early', 'onTime', 'late']) {
     const R = rows.filter((x) => x.c.startsWith(c.id + '/') && x.when === when);
@@ -226,6 +237,6 @@ for (const c of CASES)
     const m = (k: keyof Row) => mean(R.map((x) => x[k] as number));
     const cmp = R.filter((x) => x.out === 'catch').length / R.length;
     console.log(
-      `${c.id.padEnd(9)} ${when.padEnd(6)} ${String(R.length).padStart(3)}  ${f2(m('pressT'))} ${f2(m('relT'))} ${f2(m('brkT'))} ${f2(m('T'))} | ${f1(m('lead')).padStart(5)} ${f1(m('leadRun')).padStart(5)} ${f2(m('leadErr')).padStart(6)} ${f2(m('along')).padStart(5)} ${f2(m('across')).padStart(5)} ${f2(m('ballErr')).padStart(5)} | ${f1(m('v0')).padStart(4)} ${f1(m('vmin')).padStart(5)} ${f1(m('vArr')).padStart(5)} ${f1(m('dev')).padStart(4)} | ${f1(m('othersDev')).padStart(4)} ${f2(m('othersSlow')).padStart(5)} | ${f2(m('catchEarly')).padStart(5)} ${f1(m('vCatch')).padStart(4)} ${f1(m('vAfter')).padStart(5)} | ${(cmp * 100).toFixed(0).padStart(3)}% ${f1(m('yds')).padStart(5)}`,
+      `${c.id.padEnd(9)} ${when.padEnd(6)} ${String(R.length).padStart(3)}  ${f2(m('pressT'))} ${f2(m('relT'))} ${f2(m('brkT'))} ${f2(m('T'))} | ${f1(m('lead')).padStart(5)} ${f1(m('leadRun')).padStart(5)} ${f2(m('leadErr')).padStart(6)} ${f2(m('along')).padStart(5)} ${f2(m('across')).padStart(5)} ${f2(m('ballErr')).padStart(5)} | ${f1(m('v0')).padStart(4)} ${f1(m('vmin')).padStart(5)} ${f1(m('vArr')).padStart(5)} ${f1(m('dev')).padStart(4)} | ${f1(m('othersDev')).padStart(4)} ${f2(m('othersSlow')).padStart(5)} | ${f2(m('catchEarly')).padStart(5)} ${f1(m('vCatch')).padStart(4)} ${f1(m('vAfter')).padStart(5)} | ${(cmp * 100).toFixed(0).padStart(3)}% ${f1(m('yds')).padStart(5)} | ${pct(R, (x) => x.behind < -1)} ${pct(R, (x) => x.behind > 1)} | meant-base ${f2(m('meantVsBase'))} aim-base ${f2(m('behind'))}`,
     );
   }

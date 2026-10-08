@@ -406,7 +406,7 @@ function leadFor(rec: Agent, hang: (at: V2) => number, from: V2): { spot: V2; rv
   if (spot !== run.pos) {
     const dx = from.x - run.pos.x;
     const dy = from.y - run.pos.y;
-    const k = Math.hypot(dx, dy) || 1;
+    const k = Math.sqrt(dx * dx + dy * dy) || 1;
     return { spot, rv: { x: dx / k, y: dy / k }, T, speed: len(run.vel), offScript: run.offScript };
   }
   const v = len(run.vel) > 0.5 ? run.vel : rec.vel;
@@ -429,14 +429,24 @@ function leadFor(rec: Agent, hang: (at: V2) => number, from: V2): { spot: V2; rv
  * the air (the owner: "a comeback comes back to the ball").
  */
 export function comeBackTo(rec: Agent, at: V2, settled: number, from: V2): V2 {
-  if (settled <= COME_SET) return at;
+  if (settled <= COME_SET || !rec.route || !comesBack(rec.route)) return at;
   const rr = Math.max(rec.fx.a('shortRoute'), rec.fx.a('routeRunning'));
   const d = Math.min(COME_MAX * (0.6 + 0.4 * rr), COME_V * (settled - COME_SET));
   const dx = from.x - at.x;
   const dy = from.y - at.y;
-  const k = Math.hypot(dx, dy);
+  const k = Math.sqrt(dx * dx + dy * dy);
   if (k < 3 * d) return at;
   return { x: at.x + (dx / k) * d, y: at.y + (dy / k) * d };
+}
+/**
+ * A settle route whose last leg turns back toward the line (the curl, the
+ * comeback, the hitch): the ones coached to come back to the ball. A flat,
+ * a spot or a checkdown settles on its way out, facing the QB, and the ball
+ * comes to him there (coming back off those is turning round).
+ */
+export function comesBack(rt: { pts: V2[]; sit: boolean[] }): boolean {
+  const n = rt.pts.length;
+  return n >= 2 && rt.sit[n - 1] === true && rt.pts[n - 1]!.x < rt.pts[n - 2]!.x - 0.5;
 }
 /** The pace (yd/s) he comes back to the ball at: two hard steps, about half his speed. Ours, from the broadcast's curls and comebacks. */
 export const COME_V = 4;

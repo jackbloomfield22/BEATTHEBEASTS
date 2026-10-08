@@ -38,7 +38,7 @@ import { createFootball } from './football';
 import { ballWorldVel, createBallFlight, heldAt, placeFlight, resetFlight } from './ballFlight';
 import { createFieldMarks } from './fieldMarks';
 import { frameEvents } from './frameEvents';
-import { ballInHands, catchMagnet, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
+import { ballInHands, catchMagnet, catchReach, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
 import { Officials } from './officials';
 import { kickView } from './kickView';
 
@@ -161,7 +161,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: Pl
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null };
+    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, throwClip: null, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null };
   });
 }
 
@@ -445,6 +445,8 @@ export function GameScene() {
       b.lastYaw = yaw;
       b.lastSpeed = d.speed;
       b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean });
+      // The hands to the ball on a catch (passing round 3), over the clip's own reach.
+      catchReach(b, i, s);
       b.ragdoll.update(animDt);
       // A body hitting the turf hard kicks up dust (a big hit's landing).
       const land = b.ragdoll.landing;
@@ -537,7 +539,8 @@ export function GameScene() {
     const cur = r.cur;
     const rect = gl.domElement.getBoundingClientRect();
     const pocket = cur.phase === 'presnap' || cur.phase === 'snap' || cur.phase === 'dropback' || cur.phase === 'pocket';
-    const thrown = s.windup !== null;
+    // (A windup the player's still holding for touch keeps the icons and the ring up: the motion's started, the throw isn't chosen yet.)
+    const thrown = s.windup !== null && !s.windup.held;
     // How open each target is (the icons glow when open, dim when covered),
     // after the snap and before the throw; refreshed every few frames.
     const reading = !thrown && cur.phase !== 'presnap' && cur.phase !== 'snap';
