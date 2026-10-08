@@ -62,14 +62,14 @@ function downCell(m: Match, key: KeyPlay): { text: string; spot: string | null; 
 }
 
 /**
- * The score bug: a single bar. The scores bump when the Beasts' montage puts
- * a drive's points up (its board shot) before the match scores it.
+ * The score bug: a single bar. The scores bump when the Beasts' drive puts
+ * its points up (the result graphic) before the match scores it.
  */
 export function ScoreBug() {
   useGame((s) => s.v);
-  const after = useMontage((s) => (s.shot === 'board' ? s.info?.after : null));
+  const after = useMontage((s) => (s.shot === 'result' ? s.info?.after : null));
   // The montage's key play: its down, distance and spot while it's on screen.
-  const keyPlay = useMontage((s) => (s.shot === 'establish' || s.shot === 'play' ? (s.info?.play ?? null) : null));
+  const keyPlay = useMontage((s) => (s.shot === 'play' ? (s.info?.play ?? null) : null));
   const m = game.match;
   if (!m) return null;
   const score = after ?? m.score;
@@ -163,7 +163,7 @@ function useUp(key: number | undefined, ms: number, ready = true): boolean {
 /**
  * A lower third: the shared plate (tag, a coloured block, a title, a meta
  * line) and the line under it. The player's lower third, the Meanwhile card
- * and the montage's board shot are all this.
+ * and the Beasts' drive's result are all this.
  */
 export function LowerPlate({ team, tag, block, blockSmall, title, meta, line, foot, className }: { team: Team | 'neutral'; tag?: string | null; block?: ReactNode; blockSmall?: boolean; title: ReactNode; meta?: ReactNode; line?: string | null; foot?: ReactNode; className?: string }) {
   const size = useSettings((s) => s.settings.accessibility.captionSize);

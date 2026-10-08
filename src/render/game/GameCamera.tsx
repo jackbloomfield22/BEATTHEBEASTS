@@ -6,13 +6,12 @@ import { useSettings } from '@/app/settings';
 import { urlFlags, videoTime } from '@/app/platform';
 import { Input } from '@/input/InputManager';
 import { practice, usePractice } from '@/game/practice';
-import { ORBIT_LIMITS, replay, replayCam, useReplay } from '@/game/replaySession';
+import { replay, replayCam } from '@/game/replaySession';
 import { YARD } from '../world/constants';
 import { view } from '@/game/view';
 import { fieldDir, worldX, worldZ } from '@/game/coords';
 import { frameEvents } from './frameEvents';
 import { montage } from '@/game/montageSession';
-import { montagePose, montageRates } from './montageCam';
 import { celebView } from './celebrate';
 import { reveal } from '@/game/tunnelReveal';
 import { revealPose, type RevealPose } from './tunnelShow';
@@ -30,7 +29,7 @@ import { revealPose, type RevealPose } from './tunnelShow';
 type Mode = 'broadcast' | 'all22' | 'field';
 
 /** The play on screen: a replay's (M7) while one is on, the Beasts' drive montage's, else the live snap's. */
-const activeRunner = () => (replay.active ? replay.runner : montage.active ? montage.player!.runner : practice.runner);
+const activeRunner = () => (replay.active ? replay.runner : montage.player ? montage.player.runner : practice.runner);
 /** Changes with each play on screen (a replay is its own; so is a montage). */
 const activeId = () => (replay.active ? -1 - replay.epoch : montage.active ? -100000 - montage.epoch : practice.playId);
 
@@ -258,88 +257,26 @@ function celebPose(): Pose {
   return { ex: lx + Math.cos(a) * dist, ey: ly + Math.sin(a) * dist, eh: 1.35 + up - 0.15 * k + 1.5 * back, lx, ly, lh: 1.15 + 1.2 * back, fov: 34 - 5 * k + 8 * back + (v.pair ? 4 : 0) };
 }
 
-// ---- Replay cameras (M7) ------------------------------------------------------------------
-
-/** What a replay's camera looks at: the ball, or the man the play is about (the key player; the carrier or QB without one). Field frame, yd (h: m). */
-function replayFocus(): { x: number; y: number; h: number } {
-  const p = replay.player!;
-  const cur = p.runner.cur;
-  const b = cur.ball;
-  if (useReplay.getState().focus === 'player') {
-    const who = p.key && p.key.who >= 0 ? p.key.who : cur.carrier >= 0 ? cur.carrier : p.runner.state.qb;
-    const a = cur.agents[who];
-    if (a) return { x: a.x, y: a.y, h: 1.1 };
-  }
-  return { x: b.x, y: b.y, h: Math.max(0.5, b.z * YARD) };
-}
-
-/** The free orbit: around the focus at the user's angles and distance. */
-function orbitPose(): Pose {
-  const f = replayFocus();
-  const c = replayCam;
-  const horiz = (c.dist * Math.cos(c.pitch)) / YARD;
-  return { ex: f.x - Math.cos(c.yaw) * horiz, ey: f.y - Math.sin(c.yaw) * horiz, eh: f.h + c.dist * Math.sin(c.pitch), lx: f.x, ly: f.y, lh: f.h, fov: 42 };
-}
+// ---- The replay angle (M7) ------------------------------------------------------------------
 
 /**
- * The end zone: high in the stands behind the end line the play is heading
- * for (the offense's, or the other on a turnover), out wide of the posts
- * so the uprights stay out of the shot, looking back up the field on a long
- * lens that keeps about 16 yd of field across the frame wherever the
- * ball is. Never closer than 30 yd, so play at the goal line is framed, not
- * looked down on.
+ * The quick replay's one camera: the high three-quarter the replay used to
+ * open its orbit on (and the angle M7's automatic replays played on), now
+ * fixed. From the offense's side, behind and off the ball's right, 15 m
+ * from it and ~24° down (yaw −0.7 rad off straight downfield), following
+ * the ball. The live broadcast camera is behind the play; this one is off
+ * its shoulder, so the replay is a second look rather than the same shot again.
  */
-function endzonePose(): Pose {
-  const p = replay.player!;
-  const f = replayFocus();
-  const back = p.key?.kind === 'turnover' ? -1 : 1;
-  const ex = back > 0 ? Math.max(120, f.x + 30) : Math.min(-10, f.x - 30);
-  // Out to the ball's side of the posts (the sight line crosses the end line wide of the uprights, ±3.1 yd).
-  const ey = f.y + (f.y >= 0 ? 12 : -12);
-  const d = Math.hypot(ex - f.x, ey - f.y);
-  const fov = Math.min(40, Math.max(12, (2 * Math.atan(8 / d) * 180) / Math.PI));
-  return { ex, ey, eh: 18, lx: f.x, ly: f.y, lh: Math.max(0.8, f.h * 0.8), fov };
-}
+const REPLAY_ANGLE = { yaw: -0.7, pitch: 0.42, dist: 15, fov: 42 };
+/** Its rig (eye ×3, look ×3, fov): the orbit's tight springs, so it keeps the ball framed through a throw. */
+const REPLAY_RATES = [9, 9, 9, 7, 7, 7, 6];
 
-/** Orbit by the keys and sticks (radians a second at full tilt) and zoom (e-folds a second). */
-const ORBIT_RATE = { yaw: 2.1, pitch: 1.1, zoom: 1.4 };
-
-/** The user's camera input this frame: the right stick (or the arrows) orbits, the left stick (or + and −) zooms. True if any. */
-function orbitInput(dt: number): boolean {
-  const R = Input.sticks.right;
-  const L = Input.sticks.left;
-  const key = (a: string) => (Input.isHeld(a) ? 1 : 0);
-  const yaw = R.x || key('replay.orbitRight') - key('replay.orbitLeft');
-  const inv = useSettings.getState().settings.controls.invertY ? -1 : 1;
-  const pitch = (R.y || key('replay.orbitUp') - key('replay.orbitDown')) * inv;
-  const zoom = L.y || key('replay.zoomIn') - key('replay.zoomOut');
-  if (!yaw && !pitch && !zoom) return false;
-  orbitBy(yaw * ORBIT_RATE.yaw * dt, pitch * ORBIT_RATE.pitch * dt, Math.exp(-zoom * ORBIT_RATE.zoom * dt));
-  return true;
-}
-
-/** Turn the orbit (yaw, pitch in radians; zoom as a distance factor), taking the camera to the orbit if it was on a preset. */
-function orbitBy(dYaw: number, dPitch: number, zoom: number): void {
-  const c = replayCam;
-  c.yaw += dYaw;
-  c.pitch = Math.min(ORBIT_LIMITS.pitchMax, Math.max(ORBIT_LIMITS.pitchMin, c.pitch + dPitch));
-  c.dist = Math.min(ORBIT_LIMITS.distMax, Math.max(ORBIT_LIMITS.distMin, c.dist * zoom));
-  replay.takeCamera();
-}
-
-/** The orbit's angles and distance from where the camera is now (a preset taken over by the user glides on from it). */
-function orbitFrom(eye: THREE.Vector3): void {
-  const f = replayFocus();
-  const fx = worldX(f.y);
-  const fz = worldZ(f.x);
-  const dx = eye.x - fx;
-  const dz = eye.z - fz;
-  const dy = eye.y - f.h;
-  const horiz = Math.hypot(dx, dz);
-  replayCam.dist = Math.min(ORBIT_LIMITS.distMax, Math.max(ORBIT_LIMITS.distMin, Math.hypot(horiz, dy)));
-  replayCam.pitch = Math.min(ORBIT_LIMITS.pitchMax, Math.max(ORBIT_LIMITS.pitchMin, Math.atan2(dy, horiz)));
-  // The eye sits at focus − (cos yaw, sin yaw) along the field; world z runs against field x and world x against field y.
-  replayCam.yaw = Math.atan2(dx, dz);
+function replayPose(): Pose {
+  const b = replay.player!.runner.cur.ball;
+  const h = Math.max(0.5, b.z * YARD);
+  const c = REPLAY_ANGLE;
+  const horiz = (c.dist * Math.cos(c.pitch)) / YARD;
+  return { ex: b.x - Math.cos(c.yaw) * horiz, ey: b.y - Math.sin(c.yaw) * horiz, eh: h + c.dist * Math.sin(c.pitch), lx: b.x, ly: b.y, lh: h, fov: c.fov };
 }
 
 /** The throw being followed: where and when it left, and the flight time it was given. */
@@ -413,48 +350,6 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
   const seenEpoch = useRef(-1);
   const pendingCut = useRef(false);
 
-  // A replay's orbit: drag the field with the mouse, zoom on the wheel (the canvas's own events; the HUD above it takes its own clicks).
-  const gl = useThree((s) => s.gl);
-  useEffect(() => {
-    const el = gl.domElement;
-    let drag: { x: number; y: number } | null = null;
-    const down = (e: PointerEvent) => {
-      if (!replay.active || e.button !== 0) return;
-      drag = { x: e.clientX, y: e.clientY };
-      el.setPointerCapture(e.pointerId);
-    };
-    const move = (e: PointerEvent) => {
-      if (!drag || !replay.active) return;
-      const sens = useSettings.getState().settings.controls.mouseSensitivity;
-      const inv = useSettings.getState().settings.controls.invertY ? -1 : 1;
-      const k = 0.0055 * sens;
-      if (useReplay.getState().cam !== 'orbit') orbitFrom(camera.position);
-      orbitBy(-(e.clientX - drag.x) * k, (e.clientY - drag.y) * k * 0.7 * inv, 1);
-      drag = { x: e.clientX, y: e.clientY };
-    };
-    const up = (e: PointerEvent) => {
-      if (drag && el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
-      drag = null;
-    };
-    const wheel = (e: WheelEvent) => {
-      if (!replay.active || e.ctrlKey) return;
-      if (useReplay.getState().cam !== 'orbit') orbitFrom(camera.position);
-      orbitBy(0, 0, Math.exp(Math.max(-200, Math.min(200, e.deltaY)) * 0.0015));
-    };
-    el.addEventListener('pointerdown', down);
-    el.addEventListener('pointermove', move);
-    el.addEventListener('pointerup', up);
-    el.addEventListener('pointercancel', up);
-    el.addEventListener('wheel', wheel, { passive: true });
-    return () => {
-      el.removeEventListener('pointerdown', down);
-      el.removeEventListener('pointermove', move);
-      el.removeEventListener('pointerup', up);
-      el.removeEventListener('pointercancel', up);
-      el.removeEventListener('wheel', wheel);
-    };
-  }, [gl, camera]);
-
   // F1–F3 switch the camera (and remember it).
   useEffect(() => {
     return Input.onAction((id, info) => {
@@ -507,13 +402,11 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       }
     }
     stepBreakaway(step, urlFlags.shot !== null && !urlFlags.video);
-    // A replay: the free orbit (the user's), the broadcast angle or the end zone.
-    const rcam = replay.active ? useReplay.getState().cam : null;
-    if (rcam && orbitInput(Math.min(dt, 0.1)) && rcam !== 'orbit') orbitFrom(camera.position);
-    const rmode = replay.active ? useReplay.getState().cam : null;
-    // The Beasts' drive montage (M7): each shot's camera, cut to on its first frame.
+    // A replay: its one angle.
+    const rmode = replay.active;
+    // The Beasts' drive (M7): the broadcast camera on the deciding play (a kick's is the kick view's), cut to on its first frame.
     const mshot = !replay.active && montage.active ? montage.shot : null;
-    const goal = mshot ? montagePose(mshot, () => targetPose('broadcast')) : rmode === 'orbit' ? orbitPose() : rmode === 'endzone' ? endzonePose() : targetPose(rmode ? 'broadcast' : modeSetting);
+    const goal = rmode ? replayPose() : targetPose(mshot ? 'broadcast' : modeSetting);
     if (!goal) return;
     // World-space target: eye and look.
     const t = [worldX(goal.ey), goal.eh, worldZ(goal.ex), worldX(goal.ly), goal.lh, worldZ(goal.lx), goal.fov];
@@ -529,7 +422,7 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       springs.current = [camera.position.x, camera.position.y, camera.position.z, look.x, look.y, look.z, camera.fov].map((v) => new Spring(v));
     }
     // Screenshots and browser tests cut straight to the pose every frame; so does a replay's camera change.
-    const cut = (urlFlags.shot !== null && !urlFlags.video) || (rmode !== null && replayCam.cut) || (mshot !== null && montage.cut) || (!rmode && !mshot && celebView.on && celebView.cut) || revealCut;
+    const cut = (urlFlags.shot !== null && !urlFlags.video) || (rmode && replayCam.cut) || (mshot !== null && montage.cut) || (!rmode && !mshot && celebView.on && celebView.cut) || revealCut;
     if (!rmode) celebView.cut = false;
     if (cut) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
     replayCam.cut = false;
@@ -537,12 +430,12 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     const sp = springs.current;
     // Eye slower than the look: the lens leads, the dolly follows.
     // In the air the whole rig tightens up so it keeps pace with the ball.
-    // The replay's orbit is the user's hand on it: tight, so it answers at once.
-    const air = activeRunner()?.cur.phase === 'air' && (mshot ? 'broadcast' : (rmode ?? modeSetting)) === 'broadcast';
+    // The replay angle follows the ball closely (a ball in the air crosses the frame fast at 15 m).
+    const air = !rmode && activeRunner()?.cur.phase === 'air' && (mshot ? 'broadcast' : modeSetting) === 'broadcast';
     // The celebration's: the dolly slow and smooth (the push), the lens keeping him framed as he moves.
     const celeb = !rmode && !mshot && celebView.on;
     // (?follow rides its man close: a stiff rig, or a man on the move leaves the frame.)
-    const w = (mshot && montageRates(mshot)) || (rmode === 'orbit' ? [9, 9, 9, 7, 7, 7, 6] : rmode === 'endzone' ? [3, 3, 3, 5, 5, 5, 3] : celeb ? [2.2, 2.2, 2.2, 5, 5, 5, 3] : urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3]);
+    const w = rmode ? REPLAY_RATES : celeb ? [2.2, 2.2, 2.2, 5, 5, 5, 3] : urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));
     // Shake: hits kick it, it rings down in ~0.3 s.
     for (const e of frameEvents) {

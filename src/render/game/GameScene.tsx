@@ -8,8 +8,7 @@ import { skinHexFor } from '@/app/characterization';
 import { urlFlags, videoTime } from '@/app/platform';
 import { practice, usePractice } from '@/game/practice';
 import { replay, replayStats } from '@/game/replaySession';
-import { montage, useMontage, type MontageInfo } from '@/game/montageSession';
-import { videoBoard, type BoardScore } from '../stadium/props';
+import { montage } from '@/game/montageSession';
 import type { SimRunner } from '@/game/runner';
 import { Input } from '@/input/InputManager';
 import { createRouteArt } from './routeArt';
@@ -248,14 +247,6 @@ const _lean = { x: 0, z: 0 };
 /** What the scene draws: the live play's runner, or a replay's. */
 type Runner = SimRunner;
 
-/** The board's lines for a Beasts drive: the call, the score after it. */
-const BOARD_LINE: Record<string, string> = { TD: 'TOUCHDOWN BEASTS', FG: 'FIELD GOAL BEASTS', Punt: 'BEASTS PUNT', Turnover: 'TURNOVER', Downs: 'STOPPED ON DOWNS', Safety: 'SAFETY', MissedFG: 'NO GOOD', EndOfHalf: 'END OF HALF', EndOfGame: 'END OF REGULATION' };
-function boardScore(info: MontageInfo): BoardScore {
-  const d = info.drive;
-  const tp = d.twoPoint ? (d.twoPoint.good ? ' · TWO GOOD' : ' · TWO NO GOOD') : '';
-  return { kicker: `BEASTS DRIVE  ·  ${d.plays} ${d.plays === 1 ? 'PLAY' : 'PLAYS'}  ·  ${Math.max(0, Math.round(d.yards))} YD  ·  ${d.top}`, headline: BOARD_LINE[d.result]! + tp, home: info.after.beasts, away: info.after.user };
-}
-
 /** The carrier's move options as the HUD says them (one word each). */
 const OPTION_WORD: Record<string, string> = { juke: 'Juke', stiffArm: 'Stiff arm', spin: 'Spin', truck: 'Truck', hurdle: 'Hurdle', dive: 'Dive', protect: 'Protect' };
 
@@ -277,7 +268,6 @@ export function GameScene() {
   const [contact] = useState(() => new ContactSmoother());
   /** The Contenders' kit on the field (white if theirs is as dark as the Beasts'): the montage dresses the defense in it. */
   const userKit = useRef('whiteLime');
-  const boardUp = useRef(false);
   /** The tunnel reveal was on last frame (its exposure is given back the frame it ends). */
   const revealOn = useRef(false);
 
@@ -460,19 +450,11 @@ export function GameScene() {
     latency.frame++;
     // A replay (M7) plays instead of the live snap, which holds where it stands until it hands back.
     replay.frame(step);
-    // The Beasts' drive montage (M7) plays its staged snap the same way, when no replay is up.
+    // The Beasts' drive (M7) plays its staged snap the same way (or its kick through the kick view), when no replay is up.
     if (!replay.active) montage.frame(step);
     const mp = !replay.active && montage.active ? montage.player : null;
-    if (!replay.active && !mp) practice.frame(step);
+    if (!replay.active && !montage.active) practice.frame(step);
     const rp = replay.active ? replay.player : mp;
-    // The montage's last shot is the video board with the new score (a repaint at the cut, not per frame).
-    const onBoard = montage.shot === 'board';
-    if (onBoard !== boardUp.current) {
-      boardUp.current = onBoard;
-      const info = useMontage.getState().info;
-      if (onBoard && info) videoBoard.show(boardScore(info));
-      else videoBoard.reset();
-    }
     const r: Runner | null = rp ? rp.runner : practice.runner;
     const show = !!r && !!bodies;
     marks.group.visible = show && r!.cur.phase !== 'dead';
@@ -510,9 +492,12 @@ export function GameScene() {
       if (r) routeArt.update(r.state, false, step, null);
       const punt = kickView.kind === 'PUNT';
       const los = kickView.spotX + (punt ? PUNT_DEPTH : 7);
-      const key = `${kickView.kind}:${kickView.spotX}`;
+      const key = `${kickView.kind}:${kickView.spotX}:${kickView.team}:${montage.cutCount}`;
       if (kickSet.current !== key) {
         kickSet.current = key;
+        // The Beasts' kick on their drive (M7): their (anonymous) kicking unit in black, the return or block team in your kit.
+        const men = kickView.team === 'bst' ? montage.kick?.men : null;
+        if (men) bodies.forEach((b, i) => relook(b, men[i]!, i < OFF_SLOTS.length ? 'beasts' : userKit.current, true));
         for (const b of bodies) {
           const set = (punt ? PUNT_SET : FG_SET)[b.slot];
           b.player.root.visible = !!set;

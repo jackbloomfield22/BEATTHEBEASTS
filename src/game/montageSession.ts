@@ -1,34 +1,39 @@
-// The Beasts' drive montage on screen (M7, Playtest 1 #4): the staged key
-// play (montage.ts) played in the live stadium through the replay player,
-// cut as a broadcast cuts a highlight package, about ten seconds:
-//   1. establish  wide and high from the sideline: the Beasts set at the line;
-//   2. play       the snap at the broadcast angle (the live camera's own
-//                 logic), slowed through the moment on a score or a turnover;
-//   3. reaction   tight and low on the man the play was about;
-//   4. board      the video board over the north stands with the new score,
-//                 the score bug updating and the drive's lower third.
-// Cuts, never swoops (GameCamera snaps to each shot's first frame). The
-// clock is the scene's frame step (real seconds; a recorded video's game
-// time), never the wall clock, so a capture plays it exactly as a player
-// sees it. Skippable at any moment (MontageHud: confirm or back; Start).
-//
-// React reads a small store that changes on each cut only.
+// The Beasts' drive on screen (M7, Playtest 1 #4; cut down after M7 at the
+// owner's request: "just show their scoring play if they had one, or their
+// turnover/turnover on downs/punt"). The drive's deciding play (montage.ts),
+// in the live stadium, on the broadcast camera, then the result graphic
+// over its last beat; about 4–6 s:
+//   play    a snap through the replay player (the live camera's own logic:
+//           behind the offense, riding the throw, following the carrier),
+//           cut in just before the snap, a touch of slow motion through a
+//           score or a turnover; or a kick through the kick view (the
+//           punt's camera rides the ball, the field goal's sits behind the
+//           holder), from just before the punter catches it or the snap
+//           of the hold;
+//   result  the same camera on the dead ball (or the ball down), the score
+//           bug updating and the "BEASTS DRIVE" lower third up.
+// The clock is the scene's frame step (real seconds; a recorded video's
+// game time), never the wall clock, so a capture plays it exactly as a
+// player sees it. Skippable at any moment (MontageHud: confirm or back;
+// Start). React reads a small store that changes on each shot only.
 
 import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
+import { Audio } from '@/audio/audio';
+import { contactFor, kickView } from '@/render/game/kickView';
 import { TICK } from '@/sim';
 import type { BeastsDrive } from './match';
-import { PRE_SNAP, staging, type MontageTeams, type StagedPlay } from './montage';
+import { KICK_FROM, KICK_RESULT, LEAD, montageSpeed, RESULT_SECS, resultTick, staging, type MontageTeams, type Staged, type StagedKick, type StagedPlay } from './montage';
 import { ReplayPlayer } from './replay';
 
-/** 'search': the key play is being staged (a bumper is up; a few frames). */
-export type ShotId = 'search' | 'establish' | 'play' | 'reaction' | 'board';
+/** 'search': the play is being staged (a bumper is up; a few frames). */
+export type ShotId = 'search' | 'play' | 'result';
 
 /** What the HUD says: the drive (the resolver's), the staged play, the score before and after, the game clock. */
 export interface MontageInfo {
   drive: BeastsDrive;
   /** The staged play (null while it's being staged). */
-  play: Pick<StagedPlay, 'kind' | 'label' | 'down' | 'toGo' | 'los' | 'yards'> | null;
+  play: Pick<StagedPlay | StagedKick, 'kind' | 'label' | 'down' | 'toGo' | 'los' | 'yards'> | null;
   before: { user: number; beasts: number };
   after: { user: number; beasts: number };
   /** "Q2 7:41", "OT". */
@@ -45,67 +50,47 @@ export interface MontageUi {
 
 export const useMontage = create<MontageUi>(() => ({ open: false, shot: null, info: null }));
 
-/** Real seconds each timed shot holds (the establishing and play shots run on the play's own beats). */
-export const SHOT_SECS = { reaction: 1.8, board: 2.6 };
-/** The establishing shot hands to the play this long before the snap (ticks: 0.6 s). */
-const EST_LEAD = 36;
-/** The window opens this long before the snap (ticks): the establishing shot's look at the offense set. */
-const WINDOW = PRE_SNAP - 6;
-/** Slow motion through a score or a turnover: down to SLOW over EASE ticks before the moment, held to HOLD after it, back up over EASE. */
-const SLOWMO = { slow: 0.4, ease: 18, from: -10, hold: 22 };
-
-const smooth = (k: number) => {
-  const x = Math.min(1, Math.max(0, k));
-  return x * x * (3 - 2 * x);
-};
-
-/** The play's speed at `d` ticks from the moment (1 outside the slow motion). */
-export function montageSpeed(d: number): number {
-  const S = SLOWMO;
-  if (d < S.from - S.ease || d > S.hold + S.ease) return 1;
-  if (d < S.from) return 1 + (S.slow - 1) * smooth((d - (S.from - S.ease)) / S.ease);
-  if (d <= S.hold) return S.slow;
-  return S.slow + (1 - S.slow) * smooth((d - S.hold) / S.ease);
-}
-
 class MontageSession {
+  /** A snap on screen (its replay player), or a kick (the kick view's). */
   player: ReplayPlayer | null = null;
   staged: StagedPlay | null = null;
-  /** Set on every cut; the camera takes it (and snaps to the new shot). */
+  kick: StagedKick | null = null;
+  /** Set when the play comes up; the camera takes it (and cuts to the broadcast angle). */
   cut = false;
-  /** Cuts so far (a shot's camera keys its once-per-shot choices on it). */
+  /** Montages so far (the scene keys the kick's look on it). */
   cutCount = 0;
   /** Seconds into the current shot. */
   shotT = 0;
-  private playEnd = 0;
+  private resultAt = 0;
   private slow = false;
+  private thumped = false;
   private onDone: (() => void) | null = null;
   private onNone: (() => void) | null = null;
   private off: (() => void) | null = null;
-  private search: Generator<void, StagedPlay | null, void> | null = null;
+  private search: Generator<void, Staged | null, void> | null = null;
   private pending: MontageInfo | null = null;
-  private ready: { staged: StagedPlay; info: MontageInfo } | null = null;
+  private ready: { staged: Staged; info: MontageInfo } | null = null;
 
-  /** A montage is on screen (its play drawn). */
+  /** The drive's play is on screen. */
   get active(): boolean {
-    return this.player !== null;
+    return this.player !== null || this.kick !== null;
   }
 
-  /** The key play is being staged, or the montage is on: the game waits on it. */
+  /** The play is being staged, or is on: the game waits on it. */
   get busy(): boolean {
-    return this.player !== null || this.search !== null || this.ready !== null;
+    return this.active || this.search !== null || this.ready !== null;
   }
 
   /** Most of a frame the search takes (ms): a try runs whole, so a frame can go over by one. */
   static readonly SLICE_MS = 6;
 
   /**
-   * Stage a drive's key play over the next frames (montage.ts staging, a try
-   * at a time), then play it. `onNone`: nothing fits (the Meanwhile card instead).
+   * Stage a drive's deciding play over the next frames (montage.ts staging,
+   * a try at a time), then play it. `onNone`: nothing fits (the Meanwhile card instead).
    */
-  prepare(d: BeastsDrive, teams: MontageTeams, seed: number, round: number, ot: number, info: MontageInfo, onDone: () => void, onNone: () => void): void {
+  prepare(d: BeastsDrive, teams: MontageTeams, seed: number, round: number, ot: number, info: MontageInfo, onDone: () => void, onNone: () => void, wind?: { mph: number; dir: number }): void {
     this.abort();
-    this.search = staging(d, teams, seed, round, ot);
+    this.search = staging(d, teams, seed, round, ot, wind);
     this.pending = info;
     this.onDone = onDone;
     this.onNone = onNone;
@@ -156,48 +141,72 @@ class MontageSession {
     return useMontage.getState().shot;
   }
 
-  /** Changes whenever the scene must set its players again (a new montage). */
+  /** Changes whenever the scene must set its players again (a new snap). */
   get epoch(): number {
     return this.player?.epoch ?? -1;
   }
 
-  private start(staged: StagedPlay, info: MontageInfo): void {
-    const p = new ReplayPlayer(staged.src, WINDOW);
-    p.director = false;
-    p.playing = true;
-    this.player = p;
-    this.staged = staged;
-    this.slow = staged.kind === 'td' || staged.kind === 'turnover';
-    // The play shot runs to just past the whistle (a beat longer after a score or a pick, in slow motion).
-    this.playEnd = Math.min(p.end, Math.max(staged.keyTick + (this.slow ? 40 : 20), staged.whistleTick + 12));
+  private start(staged: Staged, info: MontageInfo): void {
     this.shotT = 0;
     this.cut = true;
     this.cutCount++;
+    this.thumped = false;
     const { kind, label, down, toGo, los, yards } = staged;
-    useMontage.setState({ open: true, shot: 'establish', info: { ...info, play: { kind, label, down, toGo, los, yards } } });
+    const play = { kind, label, down, toGo, los, yards };
+    if (staged.type === 'kick') {
+      this.kick = staged;
+      // The kick view, as the kick panel sets it for yours, with the flight already struck.
+      Object.assign(kickView, { active: true, kind: staged.kind === 'punt' ? 'PUNT' : 'FG', spotX: staged.spotX, distance: staged.distance, aim: 0, aiming: false, wind: { ...staged.wind }, path: staged.path, t: KICK_FROM[staged.kind], team: 'bst' });
+      const contact = contactFor(kickView.kind);
+      // The result as the punt comes down (it's fielded there) or as the field goal passes the posts.
+      this.resultAt = contact + (staged.kind === 'punt' ? staged.hang + KICK_RESULT.puntAfterLand : staged.hang * KICK_RESULT.fgFlight);
+    } else {
+      const p = new ReplayPlayer(staged.src, LEAD);
+      p.director = false;
+      p.playing = true;
+      this.player = p;
+      this.staged = staged;
+      this.slow = staged.kind === 'td' || staged.kind === 'turnover';
+      // The result graphic: at the whistle, but not before the moment has landed.
+      this.resultAt = resultTick(staged);
+    }
+    useMontage.setState({ open: true, shot: 'play', info: { ...info, play } });
   }
 
   /** Every frame of the play screens (GameScene, before it draws), by the frame's step (s). */
   frame(step: number): void {
     if (this.ready) this.build();
     else if (this.search) this.searchStep(MontageSession.SLICE_MS);
-    const p = this.player;
-    const st = this.staged;
-    if (!p || !st) return;
+    if (!this.active) return;
     this.shotT += step;
     const shot = useMontage.getState().shot;
-    p.speed = shot === 'play' && this.slow ? montageSpeed(p.tick - st.keyTick) : 1;
+    const k = this.kick;
+    if (k) {
+      // The kick view's clock (KickBall steps it by the same frame step).
+      const t = kickView.t;
+      const contact = contactFor(kickView.kind);
+      if (!this.thumped && t + step >= contact) {
+        this.thumped = true;
+        Audio.kickThump(Math.max(0, contact - t), true);
+      }
+      if (shot === 'play' && t >= this.resultAt) {
+        this.to('result');
+        // Their house: a make brings it up, a miss sits it down; a punt fielded gets a murmur, no more.
+        if (k.kind === 'fg') Audio.kickCrowd(k.good);
+      } else if (shot === 'result' && this.shotT >= RESULT_SECS) this.finish();
+      return;
+    }
+    const p = this.player!;
+    const st = this.staged!;
+    p.speed = this.slow ? montageSpeed(p.tick - st.keyTick) : 1;
     p.frame(step);
-    if (shot === 'establish' && p.tick >= st.snapTick - EST_LEAD) this.to('play');
-    else if (shot === 'play' && p.tick >= this.playEnd) this.to('reaction');
-    else if (shot === 'reaction' && this.shotT >= SHOT_SECS.reaction) this.to('board');
-    else if (shot === 'board' && this.shotT >= SHOT_SECS.board) this.finish();
+    if (shot === 'play' && p.tick >= this.resultAt) this.to('result');
+    else if (shot === 'result' && this.shotT >= RESULT_SECS) this.finish();
   }
 
+  /** A shot change that isn't a cut: the camera stays on the play. */
   private to(shot: ShotId): void {
     this.shotT = 0;
-    this.cut = true;
-    this.cutCount++;
     useMontage.setState({ shot });
   }
 
@@ -219,12 +228,14 @@ class MontageSession {
 
   private finish(): void {
     const done = this.onDone;
+    if (this.kick) Object.assign(kickView, { active: false, aiming: false, path: null, t: 0, team: 'con' });
     this.search = null;
     this.ready = null;
     this.pending = null;
     this.onNone = null;
     this.player = null;
     this.staged = null;
+    this.kick = null;
     this.onDone = null;
     this.off?.();
     this.off = null;
