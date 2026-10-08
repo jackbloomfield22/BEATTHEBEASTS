@@ -1825,7 +1825,10 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
         // the catch point to find a man to block (on four verticals all three
         // others swung 45-60° toward the ball within half a second,
         // tools/sim/p3trace.ts), the "receivers give up on their routes while
-        // the ball is in the air" the owner saw from the pocket.
+        // the ball is in the air" the owner saw from the pocket. (Out of
+        // room at the back of the end zone, he pulls up there: a route run on
+        // through a long play would carry him out over the end line.)
+        else if (a.vel.x > 0 && END_X - END_ROOM - a.pos.x < (a.vel.x * a.vel.x) / (2 * a.fx.cutAccel * 0.8) + 0.5) steer(a, arrive(a, v2(END_X - END_ROOM, a.pos.y), 1, 1));
         else runRoute(s, a);
         break;
       case 'passBlock':
@@ -1979,8 +1982,11 @@ function pursueTackle(s: PlayState, a: Agent, t: Agent): void {
   pursue(s, a, t);
 }
 
-/** A short ball: he runs on at his pace until this long (s) before it arrives, then throttles down to meet it (ours: two strides). */
-const THROTTLE_T = 0.45;
+/** A route runner pulls up this far (yd) inside the end line, braking in time to (ours: a stride). */
+const END_ROOM = 1;
+
+/** A short ball: he runs on at his pace, easing off from twice this long (s) before it arrives, and meets it at the pace that gets him there over the last of it (ours: about three strides). */
+const THROTTLE_T = 0.6;
 /** ...keeping at least this much (yd) of the way to the spot for the throttling down. Ours. */
 const THROTTLE_ROOM = 1;
 

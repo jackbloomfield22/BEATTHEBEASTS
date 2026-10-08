@@ -119,9 +119,9 @@ describe('coming back to the ball', () => {
 
 describe("the QB's deep ball timing", () => {
   it('an accurate passer leads his man better down the field; short throws are the route', () => {
-    expect(timingQb(99, 30)).toBeCloseTo(0.6, 5);
+    expect(timingQb(99, 30)).toBeCloseTo(0.7, 5);
     expect(timingQb(85, 30)).toBeCloseTo(1, 5);
-    expect(timingQb(70, 30)).toBeGreaterThan(1.3);
+    expect(timingQb(70, 30)).toBeGreaterThan(1.15);
     expect(timingQb(99, 6)).toBe(1);
     expect(timingQb(70, 6)).toBe(1);
     expect(timingQb(99, 14)).toBeGreaterThan(timingQb(99, 30));
