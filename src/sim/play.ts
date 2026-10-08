@@ -2393,7 +2393,8 @@ function lineCheck(s: PlayState, c: Agent, moved: V2 | null = null): void {
   const at = (f: number) => ({ x: p0.x + (p1.x - p0.x) * f, y: p0.y + (p1.y - p0.y) * f });
   if (fg !== null && (fo === null || fg < fo)) {
     const o = at(fg);
-    s.events.push({ t: s.t, type: 'touchdown', who: [c.i], at: { x: ballNose(c, o.x), y: o.y } });
+    // (A catch at the back of the end zone, his feet in, is a score where he caught it: the ball's nose a stride on can be past the end line.)
+    s.events.push({ t: s.t, type: 'touchdown', who: [c.i], at: { x: Math.min(ballNose(c, o.x), END_X), y: o.y } });
     whistle(s, 'touchdown', attack > 0 ? GOAL_X : 0, attack > 0, true);
     return;
   }
