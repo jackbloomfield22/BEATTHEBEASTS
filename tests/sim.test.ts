@@ -545,6 +545,8 @@ describe('feel clips (M5.5): the scripted plays behind the videos', () => {
     expect(rac!.agents[rac!.carrier]!.pos.x - racCatch.at!.x).toBeGreaterThan(12);
     expect(sack!.result!.sack).toBe(true);
     expect(broken!.events.some((e) => e.type === 'brokenTackle')).toBe(true);
+    // The touchdown clip (the celebrations' browser test plays it) still scores.
+    expect(run(CLIPS.find((c) => c.id === 'touchdown')!).result!.touchdown).toBe(true);
   });
   it('each broadcast concept (M6.5) is still a completion to its man, open, for a gain', () => {
     for (const c of CONCEPTS) {

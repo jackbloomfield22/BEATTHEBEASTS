@@ -189,6 +189,9 @@ export const CLIPS: Clip[] = [
   { id: 'broken-tackle', title: 'Broken tackle', seed: 13, play: 'trips-stick', def: 'cover1', los: 30, script: throwAndRun(2, 84, 'stiffArm') },
   // M6.5 #11: inside zone steered by the arrows, a 102° plant-and-cut across and a 45° one back upfield, a burst, and a tackler closing (tools/sim/findcarry.ts: 11.8 yd).
   { id: 'cut-run', title: 'Cut and burst on a designed run', seed: 17, play: 'singleback-inside-zone', def: 'cover2', los: 30, script: runAndCut(1.5, 3.5) },
+  // A catch-and-run touchdown (the touchdown celebrations' browser test plays it): Four Verticals against Cover 2, icon 1 caught and taken
+  // 70 yd to the end zone (2026-10-08, after the passing pass's round two; completion-rac is a tackle by design, so it can't stand in).
+  { id: 'touchdown', title: 'Catch-and-run touchdown', seed: 8, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(1, 100, 'juke') },
 ];
 
 // The ten broadcast concepts (M6.5): found by tools/sim/findconcepts.ts, the
