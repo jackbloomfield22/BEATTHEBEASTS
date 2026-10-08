@@ -317,7 +317,7 @@ export function timingQb(acc: number, air: number): number {
   const k = Math.max(0, Math.min(1, (air - TIMING_QB_FROM) / (TIMING_QB_FULL - TIMING_QB_FROM)));
   return 1 + (TIMING_QB_TOP - 1 + (1 - TIMING_QB_TOP) * Math.max(0, (99 - acc) / (99 - TIMING_QB_REF))) * k;
 }
-const TIMING_QB_TOP = 0.6;
+const TIMING_QB_TOP = 0.7;
 const TIMING_QB_REF = 85;
 const TIMING_QB_FROM = 8;
 const TIMING_QB_FULL = 20;
@@ -327,9 +327,12 @@ const TIMING_QB_FULL = 20;
  * 74% against the Beasts for 9.5 yd an attempt, open men catching 95% of
  * their targets (PFF's ~80%: tests/outcomes.test.ts); 0.4 (and the
  * receiver tracking the ball, play.ts runToBall) puts them at 69% and 8.4,
- * open men at 89%.
+ * open men at 89%. Passing round 3: 0.43. The QB's accuracy now takes up to
+ * 30% off a deep ball's (timingQb), and the other receivers no longer drag
+ * their men to the catch point, so the 60-a-cell book went 66.5% → 67.4%;
+ * 0.43 brings it back to 66.6% (8.1 yd an attempt).
  */
-const TIMING = 0.4;
+const TIMING = 0.43;
 /** The horizon (s) past which it grows only with the horizon, not faster: a deep ball's hang. */
 const TIMING_H = 2;
 /** A perfect route runner takes 60% of it off: where he is is mostly how he runs it. */
