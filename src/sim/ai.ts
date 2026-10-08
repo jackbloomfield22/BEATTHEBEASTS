@@ -8,7 +8,7 @@ import { atan2, cos, exp, sin } from '@/engine/math/detmath';
 import { blockOf, engage } from './blocks';
 import { arrive, boundaryGovern, CRUISE, seen, steer, timeTo } from './movement';
 export { boundaryGovern } from './movement';
-import { driveTime, lead, releaseOf } from './passing';
+import { lead, releaseOf, throwTime } from './passing';
 import { has } from './traits';
 import { heldTogether } from './tackle';
 import { runMeets } from './bodies';
@@ -345,12 +345,11 @@ const manOn = (s: PlayState, a: Agent): boolean => manDefender(s, a) !== null;
  */
 function manBreakOpen(s: PlayState, qb: Agent, a: Agent, route: NonNullable<Agent['route']>, d: Agent): number {
   const g: Agent = { ...a, route, mem: { ...a.mem } };
-  const power = qb.fx.r('throwPower');
   const rel = releaseOf(qb);
   let at = lead(g, 0.8);
   let T = 0.8;
   for (let k = 0; k < 3; k++) {
-    T = driveTime(dist(qb.pos, at), power) + 0.05 + rel;
+    T = throwTime(dist(qb.pos, at), qb) + 0.05 + rel;
     at = lead(g, T);
   }
   // Where he is when the ball leaves: working to his spot on the man (manCover: a step over the top and inside, or in his hip
@@ -995,13 +994,12 @@ const BREAKDOWN_R = 1;
  */
 export function openness(s: PlayState, qb: Agent, r: Agent, peek = false, why?: string[], skip?: (i: number) => boolean): { sep: number; at: V2; T: number } {
   const react = (d: Agent) => (peek ? reactionPeek(s, d) : reaction(s, d));
-  const power = qb.fx.r('throwPower');
   const rel = releaseOf(qb);
-  // The throw he'd make: the driven ball (planThrow's hang time), after his release.
+  // The throw he'd make: the driven ball (planThrow's hang time, his arm's: passing.ts throwTime), after his release.
   let at = lead(r, 0.8);
   let T = 0.8;
   for (let k = 0; k < 3; k++) {
-    T = driveTime(dist(qb.pos, at), power) + 0.05 + rel;
+    T = throwTime(dist(qb.pos, at), qb) + 0.05 + rel;
     at = lead(r, T);
   }
   // A defender's clock on the throw: a zone defender near the man reads the
@@ -2009,6 +2007,21 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
       aim = v2(Math.max(spot.x - (role === 'tampa' ? 2 : 4), v.pos.x + cushion), v.pos.y * 0.75 + spot.y * 0.25);
       aimVel = { x: Math.max(0, v.vel.x), y: v.vel.y * 0.75 };
     }
+    // The middle of the field reads the QB's eyes (passing round 2): a
+    // safety in the middle or a half leans toward where the QB is looking, a
+    // read late (his reaction). A look-off moves him away from the throw, a
+    // stare-down toward it (pocket.ts eyesBeforeRead). Deep thirds play their
+    // third. How far he leans is how far he trusts the eyes: less for an
+    // aware safety (EYE_AWARE), less again with a man to carry. Only while
+    // the QB has the ball to throw: on a run he reads his run keys.
+    if ((zone === 'deepM' || zone === 'halfL' || zone === 'halfR' || role === 'tampa') && !s.setup.play.run && (s.phase === 'dropback' || s.phase === 'pocket')) {
+      const lag = Math.max(0.1, reaction(s, d));
+      const ey0 = (d.mem.eyeY as number | undefined) ?? s.eyes.y;
+      const ey = ey0 + (s.eyes.y - ey0) * Math.min(1, TICK / lag);
+      d.mem.eyeY = ey;
+      const lim = threat ? EYE_LEAN_MAN : EYE_LEAN;
+      aim = v2(aim.x, aim.y + Math.max(-lim, Math.min(lim, (ey - aim.y) * EYE_PULL * (1 - EYE_AWARE * d.fx.a('awareness')))));
+    }
     const want = boundaryGovern(d, threat ? track(d, aim, aimVel, 2.2) : arrive(d, aim, 0.95, 1.2), 1);
     if (threat) coverPlant(s, d, want);
     steer(d, want, { face });
@@ -2197,6 +2210,22 @@ export function zoneCover(s: PlayState, d: Agent, zone: ZoneName): void {
   steer(d, want, { face });
   d.anim = d.vel.x > 0.8 ? 'backpedal' : 'run';
 }
+/**
+ * The deep safety's lean on the QB's eyes (zoneCover): this share of the gap
+ * to the eye line, at most EYE_LEAN yd with nobody to carry, EYE_LEAN_MAN
+ * while he's over a man. EYE_AWARE of it is taken off by his Awareness (a
+ * 99 leans ~60% as far as a 0: Ed Reed still reads the eyes, he just
+ * doesn't chase them). Ours, sized so a field general's look-off is worth
+ * a step (~0.7 yd) of the deep safety's position at the release against a
+ * QB with the same arm who stares his man down (tools/sim/passidentity.ts:
+ * Marino against Winston on the same deep throws, 0.76 yd at 0.35 of the gap; 0.25 and 60%
+ * off for awareness gave 0.3 yd, a lean nobody would see).
+ */
+const EYE_PULL = 0.35;
+const EYE_LEAN = 3;
+const EYE_LEAN_MAN = 2;
+const EYE_AWARE = 0.4;
+
 /**
  * A flat defender (Cover 2's squat corner) sinks with #1 only once he's
  * past the quick game's depth (yd): the hitch, the quick out and the stick

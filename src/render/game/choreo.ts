@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { carrierPace, GOAL_X, pullers } from '@/sim';
+import { carrierPace, GOAL_X, manOf, pullers } from '@/sim';
 import type { PlayerAnimator } from '@/anim/animator';
 import type { Ragdoll } from '@/anim/ragdoll';
 import type { Agent, PlayState, SimEvent } from '@/sim';
@@ -7,8 +7,9 @@ import type { Player } from '../players/playerAsset';
 import { YARD } from '../world/constants';
 import { worldDir } from '@/game/coords';
 import { latency } from '@/game/latency';
-import { catchLook, releaseOf, type CatchLook } from '@/sim/passing';
-import { pressureOn } from '@/sim/ai';
+import { catchLook, findsBallAt, releaseOf, type CatchLook } from '@/sim/passing';
+import { dropPlan, dropStart, GUN_CATCH, planFrom, UC_EXCHANGE, type DropPlan } from '@/sim/pocket';
+import { pressureOn, routeOf } from '@/sim/ai';
 import { threatOf } from '@/sim/moves';
 import type { BodyExtent } from './contact';
 
@@ -338,7 +339,8 @@ export function catchMagnet(b: Body, ball: THREE.Vector3, out: THREE.Vector3): n
   const t = catchTime(b);
   const c = b.catchClip;
   if (t === null || !c) return 0;
-  const secure = eventAt(b, c, 'secure');
+  // A bobble's hands meet it again on its regrab, not its first touch.
+  const secure = eventAt(b, c, c === 'catch_bobble' ? 'regrab' : 'secure');
   if (secure === null) return 0;
   const k = THREE.MathUtils.smoothstep(t, secure - 0.12, secure);
   if (k <= 0 || !handsPoint(b, catchHands(c), out)) return 0;
@@ -520,7 +522,9 @@ export function onSnap(bodies: Body[], s: PlayState, stanceOf: (slot: string) =>
     const a = s.agents[i]!;
     if (i === s.qb) {
       const k = play.drop.kind;
-      if (k !== 'handoff') b.animator.play(`qb_drop_${k}`, { now: true });
+      // The drop on the sim's rhythm (startDrop); a play-action drop starts after the fake (drive), a boot rolls out on the gait.
+      if (k !== 'handoff' && !play.pa && !play.drop.boot) startDrop(b, s, planFrom(s, a, a.pos.x, dropStart(s, play.drop)), 0);
+      else if (k !== 'handoff' && play.run) b.animator.play(`qb_drop_${k}`, { now: true });
       return;
     }
     const slot = a.slot as string;
@@ -553,6 +557,25 @@ export function onSnap(bodies: Body[], s: PlayState, stanceOf: (slot: string) =>
     if (b.animator.lib.meta[off]) b.animator.play(off);
     else b.animator.setStance('stance_idle');
   });
+}
+
+/**
+ * The drop clip for the sim's plan (tools/blender/lib/actions_drop.py),
+ * turned or pedalled as the sim decides (pocket.ts dropPlan), at the rate
+ * that lands its plant on the sim's set: the clip's steps are keyed on the
+ * same profile as the sim's drop, so the feet and the body agree. `t0` skips
+ * the snap or exchange (a play-action drop, started after the fake).
+ */
+function startDrop(b: Body, s: PlayState, plan: DropPlan, t0: number): void {
+  const k = s.setup.play.drop.kind;
+  const lib = b.animator.lib.meta;
+  const name = plan.style === 'pedal' && lib[`qb_drop_${k}_pedal`] ? `qb_drop_${k}_pedal` : `qb_drop_${k}`;
+  const m = lib[name];
+  if (!m) return;
+  const ts = k.startsWith('gun') ? GUN_CATCH : UC_EXCHANGE;
+  const rate = Math.max(0.6, Math.min(1.6, (m.duration - ts) / plan.T));
+  b.once.add('drop');
+  b.animator.play(name, { now: true, rate, t0: t0 > 0 ? ts : 0 });
 }
 
 const OL = new Set(['LT', 'LG', 'C', 'RG', 'RT']);
@@ -651,7 +674,20 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
         }
         break;
       }
+      case 'bobble': {
+        // Off his hands and up (the sim's bobble): the hands follow it up and come back together under it (actions_pass.py catch_bobble).
+        if (!a || !a.animator.lib.meta.catch_bobble) break;
+        if (a.catchClip && CATCH_FULL.has(a.catchClip) && catchTime(a) !== null) break;
+        a.catchClip = 'catch_bobble';
+        a.animator.playOverlay('catch_bobble', { t0: eventAt(a, 'catch_bobble', 'secure') ?? SECURE });
+        break;
+      }
       case 'catch': {
+        // Secured on the second chance: pulled in from the regrab (catch_resecure).
+        if (a && e.data?.bobble && a.animator.lib.meta.catch_resecure) {
+          startCatch(a, 'catch_resecure', eventAt(a, 'catch_resecure', 'secure') ?? 0);
+          break;
+        }
         // The final look: if the prediction a beat ago was a different one,
         // switch to it at its secure frame (a full-body clip already under
         // way is committed and plays on).
@@ -777,7 +813,77 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
   }
 }
 
+/**
+ * Where a man is looking (passing round 2). The QB: the sim's eyes (the
+ * middle of the field on the drop, a look-off, his reads: pocket.ts). A
+ * receiver on a timing route brings his head round to the QB coming out of
+ * his break and has the ball from the release; on a vertical his eyes are up
+ * the field until he finds the ball (the sim's findsBallAt), then he looks
+ * back for it over his shoulder (lookWide: the chest turns with the head),
+ * and tracks it into his hands. Defenders in zone have their eyes on the QB,
+ * in man on their man, and go to the ball once they've read the throw (the
+ * sim's onBall); after the catch everyone looks at the ball carrier (his own
+ * eyes are carrierDrive's).
+ */
+function eyesFor(i: number, s: PlayState, simT: number, out: Drive): void {
+  const a = s.agents[i]!;
+  const ball = s.ball;
+  if (s.phase === 'presnap' || a.down) return;
+  const at = (x: number, y: number, h: number) => (out.look = _look.set(-y * YARD, h, (50 - x) * YARD));
+  const atBall = () => at(ball.pos.x, ball.pos.y, Math.max(ball.pos.z, 0.9) * YARD);
+  const air = ball.mode === 'air';
+  if (i === s.qb) {
+    if (air) atBall();
+    else if (s.phase !== 'carrier') at(s.eyes.x, s.eyes.y, 1.6);
+    return;
+  }
+  if (s.phase === 'carrier' || s.phase === 'dead') {
+    const c = s.carrier >= 0 ? s.agents[s.carrier]! : null;
+    if (c && i !== s.carrier) at(c.pos.x, c.pos.y, 1.2);
+    return;
+  }
+  if (a.side === 'off') {
+    if (!a.route) return;
+    const timing = TIMING_ROUTES.has(routeOf(s, a) ?? '');
+    const outOfBreak = a.route.idx >= 1 || a.route.pts.length === 1;
+    if (air && ball.target === i) {
+      if ((timing && outOfBreak) || simT >= findsBallAt(s, a)) {
+        atBall();
+        out.lookWide = true;
+      }
+      return;
+    }
+    if (air) {
+      if (simT - ball.releaseT > 0.4) atBall();
+      return;
+    }
+    if (timing && a.route.idx >= 1) {
+      const qb = s.agents[s.qb]!;
+      at(qb.pos.x, qb.pos.y, 1.7);
+    }
+    return;
+  }
+  if (air && a.mem.onBall) {
+    atBall();
+    return;
+  }
+  const as = s.setup.def.assign[a.slot as keyof typeof s.setup.def.assign];
+  const man = as?.kind === 'man' ? manOf(s, a) : null;
+  if (man) at(man.pos.x, man.pos.y, 1.2);
+  else {
+    const qb = s.agents[s.qb]!;
+    at(qb.pos.x, qb.pos.y, 1.6);
+  }
+}
+/** A QB stepping up faster than this (yd/s along his facing) is climbing the pocket, not shuffling in it. Ours. */
+const CLIMB_ALONG = 0.8;
+
+/** Routes that come back to the QB out of their break (the ball's on him as he turns): every break but the verticals. */
+const TIMING_ROUTES = new Set(['slant', 'out', 'qout', 'in', 'qin', 'dig', 'curl', 'hitch', 'stick', 'comeback', 'spot', 'sit', 'option', 'angle', 'drag', 'cross', 'flat', 'checkdown', 'swing', 'arrow', 'sail', 'leak', 'chip', 'slip', 'bubble']);
+
 export interface Drive {
+  /** The look may turn the chest with the head (over the shoulder for a ball behind him). */
+  lookWide?: boolean;
   /** Speed to feed the animator (m/s). */
   speed: number;
   /** Moving backward facing forward (backpedal). */
@@ -856,9 +962,18 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     b.once.add('fake');
     anim.playOverlay(`ovl_pa_fake_${play.pa.aim < 0 ? 'r' : 'l'}`);
   }
+  // Out of the fake into the drop, when the sim starts it (pocket.ts dropStep); then the hitch up into the pocket at the set.
+  if (i === s.qb && !play.run && !w) {
+    const plan = dropPlan(s, a);
+    if (plan && play.pa && !play.drop.boot && !b.once.has('drop')) startDrop(b, s, plan, 1);
+    if (a.mem.hitchX0 !== undefined && a.mem.noHitch === undefined && !b.once.has('hitch') && since < play.drop.set + 0.1 && anim.lib.meta.qb_hitch) {
+      b.once.add('hitch');
+      anim.play('qb_hitch', { now: true });
+    }
+  }
   // The catch (M6.5 #5): the look the call and the ball ask for (the sim's
   // own catchLook, pure), started so its secure frame lands on the arrival.
-  if (ball.mode === 'air' && ball.target === i && b.catchFor !== ball.arrive && ball.arrive - simT <= CATCH_LOOKAHEAD) {
+  if (ball.mode === 'air' && ball.target === i && s.bobble?.who !== i && b.catchFor !== ball.arrive && ball.arrive - simT <= CATCH_LOOKAHEAD) {
     const left = ball.arrive - simT;
     const clip = catchClip(s, i, catchLook(s, a));
     const lead = eventAt(b, clip, 'secure');
@@ -924,9 +1039,15 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     b.lie.up = true;
     anim.play(b.lie.prone ? 'getup_prone' : 'getup_supine', { now: true });
   }
-  // Eyes: the QB on his read, everyone on a ball in the air.
-  if (ball.mode === 'air') out.look = _look.set(-ball.pos.y * YARD, Math.max(ball.pos.z, 1.2) * YARD, (50 - ball.pos.x) * YARD);
-  else if (i === s.qb && s.phase !== 'presnap' && s.phase !== 'carrier') out.look = _look.set(-s.eyes.y * YARD, 1.6, (50 - s.eyes.x) * YARD);
+  // Eyes (passing round 2): see eyesFor.
+  eyesFor(i, s, simT, out);
+  // Climbing the pocket (passing round 2): moving up in it after the set, the QB's steps are the short, choppy, hips-down
+  // ones of the carrier's traffic gaits (stride-matched to the sim's pace), the ball still in both hands at the numbers
+  // (his hold overlay owns the arms) and his eyes downfield.
+  if (i === s.qb && s.phase === 'pocket' && s.scrambleT < 0 && !w && along > CLIMB_ALONG && (!tr || tr.done)) {
+    out.carry = 1;
+    out.traffic = 1;
+  }
   // The ball carrier runs like one (M6.5 #11): the carry gaits, and his eyes up.
   if (carrying && !b.fallen) carrierDrive(b, i, s, simT, out, clipBusy(b, tr));
   // In a tackle (sim/tackle.ts): pads low, legs churning, both hands on the ball.

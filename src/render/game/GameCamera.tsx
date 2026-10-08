@@ -117,6 +117,14 @@ function targetPose(mode: Mode): Pose | null {
   const los = s.setup.los;
   const by = s.setup.ballY ?? 0;
   const qb = cur.agents[s.qb]!;
+  // ?follow=slot[,dx,dy,h,fov,ax]: a close camera (ax: looking that far downfield of him) on one man (dev and the passing round 2 recordings), so footwork, eyes and hands can be judged.
+  if (urlFlags.follow) {
+    const [slot, ...o] = urlFlags.follow.split(',');
+    const i = s.agents.findIndex((a) => a.slot === slot);
+    const a = i >= 0 ? cur.agents[i]! : qb;
+    const [dx = 4, dy = -7, h = 2.4, fov = 40, ax = 0] = o.map(Number);
+    return { ex: a.x + dx, ey: a.y + dy, eh: h, lx: a.x + ax, ly: a.y, lh: 1.1, fov };
+  }
   const c = cur.carrier >= 0 ? cur.agents[cur.carrier]! : null;
   const ball = cur.ball;
   const focus = c ?? qb;
@@ -283,7 +291,8 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     // Eye slower than the look: the lens leads, the dolly follows.
     // In the air the whole rig tightens up so it keeps pace with the ball.
     const air = practice.runner?.cur.phase === 'air' && modeSetting === 'broadcast';
-    const w = air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
+    // (?follow rides its man close: a stiff rig, or a man on the move leaves the frame.)
+    const w = urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));
     // Shake: hits kick it, it rings down in ~0.3 s.
     for (const e of frameEvents) {

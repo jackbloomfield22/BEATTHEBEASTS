@@ -190,9 +190,16 @@ export interface Formation {
   hBack?: OffSlot;
 }
 
-/** Drop depth (yd behind the ball) and time (s) the QB takes before he can throw. */
+/**
+ * Drop depth (yd behind the ball) and time (s) the QB takes before he can
+ * throw. Under center: the 3-step (~5 yd), the 5-step (~7) and the 7-step
+ * (~9); from the gun, 5 yd back already, their equivalents (passing round 2,
+ * docs/passing/PASSING2.md): `gun3` a catch and a step (the quick game),
+ * `gun5` three steps (the dropback game), `gun7` five (the shot, the Hail
+ * Mary). Depths from QB coaching (a 5-step plants at 7 yd, a 7-step at 9).
+ */
 export interface Drop {
-  kind: 'gun3' | 'gun5' | 'uc3' | 'uc5' | 'handoff';
+  kind: 'gun3' | 'gun5' | 'gun7' | 'uc3' | 'uc5' | 'uc7' | 'handoff';
   depth: number;
   /** Seconds after the snap the drop is set (throws from then on are on-platform). */
   set: number;
@@ -361,8 +368,10 @@ const PASS_PRO: Pick<OffPlay['assign'], 'LT' | 'LG' | 'C' | 'RG' | 'RT'> = { LT:
 const RUN_BLOCK: Pick<OffPlay['assign'], 'LT' | 'LG' | 'C' | 'RG' | 'RT'> = { LT: { kind: 'runBlock' }, LG: { kind: 'runBlock' }, C: { kind: 'runBlock' }, RG: { kind: 'runBlock' }, RT: { kind: 'runBlock' } };
 const route = (r: RouteName, read: number): Assignment => ({ kind: 'route', route: r, read });
 
-const G3 = (set: number): Drop => ({ kind: 'gun3', depth: 7, set });
+// (The gun's quick drop was 2 yd: a catch and two steps, quicker than its set, so he stood there; it's the one step and the gather.)
+const G3 = (set: number): Drop => ({ kind: 'gun3', depth: 6.5, set });
 const G5 = (set: number): Drop => ({ kind: 'gun5', depth: 8, set });
+const UC3 = (set: number): Drop => ({ kind: 'uc3', depth: 5, set });
 const UC5 = (set: number): Drop => ({ kind: 'uc5', depth: 7, set });
 const QB = { QB: { kind: 'qb' } } as const;
 const pb: Assignment = { kind: 'passBlock' };
@@ -393,6 +402,8 @@ export const PASS_PLAYS: OffPlay[] = [
   { id: 'bunch-bubble', name: 'Bubble', type: 'screen', formation: F.gunBunch, drop: { kind: 'gun3', depth: 5.5, set: 0.35 }, assign: { ...PASS_PRO, ...QB, SLOT: route('bubble', 1), X: route('hitch', 2), Z: { kind: 'stalk' }, TE: { kind: 'stalk' }, RB: pb } },
   // ---- M6 (GDD §10.2) ----
   // Quick game: hitches outside, the seams inside to hold the safeties; the spot (snag) concept from empty.
+  // The 3-step from under center (passing round 2): the quick out on the plant of the third step, the seam behind it.
+  { id: 'singleback-quick-outs', name: 'UC Quick Outs', type: 'quick', formation: F.singleback, drop: UC3(0.95), assign: { ...PASS_PRO, ...QB, X: route('qout', 1), Z: route('qout', 2), SLOT: route('seam', 3), TE: route('spot', 4), RB: route('checkdown', 5) } },
   { id: 'doubles-hitch-seam', name: 'Hitch-Seam', type: 'quick', formation: F.gunDoubles, drop: G3(0.7), assign: { ...PASS_PRO, ...QB, X: route('hitch', 1), Z: route('hitch', 2), SLOT: route('seam', 3), TE: route('seam', 4), RB: route('checkdown', 5) } },
   { id: 'empty-spot', name: 'Spot', type: 'quick', formation: F.gunEmpty, drop: G3(0.7), assign: { ...PASS_PRO, ...QB, SLOT: route('spot', 1), X: route('corner', 2), RB: route('flat', 3), TE: route('slant', 4), Z: route('hitch', 5) } },
   // Dropback: the Y-cross from trips (the tight end's deep cross behind the clear-out), levels from empty, the tight ends up the seams from Ace.
@@ -400,10 +411,10 @@ export const PASS_PLAYS: OffPlay[] = [
   { id: 'empty-levels', name: 'Levels', type: 'dropback', formation: F.gunEmpty, drop: G5(0.95), assign: { ...PASS_PRO, ...QB, X: route('dig', 1), SLOT: route('qin', 2), RB: route('seam', 3), TE: route('curl', 4), Z: route('hitch', 5) } },
   { id: 'ace-te-seam', name: 'TE Seam', type: 'dropback', formation: F.singlebackAce, drop: UC5(1.25), assign: { ...PASS_PRO, ...QB, TE: route('seam', 1), X: route('dig', 2), SLOT: route('seam', 3), Z: route('curl', 4), RB: route('checkdown', 5) } },
   // Shots: the Hail Mary (end of a half only: everyone to the end zone, the ball lofted to where they gather).
-  { id: 'doubles-hail-mary', name: 'Hail Mary', type: 'shot', formation: F.gunDoubles, drop: { kind: 'gun5', depth: 9, set: 1.3 }, situ: 'endOfHalf', hailMary: true, assign: { ...PASS_PRO, ...QB, X: route('go', 1), Z: route('go', 2), SLOT: route('post', 3), TE: route('seam', 4), RB: pb } },
+  { id: 'doubles-hail-mary', name: 'Hail Mary', type: 'shot', formation: F.gunDoubles, drop: { kind: 'gun7', depth: 9, set: 1.3 }, situ: 'endOfHalf', hailMary: true, assign: { ...PASS_PRO, ...QB, X: route('go', 1), Z: route('go', 2), SLOT: route('post', 3), TE: route('seam', 4), RB: pb } },
   // Play action: two crossers from Ace; the I-form's max-protect deep shot and its fullback to the flat; the pistol's bootleg; the goal-line tight end leak.
   { id: 'ace-pa-crossers', name: 'PA Crossers', type: 'playAction', formation: F.singlebackAce, drop: UC5(1.5), pa: { aim: -1.5, fake: 0.5 }, assign: { ...PASS_PRO, ...QB, X: route('cross', 1), SLOT: route('drag', 2), Z: route('go', 3), RB: route('arrow', 4), TE: pb } },
-  { id: 'iform-pa-deep-shot', name: 'PA Deep Shot', type: 'playAction', formation: F.iForm, drop: { kind: 'uc5', depth: 8, set: 1.65 }, pa: { aim: -1.5, fake: 0.6 }, assign: { ...PASS_PRO, ...QB, X: route('post', 1), Z: route('go', 2), RB: route('checkdown', 3), TE: pb, SLOT: pb } },
+  { id: 'iform-pa-deep-shot', name: 'PA Deep Shot', type: 'playAction', formation: F.iForm, drop: { kind: 'uc7', depth: 8.5, set: 1.65 }, pa: { aim: -1.5, fake: 0.6 }, assign: { ...PASS_PRO, ...QB, X: route('post', 1), Z: route('go', 2), RB: route('checkdown', 3), TE: pb, SLOT: pb } },
   { id: 'iform-fb-flat', name: 'Fullback Flat', type: 'playAction', formation: F.iForm, drop: UC5(1.3), pa: { aim: -1.5, fake: 0.45 }, assign: { ...PASS_PRO, ...QB, SLOT: route('flat', 1), TE: route('corner', 2), Z: route('go', 3), X: route('dig', 4), RB: pb } },
   { id: 'pistol-pa-boot', name: 'PA Boot', type: 'playAction', formation: F.pistol, drop: { kind: 'gun5', depth: 6, set: 1.45, boot: 7 }, pa: { aim: -1.5, fake: 0.45 }, assign: { ...PASS_PRO, ...QB, SLOT: route('sail', 1), TE: route('drag', 2), Z: route('cross', 3), X: route('go', 4), RB: pb } },
   { id: 'heavy-pa-te-leak', name: 'PA TE Leak', type: 'playAction', formation: F.heavy, drop: UC5(1.45), pa: { aim: -2.8, fake: 0.55 }, assign: { ...PASS_PRO, ...QB, TE: route('leak', 1), Z: route('corner', 2), X: route('post', 3), SLOT: route('flat', 4), RB: pb } },

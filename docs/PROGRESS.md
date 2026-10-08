@@ -31,6 +31,26 @@
   - Honest limits:
     - A long sprint costs 0.02–0.04 stamina a second, so a 40-yard breakaway loses ~10–15% of the bar and ~2% of top speed. That's visible on the bar but subtle in the legs. The drive-long model (stamina carried from play to play, Workhorse and the rest) is what gives it teeth.
     - Watched on the recorded broken-tackle clip (below, "Sprint watched").
+- **Passing round 2** (2026-10-08, `wip/passing2`; agent, finished by the lead at a usage pause; `docs/passing/PASSING2.md`, videos in `docs/passing/round2/`):
+  - The QB's feet: 3-, 5- and 7-step drops and the gun's set on the route's rhythm, the hitch, setting the feet to the target, climbing the pocket.
+  - The QB's eyes: the head goes through the reads; a look-off moves a deep safety, sized by rating.
+  - The receiver's head comes round out of the break; the hands come up late; the over-the-shoulder look on a go.
+  - A seeded bobble and re-secure, by Hands, ball speed and contact.
+  - A weaker arm arcs higher and arrives later.
+  - A round-two follow camera behind the QB.
+  - Numbers:
+    - Completion 66.5%, 8.3 ypa, INT 2.5%, sacks 7.6%.
+    - aDOT 11.0 → 9.0; completions of 40+ 7.1% → 4.4% (NFL ~3%), each depth band near its NFL rate.
+    - Pressure arrives at 2.6 s.
+    - Passing identity 9/9; identity 19/20; traits 127/127; clip gates 178/178.
+  - Critique: the drop and the throw read well from the follow camera. The look-off and the arm pair were recorded too wide to judge, and the bobble needs watching at full rate. The camera clips into a helmet at the end of a pile.
+- **Characters round 2** (2026-10-08, `wip/characters2`; agent, finished by the lead at a usage pause; `docs/characters/CHARACTERS2.md`, stills in `docs/characters/round2/`):
+  - Epaulet and half-angle elbow helper bones, driven at runtime: no shoulder horns with the arms overhead at any LOD.
+  - The jersey closed over the shoulders.
+  - Neck and hem fixes; cleat soles and studs; pants creases; flatter lineman pad plates.
+  - Body variety by build and position.
+  - White kits held under the bloom threshold, with every preset checked.
+  - Critique: the collar reads as a sliver; the neck column is blocky; snow loses some white separation; pads still quilted and boxy; mid-range bodies still look alike at broadcast size; faces are one sculpt.
 - **Contact and tackling physics** (2026-10-06, `wip/physics`; agent; `docs/physics/TACKLING.md`, six videos in `docs/physics/`):
   - *Bodies* (`sim/bodies.ts`): skill players are ellipses fitted to the measured model (BODIES.md); linemen and the QB keep the circle. A man on the turf is a capsule along his fall: runners go round him, hurdle him (Agility or Jumping 84+, or Hurdler) or trip over him. Men get up, and pancakes leave bodies on the ground.
   - *The tackle as a resolution over several frames* (`sim/tackle.ts`): the calibrated contact roll picks the kind of hold (wrap, shoulder hit, big hit, drag, ankle, arm), then physics plays it out:

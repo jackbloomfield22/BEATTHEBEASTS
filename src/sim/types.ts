@@ -145,6 +145,8 @@ export interface SimEvent {
     | 'handoff'
     | 'throw'
     | 'catch'
+    /** The ball off his hands and up, still his (passing round 2): [the receiver]; a 'catch' (data.bobble) or a 'drop' follows. */
+    | 'bobble'
     | 'drop'
     | 'deflection'
     | 'interception'

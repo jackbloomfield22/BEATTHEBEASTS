@@ -29,6 +29,13 @@ export interface AnimInput {
   accel?: number;
   /** World point to look at (null: look where the body faces). */
   lookAt?: THREE.Vector3 | null;
+  /**
+   * The look may turn the chest as well as the neck (passing round 2: a
+   * receiver looking back over his shoulder for a deep ball, eyes down into
+   * his hands): up to LOOK_WIDE either way, the upper spine taking what the
+   * neck can't, and the head down to LOOK_DOWN_WIDE.
+   */
+  lookWide?: boolean;
   /** World velocity of the ground under the player (the Lab's treadmill; 0 in the game). */
   groundVelocity?: THREE.Vector3;
   /** Moving backward facing forward (a defensive back's pedal): `speed` is then the backward speed. */
@@ -109,6 +116,26 @@ interface OverlayTrack {
   bone: THREE.Bone;
   interp: THREE.Interpolant;
 }
+
+/** How the look is shared out (passing round 2): the neck and head; wide, the upper back first. */
+const LOOK_PARTS: readonly (readonly [string, number])[] = [
+  ['neck_02', 0.4],
+  ['head', 0.6],
+];
+const LOOK_PARTS_WIDE: readonly (readonly [string, number])[] = [
+  ['spine_04', 0.35],
+  ['neck_02', 0.26],
+  ['head', 0.39],
+];
+/**
+ * A wide look's reach (rad, ~125°: a receiver running away from the QB gets
+ * his eyes back over his shoulder by turning his chest ~45° and his neck
+ * ~80°) and how far down (rad, ~60°: eyes into his hands at the chest).
+ * Ours, from the broadcast's over-the-shoulder catch and the coaching line
+ * "look it into the tuck".
+ */
+const LOOK_WIDE = 2.2;
+const LOOK_DOWN_WIDE = 1.05;
 
 const OVERLAY_IN = 0.13;
 const OVERLAY_OUT = 0.16;
@@ -572,7 +599,7 @@ export class PlayerAnimator {
       this.lockFoot(s, this.loco > 0.5 ? 'loco' : 'stand', down, dt, input.groundVelocity);
     }
     // 4 and 5.
-    this.lookAt(input.lookAt ?? null, dt);
+    this.lookAt(input.lookAt ?? null, dt, !!input.lookWide);
     this.pads(dt);
   }
 
@@ -672,7 +699,7 @@ export class PlayerAnimator {
     foot.updateMatrixWorld(true);
   }
 
-  private lookAt(target: THREE.Vector3 | null, dt: number): void {
+  private lookAt(target: THREE.Vector3 | null, dt: number, wide = false): void {
     const head = this.bone('head');
     const neck = this.bone('neck_02');
     const rootQ = this.player.root.getWorldQuaternion(_q2);
@@ -681,20 +708,21 @@ export class PlayerAnimator {
     if (target) {
       head.getWorldPosition(_v);
       const d = _w.subVectors(target, _v).normalize();
-      // Clamp to what a neck can do: ±70° side to side, ±35° up and down.
-      const yaw = THREE.MathUtils.clamp(Math.atan2(d.x, d.z) - Math.atan2(facing.x, facing.z), -1.22, 1.22);
-      const pitch = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(d.y, -1, 1)), -0.6, 0.6);
+      // Clamp to what a neck can do: ±70° side to side, ±35° up and down
+      // (wide: the chest turns too, and the eyes go down into the hands).
+      const yawLim = wide ? LOOK_WIDE : 1.22;
+      const yaw = THREE.MathUtils.clamp(Math.atan2(Math.sin(Math.atan2(d.x, d.z) - Math.atan2(facing.x, facing.z)), Math.cos(Math.atan2(d.x, d.z) - Math.atan2(facing.x, facing.z))), -yawLim, yawLim);
+      const pitch = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(d.y, -1, 1)), wide ? -LOOK_DOWN_WIDE : -0.6, 0.6);
       want = new THREE.Quaternion().setFromEuler(new THREE.Euler(-pitch, yaw, 0, 'YXZ'));
       want.premultiply(rootQ).multiply(rootQ.clone().invert());
     }
     // Critically damped-ish follow (~0.15 s).
     this.look.slerp(want, 1 - Math.exp(-dt * 10));
     if (Math.abs(this.look.w) > 0.99999) return;
-    // 40% in the neck, 60% in the head.
-    for (const [bone, share] of [
-      [neck, 0.4],
-      [head, 0.6],
-    ] as const) {
+    // 40% in the neck, 60% in the head; a wide look puts a third of it in the upper back first (the shoulders turn with the head).
+    const parts = wide ? LOOK_PARTS_WIDE : LOOK_PARTS;
+    for (const [name, share] of parts) {
+      const bone = name === 'head' ? head : name === 'neck_02' ? neck : this.bone(name);
       const part = new THREE.Quaternion().slerp(this.look, share);
       const wq = bone.getWorldQuaternion(new THREE.Quaternion());
       const pq = bone.parent!.getWorldQuaternion(new THREE.Quaternion());
