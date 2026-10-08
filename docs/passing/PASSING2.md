@@ -109,21 +109,37 @@ After, 30 a cell:
 **Checks:**
 
 - Passing identity 9 of 9 (two new checks: the arm's apex, the look-off).
-- Identity: IDENTITY_RESULT.
+- Identity 19 of 20 (only Gates vs Lewis fails, on top speed and break separation, as before; waiting on the owner's decision).
 - Trait audit 127 of 127 traits, 25 of 25 combinations.
 - Tackling harness (`tools/sim/tackling.ts`): runs barely move (yards after first contact 3.67, driven back 11%, gang 43%, contact to whistle 0.53 s); after the catch, yards after first contact 3.59 → 2.72 and driven back 22% → 20%: the deep defenders now arrive.
 - Film regenerated; golden re-pinned (600 of 920 cases); the e2e seeds re-found (stick 2, the touchdown 116); clips re-found: completion-rac, the go and back-shoulder concepts, the speed and rush identity pairs, tackle-driven-back.
 - Clip gates 178 of 178.
-- `npm run check`: CHECK_RESULT. The practice e2e on port 5321: E2E_RESULT.
+- `npm run check`: passes (71 files, 722 tests). The practice e2e on port 5321: 7 of 7, determinism included.
 
 ## The videos
 
-VIDEOS
+`docs/passing/round2/before/` and `after/` hold the same plays recorded before and after (frame-true, the round-two follow camera where noted); `compare/` holds the side-by-side.
+
+- `p2-drop3`, `p2-drop5-ai`, `p2-drop7-ai`: the 3-, 5- and 7-step drops on the route's rhythm, with the hitch.
+- `p2-gun-slant`: the gun's quick set on the slant.
+- `p2-lookoff` (+ `-a`/`-b`): the look-off against the deep safety.
+- `p2-head-slant`, `p2-shoulder`: the receiver's head round out of the break and over the shoulder on a go.
+- `p2-bobble`: a bobble and the re-secure.
+- `p2-arm` (+ `-a`/`-b`): a strong arm against a weak one on the same throw.
 
 ## Watched: an honest critique
 
-CRITIQUE
+Written by the lead from contact sheets of the after videos (the agent was stopped for usage before its own viewing pass).
+
+- **The drop and the throw read.** The round-two follow camera sits behind the QB, and the drop, the set and the throw are legible there in a way the broadcast camera never made them. This is the best view of the QB's feet so far.
+- **The bobble isn't legible in a sampled sheet.** The catch, the hit and the go-down read; the bobble itself is a few frames and needs watching at full rate. The clip also ends with the camera inside a defender's helmet as the pile settles (a camera clipping problem, not the bobble's).
+- **The look-off and the arm don't read at the distance they were recorded.** Both were shot from the wide broadcast angle, where players are a few pixels tall. The look-off's effect is in the numbers (passing identity 9/9) but needs a closer angle to be seen; the arm pair's higher apex (the new check) also needs a side-on view.
+- **The numbers moved the right way:** aDOT 11.0 → 9.0, 40+ completions 7.1% → 4.4% with each depth band near its NFL rate, pressure at 2.6 s. Completion rose to 66.5% because passes are shorter; sacks rose to 7.6%, a shade above the NFL.
 
 ## Still open
 
-OPEN
+- Re-record the look-off and the arm pair from a closer, side-on angle so they can be judged; watch the bobble at full rate.
+- The camera clipping into a helmet at the end of a pile.
+- Sacks 7.6% (NFL ~6.5–7%) and completions of 20+ at 16.8% (NFL ~12–14%).
+- No backpedal speed difference by drop depth yet beyond the rhythm; a true 7-step from under center is rare in the book.
+- Gates vs Lewis (identity 19/20) waits on the owner.
