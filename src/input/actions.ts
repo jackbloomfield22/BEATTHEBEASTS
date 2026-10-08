@@ -94,7 +94,7 @@ export const ACTIONS: ActionDef[] = [
   a('pocket.throwClick', 'pocket', 'Throw to clicked receiver', ['Mouse0'], [], true),
   a('pocket.pumpFake', 'pocket', 'Pump fake', ['Mouse2'], ['Pad:LB']),
   a('pocket.throwAway', 'pocket', 'Throw it away', ['KeyQ'], ['Pad:RS']),
-  a('pocket.scramble', 'pocket', 'Scramble: tuck it and run', ['KeyR'], ['Pad:RT']),
+  a('pocket.scramble', 'pocket', 'Scramble: tuck it and run', ['ShiftLeft', 'ShiftRight', 'KeyR'], ['Pad:RT']),
 
   // Ball in air
   a('air.switch', 'ballInAir', 'Switch to target', ['Tab'], ['Pad:B']),
@@ -222,6 +222,11 @@ export const PAD_DEFAULTS_V6: Record<string, string[]> = {
 };
 
 /** Gamepad defaults that changed in settings v9 (A is the one action button in the air and with the ball), with their v8 values. */
+/** Keyboard defaults that changed in settings v10 (the scramble on Shift again, as the sprint it runs into; R kept), with their v9 values. */
+export const KB_DEFAULTS_V9: Record<string, string[]> = {
+  'pocket.scramble': ['KeyR'],
+};
+
 export const PAD_DEFAULTS_V8: Record<string, string[]> = {
   'air.possession': ['Pad:A'],
   'carrier.dive': ['Pad:A'],

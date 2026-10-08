@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { loadJSON, saveJSON } from './storage';
-import { KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4, KB_DEFAULTS_V5, KB_DEFAULTS_V6, PAD_DEFAULTS_V6, PAD_DEFAULTS_V8, type Bindings } from '@/input/actions';
+import { KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4, KB_DEFAULTS_V5, KB_DEFAULTS_V6, PAD_DEFAULTS_V6, PAD_DEFAULTS_V8, KB_DEFAULTS_V9, type Bindings } from '@/input/actions';
 
 export type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
 export type Difficulty = 'rookie' | 'pro' | 'legend' | 'beast';
@@ -21,7 +21,7 @@ export interface GraphicsSettings {
 }
 
 export interface Settings {
-  version: 9;
+  version: 10;
   display: {
     fullscreen: boolean;
     resolutionScale: number; // 0.5 .. 1.0
@@ -117,7 +117,7 @@ export function renderDpr(cssW: number, cssH: number, deviceDpr: number, preset:
 
 export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings {
   return {
-    version: 9,
+    version: 10,
     display: { fullscreen: false, resolutionScale: 1, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 180, ballInAir: 'assist', keyboard, gamepad },
@@ -261,6 +261,13 @@ export function migrate(stored: Settings): Settings {
     const pad = s.controls?.gamepad;
     if (pad) for (const [id, old] of Object.entries(PAD_DEFAULTS_V8)) if (same(pad[id], old)) delete pad[id];
     (s as { version: number }).version = 9;
+  }
+  if ((s.version as number) === 9) {
+    // v10: the scramble back on Shift (held, it runs straight on into the sprint, also Shift); R stays as a second key. Only where it's still the v9 default.
+    const same = (cur: string[] | undefined, old: string[]) => !!cur && cur.length === old.length && cur.every((c, i) => c === old[i]);
+    const kb = s.controls?.keyboard;
+    if (kb) for (const [id, old] of Object.entries(KB_DEFAULTS_V9)) if (same(kb[id], old)) delete kb[id];
+    (s as { version: number }).version = 10;
   }
   return s;
 }
