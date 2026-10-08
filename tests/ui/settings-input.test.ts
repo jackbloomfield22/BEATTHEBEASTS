@@ -42,17 +42,29 @@ describe('action map', () => {
     expect([kb['carrier.option1'], kb['carrier.option2'], kb['carrier.option3']]).toEqual([['Digit1'], ['Digit2'], ['Digit3']]);
     expect([kb['carrier.juke'], kb['carrier.stiffArm'], kb['carrier.spin']]).toEqual([['KeyQ'], ['KeyW'], ['KeyE']]);
     expect([kb['carrier.truck'], kb['carrier.dive'], kb['carrier.protect']]).toEqual([['KeyR'], ['KeyF'], ['KeyC']]);
-    expect(kb['pocket.scramble']).toEqual(['KeyR']);
+    // The scramble is on Shift (held, it runs on into the sprint), R kept as a second key (v10).
+    expect(kb['pocket.scramble']).toEqual(['ShiftLeft', 'ShiftRight', 'KeyR']);
     // The directional jukes stay on the right stick only.
     expect(kb['carrier.jukeLeft']).toEqual([]);
     expect(defaultBindings('pad')['carrier.jukeLeft']).toEqual(['Pad:RSLeft']);
+  });
+
+  it('v9 settings move the scramble to Shift, but keep a scramble the player rebound', () => {
+    const old = defaultSettings({ ...defaultBindings('kb'), 'pocket.scramble': ['KeyR'] }, defaultBindings('pad'));
+    (old as { version: number }).version = 9;
+    const m = migrate(old);
+    expect(m.version).toBe(10);
+    expect(m.controls.keyboard['pocket.scramble']).toBeUndefined();
+    const rebound = defaultSettings({ ...defaultBindings('kb'), 'pocket.scramble': ['KeyG'] }, defaultBindings('pad'));
+    (rebound as { version: number }).version = 9;
+    expect(migrate(rebound).controls.keyboard['pocket.scramble']).toEqual(['KeyG']);
   });
 
   it('v2 settings move to the new keys, but keep a key the player rebound', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V2, 'carrier.spin': ['KeyX'] }, defaultBindings('pad'));
     (old as { version: number }).version = 2;
     const m = migrate(old);
-    expect(m.version).toBe(9);
+    expect(m.version).toBe(10);
     // Still on the old default: dropped, so the merge with the defaults fills in the new one.
     expect(m.controls.keyboard['carrier.up']).toBeUndefined();
     expect(m.controls.keyboard['air.possession']).toBeUndefined();
@@ -83,7 +95,7 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V5, 'carrier.sprint': ['ShiftRight'] }, { ...defaultBindings('pad'), 'carrier.sprint': ['Pad:RT'] });
     (old as { version: number }).version = 5;
     const m = migrate(old);
-    expect(m.version).toBe(9);
+    expect(m.version).toBe(10);
     expect(m.controls.keyboard['pocket.scramble']).toBeUndefined();
     expect(m.controls.keyboard['carrier.sprint']).toBeUndefined();
     expect(m.controls.gamepad['carrier.sprint']).toBeUndefined();
@@ -97,7 +109,7 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V6, 'carrier.spin': ['KeyX'] }, { ...defaultBindings('pad'), ...PAD_DEFAULTS_V6 });
     (old as { version: number }).version = 6;
     const m = migrate(old);
-    expect(m.version).toBe(9);
+    expect(m.version).toBe(10);
     expect(m.controls.keyboard['carrier.juke']).toBeUndefined();
     expect(m.controls.keyboard['carrier.spin']).toEqual(['KeyX']);
     for (const id of Object.keys(PAD_DEFAULTS_V6)) expect(m.controls.gamepad[id]).toBeUndefined();
@@ -108,7 +120,7 @@ describe('action map', () => {
     (old as { version: number }).version = 7;
     delete (old.gameplay as Partial<typeof old.gameplay>).quarterMinutes;
     const m = migrate(old);
-    expect(m.version).toBe(9);
+    expect(m.version).toBe(10);
     expect(m.gameplay.quarterMinutes).toBe(5);
     expect(m.gameplay.gameLength).toBe(6); // Quick Play's drive count stays
     expect(m.controls.keyboard['kick.aim']).toBeUndefined();
