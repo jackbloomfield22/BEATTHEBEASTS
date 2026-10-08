@@ -29,7 +29,8 @@ import './anim.css';
 // Hash query: mode=lineup|single|compare|onion|sheet|sequence, pos (sequence stance), clip, speed, t (freeze at time, s), rate
 // (playback rate), lock=0|1, kit, skin, lod, num, name, seed, clip2, yaw, look=1,
 // carry=space|traffic|drive|press (blend: the ball carrier's gaits, M6.5 #11),
-// dip=l|r (blend: the dip before contact), cam=x,y,z,tx,ty,tz.
+// dip=l|r (blend: the dip before contact), cam=x,y,z,tx,ty,tz[,fov],
+// body=<lineup index> (single mode's body; default the QB).
 
 // Numbers and names exercise the lettering: one and two digits, short,
 // long (squeezed) and accented names.
@@ -76,6 +77,8 @@ interface LabState {
   /** Single mode's jersey number and name (lineup players carry their own). */
   num: number;
   name: string;
+  /** Single mode's body: an index into LINEUP (default the QB). */
+  body: number;
 }
 
 interface Readout {
@@ -155,8 +158,8 @@ function bodyFor(pos: SequenceStance): (typeof LINEUP)[number] {
   return LINEUP.find((b) => b.pos === want) ?? LINEUP[2]!;
 }
 
-function actorsFor(mode: LabState['mode'], pos: SequenceStance): Actor[] {
-  const qb = LINEUP[2]!;
+function actorsFor(mode: LabState['mode'], pos: SequenceStance, body = 2): Actor[] {
+  const qb = LINEUP[body] ?? LINEUP[2]!;
   switch (mode) {
     case 'sequence':
       return [{ body: bodyFor(pos), x: 0, offset: 0 }];
@@ -197,7 +200,7 @@ function travel(lib: AnimLibrary, s: LabState): { speed: number; dir: [number, n
 function Scene({ asset, lib, s, onReadout }: { asset: PlayerAsset; lib: AnimLibrary; s: LabState; onReadout: (r: Readout) => void }) {
   const camera = useThree((st) => st.camera);
   const gl = useThree((st) => st.gl);
-  const actors = useMemo(() => actorsFor(s.mode, s.pos), [s.mode, s.pos]);
+  const actors = useMemo(() => actorsFor(s.mode, s.pos, s.body), [s.mode, s.pos, s.body]);
   const official = officialOf(s);
   const bodies = actors.map((a) => a.body);
   const players = useMemo(
@@ -399,6 +402,7 @@ export function AnimLab() {
     seed: q.get('seed') ?? '',
     num: Number(q.get('num') ?? 16),
     name: q.get('name') ?? 'Montana',
+    body: Number(q.get('body') ?? 2),
   });
   const [readout, setReadout] = useState<Readout | null>(null);
   const cam = (q.get('cam') ?? '3.6,1.3,0.4,0,0.95,0').split(',').map(Number);
@@ -602,7 +606,7 @@ export function AnimLab() {
         {error ? <p className="lab-error">{error}</p> : null}
       </aside>
       <div className="lab-view">
-        <Canvas shadows dpr={[1, 2]} gl={{ preserveDrawingBuffer: true, antialias: true }} camera={{ fov: 35, position: [cam[0]!, cam[1]!, cam[2]!] }} onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}>
+        <Canvas shadows dpr={[1, 2]} gl={{ preserveDrawingBuffer: true, antialias: true }} camera={{ fov: cam[6] ?? 35, position: [cam[0]!, cam[1]!, cam[2]!] }} onCreated={({ gl }) => (gl.toneMapping = THREE.ACESFilmicToneMapping)}>
           <color attach="background" args={['#9aa3ad']} />
           <hemisphereLight args={[0xbfd4ff, 0x3a3228, 0.9]} />
           <directionalLight position={[4, 8, 6]} intensity={2.4} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0004} shadow-normalBias={0.02} shadow-camera-left={-6} shadow-camera-right={6} shadow-camera-top={4} shadow-camera-bottom={-1} />

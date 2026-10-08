@@ -41,11 +41,17 @@ MANIFEST = os.path.splitext(OUT)[0] + ".json"
 # The High LOD carries every facemask style (the runtime hides all but the
 # player's); the Medium LOD too; the Low LOD one generic mask and none of the
 # small extras (visor, strap, towel), which don't read at that distance.
+# "collar" is the collar band's segments round (built per LOD, not decimated);
+# "sole" the cleat plate's outline points and the studs' segments (round two).
 BUDGET = [
-    {"body": 7000, "jersey": 5000, "pants": 3000, "helmet": 3000, "trim": (0.012, 6), "clips": 12, "cleats": 1200, "glove": 900, "collar": 400, "mask": (6, 3), "extras": True},
-    {"body": 3000, "jersey": 2100, "pants": 1300, "helmet": 1300, "trim": (0.02, 5), "clips": 8, "cleats": 500, "glove": 260, "collar": 160, "mask": (4, 3), "extras": True},
-    {"body": 1000, "jersey": 700, "pants": 450, "helmet": 400, "trim": (0.045, 3), "clips": 0, "cleats": 200, "glove": 70, "collar": 48, "mask": (3, 2), "extras": False},
+    {"body": 7000, "jersey": 5000, "pants": 3000, "helmet": 3000, "trim": (0.012, 6), "clips": 12, "cleats": 1200, "sole": (32, 8), "glove": 900, "collar": 40, "mask": (6, 3), "extras": True},
+    {"body": 3000, "jersey": 2100, "pants": 1300, "helmet": 1300, "trim": (0.02, 5), "clips": 8, "cleats": 500, "sole": (20, 5), "glove": 260, "collar": 28, "mask": (4, 3), "extras": True},
+    {"body": 1000, "jersey": 700, "pants": 450, "helmet": 400, "trim": (0.045, 3), "clips": 0, "cleats": 200, "sole": (12, 0), "glove": 70, "collar": 16, "mask": (3, 2), "extras": False},
 ]
+for _spec in filter(None, os.environ.get("BTB_BUDGET", "").split(",")):
+    # Experiments: BTB_BUDGET=body2=1100,jersey2=800 (part + LOD = triangles).
+    _k, _n = _spec.split("=")
+    BUDGET[int(_k[-1])][_k[:-1]] = int(_n)
 HAND_BONES = ("forearm", "forearm_twist", "hand", "thumb_01", "thumb_02", "thumb_03", "index_01", "index_02", "index_03", "fingers_01", "fingers_02", "fingers_03")
 
 
@@ -64,6 +70,11 @@ def covered(co: Vector) -> bool:
     # (0.083, the character pass: at 0.092 flaps of trapezius skin stood
     # outside the collar band's ring, 0.088 x 0.081, as a torn edge.)
     if co.z > 1.44 and math.hypot(co.x, co.y - 0.02) < 0.083:
+        return False
+    # Round two: the trapezius slopes above the collar are kept too and
+    # pulled into the neck column (shrink_neck). Cut at the collar's top
+    # (1.62 m) they left a torn flap standing beside the neck.
+    if co.z > 1.56 and math.hypot(co.x, co.y - 0.02) < 0.13:
         return False
     # Inside the glove cuff (gear.glove: wrist - 4.5 cm .. + 2 cm): the
     # forearm poked through it when the wrist bent back (QB gun). Keep 1 cm
@@ -86,6 +97,58 @@ def covered(co: Vector) -> bool:
                     return False
         return abs(co.x) < 0.33  # torso and upper arm, under the jersey
     return False
+
+
+# The neck column the skin is held inside between the collar and the skull
+# (round two): an ellipse round the neck's axis (body.neck: 0.080 x 0.074 at
+# its base), the collar band's inner ring less a few millimetres, widening
+# from NECK_HOLD_Z[1] to the skull base so the neck still flares into the head.
+NECK_HOLD = (0.079, 0.073, 0.02)  # half-width, half-depth, y of the axis (m)
+NECK_HOLD_Z = (1.50, 1.60, 1.70)  # from, held to here, free by here
+
+
+def shrink_neck(ob: bpy.types.Object) -> int:
+    """Pull the kept skin between the collar and the skull base inside the
+    neck column: the trapezius slopes rise out to 0.13 m from the neck's axis
+    and would stand outside the collar band (0.090 x 0.083). Returns how
+    many vertices moved."""
+    from lib.geo import smoothstep as ss
+
+    a, b, y0 = NECK_HOLD
+    n = 0
+    for v in ob.data.vertices:
+        z = v.co.z
+        if not NECK_HOLD_Z[0] < z < NECK_HOLD_Z[2]:
+            continue
+        dx, dy = v.co.x, v.co.y - y0
+        if dy < 0 and z > 1.62:
+            continue  # the throat and the jaw: never flaps, and the face starts here
+        r = math.hypot(dx / a, dy / b)
+        # Held to the ellipse up to 1.60, then the limit opens up to 1.35x by
+        # the skull base (and stops applying there).
+        lim = 1.0 + 0.35 * ss(NECK_HOLD_Z[1], NECK_HOLD_Z[2], z)
+        k = 1.0 - ss(NECK_HOLD_Z[2] - 0.02, NECK_HOLD_Z[2], z)
+        if r <= lim or k <= 0:
+            continue
+        s = 1.0 + (lim / r - 1.0) * k
+        v.co.x, v.co.y = dx * s, y0 + dy * s
+        n += 1
+    return n
+
+
+def shrink_under_hem(ob: bpy.types.Object, depth: float = 0.004) -> int:
+    """Sink the leg skin up inside the pants hem a few millimetres (round
+    two): it overlaps 7 cm so no gap opens at the sprint, and where it
+    stood within a centimetre of the fabric it z-fought through the hem."""
+    from lib.geo import smoothstep as ss
+
+    z0 = gear.PANTS_HEM_Z
+    n = 0
+    for v in ob.data.vertices:
+        if z0 - 0.005 < v.co.z < z0 + 0.08 and abs(v.co.x) < 0.24:
+            v.co -= v.normal * (depth * ss(z0 - 0.005, z0 + 0.015, v.co.z))
+            n += 1
+    return n
 
 
 def covered_official(co: Vector) -> bool:
@@ -181,6 +244,7 @@ def build_official(rig, full_body, src, mat) -> tuple[list, list]:
         for m in list(ob.modifiers)[1:]:
             ob.modifiers.remove(m)
         limit_weights(ob, 4)
+        with_helpers(ob)
         ob.data.validate(clean_customdata=False)
         for p in ob.data.polygons:
             p.use_smooth = True
@@ -227,14 +291,85 @@ def add_shapes(ob: bpy.types.Object) -> None:
     me = ob.data
     part = me.attributes["part"]
     ob.shape_key_add(name="Basis", from_mix=False)
+    # Round two: the collar band's outer edge lies on the jersey's neck
+    # opening, so it takes the jersey's displacement there (the nearest
+    # jersey vertex's), fading to its own field down at the neck. With its
+    # own normals it moved apart from the cap tops (the pads shape lifts
+    # them) and opened a dark slot beside the neck.
+    from mathutils.kdtree import KDTree
+
+    from lib.geo import smoothstep as ss
+
+    jersey = [v for v in me.vertices if part.data[v.index].value == gear.PARTS["jersey"]]
+    kd = KDTree(max(1, len(jersey)))
+    for k, v in enumerate(jersey):
+        kd.insert(v.co, k)
+    kd.balance()
+    collar_src = {}
+    for v in me.vertices if jersey else ():
+        if part.data[v.index].value == gear.PARTS["collar"]:
+            # The mean over the 8 nearest jersey vertices: one vertex's
+            # normal-driven delta varies too much from one to the next.
+            near = [jersey[k] for _co, k, _d in kd.find_n(v.co, 8)]
+            collar_src[v.index] = (near, ss(1.575, 1.598, v.co.z))
+
+    def delta(name, field, v, pid):
+        return field(v.co, v.normal, pid) if name in PART_AWARE else field(v.co, v.normal)
+
     for name, field in SHAPES.items():
         key = ob.shape_key_add(name=name, from_mix=False)
         for v in me.vertices:
             pid = part.data[v.index].value
             f = PART_FOLLOW[pid]
             if f:
-                d = field(v.co, v.normal, pid) if name in PART_AWARE else field(v.co, v.normal)
+                d = delta(name, field, v, pid)
+                if v.index in collar_src:
+                    near, t = collar_src[v.index]
+                    dj = sum((delta(name, field, jv, gear.PARTS["jersey"]) for jv in near), Vector()) / len(near)
+                    d = d.lerp(dj * PART_FOLLOW[gear.PARTS["jersey"]] / f, t)
                 key.data[v.index].co = v.co + d * f
+
+
+def collar_follows_jersey(ob: bpy.types.Object) -> int:
+    """The collar band's outer edge rides the jersey's neck opening (round
+    two): rigid on the chest, it parted from the opening's sides, which the
+    pad shell partly skins to the pads and clavicles, and showed the
+    jersey's inside at a shrug. Its weights blend from the chest at the neck
+    to the nearest jersey vertex's at the opening (as its shapes do,
+    add_shapes)."""
+    from mathutils.kdtree import KDTree
+
+    from lib.geo import smoothstep as ss
+
+    me = ob.data
+    part = me.attributes["part"]
+    groups = ob.vertex_groups
+    jersey = [v for v in me.vertices if part.data[v.index].value == gear.PARTS["jersey"]]
+    if not jersey:
+        return 0
+    kd = KDTree(len(jersey))
+    for k, v in enumerate(jersey):
+        kd.insert(v.co, k)
+    kd.balance()
+    n = 0
+    for v in me.vertices:
+        if part.data[v.index].value != gear.PARTS["collar"]:
+            continue
+        t = ss(1.575, 1.598, v.co.z)
+        if t <= 0:
+            continue
+        _co, k, _d = kd.find(v.co)
+        src = {groups[g.group].name: g.weight for g in jersey[k].groups if g.weight > 0}
+        own = {groups[g.group].name: g.weight for g in v.groups if g.weight > 0}
+        new = {name: own.get(name, 0.0) * (1 - t) + src.get(name, 0.0) * t for name in set(own) | set(src)}
+        for g in list(v.groups):
+            groups[g.group].remove([v.index])
+        for name, w in new.items():
+            if w > 1e-4:
+                groups[name].add([v.index], w, "REPLACE")
+        n += 1
+    limit_weights(ob, 4)
+    return n
 
 
 def smooth_weights(ob: bpy.types.Object, repeat: int = 4, factor: float = 0.5, where=None) -> None:
@@ -391,6 +526,41 @@ def towel_weights(ob: bpy.types.Object, rig: bpy.types.Object) -> None:
     am.object = rig
 
 
+ELBOW_SMOOTH = int(os.environ.get("BTB_ELBOW_SMOOTH", "6"))
+ELBOW_R = float(os.environ.get("BTB_ELBOW_R", "0.09"))
+
+
+def near_elbow(co: Vector) -> bool:
+    return any((co - Vector(J[f"elbow_{s}"])).length < ELBOW_R for s in ("l", "r"))
+
+
+# The half-angle helper bones (lib/helpers.py, round two). BTB_HELPERS=0
+# builds without them (the A/B the skinning gate numbers in
+# docs/characters/CHARACTERS2.md compare).
+HELPERS_ON = os.environ.get("BTB_HELPERS", "1") != "0"
+
+
+def helper_manifest() -> dict:
+    from lib import helpers as h
+
+    return {
+        "epaulet": {"parent": "clavicle", "child": "upperarm", "from": h.EPAULET_FROM, "to": h.EPAULET_TO, "max": h.EPAULET_MAX},
+        "elbow_helper": {"parent": "upperarm", "child": "forearm", "share": h.ELBOW_SHARE},
+    }
+
+
+def with_helpers(ob: bpy.types.Object) -> None:
+    """Move each joint's blend band onto its half-angle helper (the parts
+    lib/helpers.HELPERS lists), then keep four influences."""
+    if not HELPERS_ON:
+        return
+    from lib.helpers import reweight
+
+    part = ob.data.attributes["part"]
+    reweight(ob, lambda i: part.data[i].value)
+    limit_weights(ob, 4)
+
+
 def join(objs, name):
     bpy.ops.object.select_all(action="DESELECT")
     for o in objs:
@@ -412,16 +582,23 @@ def main() -> None:
     src = duplicate(full_body, "weight_source")
     decimate_to(src, 60000)
     bind(src, rig)
+    if HELPERS_ON:
+        # After the heat weights (the helpers get their weights from the
+        # blend bands, lib/helpers.reweight, never from the heat solve).
+        from lib.helpers import add_helpers
+
+        add_helpers(rig)
 
     visible = duplicate(full_body, "body_visible")
     delete_verts(visible, covered)
+    shrink_neck(visible)  # round two: the trapezius slopes inside the collar
+    shrink_under_hem(visible)  # round two: the leg skin clear of the pants hem
 
     pieces = {
         "jersey": gear.jersey(),
         "pants": gear.pants(),
         "helmet": gear.helmet(),
         "cleats": gear.cleats(),
-        "collar": gear.collar_insert(),
     }
     gloves = {}
     for s in ("l", "r"):
@@ -439,11 +616,16 @@ def main() -> None:
         # The traps below the collar belong to the trunk: skinned to the
         # clavicles and neck they swing with the arms and poke through the pads.
         traps_to_chest(body)
+        if ELBOW_SMOOTH:
+            smooth_weights(body, repeat=ELBOW_SMOOTH, where=near_elbow)
         parts.append(body)
         finish = {"jersey": gear.cut_jersey, "pants": gear.cut_pants, "cleats": lambda ob: None}
         for name, pid in (("jersey", "jersey"), ("pants", "pants"), ("cleats", "cleat")):
             p = decimate_to(duplicate(pieces[name], f"{name}_{i}"), b[name])
             finish[name](p)
+            if name == "cleats":
+                # Round two: the outsole plate and studs (gear.cleat_soles).
+                p = join([p, gear.cleat_soles(*b["sole"])], f"cleats_{i}")
             tag(p, lambda co, pid=pid: gear.PARTS[pid])
             transfer_weights(src, p, rig)
             if name == "jersey":
@@ -471,7 +653,8 @@ def main() -> None:
             tag(g, lambda co: gear.PARTS["glove"])
             transfer_weights(gloves[s], g, rig)
             parts.append(g)
-        col = decimate_to(duplicate(pieces["collar"], f"collar_{i}"), b["collar"])
+        col = gear.collar_insert(b["collar"])
+        col.name = f"collar_{i}"
         tag(col, lambda co: gear.PARTS["collar"])
         rigid(col, rig, "spine_04")  # the collar rides the pads; the neck turns inside it
         parts.append(col)
@@ -517,6 +700,8 @@ def main() -> None:
         for m in list(ob.modifiers)[1:]:
             ob.modifiers.remove(m)  # one armature modifier after the join
         limit_weights(ob, 4)
+        collar_follows_jersey(ob)  # round two: no gap opens at the neck opening
+        with_helpers(ob)
         ob.data.validate(clean_customdata=False)  # drop degenerate faces left by decimation
         for p in ob.data.polygons:
             p.use_smooth = True
@@ -538,8 +723,19 @@ def main() -> None:
     from lib.corrective import add_reach_correctives
 
     tmp_rig = build_armature("corrective_rig")
-    for ob, st, iters in zip(lods, stats, (24, 10, 4)):
-        st["reach"] = add_reach_correctives(ob, tmp_rig, iters)
+    if HELPERS_ON:
+        add_helpers(tmp_rig)
+    # Round two: LOD1 and LOD2 take LOD0's relaxed surface (lib/corrective.py
+    # _transfer) plus a couple of passes of their own; BTB_REACH_TRANSFER=0
+    # relaxes each LOD on its own as round one did (24 / 10 / 4 passes).
+    transfer = os.environ.get("BTB_REACH_TRANSFER", "1") != "0"
+    own = [int(x) for x in os.environ.get("BTB_REACH_OWN", "40,2,1").split(",")] if transfer else [24, 10, 4]
+    sculpt: dict = {}
+    for k, (ob, st, iters) in enumerate(zip(lods, stats, own)):
+        if k == 0 or not transfer:
+            st["reach"] = add_reach_correctives(ob, tmp_rig, iters, sculpt_out=sculpt if k == 0 else None)
+        else:
+            st["reach"] = add_reach_correctives(ob, tmp_rig, iters, source=sculpt)
         print(ob.name, "reach corrective", st["reach"])
 
     official, official_stats = build_official(rig, full_body, src, mat)
@@ -585,6 +781,8 @@ def main() -> None:
         "shapes": list(SHAPES),
         # Pose-space correctives on the player LODs (lib/corrective.py), driven by arm elevation at runtime.
         "correctives": ["reach_l", "reach_r"],
+        # The helper bones the runtime drives (lib/helpers.py; playerAsset.ts HELPERS must match).
+        "helpers": helper_manifest() if HELPERS_ON else {},
         "bytes": os.path.getsize(OUT),
         "skinGate": skin_gate,
     }
@@ -597,7 +795,7 @@ def main() -> None:
             print(f"skin gate {group:5s} {r:9s} collapsed {w['collapsed'] * 100:5.2f}% folded {w['flips'] * 100:5.2f}% {'pass' if w['pass'] else 'FAIL'} {w['at']}")
         if "capLift" in g:
             print(f"skin gate {group:5s} cap lift {g['capLift']['m'] * 100:.1f} cm {'pass' if g['capLift']['pass'] else 'FAIL'} {g['capLift']['at']}")
-    assert skin_gate["pass"], "skinning gate failed (player.json skinGate)"
+    assert skin_gate["pass"] or os.environ.get("BTB_GATE_SOFT"), "skinning gate failed (player.json skinGate)"
 
 
 if __name__ == "__main__":

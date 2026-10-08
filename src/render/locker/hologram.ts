@@ -165,6 +165,8 @@ export class Hologram {
     if (this.raw) {
       if (t > 0.45) this.raw.update(dt);
     } else this.animator.update(dt, { speed: this.speedAt(t) });
+    // The helper bones and correctives follow the pose (playerAsset.ts tick).
+    this.player?.tick();
     const fadeIn = Math.min(1, t / 0.4);
     const fadeOut = Math.min(1, Math.max(0, (this.duration - t) / 0.45));
     this.uniforms.uHoloAlpha.value = fadeIn * fadeOut;

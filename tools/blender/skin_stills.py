@@ -23,6 +23,7 @@ import numpy as np  # noqa: E402
 from lib.anim_rig import Controls  # noqa: E402
 from lib.poses import apply_pose  # noqa: E402
 from lib.preview import VIEWS, render_views, setup_scene, sheet  # noqa: E402
+from lib.helpers import add_helpers, drive_helpers  # noqa: E402
 from lib.rig import build_armature  # noqa: E402
 from lib.skin import COLLAPSED, FLIP_DEG, SkinProbe  # noqa: E402
 from skin_check import poses_of  # noqa: E402
@@ -32,6 +33,14 @@ FOLLOW = {
     # Three-quarter front and back, close on the chest and shoulders.
     "shoulder": ("spine_04", (1.15, -1.35, 0.25), 50),
     "shoulder_back": ("spine_04", (1.15, 1.35, 0.25), 50),
+    # Round two: close on the left shoulder, front and back (the arms overhead).
+    "shoulder_close": ("spine_04", (0.75, -0.75, 0.35), 50),
+    "shoulder_close_back": ("spine_04", (0.75, 0.75, 0.35), 50),
+    # Close behind the left knee, and on the left elbow from outside.
+    "knee_back": ("calf_l", (0.45, 0.8, 0.1), 50),
+    # The Lab's lab-knee-back-sprint camera, about.
+    "lab_knee": ("pelvis", (0.9, 0.9, -0.35), 40),
+    "elbow": ("forearm_l", (0.75, -0.25, 0.1), 50),
     # Side on, the hips and knees.
     "hip": ("pelvis", (2.0, -0.2, -0.15), 45),
     # The whole body, three-quarter front.
@@ -99,6 +108,7 @@ def main() -> None:
         lib.preview.PLAYER = os.path.abspath(sys.argv[sys.argv.index("--file") + 1])
     bpy.ops.wm.read_factory_settings(use_empty=True)
     rig = build_armature("rig")
+    add_helpers(rig)  # the half-angle helpers (lib/helpers.py); no effect on a file without them
     import lib.preview
 
     mesh = lib.preview.import_player(rig, lod=lod)
@@ -127,6 +137,7 @@ def main() -> None:
         views = parts[2].split("+") if len(parts) > 2 else ["shoulder"]
         pose = dict(poses_of(name, clips))[f]
         apply_pose(rig, c, pose)
+        drive_helpers(rig)
         if "--noreach" not in sys.argv:
             from lib.corrective import set_reach
 
