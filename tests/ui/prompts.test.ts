@@ -41,18 +41,10 @@ const PROMPTED = [
   'menu.alt2',
   'menu.alt3',
   'global.pause',
-  // The instant replay (M7): the result card's offer, and the replay's deck.
+  // The instant replay (M7): the result card's offer, and the quick replay's skip and speed-up.
   'global.replay',
-  'replay.playPause',
-  'replay.slowmo',
-  'replay.scrubBack',
-  'replay.scrubForward',
-  'replay.frameBack',
-  'replay.frameForward',
-  'replay.start',
-  'replay.key',
-  'replay.camera',
-  'replay.focus',
+  'replay.skip',
+  'replay.fast',
   'replay.close',
   // The Beasts' drive montage (M7): skipped with the confirm or back binding (and Start, global.pause).
   'menu.confirm',
@@ -87,6 +79,14 @@ describe('prompt labels per device', () => {
     expect(promptCode('menu.confirm', 'kb', kb, pad)).toBe('Enter');
     expect(promptCode('menu.back', 'kb', kb, pad)).toBe('Escape');
     expect(promptCode('global.pause', 'pad', kb, pad)).toBe('Pad:Menu');
+  });
+
+  it('the quick replay: Space skips and Shift (held) speeds it up; A and RT on a pad', () => {
+    expect(promptCode('replay.skip', 'kb', kb, pad)).toBe('Space');
+    expect(promptCode('replay.fast', 'kb', kb, pad)).toBe('ShiftLeft');
+    expect(promptCode('replay.skip', 'pad', kb, pad)).toBe('Pad:A');
+    expect(promptCode('replay.fast', 'pad', kb, pad)).toBe('Pad:RT');
+    expect(padGlyph('Pad:RT')).toEqual({ kind: 'trigger', label: 'RT' });
   });
 
   it('draws the celebration choices as 1, 2, 3 on the keys and A, B, X on a pad', () => {

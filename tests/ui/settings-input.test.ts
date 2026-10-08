@@ -49,11 +49,26 @@ describe('action map', () => {
     expect(defaultBindings('pad')['carrier.jukeLeft']).toEqual(['Pad:RSLeft']);
   });
 
+  it('v10 settings drop the replay transport and camera bindings; the quick replay takes Space / A to skip and Shift / RT to speed up', () => {
+    const kb = { ...defaultBindings('kb'), 'replay.playPause': ['Space'], 'replay.camera': ['KeyC'], 'replay.orbitLeft': ['KeyJ'] };
+    const pad = { ...defaultBindings('pad'), 'replay.frameForward': ['Pad:RT'], 'replay.key': ['Pad:Y'] };
+    const old = defaultSettings(kb, pad);
+    (old as { version: number }).version = 10;
+    const m = migrate(old);
+    expect(m.version).toBe(11);
+    for (const id of ['replay.playPause', 'replay.camera', 'replay.orbitLeft']) expect(m.controls.keyboard[id], id).toBeUndefined();
+    for (const id of ['replay.frameForward', 'replay.key']) expect(m.controls.gamepad[id], id).toBeUndefined();
+    // The new actions' defaults, and nothing in the replay context but them.
+    expect([defaultBindings('kb')['replay.skip'], defaultBindings('kb')['replay.fast']]).toEqual([['Space'], ['ShiftLeft', 'ShiftRight']]);
+    expect([defaultBindings('pad')['replay.skip'], defaultBindings('pad')['replay.fast'], defaultBindings('pad')['replay.close']]).toEqual([['Pad:A'], ['Pad:RT'], ['Pad:B']]);
+    expect(ACTIONS.filter((a) => a.context === 'replay').map((a) => a.id)).toEqual(['replay.skip', 'replay.fast', 'replay.close']);
+  });
+
   it('v9 settings move the scramble to Shift, but keep a scramble the player rebound', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), 'pocket.scramble': ['KeyR'] }, defaultBindings('pad'));
     (old as { version: number }).version = 9;
     const m = migrate(old);
-    expect(m.version).toBe(10);
+    expect(m.version).toBe(11);
     expect(m.controls.keyboard['pocket.scramble']).toBeUndefined();
     const rebound = defaultSettings({ ...defaultBindings('kb'), 'pocket.scramble': ['KeyG'] }, defaultBindings('pad'));
     (rebound as { version: number }).version = 9;
@@ -64,7 +79,7 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V2, 'carrier.spin': ['KeyX'] }, defaultBindings('pad'));
     (old as { version: number }).version = 2;
     const m = migrate(old);
-    expect(m.version).toBe(10);
+    expect(m.version).toBe(11);
     // Still on the old default: dropped, so the merge with the defaults fills in the new one.
     expect(m.controls.keyboard['carrier.up']).toBeUndefined();
     expect(m.controls.keyboard['air.possession']).toBeUndefined();
@@ -95,7 +110,7 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V5, 'carrier.sprint': ['ShiftRight'] }, { ...defaultBindings('pad'), 'carrier.sprint': ['Pad:RT'] });
     (old as { version: number }).version = 5;
     const m = migrate(old);
-    expect(m.version).toBe(10);
+    expect(m.version).toBe(11);
     expect(m.controls.keyboard['pocket.scramble']).toBeUndefined();
     expect(m.controls.keyboard['carrier.sprint']).toBeUndefined();
     expect(m.controls.gamepad['carrier.sprint']).toBeUndefined();
@@ -109,7 +124,7 @@ describe('action map', () => {
     const old = defaultSettings({ ...defaultBindings('kb'), ...KB_DEFAULTS_V6, 'carrier.spin': ['KeyX'] }, { ...defaultBindings('pad'), ...PAD_DEFAULTS_V6 });
     (old as { version: number }).version = 6;
     const m = migrate(old);
-    expect(m.version).toBe(10);
+    expect(m.version).toBe(11);
     expect(m.controls.keyboard['carrier.juke']).toBeUndefined();
     expect(m.controls.keyboard['carrier.spin']).toEqual(['KeyX']);
     for (const id of Object.keys(PAD_DEFAULTS_V6)) expect(m.controls.gamepad[id]).toBeUndefined();
@@ -120,7 +135,7 @@ describe('action map', () => {
     (old as { version: number }).version = 7;
     delete (old.gameplay as Partial<typeof old.gameplay>).quarterMinutes;
     const m = migrate(old);
-    expect(m.version).toBe(10);
+    expect(m.version).toBe(11);
     expect(m.gameplay.quarterMinutes).toBe(5);
     expect(m.gameplay.gameLength).toBe(6); // Quick Play's drive count stays
     expect(m.controls.keyboard['kick.aim']).toBeUndefined();

@@ -6,7 +6,14 @@
 // the same as the original's, and a replay that doesn't (a record from an
 // older build) is refused (tests/replay.test.ts).
 //
-// Scrubbing: forward steps the play on and the scene animates every step;
+// The replay on screen is quick and hands-off (the owner's call after M7:
+// "a quick replay that the player can't control beyond pressing space to
+// skip or holding shift to speed up"): replaySession.ts opens it on the
+// key moment and lets it play through once. The player keeps its seek and
+// transport (pure, cheap) because the session seeks to open and to hand
+// back, and the determinism tests drive every path through it.
+//
+// Seeking: forward steps the play on and the scene animates every step;
 // back rebuilds the play at the start of the replay window (a beat before
 // the snap, everyone set in his stance) and steps it forward to the new
 // tick, the scene animating the way there (GameScene catchUp). TECH_PLAN
@@ -49,8 +56,17 @@ export const LEAD_TICKS = 60;
 export const KEY_LEAD = 90;
 /** Jumping to the key moment lands this long before it (0.5 s), so it plays into it. */
 export const KEY_JUMP = 30;
-/** An automatic replay hands back to the result card this long after the key moment (2.5 s of play), or at the end. */
-export const AUTO_TAIL = 150;
+/** A flagged replay hands back this long after its key moment (1.5 s of play: the ball in, the man down), or at the end. */
+export const KEY_TAIL = 90;
+/** A play with no flagged moment replays from just before the snap (0.4 s) to just after the whistle (0.75 s). */
+export const PLAIN_LEAD = 24;
+export const PLAIN_TAIL = 45;
+/**
+ * Held Shift (RT on a pad) runs the replay this many times faster. 3×: a
+ * 4-second replay goes by in under a second and a half (a skim you can still
+ * follow); 2× barely felt quicker in the slow motion, where it lands at 0.7×.
+ */
+export const FAST = 3;
 /** The replay's speeds, in the order the speed key cycles them. */
 export const SPEEDS = [1, 0.5, 0.25] as const;
 /** The scrub keys' step (ticks: 1 s) and a frame step (ticks: 1/30 s, a broadcast frame). */
@@ -60,11 +76,14 @@ export const FRAME_TICKS = 2;
 /**
  * The director's slow motion through a key moment (ticks from it): full
  * speed until EASE_IN before it, easing down to SLOW by HOLD_FROM before it,
- * held through HOLD_TO after it (the hit landing, the ball in the hands, the
- * plane broken), then easing back up over EASE_OUT. 0.3× is the broadcast's
- * super slow-mo feel; GDD §11.5's in-play slow motion is 0.35×.
+ * held through HOLD_TO after it (the ball in the hands, the hit landing,
+ * the plane broken), then easing back up over EASE_OUT. A touch, not a
+ * set piece (the quick replay): 0.35× (GDD §11.5's in-play slow motion)
+ * for 0.5 s around the moment, ~1 s of the replay's ~4. It was 0.3× held
+ * for a second (3.2 s of screen time) when the replay had a deck to replay
+ * it again.
  */
-const DIRECTOR = { easeIn: 36, holdFrom: 10, holdTo: 48, easeOut: 30, slow: 0.3 };
+const DIRECTOR = { easeIn: 30, holdFrom: 8, holdTo: 22, easeOut: 24, slow: 0.35 };
 
 const smooth = (k: number) => {
   const x = Math.min(1, Math.max(0, k));
@@ -81,6 +100,12 @@ export function directorSpeed(d: number): number {
 }
 
 const tickOf = (e: SimEvent) => Math.round(e.t / TICK);
+
+/** Where the quick replay opens and where it closes by itself (ticks): a flagged play around its moment, any other the snap to the whistle. */
+export function quickWindow(p: Pick<ReplayPlayer, 'key' | 'snapTick' | 'whistleTick' | 'start' | 'end'>): { from: number; to: number } {
+  if (p.key) return { from: Math.max(p.start, p.key.tick - KEY_LEAD), to: Math.min(p.end, p.key.tick + KEY_TAIL) };
+  return { from: Math.max(p.start, p.snapTick - PLAIN_LEAD), to: Math.min(p.end, (p.whistleTick >= 0 ? p.whistleTick : p.end) + PLAIN_TAIL) };
+}
 
 /**
  * The play's key moment, if it's one the replay flags: a turnover (the
@@ -214,6 +239,8 @@ export class ReplayPlayer {
   speed = 1;
   /** The director's slow motion through the key moment is on (until the user takes the speed or the scrub). */
   director = false;
+  /** A multiplier on top of the speed (held Shift: FAST). */
+  boost = 1;
 
   /** `lead`: ticks of the window before the snap (the Beasts' drive montage opens on a longer look at the offense set). */
   constructor(src: ReplaySource, lead = LEAD_TICKS) {
@@ -286,7 +313,7 @@ export class ReplayPlayer {
       this.playing = false;
       return;
     }
-    this.runner.timeScale = this.rate();
+    this.runner.timeScale = this.rate() * this.boost;
     this.runner.advance(dt, () => this.frames[this.tick]!, this.end);
     if (this.atEnd) this.playing = false;
   }

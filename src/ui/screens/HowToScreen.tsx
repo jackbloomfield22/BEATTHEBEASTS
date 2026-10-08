@@ -178,6 +178,12 @@ function FieldPage() {
         A hard hitter arriving at full speed, with his weight behind it, can lay a runner out; Break Tackle, size and running through the contact are what stand up to it. Big hits are rare (a few a game), shake the ball loose more often (Ball Security holds on), and the man who took one
         starts the next play short of breath. The biggest play in slow motion for a moment (Settings, Gameplay).
       </p>
+      <h3>Instant replay</h3>
+      <p>
+        After any snap, {k('global.replay')} on the result card plays it back once from the replay angle, high off the ball's shoulder: a touchdown, a turnover or a big hit from a beat before the moment, slowing through it; anything else from the snap to the whistle. Touchdowns and turnovers roll by themselves (Settings, Gameplay). It plays itself: {k('replay.skip')} skips it, and holding {k('replay.fast')} runs it at three times the speed. The results screen plays the play of the game the same way.
+      </p>
+      <h3>The Beasts' drives</h3>
+      <p>Their drives aren't played: you see the play that decided each one (their score, the turnover, the failed fourth down, the punt or the field goal) and the result, then it's your ball. {k('menu.confirm')} skips it.</p>
     </div>
   );
 }

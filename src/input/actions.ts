@@ -139,28 +139,13 @@ export const ACTIONS: ActionDef[] = [
   a('kick.aimRight', 'kick', 'Aim right', ['ArrowRight', 'KeyD'], ['Pad:Right']),
   a('kick.charge', 'kick', 'Kick: hold to charge, release to strike', ['Space', 'Enter', 'Mouse0'], ['Pad:A']),
 
-  // Replay (M7): after any snap, and the play of the game on the results
-  // screen. Esc (the pause key) or B goes back; P / Backspace / View
-  // (global.replay) toggles it. The mouse drags the orbit and the wheel
-  // zooms (the canvas's own events, render/game/GameCamera.tsx).
-  a('replay.playPause', 'replay', 'Play / pause', ['Space'], ['Pad:A']),
-  a('replay.slowmo', 'replay', 'Speed (1×, ½×, ¼×)', ['KeyS'], ['Pad:X']),
-  a('replay.scrubBack', 'replay', 'Back a second', ['KeyA'], ['Pad:LB']),
-  a('replay.scrubForward', 'replay', 'On a second', ['KeyD'], ['Pad:RB']),
-  a('replay.frameBack', 'replay', 'Back a frame', ['KeyQ'], ['Pad:LT']),
-  a('replay.frameForward', 'replay', 'On a frame', ['KeyE'], ['Pad:RT']),
-  a('replay.start', 'replay', 'To the start', ['KeyR', 'Home'], ['Pad:Left']),
-  a('replay.key', 'replay', 'To the key moment (in slow motion)', ['KeyF'], ['Pad:Y']),
-  a('replay.camera', 'replay', 'Camera: orbit / broadcast / end zone', ['KeyC'], ['Pad:Up']),
-  a('replay.focus', 'replay', 'Orbit the ball / the key player', ['Tab'], ['Pad:RS']),
-  a('replay.orbitLeft', 'replay', 'Orbit left', ['ArrowLeft'], ['Pad:RSLeft']),
-  a('replay.orbitRight', 'replay', 'Orbit right', ['ArrowRight'], ['Pad:RSRight']),
-  a('replay.orbitUp', 'replay', 'Orbit up', ['ArrowUp'], ['Pad:RSUp']),
-  a('replay.orbitDown', 'replay', 'Orbit down', ['ArrowDown'], ['Pad:RSDown']),
-  a('replay.zoomIn', 'replay', 'Zoom in', ['Equal', 'NumpadAdd'], ['Pad:LSUp']),
-  a('replay.zoomOut', 'replay', 'Zoom out', ['Minus', 'NumpadSubtract'], ['Pad:LSDown']),
-  a('replay.orbit', 'replay', 'Orbit camera (drag) / zoom (wheel)', ['Mouse0'], ['Pad:RStick'], true),
-  a('replay.close', 'replay', 'Back to the result', [], ['Pad:B']),
+  // Replay (M7; quick and hands-off since settings v11): after any snap, and
+  // the play of the game on the results screen. It plays once by itself:
+  // Space / A skips it, Shift / RT held speeds it up. Esc (the pause key),
+  // B and P / Backspace / View (global.replay) skip it too.
+  a('replay.skip', 'replay', 'Skip the replay', ['Space'], ['Pad:A']),
+  a('replay.fast', 'replay', 'Speed it up (hold)', ['ShiftLeft', 'ShiftRight'], ['Pad:RT']),
+  a('replay.close', 'replay', 'Skip the replay (back)', [], ['Pad:B']),
 
   // Touchdown celebrations (M7): the three on offer, the keys and the pad's
   // A, B, X as the prompt draws them; skip goes straight to the result card.
@@ -254,6 +239,12 @@ export const PAD_DEFAULTS_V8: Record<string, string[]> = {
   'air.possession': ['Pad:A'],
   'carrier.dive': ['Pad:A'],
 };
+
+/**
+ * The replay's transport and camera actions, gone in settings v11 (the
+ * replay plays itself: replay.skip and replay.fast are all it takes).
+ */
+export const REPLAY_ACTIONS_V10 = ['replay.playPause', 'replay.slowmo', 'replay.scrubBack', 'replay.scrubForward', 'replay.frameBack', 'replay.frameForward', 'replay.start', 'replay.key', 'replay.camera', 'replay.focus', 'replay.orbitLeft', 'replay.orbitRight', 'replay.orbitUp', 'replay.orbitDown', 'replay.zoomIn', 'replay.zoomOut', 'replay.orbit'];
 
 export const ACTIONS_BY_ID = new Map(ACTIONS.map((d) => [d.id, d]));
 

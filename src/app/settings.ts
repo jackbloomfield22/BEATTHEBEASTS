@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { loadJSON, saveJSON } from './storage';
-import { KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4, KB_DEFAULTS_V5, KB_DEFAULTS_V6, PAD_DEFAULTS_V6, PAD_DEFAULTS_V8, KB_DEFAULTS_V9, type Bindings } from '@/input/actions';
+import { KB_DEFAULTS_V2, KB_DEFAULTS_V3, KB_DEFAULTS_V4, KB_DEFAULTS_V5, KB_DEFAULTS_V6, PAD_DEFAULTS_V6, PAD_DEFAULTS_V8, KB_DEFAULTS_V9, REPLAY_ACTIONS_V10, type Bindings } from '@/input/actions';
 
 export type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
 export type Difficulty = 'rookie' | 'pro' | 'legend' | 'beast';
@@ -21,7 +21,7 @@ export interface GraphicsSettings {
 }
 
 export interface Settings {
-  version: 10;
+  version: 11;
   display: {
     fullscreen: boolean;
     resolutionScale: number; // 0.5 .. 1.0
@@ -34,7 +34,9 @@ export interface Settings {
   };
   graphics: GraphicsSettings;
   controls: {
+    /** Unused since the replay lost its free camera (settings v11); kept so saved settings round-trip. */
     mouseSensitivity: number; // 0.25 .. 2
+    /** Unused since v11, as above. */
     invertY: boolean;
     reticleSensitivity: number; // 0.25 .. 2
     /** Touch pass hold (ms): a receiver key held longer throws touch (the sim's tapMax; 180 = its tuned TAP_MAX). */
@@ -120,7 +122,7 @@ export function renderDpr(cssW: number, cssH: number, deviceDpr: number, preset:
 
 export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings {
   return {
-    version: 10,
+    version: 11,
     display: { fullscreen: false, resolutionScale: 1, dynamicResolution: true, frameCap: 0, fov: 0, hudScale: 1, ultrawideSafeArea: true, showFps: false },
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 180, ballInAir: 'assist', keyboard, gamepad },
@@ -271,6 +273,18 @@ export function migrate(stored: Settings): Settings {
     const kb = s.controls?.keyboard;
     if (kb) for (const [id, old] of Object.entries(KB_DEFAULTS_V9)) if (same(kb[id], old)) delete kb[id];
     (s as { version: number }).version = 10;
+  }
+  if ((s.version as number) === 10) {
+    // v11: the replay is quick and hands-off (it plays once by itself; Space / A skips, Shift / RT held speeds it up).
+    // Its transport and camera bindings are gone; replay.skip and replay.fast come in on their defaults. A player's
+    // rebinding of the old play/pause key doesn't carry over: it was a different action (pause, not skip).
+    const kb = s.controls?.keyboard;
+    const pad = s.controls?.gamepad;
+    for (const id of REPLAY_ACTIONS_V10) {
+      if (kb) delete kb[id];
+      if (pad) delete pad[id];
+    }
+    (s as { version: number }).version = 11;
   }
   return s;
 }
