@@ -2,18 +2,20 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { test, type Page } from '@playwright/test';
 
-// The instant replay (M7): scripted plays (src/game/clips.ts) in the Practice
-// Field, then their replays: the result card's offer, the director's cut of
-// a flagged play (a beat before the moment, slow motion through it), the
-// three cameras at the key moment, the orbit from the other side, the
-// scrub back to the start, the hand-back to the card; a big hit; and the
-// results screen's play of the game. Stills into docs/m7/shots; with
-// BTB_REPLAY_VIDEO=1 the touchdown's director cut is recorded too
-// (docs/m7/replay-td.mp4). Every drawn frame is 1/30 s of game time
-// (?video=30), so the replay runs at its own speeds however slowly this
-// machine draws.
+// The instant replay (M7; quick and hands-off since the owner's call after
+// M7): scripted plays (src/game/clips.ts) in the Practice Field, then their
+// replays: the result card's offer, the replay angle at the moment (a beat
+// before it, the touch of slow motion through it), held Shift (3x), the
+// skip and the hand-back to the card; a big hit; and the results screen's
+// play of the game. Stills into docs/m7/shots; with BTB_REPLAY_VIDEO=1 the
+// touchdown's replay is recorded instead (docs/m7/replay-quick.mp4): it
+// plays at 1x through the moment, Shift is held for a beat, then Space
+// skips it just short of its end. Every drawn frame is 1/30 s of game time (?video=30), so the
+// replay runs at its own speeds however slowly this machine draws.
 //   BTB_REPLAY=1 BTB_PORT=5391 npx playwright test -c tools/shots/playwright.config.ts
-// BTB_REPLAY_ONLY=td,hit,results limits the parts.
+// BTB_REPLAY_ONLY=td,hit,results limits the parts; BTB_REPLAY_CLIP picks the
+// first part's clip (default 'touchdown': completion-rac no longer scores
+// since the m66 passing round re-drew its throw).
 
 const OUT = 'docs/m7/shots';
 const VIDEO = !!process.env.BTB_REPLAY_VIDEO;
@@ -24,13 +26,12 @@ const H = Math.round((W * 9) / 16);
 const QUALITY = process.env.BTB_REPLAY_QUALITY ?? 'medium';
 
 type Clip = { id: string; seed: number; script(s: unknown): unknown };
-type Player = { tick: number; start: number; end: number; key: { tick: number; label: string } | null; seeking: boolean; playing: boolean; seek(t: number): void };
+type Player = { tick: number; start: number; end: number; key: { tick: number; label: string } | null; seeking: boolean; playing: boolean; boost: number; seek(t: number): void };
 type Win = {
   __btbPractice: { runner: { paused: boolean; state: { result: unknown } } | null; callClip(c: unknown): Promise<void>; tickWith(f: unknown): void; tick(n: number): void };
   __btbPracticeUi: { getState(): { stage: string } };
-  __btbReplay: { player: Player | null; active: boolean; openSnap(auto?: boolean): boolean; close(): void; act(id: string): void };
-  __btbReplayUi: { getState(): { open: boolean; loading: boolean }; setState(p: object): void };
-  __btbReplayCam: { yaw: number; pitch: number; dist: number; cut: boolean };
+  __btbReplay: { player: Player | null; active: boolean; stopAt: number; openSnap(): boolean; close(): void };
+  __btbReplayUi: { getState(): { open: boolean; loading: boolean; fast: boolean }; setState(p: object): void };
   __btbClips(): Promise<Clip[]>;
   __btbGameReady?: boolean;
   __btbHistory: { setState(p: object): void };
@@ -108,106 +109,77 @@ async function until(page: Page, pred: (w: Win) => boolean, max = 600, each?: (n
 test.use({ viewport: { width: W, height: H } });
 test.beforeAll(() => mkdirSync(OUT, { recursive: true }));
 
-test('replay · a touchdown: the offer, the director cut, three cameras, scrub, hand-back', async ({ page }) => {
+test('replay · a touchdown: the offer, the replay angle through the moment, held Shift, the skip, the hand-back', async ({ page }) => {
   test.skip(!want('td'));
   test.setTimeout(14_400_000);
   await boot(page);
-  await playClip(page, 'completion-rac');
+  await playClip(page, process.env.BTB_REPLAY_CLIP ?? 'touchdown');
   if (!VIDEO) await still(page, '01-td-result-offer');
-  await ev(page, (w) => w.__btbReplay.openSnap(true));
+  await page.keyboard.press('KeyP');
   await frame(page);
   if (VIDEO) {
-    const dir = 'tools/shots/out/replay/td';
+    const dir = 'tools/shots/out/replay/quick';
     rmSync(dir, { recursive: true, force: true });
     mkdirSync(dir, { recursive: true });
     let n = 0;
     const log: string[] = [];
-    await until(
-      page,
-      (w) => !w.__btbReplay.active,
-      900,
-      async () => {
-        const at = await ev(page, (w) => (w.__btbReplay.player ? `${w.__btbReplay.player.tick}` : 'closed'));
-        await page.screenshot({ path: `${dir}/${String(n++).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 88 });
-        log.push(`${n} ${at}`);
-      },
-    );
+    const shoot = async () => {
+      const at = await ev(page, (w) => (w.__btbReplay.player ? `${w.__btbReplay.player.tick} x${w.__btbReplay.player.boost}` : 'closed'));
+      await page.screenshot({ path: `${dir}/${String(n++).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 88 });
+      log.push(`${n} ${at}`);
+    };
+    // 1x from the open (the wipe), through the moment and its slow motion, to 0.4 s after it.
+    // (A play with nothing flagged: to a second before it would close by itself.)
+    await until(page, (w) => { const p = w.__btbReplay.player; return !p || (!p.seeking && p.tick >= (p.key ? p.key.tick + 24 : w.__btbReplay.stopAt - 60)); }, 600, shoot);
+    // Shift held for 0.27 s: 3x (24 ticks of play; held longer it reaches its own end before the skip).
+    await page.keyboard.down('Shift');
+    for (let k = 0; k < 8; k++) {
+      await frame(page);
+      await shoot();
+    }
+    await page.keyboard.up('Shift');
+    // A beat at 1x, then Space skips it (just short of its end): the hand-back, and a second of the card.
+    for (let k = 0; k < 6; k++) {
+      await frame(page);
+      await shoot();
+    }
+    await page.keyboard.press('Space');
+    for (let k = 0; k < 30; k++) {
+      await frame(page);
+      await shoot();
+    }
     writeFileSync(`${dir}/log.txt`, log.join('\n') + '\n');
-    execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-framerate', '30', '-i', `${dir}/%04d.jpg`, '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'docs/m7/replay-td.mp4']);
-    console.log(`  replay-td.mp4: ${n} frames`);
+    execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-framerate', '30', '-i', `${dir}/%04d.jpg`, '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', 'docs/m7/replay-quick.mp4']);
+    console.log(`  replay-quick.mp4: ${n} frames`);
     // The video run (often at another size and quality) leaves the stills alone.
     return;
   }
-  // Just before the ball crosses: the orbit (the replay's own camera), then the presets.
-  await ev(page, (w) => {
-    const p = w.__btbReplay.player!;
-    p.seek(p.key!.tick - 8);
-    p.playing = false;
-  });
-  await until(page, (w) => !w.__btbReplay.player!.seeking);
-  for (let k = 0; k < 20; k++) await frame(page); // the camera's springs settle
-  await still(page, '02-td-key-orbit');
-  await ev(page, (w) => w.__btbReplay.act('replay.camera'));
-  for (let k = 0; k < 2; k++) await frame(page);
-  await still(page, '03-td-key-broadcast');
-  await ev(page, (w) => w.__btbReplay.act('replay.camera'));
-  for (let k = 0; k < 2; k++) await frame(page);
-  await still(page, '04-td-key-endzone');
-  // Back to the orbit, round to the other side and low, on the scorer.
-  await ev(page, (w) => {
-    w.__btbReplay.act('replay.camera');
-    w.__btbReplay.act('replay.focus');
-    const c = w.__btbReplayCam;
-    c.yaw += 2.4;
-    c.pitch = 0.16;
-    c.dist = 9;
-    c.cut = true;
-  });
+  // A few ticks before the ball crosses: the replay angle.
+  await until(page, (w) => !w.__btbReplay.player!.seeking && w.__btbReplay.player!.tick >= w.__btbReplay.player!.key!.tick - 8);
+  await still(page, '02-td-key');
+  // Held Shift: 3x (the bug says so).
+  await page.keyboard.down('Shift');
   for (let k = 0; k < 3; k++) await frame(page);
-  await still(page, '05-td-key-orbit-low-player');
-  // Scrub back to the start (the play rebuilt, the offense set).
-  await ev(page, (w) => w.__btbReplay.act('replay.start'));
-  await until(page, (w) => !w.__btbReplay.player!.seeking);
-  for (let k = 0; k < 10; k++) await frame(page);
-  await still(page, '06-td-start');
-  // On through the snap at quarter speed.
-  await ev(page, (w) => {
-    w.__btbReplay.act('replay.slowmo');
-    w.__btbReplay.act('replay.slowmo');
-    w.__btbReplay.act('replay.playPause');
-  });
-  for (let k = 0; k < 40; k++) await frame(page);
-  await still(page, '07-td-quarter-speed');
-  // Esc: on to where the play stands, and back to the card.
-  await ev(page, (w) => w.__btbReplay.close());
+  await still(page, '03-td-fast');
+  await page.keyboard.up('Shift');
+  // Space: skipped, on to where the play stands, and back to the card.
+  await page.keyboard.press('Space');
   await until(page, (w) => !w.__btbReplay.active);
   for (let k = 0; k < 4; k++) await frame(page);
-  await still(page, '08-td-back-to-card');
+  await still(page, '04-td-back-to-card');
 });
 
-test('replay · a big hit: slow motion through the collision, on the man who took it', async ({ page }) => {
+test('replay · a big hit: slow motion through the collision, pad prompts', async ({ page }) => {
   test.skip(!want('hit'));
   test.setTimeout(7_200_000);
   await boot(page, '&pad');
   // The slant against seed 29: a catch at 13 yd and a big hit (found with tests/replay.test.ts's search).
   await playClip(page, 'slant', 29);
-  await still(page, '09-hit-result-offer-pad');
-  await ev(page, (w) => w.__btbReplay.openSnap(false));
+  await still(page, '05-hit-result-offer-pad');
+  await ev(page, (w) => w.__btbReplay.openSnap());
   await frame(page);
-  await until(page, (w) => w.__btbReplay.player!.tick >= w.__btbReplay.player!.key!.tick - 4, 400);
-  await ev(page, (w) => void (w.__btbReplay.player!.playing = false));
-  for (let k = 0; k < 2; k++) await frame(page);
-  await still(page, '10-hit-key-orbit-pad');
-  await ev(page, (w) => {
-    w.__btbReplay.act('replay.focus');
-    const c = w.__btbReplayCam;
-    c.yaw = 1.7;
-    c.pitch = 0.22;
-    c.dist = 7;
-    c.cut = true;
-  });
-  for (let k = 0; k < 3; k++) await frame(page);
-  await still(page, '11-hit-key-orbit-tight');
+  await until(page, (w) => !!w.__btbReplay.player && !w.__btbReplay.player.seeking && w.__btbReplay.player.tick >= w.__btbReplay.player.key!.tick - 4, 400);
+  await still(page, '06-hit-key-pad');
 });
 
 test('replay · the results screen plays back the play of the game', async ({ page }) => {
@@ -248,7 +220,7 @@ test('replay · the results screen plays back the play of the game', async ({ pa
     w.__btbApp.getState().go('results');
   });
   for (let k = 0; k < 6; k++) await frame(page);
-  await still(page, '12-results-offer');
+  await still(page, '07-results-offer');
   await page.keyboard.press('KeyP');
   await page.waitForFunction(
     () => {
@@ -259,8 +231,8 @@ test('replay · the results screen plays back the play of the game', async ({ pa
     { timeout: 600_000, polling: 1000 },
   );
   await until(page, (w) => w.__btbReplay.player!.tick >= w.__btbReplay.player!.key!.tick - 20, 600);
-  await still(page, '13-results-replay');
-  await page.keyboard.press('Escape');
+  await still(page, '08-results-replay');
+  await page.keyboard.press('Space');
   for (let k = 0; k < 4; k++) await frame(page);
-  await still(page, '14-results-after');
+  await still(page, '09-results-after');
 });

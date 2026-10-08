@@ -1,4 +1,4 @@
-/* The instant replay (M7): the wipe, the bug and the deck. The scene stays clear above the deck. */
+/* The instant replay (M7, quick and hands-off): the wipe, the bug and the two prompts. The picture is the point. */
 .replay-hud { position: absolute; inset: 0; pointer-events: none; --rp: #ff2a6d; }
 
 /* The wipe: a band sweeps across as the replay opens (the broadcast's "REPLAY" sting). */
@@ -15,40 +15,17 @@
 .rb-dot { width: .55rem; height: .55rem; border-radius: 50%; background: #fff; animation: rb-blink 1.1s steps(2, start) infinite; }
 .rb-key { font-family: var(--font-display); font-weight: 400; font-size: 1.05rem; color: var(--lime); text-transform: uppercase; }
 .rb-key.kind-turnover { color: #ff7a9a; }
-.rb-speed { font-family: var(--font-num); font-size: 1rem; color: var(--ink); min-width: 4.5rem; justify-content: center; }
-.rb-cam { color: var(--ink-3); font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; }
+.rb-speed { font-family: var(--font-num); font-size: 1rem; color: var(--lime); min-width: 3rem; justify-content: center; }
 @keyframes rb-in { from { opacity: 0; transform: translateX(-1rem); } to { opacity: 1; transform: none; } }
 @keyframes rb-blink { to { visibility: hidden; } }
 
 .replay-loading { position: absolute; top: 46%; left: 50%; transform: translateX(-50%); color: var(--ink-2); font-size: 1.1rem; letter-spacing: .06em; }
 
-/* The deck: the scrub bar, then the transport, then the cameras and the way back. */
-.replay-deck { position: absolute; left: 50%; bottom: 1.6rem; transform: translateX(-50%); width: min(70rem, calc(100vw - 5rem)); display: flex; flex-direction: column; gap: .55rem; padding: .8rem 1.2rem .7rem; background: linear-gradient(180deg, rgba(8,7,15,.62), rgba(8,7,15,.84)); backdrop-filter: blur(8px); border-top: 2px solid color-mix(in srgb, var(--rp) 70%, transparent); pointer-events: auto; animation: deck-in 320ms 480ms cubic-bezier(.2,.7,.2,1) both; }
-@keyframes deck-in { from { opacity: 0; transform: translate(-50%, 1rem); } to { opacity: 1; transform: translate(-50%, 0); } }
-.replay-deck > .replay-controls, .replay-deck > .replay-cams { max-height: 3rem; transition: max-height 280ms ease, opacity 220ms ease; }
-.replay-deck { transition: padding 280ms ease, background 280ms ease; }
-.replay-deck.tucked { padding-top: .35rem; padding-bottom: .35rem; gap: 0; background: linear-gradient(180deg, rgba(8,7,15,.18), rgba(8,7,15,.5)); }
-.replay-deck.tucked > .replay-controls, .replay-deck.tucked > .replay-cams { max-height: 0; opacity: 0; overflow: hidden; pointer-events: none; }
-.replay-scrub { display: flex; align-items: center; gap: 1rem; }
-.replay-time { font-family: var(--font-num); font-weight: 700; font-size: 1.05rem; min-width: 4.6rem; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
-.replay-bar { position: relative; flex: 1; height: 2.2rem; cursor: pointer; touch-action: none; }
-.rbar-track { position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px; background: rgba(244,240,255,.16); border-radius: 2px; overflow: hidden; }
-.rbar-fill { height: 100%; width: 0; background: var(--lime); box-shadow: 0 0 .5rem color-mix(in srgb, var(--lime) 60%, transparent); }
-.rbar-head { position: absolute; top: 50%; left: 0; width: .95rem; height: .95rem; margin: -.475rem 0 0 -.475rem; border-radius: 50%; background: #fff; box-shadow: 0 0 .6rem rgba(0,0,0,.6), 0 0 0 3px color-mix(in srgb, var(--lime) 55%, transparent); }
-.rbar-mark { position: absolute; top: 50%; pointer-events: none; }
-.rbar-mark.snap { width: 2px; height: .9rem; margin: -.45rem 0 0 -1px; background: var(--ink-2); }
-.rbar-mark.key { width: 0; height: 0; }
-.rbar-mark.key::before { content: ''; position: absolute; left: -.3rem; top: -.3rem; width: .6rem; height: .6rem; background: var(--rp); transform: rotate(45deg); box-shadow: 0 0 .5rem var(--rp); }
-.rbar-mark.key span { position: absolute; bottom: .55rem; left: 0; transform: translateX(-50%); white-space: nowrap; font-size: .64rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #fff; text-shadow: 0 0 .4rem rgba(0,0,0,.9); }
-
-.replay-controls, .replay-cams { display: flex; align-items: center; justify-content: center; gap: .35rem 1rem; flex-wrap: wrap; }
-.replay-cams { gap: .35rem 1.3rem; color: var(--ink-2); }
-.replay-cams .rc:last-child { margin-left: auto; }
-.rc { padding: .22rem .5rem .22rem .25rem; border: 0; border-radius: .35rem; background: transparent; color: var(--ink-2); cursor: pointer; font: inherit; font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+/* The prompts, bottom right: hold to speed it up, and skip (both clickable; the speed-up holds while the mouse is down). */
+.replay-keys { position: absolute; right: 2.4rem; bottom: 2rem; display: flex; align-items: center; gap: .6rem; padding: .35rem .5rem; background: rgba(8,7,15,.6); backdrop-filter: blur(6px); border-top: 2px solid color-mix(in srgb, var(--rp) 70%, transparent); pointer-events: auto; animation: rb-in 300ms 480ms cubic-bezier(.2,.7,.2,1) both; }
+.rc { display: flex; align-items: center; gap: .45rem; padding: .22rem .5rem .22rem .25rem; border: 0; user-select: none; border-radius: .35rem; background: transparent; color: var(--ink-2); cursor: pointer; font: inherit; font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .rc:hover { background: rgba(244,240,255,.08); color: var(--ink); }
-.rc.wide { min-width: 7.2rem; justify-content: center; color: var(--ink); }
 .rc.lit { color: var(--lime); }
-.rc.hint { cursor: default; background: none; color: var(--ink-3); }
 .rc kbd { font-size: .78rem; }
 .rc .glyph { height: 1.8em; }
 

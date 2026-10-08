@@ -8,16 +8,16 @@ import { ActionGlyph } from '../components/Glyph';
 import { LowerPlate, useHudScale } from './Broadcast';
 import '../styles/montage.css';
 
-// The Beasts' drive montage's graphics (M7, src/game/montageSession.ts): a
-// broadcast package's, drawn once per cut (the store changes on cuts only).
-//   the bumper while the key play is staged ("MEANWHILE · BEASTS BALL");
-//   a tag, top left, through the establishing and play shots ("Meanwhile ·
-//     Key play"); the key play's down, distance and spot are on the score
-//     bug's down cell (./Broadcast.tsx), so the screen says it once;
-//   the call, big, on the reaction shot ("TOUCHDOWN", "INTERCEPTED");
-//   the "BEASTS DRIVE" lower third on the board shot (the broadcast
-//     package's plate, ./Broadcast.tsx): the result, the drive's plays, yards
-//     and time (the resolver's), the booth's line, and where your drive starts.
+// The Beasts' drive's graphics (M7, src/game/montageSession.ts), drawn once
+// per shot (the store changes on shots only):
+//   the bumper while the play is staged ("MEANWHILE · BEASTS BALL");
+//   a tag, top left, over the play ("Meanwhile · Beasts ball", or the
+//     kick); the play's down, distance and spot are on the score bug's down
+//     cell (./Broadcast.tsx), so the screen says it once;
+//   the "BEASTS DRIVE" lower third over the result (the broadcast package's
+//     plate, ./Broadcast.tsx): the result, the drive's plays, yards and time
+//     (the resolver's), the booth's line, and where your drive starts, as
+//     the score bug's numbers bump.
 // Confirm or back (Enter / Esc, A / B; Start too) skips it at any moment.
 
 const RESULT: Record<string, string> = {
@@ -41,9 +41,6 @@ function nextLine(info: MontageInfo): string {
   if (d.result === 'EndOfGame') return info.after.beasts > info.after.user ? 'They kneel it out' : 'The end of regulation';
   return `Your ball on the ${broadcastSpot(d.nextStart)}`;
 }
-
-/** Good for the Contenders (the call goes up in lime, not crimson). */
-const forUs = (k: string | undefined) => k === 'turnover' || k === 'stop' || k === 'safety';
 
 export function MontageHud() {
   const shot = useMontage((s) => s.shot);
@@ -69,18 +66,13 @@ export function MontageHud() {
           <span className="mt-bumper-t">Beasts ball</span>
         </div>
       ) : null}
-      {(shot === 'establish' || shot === 'play') && p ? (
+      {shot === 'play' && p ? (
         <div className="mt-bug" key="bug">
           <span className="mt-bug-tag">{info.ot ? `Overtime ${info.ot}` : 'Meanwhile'}</span>
-          <span className="mt-bug-sit">Key play</span>
+          <span className="mt-bug-sit">{p.kind === 'punt' ? 'Beasts punt' : p.kind === 'fg' ? 'Beasts field goal try' : 'Beasts ball'}</span>
         </div>
       ) : null}
-      {shot === 'reaction' && p ? (
-        <div className={`mt-call ${forUs(p.kind) ? 'us' : 'them'}`} key="call">
-          {p.label}
-        </div>
-      ) : null}
-      {shot === 'board' ? (
+      {shot === 'result' ? (
         <div className="onair mt-lower" style={hud} key="lower">
           <LowerPlate
             team="bst"

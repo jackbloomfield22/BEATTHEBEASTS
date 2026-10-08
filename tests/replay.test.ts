@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createPlay, DEF_CALLS, defenseFor, input, offenseFor, playById, PLAYS, practiceRosters, TICK, type InputFrame, type PlayState, type SnapshotLike } from '@/sim';
 import { hashPlay } from '@/sim/hash';
 import { SimRunner } from '@/game/runner';
-import { capsuleOf, captureSource, directorSpeed, keyMoment, ReplayPlayer, sourceOf, LEAD_TICKS } from '@/game/replay';
+import { capsuleOf, captureSource, directorSpeed, FAST, KEY_LEAD, KEY_TAIL, keyMoment, PLAIN_LEAD, PLAIN_TAIL, quickWindow, ReplayPlayer, sourceOf, LEAD_TICKS } from '@/game/replay';
 import type { ReplayCapsule } from '@/game/record';
 
 // M7 instant replay: a play rebuilt from its capsule (the setup, the eleven
@@ -188,10 +188,40 @@ describe('instant replay: key moments', () => {
     }
   });
 
+  it('the quick replay: a flagged play around its moment in ~4 s (under 1.5 s held at FAST), any other the snap to the whistle; it ends on its own', () => {
+    const f = find('touchdown')!;
+    const p = new ReplayPlayer(captureSource(f.run.state, f.run.frames));
+    const w = quickWindow(p);
+    expect(w.from).toBe(p.key!.tick - KEY_LEAD);
+    expect(w.to).toBe(Math.min(p.end, p.key!.tick + KEY_TAIL));
+    // Played as the session plays it: seek to the window, the director's touch of slow motion, frame by frame to its end.
+    const secs = (boost: number) => {
+      const q = new ReplayPlayer(captureSource(f.run.state, f.run.frames));
+      q.seek(w.from);
+      while (q.seeking) q.stepTicks(12);
+      q.director = true;
+      q.boost = boost;
+      let t = 0;
+      while (q.tick < w.to && !q.atEnd) {
+        q.frame(1 / 60);
+        t += 1 / 60;
+      }
+      return t;
+    };
+    const normal = secs(1);
+    expect(normal).toBeGreaterThan(3);
+    expect(normal).toBeLessThan(5);
+    expect(secs(FAST)).toBeLessThan(normal / 2.5);
+    // A play with nothing flagged: from just before the snap to just after the whistle.
+    const run = playOut('trips-stick', 1, 12);
+    const plain = new ReplayPlayer(captureSource(run.state, run.frames));
+    if (!plain.key) expect(quickWindow(plain)).toEqual({ from: Math.max(plain.start, plain.snapTick - PLAIN_LEAD), to: Math.min(plain.end, plain.whistleTick + PLAIN_TAIL) });
+  });
+
   it('slows through the key moment and is back to full speed either side', () => {
     expect(directorSpeed(-120)).toBe(1);
-    expect(directorSpeed(0)).toBeCloseTo(0.3);
-    expect(directorSpeed(30)).toBeCloseTo(0.3);
+    expect(directorSpeed(0)).toBeCloseTo(0.35);
+    expect(directorSpeed(20)).toBeCloseTo(0.35);
     expect(directorSpeed(200)).toBe(1);
     // Eased: no jump anywhere along it.
     for (let d = -100; d < 150; d++) expect(Math.abs(directorSpeed(d + 1) - directorSpeed(d))).toBeLessThan(0.08);

@@ -1,4 +1,4 @@
-/* The Beasts' drive montage (M7): the bumper, the bug, the call and the "BEASTS DRIVE" lower third, cut by cut. */
+/* The Beasts' drive (M7): the bumper, the bug and the "BEASTS DRIVE" lower third. */
 
 .montage { position: absolute; inset: 0; pointer-events: none; }
 .montage > * { pointer-events: none; }
@@ -9,19 +9,15 @@
 .mt-bumper-t { font-family: var(--font-display); font-size: 2.6rem; letter-spacing: .04em; text-transform: uppercase; color: #ff2a4d; }
 @keyframes mt-band { from { clip-path: inset(0 50% 0 50%); } to { clip-path: inset(0 0 0 0); } }
 
-/* The bug: the key play's down, distance and spot, top left (the score bug keeps the top middle). */
+/* The bug: whose ball (or the kick), top left (the score bug keeps the down, distance and spot, top middle). */
 .mt-bug { position: absolute; left: 3.5rem; top: 1.6rem; display: flex; align-items: stretch; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; animation: lt-in 380ms cubic-bezier(.2,.7,.2,1) both; }
 .mt-bug > span { padding: .45rem .8rem; background: rgba(6,6,8,.86); font-size: .82rem; display: flex; align-items: center; }
 .mt-bug > .mt-bug-tag { background: #c8102e; color: #fff; font-family: var(--font-display); letter-spacing: .08em; font-size: .9rem; }
 .mt-bug-sit { color: #fff; }
 .mt-bug-spot { color: var(--ink-2); border-left: 1px solid rgba(255,255,255,.1); }
 
-/* The call on the reaction shot: big, low left, a slash of color beside it. */
-.mt-call { position: absolute; left: 3.5rem; bottom: 7rem; padding: .2rem 1.2rem .35rem; font-family: var(--font-display); font-size: 3.4rem; line-height: 1.05; text-transform: uppercase; color: #fff; background: linear-gradient(90deg, rgba(5,5,6,.88), rgba(5,5,6,.35)); border-left: 6px solid #ff2a4d; text-shadow: 0 .2rem 1.2rem rgba(0,0,0,.6); animation: mt-call-in 360ms cubic-bezier(.2,.9,.3,1.15) both; }
-.mt-call.us { border-left-color: var(--lime); }
-@keyframes mt-call-in { from { opacity: 0; transform: translateX(-1.5rem) skewX(-8deg); } to { opacity: 1; transform: none; } }
 
-/* The "BEASTS DRIVE" lower third on the board shot is the broadcast package's plate (broadcast.css). */
+/* The "BEASTS DRIVE" lower third over the result is the broadcast package's plate (broadcast.css). */
 
 /* Skip, bottom right: the confirm binding's glyph (Enter, A) and the word; clickable. */
 .montage > .mt-skip { position: absolute; right: 2.4rem; bottom: 2rem; display: flex; align-items: center; gap: .55rem; padding: .4rem .8rem; background: rgba(6,6,8,.6); border: 1px solid rgba(255,255,255,.12); color: var(--ink-2); font: inherit; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: .78rem; cursor: pointer; pointer-events: auto; }

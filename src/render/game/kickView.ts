@@ -1,8 +1,9 @@
 // The kick view (M6, M6.6): a field goal, PAT or punt. The ball at the spot
 // of the kick, the camera behind it, the aim line and the wind on the field
 // while you line it up, and, once struck, the flight along the path
-// src/game/kick.ts computed. Written by the game screen's kick panel, read
-// by the game camera, KickBall and KickAim.
+// src/game/kick.ts computed. Written by the game screen's kick panel (and by
+// the Beasts' drive, M7, for their punts and field goals:
+// src/game/montageSession.ts), read by the game camera, KickBall and KickAim.
 
 export const kickView: {
   active: boolean;
@@ -23,7 +24,9 @@ export const kickView: {
   t: number;
   /** Where the ball is now (kick frame), for the camera to follow a punt. */
   ball: [number, number, number];
-} = { active: false, kind: 'FG', spotX: 0, distance: 0, aim: 0, aiming: false, wind: { mph: 0, dir: 0 }, path: null, t: 0, ball: [0, 0, 0] };
+  /** Who's kicking: yours, or the Beasts' (their drive's punt or field goal, M7: the scene dresses the units for it). */
+  team: 'con' | 'bst';
+} = { active: false, kind: 'FG', spotX: 0, distance: 0, aim: 0, aiming: false, wind: { mph: 0, dir: 0 }, path: null, t: 0, ball: [0, 0, 0], team: 'con' };
 
 /**
  * Seconds from the strike (the snap) to the foot meeting the ball: the snap

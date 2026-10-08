@@ -206,6 +206,20 @@
     - Cameras: an orbit around the ball or the key player, the broadcast follow, and an end-zone angle.
     - Touchdowns and turnovers (big hits optional) are flagged and roll by themselves, slowing to 0.3× through the key moment. The results screen's play of the game plays back.
     - Critique: the orbit is the strong part. The end-zone angle isn't a real broadcast end-zone shot yet (an upright crosses the frame; the lens is too wide). No depth of field or motion blur (the settings for them still do nothing). Auto replays use one angle, not the GDD's 2–3. Seeks take ~0.2–0.7 s. Records saved before M7 have no replay.
+  - *Simplified on the owner's call* (2026-10-08, `wip/m7-simpler`; agent):
+    - **The Beasts' drive** now shows only the play that decided it, on the broadcast camera:
+      - the score, the turnover or the failed fourth down;
+      - a punt is their punter's kick, coming down where your drive starts;
+      - a field goal goes through or wide from where the drive ended.
+
+      Then the score bug bumps and the BEASTS DRIVE lower third holds for 1.6 s: 5.1–6.1 s on average, instead of ~10.5. The establishing, reaction and board shots are gone. `match.ts` and `src/sim` are untouched.
+    - **The instant replay** is quick and hands-off: one high three-quarter angle, played once from 1.5 s before the flagged moment, with a touch of 0.35× through it, then it closes by itself. Space/A skips it; holding Shift/RT runs it at 3×. The orbit, scrub, speeds, angles and focus are gone; settings v11 drops their bindings.
+    - Videos: `docs/m7/montage-td.mp4`, `montage-punt.mp4`, `replay-quick.mp4`, `replay-quick-full.mp4`.
+    - Rough edges:
+      - a punt's ball leaves the frame at its apex, and nobody runs a return;
+      - a long catch-and-run TD replays only its last ~20 yd (opening at the catch would make it longer: your call);
+      - your own punt's camera still drifts up into the stands;
+      - replay depth of field and motion blur aren't built.
   - *Broadcast overlay and commentary* (GDD §11.4, §11.7; agent, `docs/m7/OVERLAY.md`, stills `docs/m7/shots/overlay-*`):
     - **One package.** The score bug is a single bar: CON/BST, the possession ball, your timeouts, quarter, game clock and play clock, and down and distance with the broadcast spot (amber on 3rd and 4th). Under it, legacy's drive strip is revived: one pip a possession, lime for your scores, crimson for theirs, dim for stops.
     - **Lower thirds** for big plays: TDs, turnovers, sacks, big hits, safeties, 20+ through the air and 15+ on the ground. Each has the number, name, position, team and decade, the trait badge and the booth's line. A touchdown's lower third waits for the celebration prompt, then rides with the celebration. The Meanwhile card and the montage board now use the same plate.

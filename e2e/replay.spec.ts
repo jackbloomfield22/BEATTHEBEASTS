@@ -1,19 +1,21 @@
 import { expect, test, type Page } from '@playwright/test';
 import { trackErrors, waitReady } from './helpers';
 
-// M7 instant replay (Playtest 1 #8): after a snap, the replay key opens the
-// replay over the result card; it plays, pauses, changes speed, scrubs and
-// changes camera; it ends on the very state the live play is in (the same
-// hash); Esc goes back to the result card, which still stands. The results
-// screen plays the play of the game back from the record's capsule. The sim
-// is stepped tick by tick as in practice.spec.ts (software rendering is slow).
+// M7 instant replay, quick and hands-off (the owner's call after M7): after
+// a snap, the replay key opens the replay over the result card; it plays
+// once by itself from the replay angle and hands back to the card, on the
+// very state the live play is in (the same hash). Holding Shift runs it at
+// 3x; Space skips it. No deck: no scrub, speeds, cameras or focus. The
+// results screen plays the play of the game back the same way. The sim is
+// stepped tick by tick as in practice.spec.ts (software rendering is slow).
 
-type Player = { verified: boolean; tick: number; start: number; end: number; target: number; seeking: boolean; runner: { hash(): number }; seek(t: number): void };
+type Player = { verified: boolean; tick: number; start: number; end: number; boost: number; seeking: boolean; runner: { hash(): number } };
 type W = {
   __btbPractice: { runner: { paused: boolean; hash(): number; state: { result: unknown } } | null; tick(n: number): void };
   __btbPracticeUi: { getState(): { stage: string } };
-  __btbReplay: { player: Player | null; active: boolean };
-  __btbReplayUi: { getState(): { open: boolean; playing: boolean; speed: number; cam: string; from: string | null; loading: boolean } };
+  __btbReplay: { player: Player | null; active: boolean; stopAt: number };
+  __btbReplayUi: { getState(): { open: boolean; fast: boolean; from: string | null; loading: boolean; key: { label: string } | null } };
+  __btbReplayStats: { lastHash: number };
   __btbInput: { activeContext: string };
   __btbHistory: { setState(p: object): void; getState(): { records: unknown[] } };
   __btbApp: { getState(): { screen: string; go(s: string): void } };
@@ -21,9 +23,6 @@ type W = {
 };
 const ev = <T>(page: Page, f: (w: W) => T) => page.evaluate(`(${f.toString()})(window)`) as Promise<T>;
 const tick = (page: Page, n: number) => page.evaluate((k) => (window as unknown as W).__btbPractice.tick(k), n);
-const ui = (page: Page) => ev(page, (w) => w.__btbReplayUi.getState());
-/** Let the scene draw until a scrub has landed (its catch-up runs in the frame). */
-const settled = (page: Page) => page.waitForFunction(() => !(window as unknown as W).__btbReplay.player?.seeking, null, { timeout: 120_000 });
 
 /** Stick against the coverage seed 5 draws: snap, throw to the first read, step to the result card. */
 async function toResult(page: Page) {
@@ -43,8 +42,8 @@ async function toResult(page: Page) {
   await expect(page.locator('.result-card')).toBeVisible();
 }
 
-test('a snap: the replay opens over the result card, plays, scrubs, matches the play, and goes back', async ({ page }) => {
-  test.setTimeout(600_000);
+test('a snap: the quick replay plays once by itself, Shift speeds it up, it hands back on the live play; Space skips it', async ({ page }) => {
+  test.setTimeout(900_000);
   const errors = trackErrors(page);
   await toResult(page);
   // The card prompts for it (the replay key's glyph).
@@ -55,39 +54,47 @@ test('a snap: the replay opens over the result card, plays, scrubs, matches the 
   await expect(page.locator('.result-card')).toHaveCount(0);
   await expect(page.locator('.replay-bug')).toContainText('Replay');
   expect(await ev(page, (w) => [w.__btbReplay.player!.verified, w.__btbInput.activeContext])).toEqual([true, 'replay']);
-
-  // Pause, slow it down, back to the start, on a second, the broadcast camera.
-  await page.keyboard.press('Space');
-  expect((await ui(page)).playing).toBe(false);
-  await page.keyboard.press('KeyS');
-  expect((await ui(page)).speed).toBe(0.5);
-  await page.keyboard.press('KeyR');
-  await settled(page);
-  expect(await ev(page, (w) => w.__btbReplay.player!.tick === w.__btbReplay.player!.start)).toBe(true);
-  await page.keyboard.press('KeyD');
-  await settled(page);
-  expect(await ev(page, (w) => w.__btbReplay.player!.tick - w.__btbReplay.player!.start)).toBe(60);
-  await page.keyboard.press('KeyC');
-  expect((await ui(page)).cam).toBe('broadcast');
+  // Two prompts and nothing else: skip, and hold to speed it up. No deck, scrub bar or camera.
+  await expect(page.locator('.replay-keys .rc')).toHaveCount(2);
+  await expect(page.locator('.replay-keys')).toContainText('Skip');
+  await expect(page.locator('.replay-keys')).toContainText('3× speed');
+  await expect(page.locator('.replay-deck, .replay-bar, .replay-cams')).toHaveCount(0);
+  // The window: up to where it closes by itself (never past the last recorded input).
+  expect(await ev(page, (w) => w.__btbReplay.stopAt > 0 && w.__btbReplay.stopAt <= w.__btbReplay.player!.end)).toBe(true);
+  // The keys that drove the old deck do nothing to it now.
+  for (const k of ['KeyS', 'KeyC', 'KeyR', 'Tab']) await page.keyboard.press(k);
+  expect(await ev(page, (w) => [w.__btbReplay.active, w.__btbReplay.player!.boost])).toEqual([true, 1]);
   await page.screenshot({ path: 'test-results/replay-practice.png' });
 
-  // Run to its end: the very state the live play is in.
-  await ev(page, (w) => w.__btbReplay.player!.seek(w.__btbReplay.player!.end));
-  await settled(page);
-  expect(await ev(page, (w) => w.__btbReplay.player!.runner.hash() === w.__btbPractice.runner!.hash())).toBe(true);
-
-  // Esc: back to the result card, the snap still at its result.
-  await page.keyboard.press('Escape');
+  // Held Shift: 3x, and the bug says so; let go, back to 1x.
+  await page.keyboard.down('Shift');
+  await page.waitForFunction(() => (window as unknown as W).__btbReplayUi.getState().fast, null, { timeout: 60_000 });
+  expect(await ev(page, (w) => w.__btbReplay.player!.boost)).toBe(3);
+  await expect(page.locator('.rb-speed')).toHaveText('3×');
+  await page.keyboard.up('Shift');
+  await page.waitForFunction(() => !(window as unknown as W).__btbReplayUi.getState().fast, null, { timeout: 60_000 });
+  expect(await ev(page, (w) => w.__btbReplay.player?.boost ?? 1)).toBe(1);
+  // Held again to the end: it closes by itself and hands back to the card, on the very state the live play is in.
+  await page.keyboard.down('Shift');
+  await page.waitForFunction(() => !(window as unknown as W).__btbReplay.active, null, { timeout: 600_000 });
+  await page.keyboard.up('Shift');
   await expect(page.locator('.result-card')).toBeVisible();
-  expect(await ev(page, (w) => [w.__btbReplay.active, w.__btbReplayUi.getState().open, w.__btbPracticeUi.getState().stage])).toEqual([false, false, 'result']);
+  expect(await ev(page, (w) => [w.__btbReplayUi.getState().open, w.__btbPracticeUi.getState().stage, w.__btbReplayStats.lastHash === w.__btbPractice.runner!.hash()])).toEqual([false, 'result', true]);
 
-  // Backspace is the replay key here, not Back: it opens the replay again (and the card stays), and closes it.
+  // Backspace is the replay key here, not Back: it opens the replay again (the card stays); Space skips it at once.
   await page.keyboard.press('Backspace');
   await expect(page.locator('.replay-hud')).toBeVisible();
   await page.waitForTimeout(300);
-  await page.keyboard.press('Backspace');
+  await page.keyboard.press('Space');
   await expect(page.locator('.result-card')).toBeVisible();
-  expect(await ev(page, (w) => w.__btbPracticeUi.getState().stage)).toBe('result');
+  expect(await ev(page, (w) => [w.__btbReplay.active, w.__btbPracticeUi.getState().stage, w.__btbReplayStats.lastHash === w.__btbPractice.runner!.hash()])).toEqual([false, 'result', true]);
+  // And with the mouse: the Skip prompt is a button.
+  await page.keyboard.press('KeyP');
+  await expect(page.locator('.replay-hud')).toBeVisible();
+  await page.waitForTimeout(300);
+  await page.locator('.replay-keys .rc', { hasText: 'Skip' }).click();
+  await expect(page.locator('.result-card')).toBeVisible();
+  expect(await ev(page, (w) => w.__btbReplay.active)).toBe(false);
   expect(errors).toEqual([]);
 });
 
@@ -123,8 +130,10 @@ test('the results screen: the play of the game plays back from the record and re
   // The play scene mounts for it and builds the record's players.
   await page.waitForFunction(() => (window as unknown as W).__btbReplayUi.getState().loading === false, null, { timeout: 150_000 });
   expect(await ev(page, (w) => [w.__btbReplay.player!.verified, w.__btbReplayUi.getState().from])).toEqual([true, 'record']);
+  await expect(page.locator('.replay-keys .rc')).toHaveCount(2);
   await page.screenshot({ path: 'test-results/replay-results.png' });
-  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  await page.keyboard.press('Space');
   await expect(page.locator('.pog-replay')).toBeVisible();
   expect(await ev(page, (w) => [w.__btbReplay.active, w.__btbApp.getState().screen])).toEqual([false, 'results']);
   expect(errors).toEqual([]);

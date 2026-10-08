@@ -386,7 +386,7 @@ class GameSession {
 
   /**
    * A Beasts possession: computed now (the resolver decides it), then shown:
-   * the broadcast montage of its key play (M7; staged over the next frames,
+   * the drive's deciding play on the broadcast camera (M7; a snap staged over the next frames,
    * src/game/montage.ts) or, by the setting or when no snap fits, the
    * Meanwhile card. The montage only shows what the resolver decided.
    */
@@ -399,7 +399,7 @@ class GameSession {
     if (getSettings().gameplay.beastsDrives !== 'montage' || !this.mTeams) return;
     const after = { user: m.score.user + (d.result === 'Safety' ? 2 : 0), beasts: m.score.beasts + d.points };
     const info = { drive: d, play: null, before: { ...m.score }, after, clock: clockLabel(m), ot: m.ot };
-    montage.prepare(d, this.mTeams, m.cfg.seed, m.round, m.ot, info, () => this.endMeanwhile(), () => set({}));
+    montage.prepare(d, this.mTeams, m.cfg.seed, m.round, m.ot, info, () => this.endMeanwhile(), () => set({}), m.wind);
   }
 
   /** The Meanwhile cut is over (or skipped): score it, and to your drive. */

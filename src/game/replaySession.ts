@@ -1,28 +1,28 @@
-// The instant replay session (M7, Playtest 1 #8): opens a replay of the snap
-// on the field from its result card (Practice and a game), or of a game's
-// play of the game from the results screen, and runs it in the live scene
-// (GameScene draws `runner` while a replay is on; GameCamera flies the
-// replay cameras). Flagged plays (touchdowns, turnovers, big hits) open a
-// beat before their key moment and play through it in slow motion; the
-// Automatic replays setting plays them by themselves when the result comes
-// up. React reads the small store, which changes only when the transport
-// does; the scrub bar's head and the clock are written straight to the DOM
-// from the frame (replayDom), never through React.
+// The instant replay session (M7, Playtest 1 #8; made quick and hands-off
+// after M7 at the owner's request: "a quick replay that the player can't
+// control beyond pressing space to skip or holding shift to speed up").
+// Opens a replay of the snap on the field from its result card (Practice and
+// a game), or of a game's play of the game from the results screen, and
+// runs it in the live scene (GameScene draws `runner` while a replay is on;
+// GameCamera flies the replay angle). A flagged play (a touchdown, a
+// turnover, a big hit) opens a beat before its key moment, slows through it
+// and hands back 1.5 s after; any other play runs from just before the snap
+// to just after the whistle. It plays once and closes by itself. Space (A)
+// skips it; holding Shift (RT) runs it at FAST×. Esc, B and the replay key
+// skip it too. The Automatic replays setting rolls the flagged ones by
+// themselves when the result comes up. React reads the small store, which
+// changes only when the replay opens or closes, or the speed-up is pressed
+// or let go.
 
 import { create } from 'zustand';
 import { Input } from '@/input/InputManager';
 import { getSettings } from '@/app/settings';
 import { urlFlags } from '@/app/platform';
-import { TICK, type DefSlot, type OffSlot, type SimPlayer } from '@/sim';
+import type { DefSlot, OffSlot, SimPlayer } from '@/sim';
 import { practice, usePractice } from './practice';
 import { celebration } from './celebration';
 import type { GameRecord } from './record';
-import { AUTO_TAIL, captureSource, KEY_LEAD, keyMoment, ReplayPlayer, SCRUB_TICKS, sourceOf, type FlagKind, type ReplayKey, type ReplaySource } from './replay';
-
-/** The replay's cameras: the free orbit, the broadcast angle (the live camera's), and the end zone looking back up the field. */
-export type ReplayCam = 'orbit' | 'broadcast' | 'endzone';
-export const REPLAY_CAMS: ReplayCam[] = ['orbit', 'broadcast', 'endzone'];
-export const CAM_LABEL: Record<ReplayCam, string> = { orbit: 'Orbit', broadcast: 'Broadcast', endzone: 'End zone' };
+import { captureSource, FAST, keyMoment, quickWindow, ReplayPlayer, sourceOf, type FlagKind, type ReplayKey, type ReplaySource } from './replay';
 
 export interface ReplayUi {
   open: boolean;
@@ -30,43 +30,29 @@ export interface ReplayUi {
   from: 'snap' | 'record' | null;
   /** The scene is still building its players (the results screen's replay mounts it). */
   loading: boolean;
-  playing: boolean;
-  speed: number;
-  director: boolean;
-  cam: ReplayCam;
-  /** What the orbit circles: the ball, or the man the play is about. */
-  focus: 'ball' | 'player';
-  /** Playing by itself (the Automatic replays setting): it hands back to the card at its end unless a control is touched. */
-  auto: boolean;
-  /** The flagged moment and where it sits on the scrub bar (0–1); the snap's spot on it. */
-  key: { kind: FlagKind; label: string; at: number } | null;
-  snapAt: number;
+  /** Running at FAST× (Shift or RT held, or the speed-up held down with the mouse). */
+  fast: boolean;
+  /** The flagged moment it's built around (the bug names it). */
+  key: { kind: FlagKind; label: string } | null;
   /** Why a replay couldn't be shown. */
   error: string | null;
   /** The snap (practice.playId) whose replay was last opened: its card no longer leads with the offer. */
   watched: number;
 }
 
-export const useReplay = create<ReplayUi>(() => ({ open: false, from: null, loading: false, playing: false, speed: 1, director: false, cam: 'orbit', focus: 'ball', auto: false, key: null, snapAt: 0, error: null, watched: -1 }));
+export const useReplay = create<ReplayUi>(() => ({ open: false, from: null, loading: false, fast: false, key: null, error: null, watched: -1 }));
 const set = (p: Partial<ReplayUi>) => useReplay.setState(p);
 
-/**
- * The replay HUD's live elements, written each frame (React renders them
- * once): the scrub bar's fill and head, and the clock.
- */
-export const replayDom: { fill: HTMLElement | null; head: HTMLElement | null; time: HTMLElement | null } = { fill: null, head: null, time: null };
+/** The camera cuts (rather than glides) to the replay angle on its next frame: a new replay. Read by GameCamera. */
+export const replayCam = { cut: true };
 
 /**
- * The orbit camera's state, read by GameCamera each frame: the angles and
- * distance the user has set (yaw 0 = behind the offense, looking downfield;
- * pitch up from the turf), and a flag to cut rather than glide (a new
- * replay, a camera change).
+ * What the seeks have cost (GameScene's catch-up): for the perf notes in
+ * docs/m7/REPLAY.md and the dev console. `lastHash`: the state hash the last
+ * replay ended on (the browser test checks a snap's replay hands back on the
+ * live play's own state).
  */
-export const replayCam = { yaw: -0.7, pitch: 0.42, dist: 15, cut: true };
-export const ORBIT_LIMITS = { pitchMin: 0.06, pitchMax: 1.35, distMin: 4, distMax: 48 };
-
-/** What the scrubs have cost (GameScene's catch-up): for the perf notes in docs/m7/REPLAY.md and the dev console. */
-export const replayStats = { seeks: 0, ticks: 0, steps: 0, ms: 0, worstFrameMs: 0 };
+export const replayStats = { seeks: 0, ticks: 0, steps: 0, ms: 0, worstFrameMs: 0, lastHash: 0 };
 
 /** Which flags play by themselves under the Automatic replays setting. */
 export function autoFlags(setting: 'on' | 'big' | 'off'): FlagKind[] {
@@ -83,7 +69,7 @@ type Rosters = { offense: Record<OffSlot, SimPlayer>; defense: Record<DefSlot, S
 
 /** The scene waits this long after a result card comes up before an automatic replay rolls (s of real time): the result lands first. */
 const AUTO_DELAY = 1.1;
-/** A toggle of the replay key this soon after opening is the same press (ms). */
+/** A skip this soon after opening is the press that opened it (ms). */
 const DEBOUNCE_MS = 200;
 
 class ReplaySession {
@@ -98,12 +84,14 @@ class ReplaySession {
    * is in): this is that play's id, or -1.
    */
   handoff = -1;
+  /** The tick it closes by itself at. */
+  stopAt = -1;
+  /** The speed-up held down with the mouse (the HUD's button). */
+  private mouseFast = false;
   private origin = -1;
   private pop: (() => void) | null = null;
   private off: (() => void) | null = null;
   private openedAt = 0;
-  private autoEnd = -1;
-  private touched = false;
   /** The result card's arrival (performance.now() ms) and its play, for the automatic replay's beat. */
   private resultAt = 0;
   private resultPlay = -1;
@@ -116,20 +104,19 @@ class ReplaySession {
     return this.player?.runner ?? null;
   }
 
-  /** Changes whenever the scene must set its players again (a new replay, a rebuild for a scrub back). */
+  /** Changes whenever the scene must set its players again (a new replay). */
   get epoch(): number {
     return this.player?.epoch ?? -1;
   }
 
-  /** The replay of the snap whose result card is up. `auto`: rolled by the Automatic replays setting. */
-  openSnap(auto = false): boolean {
+  /** The replay of the snap whose result card is up (opened from the card, or rolled by the Automatic replays setting: the same either way). */
+  openSnap(): boolean {
     const r = practice.runner;
     if (this.player || !r || !r.state.result || usePractice.getState().stage !== 'result') return false;
     const p = this.start(captureSource(r.state, r.frames));
     if (!p) return false;
     this.origin = practice.playId;
-    this.autoEnd = auto && p.key ? Math.min(p.end, p.key.tick + AUTO_TAIL) : -1;
-    this.begin('snap', p, auto);
+    this.begin('snap', p);
     return true;
   }
 
@@ -146,8 +133,7 @@ class ReplaySession {
     if (!p) return false;
     this.rosters = { offense: src.setup.offense, defense: src.setup.defense };
     this.origin = -1;
-    this.autoEnd = -1;
-    this.begin('record', p, false);
+    this.begin('record', p);
     set({ loading: true });
     return true;
   }
@@ -160,25 +146,21 @@ class ReplaySession {
       set({ error: 'This replay was recorded on an older version of the game and can no longer be shown.' });
       return null;
     }
-    // A flagged play opens a beat before its moment and plays through it slowed.
-    if (p.key) {
-      p.seek(p.key.tick - KEY_LEAD);
-      p.director = true;
-    }
+    const w = quickWindow(p);
+    p.seek(w.from);
+    // The director's touch of slow motion through a flagged moment.
+    p.director = !!p.key;
+    this.stopAt = w.to;
     return p;
   }
 
-  private begin(from: 'snap' | 'record', p: ReplayPlayer, auto: boolean): void {
+  private begin(from: 'snap' | 'record', p: ReplayPlayer): void {
     this.player = p;
     this.closing = false;
     this.handoff = -1;
-    this.touched = false;
+    this.mouseFast = false;
     this.openedAt = performance.now();
     replayCam.cut = true;
-    // The orbit opens on a high three-quarter view from the offense's side, the play running away from it.
-    replayCam.yaw = -0.7;
-    replayCam.pitch = 0.42;
-    replayCam.dist = 15;
     this.pop?.();
     this.pop = Input.pushContext('replay');
     this.off?.();
@@ -188,14 +170,8 @@ class ReplaySession {
       open: true,
       from,
       loading: false,
-      playing: p.playing,
-      speed: p.speed,
-      director: p.director,
-      cam: 'orbit',
-      focus: 'ball',
-      auto,
-      key: k ? { kind: k.kind, label: k.label, at: p.fracOf(k.tick) } : null,
-      snapAt: p.fracOf(p.snapTick),
+      fast: false,
+      key: k ? { kind: k.kind, label: k.label } : null,
       error: null,
       watched: from === 'snap' ? practice.playId : useReplay.getState().watched,
     });
@@ -206,7 +182,7 @@ class ReplaySession {
     if (useReplay.getState().loading) set({ loading: false });
   }
 
-  /** Back to the result card (or the results screen). */
+  /** Over or skipped: back to the result card (or the results screen). */
   close(): void {
     const p = this.player;
     if (!p || this.closing) return;
@@ -215,8 +191,9 @@ class ReplaySession {
       this.closing = true;
       p.director = false;
       p.playing = false;
+      p.boost = 1;
       p.seek(p.end);
-      set({ playing: false });
+      set({ fast: false });
       return;
     }
     this.finish();
@@ -233,20 +210,22 @@ class ReplaySession {
   /** The scene has caught a closing replay up: the live play takes over. */
   finish(): void {
     this.handoff = useReplay.getState().from === 'snap' ? this.origin : -1;
+    if (this.player) replayStats.lastHash = this.player.runner.hash();
     this.player = null;
     this.rosters = null;
     this.closing = false;
+    this.mouseFast = false;
     this.pop?.();
     this.pop = null;
     this.off?.();
     this.off = null;
-    set({ open: false, from: null, loading: false, auto: false, playing: false });
+    set({ open: false, from: null, loading: false, fast: false });
   }
 
   /**
    * Every frame of the play screens (GameScene, before it draws): plays the
-   * replay on, writes the scrub bar, and rolls an automatic replay once a
-   * flagged play's result card has been up a beat.
+   * replay on (FAST× while the speed-up is held), closes it at its end, and
+   * rolls an automatic replay once a flagged play's result card has been up a beat.
    */
   frame(dt: number): void {
     const p = this.player;
@@ -254,29 +233,18 @@ class ReplaySession {
       this.watchForAuto();
       return;
     }
-    // The results screen's replay holds until the scene has its players.
-    if (!this.closing && !useReplay.getState().loading) p.frame(dt);
-    if (this.autoEnd >= 0 && !this.touched && !this.closing && (p.tick >= this.autoEnd || p.atEnd)) this.close();
-    const st = useReplay.getState();
-    if (!this.closing && (st.playing !== p.playing || st.speed !== p.speed || st.director !== p.director)) set({ playing: p.playing, speed: p.speed, director: p.director });
-    this.paint(p);
+    // Closing: the scene runs it on to the live play's state. The results screen's replay holds until the scene has its players.
+    if (this.closing || useReplay.getState().loading) return;
+    const fast = this.mouseFast || Input.isHeld('replay.fast');
+    p.boost = fast ? FAST : 1;
+    if (fast !== useReplay.getState().fast) set({ fast });
+    p.frame(dt);
+    if (!p.seeking && (p.tick >= this.stopAt || p.atEnd)) this.close();
   }
 
-  /** The scrub bar and the clock (DOM, no React). */
-  private paint(p: ReplayPlayer): void {
-    const at = Math.min(p.tick, p.end);
-    const f = p.fracOf(p.seeking ? p.target : at);
-    const pct = `${(f * 100).toFixed(2)}%`;
-    if (replayDom.fill) replayDom.fill.style.width = pct;
-    if (replayDom.head) replayDom.head.style.left = pct;
-    if (replayDom.time) {
-      // The play clock from the snap: −0:00.8 before it, 0:03.2 after.
-      const s0 = (at - Math.max(0, p.snapTick)) * TICK;
-      const s = Math.abs(s0) < 0.05 ? 0 : s0;
-      const a = Math.abs(s);
-      const txt = `${s < 0 ? '−' : ''}${Math.floor(a / 60)}:${(a % 60).toFixed(1).padStart(4, '0')}`;
-      if (replayDom.time.textContent !== txt) replayDom.time.textContent = txt;
-    }
+  /** The HUD's speed-up button held down with the mouse (or let go). */
+  holdFast(on: boolean): void {
+    this.mouseFast = on && !!this.player;
   }
 
   /** The Automatic replays setting: a flagged play's replay rolls by itself once its card has been up a beat. */
@@ -298,7 +266,7 @@ class ReplaySession {
     this.autoDone = true;
     const k = snapFlag();
     if (!k || useReplay.getState().watched === practice.playId || !autoFlags(getSettings().gameplay.autoReplay).includes(k.kind)) return;
-    this.openSnap(true);
+    this.openSnap();
   }
   private autoDone = true;
 
@@ -308,82 +276,15 @@ class ReplaySession {
     this.resultPlay = practice.playId;
   }
 
-  /** A scrub bar press or drag (0–1 along the window). Drags only seek once the last seek has landed (a seek back replays the window). */
-  scrubTo(frac: number, final: boolean): void {
-    const p = this.player;
-    if (!p || this.closing || (!final && p.seeking)) return;
-    this.touched = true;
-    p.director = false;
-    p.seek(p.tickAt(frac));
-  }
-
-  /** The transport, for the HUD's buttons and the keys. */
-  act(id: string): void {
-    const p = this.player;
-    if (!p || this.closing) return;
-    this.touched = true;
-    switch (id) {
-      case 'replay.playPause':
-        p.togglePlay();
-        break;
-      case 'replay.slowmo':
-        p.cycleSpeed();
-        break;
-      case 'replay.scrubBack':
-        p.scrub(-SCRUB_TICKS);
-        break;
-      case 'replay.scrubForward':
-        p.scrub(SCRUB_TICKS);
-        break;
-      case 'replay.frameBack':
-        p.stepFrame(-1);
-        break;
-      case 'replay.frameForward':
-        p.stepFrame(1);
-        break;
-      case 'replay.start':
-        p.toStart();
-        break;
-      case 'replay.key':
-        p.toKey();
-        break;
-      case 'replay.camera': {
-        const c = useReplay.getState().cam;
-        replayCam.cut = true;
-        set({ cam: REPLAY_CAMS[(REPLAY_CAMS.indexOf(c) + 1) % REPLAY_CAMS.length]! });
-        break;
-      }
-      case 'replay.focus':
-        set({ focus: useReplay.getState().focus === 'ball' ? 'player' : 'ball' });
-        break;
-    }
-    set({ playing: p.playing, speed: p.speed, director: p.director });
-  }
-
-  /** The user took the camera (a drag, the stick): the orbit, from wherever the camera is. */
-  takeCamera(): void {
-    this.touched = true;
-    if (useReplay.getState().cam !== 'orbit') set({ cam: 'orbit' });
-  }
-
   private onAction(id: string, repeat: boolean): void {
-    if (!this.player) return;
-    // Esc (pause) and B leave the replay; so does the replay key itself (not the press that opened it).
-    if (id === 'global.pause' || id === 'replay.close' || id === 'global.replay') {
-      if (!repeat && performance.now() - this.openedAt > DEBOUNCE_MS) this.close();
-      return;
+    if (!this.player || repeat) return;
+    // Space (A) skips it; so do Esc (pause), B and the replay key itself (not the press that opened it).
+    if (id === 'replay.skip' || id === 'replay.close' || id === 'global.pause' || id === 'global.replay') {
+      if (performance.now() - this.openedAt > DEBOUNCE_MS) this.close();
     }
-    if (!id.startsWith('replay.')) return;
-    // Held, only the scrub and frame keys repeat; back only once the last seek has landed (each one replays the window).
-    if (repeat) {
-      const fwd = id === 'replay.scrubForward' || id === 'replay.frameForward';
-      const back = id === 'replay.scrubBack' || id === 'replay.frameBack';
-      if (!fwd && !(back && !this.player.seeking)) return;
-    }
-    this.act(id);
   }
 }
 
 export const replay = new ReplaySession();
 
-if (import.meta.env.DEV) Object.assign(globalThis, { __btbReplay: replay, __btbReplayUi: useReplay, __btbReplayStats: replayStats, __btbReplayCam: replayCam });
+if (import.meta.env.DEV) Object.assign(globalThis, { __btbReplay: replay, __btbReplayUi: useReplay, __btbReplayStats: replayStats });

@@ -24,6 +24,7 @@ import { YARD } from '../world/constants';
 
 interface Man {
   player: Player;
+  num: number;
   anim: PlayerAnimator;
   /** Field-frame spot relative to the spot of the kick (x toward the posts, y left), yd. */
   at: [number, number];
@@ -73,7 +74,7 @@ export function KickBall() {
         anim.setStance(stance);
         anim.update(10, { speed: 0 });
         group!.add(player.root);
-        return { player, anim, at, stance, clip, start, started: false, on };
+        return { player, num, anim, at, stance, clip, start, started: false, on };
       };
       unit.current = {
         group,
@@ -108,8 +109,13 @@ export function KickBall() {
     const punt = kickView.kind === 'PUNT';
     const p = kickView.path;
     // A new kick: the unit sets at its spot (and again if the unit loads after the kick is up).
-    const key = `${kickView.kind}:${sx}`;
+    const key = `${kickView.kind}:${sx}:${kickView.team}`;
     if (u && placed.current !== key) {
+      // Dressed for whoever's kicking: yours, or the Beasts' on their drive (M7).
+      if (placed.current?.split(':')[2] !== kickView.team) {
+        const kit = KITS[kickView.team === 'bst' ? 'beasts' : 'blackoutLime']!;
+        for (const m of u.men) m.player.setLook({ kit, skin: '#c08552', number: m.num });
+      }
       placed.current = key;
       for (const m of u.men) {
         const on = m.on === 'both' || (m.on === 'punt') === punt;
@@ -129,7 +135,8 @@ export function KickBall() {
         if (!m.player.root.visible) continue;
         if (p && !m.started && t >= m.start) {
           m.started = true;
-          m.anim.play(m.clip, { now: true });
+          // From where the kick is now (the Beasts' punt cuts in as the snap reaches the punter: the snapper's clip is already done).
+          m.anim.play(m.clip, { now: true, t0: t - m.start });
         }
         m.anim.update(step, { speed: 0 });
         // The kicker's run-up and the punter's steps are root motion along his facing (downfield).
