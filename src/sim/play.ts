@@ -387,7 +387,9 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
     qb.anim = 'drop';
   } else if (!play.drop.boot && since < play.drop.set && (qb.mem.dropT0 !== undefined || qb.pos.x > dropX + 0.1)) {
     // The drop, on its rhythm (pocket.ts): to his depth by the set, the clip's steps on the sim's.
-    dropStep(s, qb, 0);
+    // Wound up in it (the player's key on the drop: the ball goes on the plant),
+    // he opens his front shoulder to the target over the last steps.
+    dropStep(s, qb, s.windup && !s.windup.away ? qbFace(s, qb) : 0);
     qb.anim = 'drop';
   } else if (!s.setup.user && !play.drop.boot && hitches(s) && since < play.drop.set + HITCH && !s.windup && qb.mem.dropT0 !== undefined && qb.mem.noHitch === undefined && !freeRusherNear(s, qb)) {
     // The hitch: off a five- or seven-step drop, a step up into the pocket
@@ -484,7 +486,13 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     return;
   }
   const start = (icon: number, charge: number, aim: V2, away = false, held = false) => {
-    const at = s.t + releaseOf(qb);
+    // The player's key on the drop throws on its rhythm: the arm comes through
+    // as the back foot plants (the set), not with him still backpedalling
+    // (passing round 3: a key pressed in the drop let it go a step early, off
+    // his back foot, the motion over the drop's legs). A boot throws on the move.
+    const drop = s.setup.play.drop;
+    const plant = s.setup.user && !drop.boot && since < drop.set ? s.snapT + drop.set : -Infinity;
+    const at = Math.max(s.t + releaseOf(qb), plant);
     s.windup = { at, from: s.t, icon, charge, aim, away, nat: at, held };
     qb.anim = 'throw';
     s.eyes = away ? s.eyes : { ...s.agents[s.icons[icon]!]!.pos };
@@ -1932,8 +1940,21 @@ function runToBall(s: PlayState, a: Agent): void {
     // meets it, instead of running on past the spot and having it arrive
     // behind him. (With the lead now on his real path, a ball on time needs
     // his full speed anyway.)
+    // Passing round 3: a ball a stride or two short of his run he tracks in
+    // at his pace and throttles down for late, in the last THROTTLE_T, as a
+    // receiver does (he paced to it from the moment he read it, so on a
+    // deep ball the player watched him ease up a yard or two a second with
+    // the ball in the air: "giving up on the route"). Never so long that he'd
+    // be on the spot before the ball; a ball well short, or placed behind
+    // him, he gathers for at once.
     const back = (b.place ?? 0) < -0.5;
-    const sp = Math.min(top, back || need < 0.6 * cur || read > 0 ? need : Math.max(need, cur));
+    let sp = need;
+    if (!back && need >= 0.6 * cur && need < cur) {
+      const k = Math.max(0, Math.min(1, (left - THROTTLE_T) / THROTTLE_T));
+      const hold = Math.min(cur, Math.max(need, (d - THROTTLE_ROOM) / Math.max(TICK, left - THROTTLE_T / 2)));
+      sp = need + (hold - need) * k;
+    }
+    sp = Math.min(top, sp);
     steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp }, 0.25));
     return;
   }
@@ -1950,6 +1971,11 @@ function pursueTackle(s: PlayState, a: Agent, t: Agent): void {
   }
   pursue(s, a, t);
 }
+
+/** A short ball: he runs on at his pace until this long (s) before it arrives, then throttles down to meet it (ours: two strides). */
+const THROTTLE_T = 0.45;
+/** ...keeping at least this much (yd) of the way to the spot for the throttling down. Ours. */
+const THROTTLE_ROOM = 1;
 
 /** A ball thrown this far (yd) off a come-back man's settle point he goes to straight off, not through his settle first. Ours: about two strides. */
 const COME_OFF = 2;

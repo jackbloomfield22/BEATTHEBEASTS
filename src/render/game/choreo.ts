@@ -1019,7 +1019,8 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // its release frame on the sim's release, slowing at the top (the ball
   // cocked behind his ear) while the key is held past his own release.
   const w = s.windup;
-  if (i === s.qb && w && b.throwAt !== w.from) {
+  // (A key pressed on the drop throws on the plant: the arm starts a release's length before it, at its own pace.)
+  if (i === s.qb && w && b.throwAt !== w.from && (w.held || w.at - simT <= (eventAt(b, throwClip(b, s, a, sp * YARD >= 1.6), 'release') ?? RELEASE_FRAME) + TICK)) {
     b.throwAt = w.from;
     const running = sp * YARD >= 1.6;
     const clip = throwClip(b, s, a, running);
@@ -1029,7 +1030,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     if (!running) anim.play(clip, { now: true, rate });
     else anim.playOverlay(clip, { rate, mask: THROW_MASK });
     latency.respond('throwRelease');
-  } else if (i === s.qb && w && b.throwClip) {
+  } else if (i === s.qb && w && b.throwClip && b.throwAt === w.from) {
     const clip = b.throwClip;
     const rel = eventAt(b, clip, 'release') ?? RELEASE_FRAME;
     const t = tr && tr.name === clip && !tr.done ? tr.t : anim.overlayAction?.name === clip ? anim.overlayAction.t : null;
@@ -1097,7 +1098,9 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   }
   // What the hands hold.
   const holder = ball.mode === 'held' && s.phase !== 'presnap' && simT - s.snapT > 0.3 ? ball.holder : -1;
-  const throwing = !!tr?.name.startsWith('qb_throw') && !tr.done;
+  // (The throw on the move is an overlay over the legs: its hands are the throw's too, not the two-hand hold's.
+  // Passing round 3: with the hold left on, the off hand stayed on the ball and both went up over his helmet.)
+  const throwing = (!!tr?.name.startsWith('qb_throw') && !tr.done) || !!anim.overlayAction?.name.startsWith('qb_throw');
   let carrying = false;
   if (i === holder && !a.down) {
     // (A scrambling QB has it tucked; a play-action or handoff overlay owns the hands while it plays.)
