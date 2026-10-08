@@ -13,7 +13,9 @@ import { test, type Page } from '@playwright/test';
 // skips it. Every drawn frame is 1/30 s of game time (?video=30), so the
 // replay runs at its own speeds however slowly this machine draws.
 //   BTB_REPLAY=1 BTB_PORT=5391 npx playwright test -c tools/shots/playwright.config.ts
-// BTB_REPLAY_ONLY=td,hit,results limits the parts.
+// BTB_REPLAY_ONLY=td,hit,results limits the parts; BTB_REPLAY_CLIP picks the
+// first part's clip (default 'touchdown': completion-rac no longer scores
+// since the m66 passing round re-drew its throw).
 
 const OUT = 'docs/m7/shots';
 const VIDEO = !!process.env.BTB_REPLAY_VIDEO;
@@ -111,7 +113,7 @@ test('replay · a touchdown: the offer, the replay angle through the moment, hel
   test.skip(!want('td'));
   test.setTimeout(14_400_000);
   await boot(page);
-  await playClip(page, 'completion-rac');
+  await playClip(page, process.env.BTB_REPLAY_CLIP ?? 'touchdown');
   if (!VIDEO) await still(page, '01-td-result-offer');
   await page.keyboard.press('KeyP');
   await frame(page);
@@ -127,7 +129,8 @@ test('replay · a touchdown: the offer, the replay angle through the moment, hel
       log.push(`${n} ${at}`);
     };
     // 1x from the open (the wipe), through the moment and its slow motion, to 0.4 s after it.
-    await until(page, (w) => !w.__btbReplay.player || (!w.__btbReplay.player.seeking && w.__btbReplay.player.tick >= w.__btbReplay.player.key!.tick + 24), 600, shoot);
+    // (A play with nothing flagged: to a second before it would close by itself.)
+    await until(page, (w) => { const p = w.__btbReplay.player; return !p || (!p.seeking && p.tick >= (p.key ? p.key.tick + 24 : w.__btbReplay.stopAt - 60)); }, 600, shoot);
     // Shift held for 0.6 s: 3x.
     await page.keyboard.down('Shift');
     for (let k = 0; k < 18; k++) {
