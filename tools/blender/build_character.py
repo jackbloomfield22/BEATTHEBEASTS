@@ -41,10 +41,12 @@ MANIFEST = os.path.splitext(OUT)[0] + ".json"
 # The High LOD carries every facemask style (the runtime hides all but the
 # player's); the Medium LOD too; the Low LOD one generic mask and none of the
 # small extras (visor, strap, towel), which don't read at that distance.
+# "collar" is the collar band's segments round (built per LOD, not decimated);
+# "sole" the cleat plate's outline points and the studs' segments (round two).
 BUDGET = [
-    {"body": 7000, "jersey": 5000, "pants": 3000, "helmet": 3000, "trim": (0.012, 6), "clips": 12, "cleats": 1200, "sole": (32, 8), "glove": 900, "collar": 400, "mask": (6, 3), "extras": True},
-    {"body": 3000, "jersey": 2100, "pants": 1300, "helmet": 1300, "trim": (0.02, 5), "clips": 8, "cleats": 500, "sole": (20, 5), "glove": 260, "collar": 160, "mask": (4, 3), "extras": True},
-    {"body": 1000, "jersey": 700, "pants": 450, "helmet": 400, "trim": (0.045, 3), "clips": 0, "cleats": 200, "sole": (12, 0), "glove": 70, "collar": 48, "mask": (3, 2), "extras": False},
+    {"body": 7000, "jersey": 5000, "pants": 3000, "helmet": 3000, "trim": (0.012, 6), "clips": 12, "cleats": 1200, "sole": (32, 8), "glove": 900, "collar": 40, "mask": (6, 3), "extras": True},
+    {"body": 3000, "jersey": 2100, "pants": 1300, "helmet": 1300, "trim": (0.02, 5), "clips": 8, "cleats": 500, "sole": (20, 5), "glove": 260, "collar": 28, "mask": (4, 3), "extras": True},
+    {"body": 1000, "jersey": 700, "pants": 450, "helmet": 400, "trim": (0.045, 3), "clips": 0, "cleats": 200, "sole": (12, 0), "glove": 70, "collar": 16, "mask": (3, 2), "extras": False},
 ]
 for _spec in filter(None, os.environ.get("BTB_BUDGET", "").split(",")):
     # Experiments: BTB_BUDGET=body2=1100,jersey2=800 (part + LOD = triangles).
@@ -289,14 +291,85 @@ def add_shapes(ob: bpy.types.Object) -> None:
     me = ob.data
     part = me.attributes["part"]
     ob.shape_key_add(name="Basis", from_mix=False)
+    # Round two: the collar band's outer edge lies on the jersey's neck
+    # opening, so it takes the jersey's displacement there (the nearest
+    # jersey vertex's), fading to its own field down at the neck. With its
+    # own normals it moved apart from the cap tops (the pads shape lifts
+    # them) and opened a dark slot beside the neck.
+    from mathutils.kdtree import KDTree
+
+    from lib.geo import smoothstep as ss
+
+    jersey = [v for v in me.vertices if part.data[v.index].value == gear.PARTS["jersey"]]
+    kd = KDTree(max(1, len(jersey)))
+    for k, v in enumerate(jersey):
+        kd.insert(v.co, k)
+    kd.balance()
+    collar_src = {}
+    for v in me.vertices if jersey else ():
+        if part.data[v.index].value == gear.PARTS["collar"]:
+            # The mean over the 8 nearest jersey vertices: one vertex's
+            # normal-driven delta varies too much from one to the next.
+            near = [jersey[k] for _co, k, _d in kd.find_n(v.co, 8)]
+            collar_src[v.index] = (near, ss(1.575, 1.598, v.co.z))
+
+    def delta(name, field, v, pid):
+        return field(v.co, v.normal, pid) if name in PART_AWARE else field(v.co, v.normal)
+
     for name, field in SHAPES.items():
         key = ob.shape_key_add(name=name, from_mix=False)
         for v in me.vertices:
             pid = part.data[v.index].value
             f = PART_FOLLOW[pid]
             if f:
-                d = field(v.co, v.normal, pid) if name in PART_AWARE else field(v.co, v.normal)
+                d = delta(name, field, v, pid)
+                if v.index in collar_src:
+                    near, t = collar_src[v.index]
+                    dj = sum((delta(name, field, jv, gear.PARTS["jersey"]) for jv in near), Vector()) / len(near)
+                    d = d.lerp(dj * PART_FOLLOW[gear.PARTS["jersey"]] / f, t)
                 key.data[v.index].co = v.co + d * f
+
+
+def collar_follows_jersey(ob: bpy.types.Object) -> int:
+    """The collar band's outer edge rides the jersey's neck opening (round
+    two): rigid on the chest, it parted from the opening's sides, which the
+    pad shell partly skins to the pads and clavicles, and showed the
+    jersey's inside at a shrug. Its weights blend from the chest at the neck
+    to the nearest jersey vertex's at the opening (as its shapes do,
+    add_shapes)."""
+    from mathutils.kdtree import KDTree
+
+    from lib.geo import smoothstep as ss
+
+    me = ob.data
+    part = me.attributes["part"]
+    groups = ob.vertex_groups
+    jersey = [v for v in me.vertices if part.data[v.index].value == gear.PARTS["jersey"]]
+    if not jersey:
+        return 0
+    kd = KDTree(len(jersey))
+    for k, v in enumerate(jersey):
+        kd.insert(v.co, k)
+    kd.balance()
+    n = 0
+    for v in me.vertices:
+        if part.data[v.index].value != gear.PARTS["collar"]:
+            continue
+        t = ss(1.575, 1.598, v.co.z)
+        if t <= 0:
+            continue
+        _co, k, _d = kd.find(v.co)
+        src = {groups[g.group].name: g.weight for g in jersey[k].groups if g.weight > 0}
+        own = {groups[g.group].name: g.weight for g in v.groups if g.weight > 0}
+        new = {name: own.get(name, 0.0) * (1 - t) + src.get(name, 0.0) * t for name in set(own) | set(src)}
+        for g in list(v.groups):
+            groups[g.group].remove([v.index])
+        for name, w in new.items():
+            if w > 1e-4:
+                groups[name].add([v.index], w, "REPLACE")
+        n += 1
+    limit_weights(ob, 4)
+    return n
 
 
 def smooth_weights(ob: bpy.types.Object, repeat: int = 4, factor: float = 0.5, where=None) -> None:
@@ -526,7 +599,6 @@ def main() -> None:
         "pants": gear.pants(),
         "helmet": gear.helmet(),
         "cleats": gear.cleats(),
-        "collar": gear.collar_insert(),
     }
     gloves = {}
     for s in ("l", "r"):
@@ -581,7 +653,8 @@ def main() -> None:
             tag(g, lambda co: gear.PARTS["glove"])
             transfer_weights(gloves[s], g, rig)
             parts.append(g)
-        col = decimate_to(duplicate(pieces["collar"], f"collar_{i}"), b["collar"])
+        col = gear.collar_insert(b["collar"])
+        col.name = f"collar_{i}"
         tag(col, lambda co: gear.PARTS["collar"])
         rigid(col, rig, "spine_04")  # the collar rides the pads; the neck turns inside it
         parts.append(col)
@@ -627,6 +700,7 @@ def main() -> None:
         for m in list(ob.modifiers)[1:]:
             ob.modifiers.remove(m)  # one armature modifier after the join
         limit_weights(ob, 4)
+        collar_follows_jersey(ob)  # round two: no gap opens at the neck opening
         with_helpers(ob)
         ob.data.validate(clean_customdata=False)  # drop degenerate faces left by decimation
         for p in ob.data.polygons:

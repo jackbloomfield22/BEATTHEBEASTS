@@ -491,14 +491,20 @@ def glove(s: str, voxel: float = 0.0028):
     return union_remesh(parts, f"glove_{s}", voxel=voxel, smooth_iters=4)
 
 
-def collar_insert():
+def collar_insert(segs: int = 32):
     """Closes the jersey's neck opening: the collar band from the neck down
     and out to the jersey's edge (no hollow jersey inside visible)."""
     # The band runs from the neck out to just past the jersey's neck opening
-    # (NECK_OPEN, round two): under the caps' edge at the sides, standing
-    # ~1 cm proud of it in front and behind, so it reads as a collar.
-    rings = [Ring((0, 0.022, 1.545), 0.080, 0.074), Ring((0, 0.018, 1.575), 0.090, 0.083), Ring((0, NECK_OPEN[2], 1.594), NECK_OPEN[0] + 0.004, NECK_OPEN[1] + 0.004)]
-    return loft("collar", rings, segs=32, cap=False)
+    # (NECK_OPEN, round two), tucked just under the caps' edge at the sides
+    # and lying on the opening's rim in front and behind.
+    # All three rings share one centre: the loft turns each ring square to
+    # the path, and a path leaning 6 mm forward tilted the wide top ring 19°
+    # (its back stood 4 cm up as a flange, its front sank under the jersey).
+    y = NECK_OPEN[2]
+    rings = [Ring((0, y, 1.545), 0.080, 0.084), Ring((0, y, 1.575), 0.090, 0.090), Ring((0, y, 1.592), NECK_OPEN[0] + 0.012, NECK_OPEN[1] + 0.012)]
+    # (Round two: built per LOD at `segs` round instead of decimated: the
+    # decimation collapsed the wider outer ring into spikes.)
+    return loft("collar", rings, segs=segs, cap=False, sub=2)
 
 
 def chin_strap():

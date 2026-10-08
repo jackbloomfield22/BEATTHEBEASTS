@@ -3,8 +3,8 @@
   "lods": [
     {
       "lod": 0,
-      "triangles": 27912,
-      "vertices": 14943,
+      "triangles": 27848,
+      "vertices": 14919,
       "reach": {
         "l": {
           "weight": 0.797,
@@ -20,8 +20,8 @@
     },
     {
       "lod": 1,
-      "triangles": 13790,
-      "vertices": 7707,
+      "triangles": 13854,
+      "vertices": 7735,
       "reach": {
         "l": {
           "weight": 0.797,
@@ -37,8 +37,8 @@
     },
     {
       "lod": 2,
-      "triangles": 4043,
-      "vertices": 2426,
+      "triangles": 4123,
+      "vertices": 2469,
       "reach": {
         "l": {
           "weight": 0.797,
@@ -158,7 +158,7 @@
       "share": 0.5
     }
   },
-  "bytes": 3811544,
+  "bytes": 3816984,
   "skinGate": {
     "groups": {
       "speed": {

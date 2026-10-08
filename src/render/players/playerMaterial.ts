@@ -42,10 +42,13 @@ const GEAR_COLORS: Record<Exclude<GearColor, 'kit' | 'trim'>, string> = { black:
 // (tools/blender/lib/gear.py), the front over the chest plate.
 // Numbers are condensed (athletic block numerals are narrower than Bungee),
 // which keeps two digits inside the back's width over the pads.
-const BACK_NUMBER = { cap: 0.235, y: 1.3 };
+// (Round two: the nameplate and the back number 1-1.5 cm lower; the name's top
+// ran into the crease where the back plate meets the pad arch, ~1.50 m,
+// which broke the letters' tops into a wavy line.)
+const BACK_NUMBER = { cap: 0.235, y: 1.29 };
 const FRONT_NUMBER = { cap: 0.19, y: 1.31 };
 const NUMBER_CONDENSE = 0.84;
-const NAME = { cap: 0.066, y: 1.47, maxWidth: 0.34 };
+const NAME = { cap: 0.066, y: 1.455, maxWidth: 0.34 };
 // Sleeve ("TV") numbers on the outside of each sleeve, 4 in tall.
 const SLEEVE_NUMBER = { cap: 0.085, t: 0.3 };
 // The official's shirt: vertical black-and-white stripes, each 2 in wide
@@ -259,7 +262,7 @@ float pantsHeight(vec3 p, float fp) {
   float n2 = pNoise(vec3(p.x * 22.0, p.y * 9.0, p.z * 22.0) + 3.0);
   float crease = 1.0 - abs(2.0 * n1 - 1.0);
   float drape = 1.0 - abs(2.0 * n2 - 1.0);
-  float h = 0.0018 * crease * crease * (knee + hip * 0.8) + 0.0009 * drape * drape * smoothstep(0.55, 0.7, p.y) * (1.0 - smoothstep(1.0, 1.08, p.y));
+  float h = 0.0013 * crease * crease * (knee + hip * 0.8) + 0.0009 * drape * drape * smoothstep(0.55, 0.7, p.y) * (1.0 - smoothstep(1.0, 1.08, p.y));
   return h * (1.0 - smoothstep(0.0012, 0.003, fp));
 }
 // Ribbed sock knit: a height field around the leg (rest pose, the shin's
@@ -414,7 +417,7 @@ vec3 playerAlbedo(int part, vec3 p, bool front, out float stripe, out float roug
     c = mix(c, uTrim, max(collar, hem));
   } else if (part == ${PART.pants}) {
     // The creases' valleys a little darker (pantsHeight; the bump does the rest).
-    c *= 1.0 + (pantsHeight(p, length(fwidth(p))) - 0.0012) * 40.0;
+    c *= 1.0 + (pantsHeight(p, length(fwidth(p))) - 0.0009) * 30.0;
     float side = step(0.12, abs(p.x)) * (1.0 - smoothstep(0.011, 0.015, abs(p.z + 0.005))) * step(p.y, 1.05);
     c = mix(c, uPantsStripe, side);
     // The belt in the jersey's colour at the waistband (the pants top is at
