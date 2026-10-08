@@ -804,10 +804,12 @@ def action_clips() -> list[Clip]:
     from .actions_m65_contact import contact_clips
     from .actions_m7_cel import cel_clips
     from .actions_pass import pass_clips
+    from .actions_drop import drop_clips
 
     jl = juke_left()
     return [
-        qb_drop(3), qb_drop(5), qb_throw(),
+        # (The drops are actions_drop.py's since passing round 2: qb_drop here still keys the locker room's hologram.)
+        *drop_clips(), qb_throw(),
         carry(), protect(), qb_hold(), catch(False), catch(True), stiff_arm(), truck(), pump(),
         jl, mirrored(jl, "juke_r", to_phase=0.0), spin(), dive(), tackle(), getup_prone(), getup_supine(),
         *m55_clips(),

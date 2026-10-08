@@ -11,6 +11,7 @@ padded and end just below the knee.
 from __future__ import annotations
 
 import math
+import os
 
 from mathutils import Vector
 
@@ -49,6 +50,7 @@ def along_upper_arm(co, s):
 
 
 SLEEVE_END = 0.5  # fraction of the upper arm the sleeve covers
+PAD_CAP_Z = float(os.environ.get("BTB_PAD_CAP_Z", "1.546"))  # the pad caps' centres (their flat tops 5.2 cm above)
 PANTS_HEM_Z = 0.44  # just under the knee (knee joint at 0.52)
 PANTS_TOP_Z = 1.13
 
@@ -69,7 +71,7 @@ def jersey(voxel=0.006):
         # A flat-topped cap with squared corners and a defined outer edge
         # (a plain ellipsoid read as a pool float), and the epaulet's lip
         # turning down over the deltoid.
-        parts.append(superellipsoid("pad_cap", (0.165 * sx, 0.012, 1.546), (0.128, 0.148, 0.052), plan=0.5, vert=0.45, segs=40))
+        parts.append(superellipsoid("pad_cap", (0.165 * sx, 0.012, PAD_CAP_Z), (0.128, 0.148, 0.052), plan=0.5, vert=0.45, segs=40))
         parts.append(superellipsoid("pad_lip", (0.268 * sx, 0.012, 1.508), (0.030, 0.132, 0.048), plan=0.6, vert=0.7, segs=24))
         s = "l" if sx > 0 else "r"
         sh, el = _v(f"shoulder_{s}"), _v(f"elbow_{s}")
@@ -84,14 +86,65 @@ COLLAR_Z = 1.585
 JERSEY_HEM_Z = 1.085  # tucked 4.5 cm into the pants (top at 1.13): a deeper tuck pokes out when the trunk twists against the hips
 
 
+# The neck opening (round two): an ellipse round the neck, half-axes (x, y)
+# and centre y. The collar cut at COLLAR_Z used to open the whole jersey
+# above it, and the pad caps' flat tops (1.598 m) stand above it: it took
+# the top off both caps and the jersey was an open box across the
+# shoulders. From the broadcast camera and in the huddle you looked down
+# into it round the collar, and its back wall read as a hood. Only the neck
+# opens now; the caps keep their tops.
+NECK_OPEN = (0.125, 0.112, 0.012)
+NECK_SIDES = 24
+
+
+def _in_neck(co, grow: float = 1.0) -> bool:
+    a, b, y0 = NECK_OPEN
+    return (co.x / (a * grow)) ** 2 + ((co.y - y0) / (b * grow)) ** 2 < 1.0
+
+
+def cut_neck(ob) -> None:
+    """Open the neck: everything above COLLAR_Z inside the NECK_OPEN
+    ellipse goes, with clean edges (the plane where the jersey crosses it,
+    and a polygon of vertical planes round the ellipse where the caps stand
+    above it, each one splitting only the faces in its own sector)."""
+    import bmesh
+
+    a, b, y0 = NECK_OPEN
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+
+    def split(co, no, keep):
+        geom = [f for f in bm.faces if keep(f.calc_center_median())]
+        edges = {e for f in geom for e in f.edges}
+        verts = {v for f in geom for v in f.verts}
+        bmesh.ops.bisect_plane(bm, geom=list(verts) + list(edges) + geom, plane_co=Vector(co), plane_no=Vector(no))
+
+    split((0, 0, COLLAR_Z), (0, 0, 1), lambda c: _in_neck(c, 1.3) and c.z > COLLAR_Z - 0.04)
+    for k in range(NECK_SIDES):
+        t = 2 * math.pi * k / NECK_SIDES
+        p = Vector((a * math.cos(t), y0 + b * math.sin(t), 0.0))
+        n = Vector((math.cos(t) / a, math.sin(t) / b, 0.0)).normalized()
+
+        def sector(c, t=t):
+            d = math.atan2((c.y - y0) / b, c.x / a) - t
+            return abs(math.atan2(math.sin(d), math.cos(d))) < 1.4 * math.pi / NECK_SIDES and c.z > COLLAR_Z - 0.005 and _in_neck(c, 1.35)
+
+        split(p, n, sector)
+    dead = [f for f in bm.faces if (lambda c: c.z > COLLAR_Z and _in_neck(c, 1.001))(f.calc_center_median())]
+    bmesh.ops.delete(bm, geom=dead, context="FACES")
+    bm.to_mesh(ob.data)
+    bm.free()
+
+
 def cut_jersey(ob):
-    planes = [((0, 0, JERSEY_HEM_Z), (0, 0, 1)), ((0, 0, COLLAR_Z), (0, 0, 1))]
+    cut_neck(ob)
+    planes = [((0, 0, JERSEY_HEM_Z), (0, 0, 1))]
     for s in ("l", "r"):
         sh, el = _v(f"shoulder_{s}"), _v(f"elbow_{s}")
         planes.append((tuple(sh.lerp(el, SLEEVE_END + 0.05)), tuple((el - sh).normalized())))
 
     def inside(co):
-        if co.z < JERSEY_HEM_Z or co.z > COLLAR_Z:
+        if co.z < JERSEY_HEM_Z:
             return True
         for s in ("l", "r"):
             if (co.x > 0) == (s == "l") and abs(co.x) > 0.2:
@@ -325,27 +378,107 @@ def cleats(voxel=0.005):
     parts = []
     for s in ("l", "r"):
         x = J[f"ankle_{s}"][0]
-        parts.append(
-            loft(
-                "shoe",
-                [
-                    Ring((x, 0.080, 0.050), 0.036, 0.040),
-                    Ring((x, 0.040, 0.066), 0.046, 0.062),
-                    Ring((x * 1.02, -0.045, 0.048), 0.052, 0.042),
-                    Ring((x * 1.04, -0.12, 0.034), 0.056, 0.030),
-                    Ring((x * 1.05, -0.185, 0.026), 0.042, 0.022),
-                    Ring((x * 1.05, -0.212, 0.022), 0.018, 0.014),
-                ],
-                side_hint=(1, 0, 0),
-                segs=20,
-            )
-        )
+        parts.append(loft("shoe", _shoe_rings(x), side_hint=(1, 0, 0), segs=20))
     ob = union_remesh(parts, "cleats", voxel=voxel, smooth_iters=6)
     # Flat sole.
     for v in ob.data.vertices:
         if v.co.z < 0.006:
             v.co.z = 0.004
     return ob
+
+
+# The cleat's outsole plate and studs (round two; docs/characters/CHARACTERS2.md).
+# The upper (cleats()) is a rounded loft whose flattened bottom is a narrow
+# strip: from the side the shoe was a blob on the turf. A real cleat stands
+# on a plate the full width of the foot with a lip round the upper, and
+# studs under it that sink into the grass. The plate's top is SOLE_TOP; the
+# shader paints it (and the studs) the sole colour (playerMaterial.ts).
+SOLE_TOP = 0.016
+SOLE_LIP = 0.003  # the plate's edge outside the upper's widest line, m
+# Stud positions (across from the foot's centre line, along the foot) and
+# the stud size: 7 a shoe, a molded-cleat pattern (four at the forefoot,
+# one at the toe, two at the heel), 1.3 cm into the turf.
+STUDS = [(-0.026, -0.150), (0.028, -0.150), (-0.030, -0.095), (0.032, -0.095), (0.002, -0.192), (-0.019, 0.050), (0.019, 0.050)]
+STUD_R = (0.0068, 0.0042)  # top, tip
+STUD_Z = (0.004, -0.009)
+
+
+def _shoe_rings(x):
+    return [
+        Ring((x, 0.080, 0.050), 0.036, 0.040),
+        Ring((x, 0.040, 0.066), 0.046, 0.062),
+        Ring((x * 1.02, -0.045, 0.048), 0.052, 0.042),
+        Ring((x * 1.04, -0.12, 0.034), 0.056, 0.030),
+        Ring((x * 1.05, -0.185, 0.026), 0.042, 0.022),
+        Ring((x * 1.05, -0.212, 0.022), 0.018, 0.014),
+    ]
+
+
+def cleat_soles(points: int = 32, stud_segs: int = 8):
+    """Both shoes' outsole plates (an outline round the upper's widest
+    line, `points` round, extruded from the turf to SOLE_TOP with a bevelled
+    top edge) and, with stud_segs > 0, their studs (tapered cylinders)."""
+    import bmesh
+
+    from .geo import new_object, refine
+
+    bm = bmesh.new()
+    for s in ("l", "r"):
+        x = J[f"ankle_{s}"][0]
+        st = refine(_shoe_rings(x), 4)
+        # The outline: down one side, round the toe, back up the other, and
+        # round the heel; each station's centre and half-width (+ the lip).
+        cy = [r.c.y for r in st]
+        cx = [r.c.x for r in st]
+        hw = [r.w + SOLE_LIP for r in st]
+        y0, y1 = cy[0] + 0.004, cy[-1] - 0.006  # past the heel and toe caps
+
+        def at(y):
+            """The stations' centre and half-width at y (held at the ends)."""
+            if y >= cy[0]:
+                return cx[0], hw[0]
+            if y <= cy[-1]:
+                return cx[-1], hw[-1]
+            j = next(i for i in range(len(cy) - 1) if cy[i] >= y >= cy[i + 1])
+            f = (cy[j] - y) / max(1e-9, cy[j] - cy[j + 1])
+            return cx[j] + (cx[j + 1] - cx[j]) * f, hw[j] + (hw[j + 1] - hw[j]) * f
+        outline = []
+        for k in range(points):
+            t = 2 * math.pi * k / points
+            # A superellipse in the foot's frame, then shaped by the stations' width.
+            u = math.cos(t)  # +1 heel .. -1 toe
+            v = math.sin(t)
+            y = y1 + (y0 - y1) * (u * 0.5 + 0.5)
+            c, w = at(y)
+            # Round the heel and the toe in plan (the stations end in flat caps).
+            end = max(0.0, abs(u)) ** 6
+            outline.append(Vector((c + math.copysign(abs(v) ** 0.8, v) * w * (1.0 - 0.35 * end), y, 0.0)))
+        bot = [bm.verts.new((p.x, p.y, 0.002)) for p in outline]
+        mid = [bm.verts.new((p.x, p.y, SOLE_TOP - 0.004)) for p in outline]
+        cen = sum(outline, Vector()) / len(outline)
+        top = [bm.verts.new((cen.x + (p.x - cen.x) * 0.96, cen.y + (p.y - cen.y) * 0.985, SOLE_TOP)) for p in outline]
+        n = len(outline)
+        for k in range(n):
+            k2 = (k + 1) % n
+            bm.faces.new((bot[k], bot[k2], mid[k2], mid[k]))
+            bm.faces.new((mid[k], mid[k2], top[k2], top[k]))
+        bm.faces.new(list(reversed(bot)))
+        bm.faces.new(top)
+        if stud_segs:
+            for ax, ay in STUDS:
+                # The stud's centre: across from this y's centre line.
+                c, _w = at(ay)
+                # (Mirrored across the foot for the right shoe: + is toward the outside.)
+                px = c + ax * (1 if s == "l" else -1)
+                ring_t = [bm.verts.new((px + STUD_R[0] * math.cos(2 * math.pi * q / stud_segs), ay + STUD_R[0] * math.sin(2 * math.pi * q / stud_segs), STUD_Z[0])) for q in range(stud_segs)]
+                ring_b = [bm.verts.new((px + STUD_R[1] * math.cos(2 * math.pi * q / stud_segs), ay + STUD_R[1] * math.sin(2 * math.pi * q / stud_segs), STUD_Z[1])) for q in range(stud_segs)]
+                for q in range(stud_segs):
+                    q2 = (q + 1) % stud_segs
+                    bm.faces.new((ring_t[q], ring_t[q2], ring_b[q2], ring_b[q]))
+                bm.faces.new(list(reversed(ring_b)))
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return new_object("cleat_soles", bm)
 
 
 def glove(s: str, voxel: float = 0.0028):
@@ -358,13 +491,20 @@ def glove(s: str, voxel: float = 0.0028):
     return union_remesh(parts, f"glove_{s}", voxel=voxel, smooth_iters=4)
 
 
-def collar_insert():
+def collar_insert(segs: int = 32):
     """Closes the jersey's neck opening: the collar band from the neck down
     and out to the jersey's edge (no hollow jersey inside visible)."""
-    # The band stands ~1.5 cm proud of the jersey's edge (1.585, ~0.11 x 0.10
-    # across) so it reads as a collar.
-    rings = [Ring((0, 0.022, 1.545), 0.080, 0.074), Ring((0, 0.022, 1.575), 0.088, 0.081), Ring((0, 0.020, 1.600), 0.100, 0.090)]
-    return loft("collar", rings, segs=32, cap=False)
+    # The band runs from the neck out to just past the jersey's neck opening
+    # (NECK_OPEN, round two), tucked just under the caps' edge at the sides
+    # and lying on the opening's rim in front and behind.
+    # All three rings share one centre: the loft turns each ring square to
+    # the path, and a path leaning 6 mm forward tilted the wide top ring 19°
+    # (its back stood 4 cm up as a flange, its front sank under the jersey).
+    y = NECK_OPEN[2]
+    rings = [Ring((0, y, 1.545), 0.080, 0.084), Ring((0, y, 1.575), 0.090, 0.090), Ring((0, y, 1.592), NECK_OPEN[0] + 0.012, NECK_OPEN[1] + 0.012)]
+    # (Round two: built per LOD at `segs` round instead of decimated: the
+    # decimation collapsed the wider outer ring into spikes.)
+    return loft("collar", rings, segs=segs, cap=False, sub=2)
 
 
 def chin_strap():

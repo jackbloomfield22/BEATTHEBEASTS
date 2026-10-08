@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GLYPH_CHARS, jerseyName, layoutText, sdfFromCoverage } from '@/render/players/glyphs';
+import { GLYPH_CHARS, downsampleField, jerseyName, layoutText, sdfFromCoverage } from '@/render/players/glyphs';
 
 describe('jersey glyphs', () => {
   it('builds a signed distance field with the edge at 128', () => {
@@ -17,6 +17,23 @@ describe('jersey glyphs', () => {
     expect(row[8]! - 128).toBeCloseTo(128 - row[7]!, 0);
     // Monotonic toward the center.
     for (let x = 1; x <= 10; x++) expect(row[x]).toBeGreaterThanOrEqual(row[x - 1]!);
+  });
+
+  it('keeps sub-texel edges when built supersampled and box-filtered down (round two)', () => {
+    // A bar whose edge sits at x = 10.25 texels: at 4x it is exact, and the
+    // filtered field crosses 128 a quarter of the way into texel 10.
+    const ss = 4;
+    const w = 24 * ss;
+    const h = 4 * ss;
+    const cov = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 41; x < w; x++) cov[y * w + x] = 255;
+    const lo = downsampleField(sdfFromCoverage(cov, w, h, 4 * ss), w, h, ss);
+    expect(lo.length).toBe(24 * 4);
+    const row = Array.from(lo.slice(24, 48));
+    // Interpolating the field between texel centres 9.5 and 10.5 puts the edge at ~10.25.
+    const edge = 9.5 + (128 - row[9]!) / (row[10]! - row[9]!);
+    expect(edge).toBeGreaterThan(10.1);
+    expect(edge).toBeLessThan(10.4);
   });
 
   it('lays out text with advances and pads empty slots', () => {

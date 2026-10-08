@@ -13,6 +13,7 @@ bracket the roster: a 6'5" 340 lb tackle sits near heavy 1 + belly 0.8, and a
 from __future__ import annotations
 
 import math
+import os
 
 from mathutils import Vector
 
@@ -21,7 +22,9 @@ from .geo import smoothstep
 # How much each part follows the body shape (helmets, masks, visor and the
 # chin strap don't grow; gloves and cleats a little; the official's shirt does, his cap doesn't).
 PART_FOLLOW = {0: 1.0, 1: 0.35, 2: 0.7, 3: 0.15, 4: 1.0, 5: 1.0, 6: 0.0, 7: 0.0, 8: 0.0, 9: 0.0, 10: 0.0, 11: 0.0, 12: 0.0, 13: 0.8, 14: 1.0, 15: 1.0, 16: 0.0, 17: 0.0}
-JERSEY, SKIN, SOCK, COLLAR = 4, 0, 2, 14
+JERSEY, SKIN, SOCK, COLLAR, PANTS, TOWEL = 4, 0, 2, 14, 5, 13
+# Round two: the pads shape, "v1" (round one) or "v2" (wider, not puffier); BTB_PADS picks it for the A/B stills.
+PADS_V = os.environ.get("BTB_PADS", "v2")
 
 
 def _mass_region(p: Vector) -> float:
@@ -34,12 +37,24 @@ def _mass_region(p: Vector) -> float:
     return max(torso * near_axis, legs, arms, neck)
 
 
-def heavy(p: Vector, n: Vector) -> Vector:
-    return n * (0.030 * _mass_region(p))
+def heavy(p: Vector, n: Vector, part: int = SKIN) -> Vector:
+    d = n * (0.030 * _mass_region(p))
+    if PADS_V != "v1" and part == JERSEY:
+        # Round two: the pads' front and back plates are a hard shell, and
+        # the body under them is culled (build_character.covered), so they
+        # needn't grow with the man's mass the way skin does: pushed out
+        # 3-4 cm on a lineman they ballooned in profile. The plates over
+        # the chest and back (front- and back-facing normals, above the
+        # chest line, away from the collar) take a third of it.
+        plate = smoothstep(1.30, 1.42, p.z) * abs(n.y) * smoothstep(0.13, 0.17, math.hypot(p.x, p.y - 0.012))
+        d *= 1.0 - (2.0 / 3.0) * plate
+    return d
 
 
 def lean(p: Vector, n: Vector) -> Vector:
-    return n * (-0.012 * _mass_region(p))
+    # (Round two: -1.2 cm read as the base body at broadcast distance; a
+    # receiver or a corner is narrow through the hips and limbs.)
+    return n * (-0.016 * _mass_region(p))
 
 
 def belly(p: Vector, n: Vector) -> Vector:
@@ -63,7 +78,15 @@ def pads(p: Vector, n: Vector, part: int = JERSEY) -> Vector:
         return Vector((0, 0, 0))
     w = smoothstep(1.30, 1.48, p.z) * smoothstep(0.06, 0.20, abs(p.x))
     out = Vector((p.x, 0, 0)).normalized() if abs(p.x) > 1e-4 else Vector((0, 0, 0))
-    return (n * 0.022 + out * 0.018 + Vector((0, 0, 0.012)) * smoothstep(1.50, 1.58, p.z)) * w
+    if PADS_V == "v1":
+        return (n * 0.022 + out * 0.018 + Vector((0, 0, 0.012)) * smoothstep(1.50, 1.58, p.z)) * w
+    # Round two: a lineman's pads are wider, not puffier. Pushed along every
+    # normal, the front and back plates bulged 2-5 cm (with heavy) and the
+    # pads ballooned in profile into a hump behind the neck. Now the caps
+    # grow outward and up (over the shoulder: the normals that face out or
+    # up), and the plates over the chest and back only move out with them.
+    side = min(1.0, abs(n.x) + max(0.0, n.z))
+    return (n * (0.018 * side) + out * 0.026 + Vector((0, 0, 0.010)) * smoothstep(1.50, 1.58, p.z)) * w
 
 
 def neck(p: Vector, n: Vector, part: int = SKIN) -> Vector:
@@ -83,7 +106,9 @@ def waist(p: Vector, n: Vector, part: int = SKIN) -> Vector:
 
 def calves(p: Vector, n: Vector, part: int = SKIN) -> Vector:
     """Fuller calves, mostly behind."""
-    if part not in (SKIN, SOCK) or not 0.12 < p.z < 0.50:
+    # (Round two: the pants too, so their hem stays round the calf it covers;
+    # the calf bulged through the hem, the sawtooth at the calf.)
+    if part not in (SKIN, SOCK, PANTS) or not 0.12 < p.z < 0.50:
         return Vector((0, 0, 0))
     bump = math.sin(math.pi * (p.z - 0.12) / 0.38)
     back = 0.5 + 0.5 * smoothstep(-0.02, 0.05, p.y)
@@ -97,6 +122,20 @@ def arms(p: Vector, n: Vector, part: int = SKIN) -> Vector:
     return n * 0.010
 
 
-SHAPES = {"heavy": heavy, "lean": lean, "belly": belly, "pads": pads, "neck": neck, "waist": waist, "calves": calves, "arms": arms}
+def thighs(p: Vector, n: Vector, part: int = SKIN) -> Vector:
+    """Round two (docs/characters/CHARACTERS2.md): a back's or a lineman's
+    legs. Quads and hamstrings fuller down the thigh (most at mid-thigh,
+    nothing at the knee), the glutes and the hips behind and out. The skin,
+    the pants over it and the towel on the thigh; ~2 cm at mid-thigh at
+    weight 1 (a thigh ~12 cm round bigger), 1.2 cm more over the glutes."""
+    if part not in (SKIN, PANTS, TOWEL) or not 0.50 < p.z < 1.08:
+        return Vector((0, 0, 0))
+    leg = math.sin(math.pi * (p.z - 0.50) / 0.58) ** 1.2
+    glute = math.exp(-(((p.z - 0.95) / 0.07) ** 2)) * smoothstep(-0.01, 0.07, p.y)
+    hip = math.exp(-(((p.z - 0.97) / 0.08) ** 2)) * smoothstep(0.10, 0.17, abs(p.x))
+    return n * (0.020 * leg + 0.012 * glute + 0.010 * hip)
+
+
+SHAPES = {"heavy": heavy, "lean": lean, "belly": belly, "pads": pads, "neck": neck, "waist": waist, "calves": calves, "arms": arms, "thighs": thighs}
 # The variety shapes read the part id (the frame shapes apply to everything).
-PART_AWARE = {"pads", "neck", "waist", "calves", "arms"}
+PART_AWARE = {"heavy", "pads", "neck", "waist", "calves", "arms", "thighs"}

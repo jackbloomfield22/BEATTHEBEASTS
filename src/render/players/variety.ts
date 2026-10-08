@@ -25,7 +25,7 @@ export interface Variety {
   /** Stripes around the sock (0, 1 or 2). */
   sockStripes: number;
   /** Morph influences (tools/blender/lib/shapes.py). */
-  morph: { pads: number; neck: number; waist: number; calves: number; arms: number };
+  morph: { pads: number; neck: number; waist: number; calves: number; arms: number; thighs: number };
   /** Skeleton: extra shoulder half-width (m) and arm length (factor). */
   shoulder: number;
   arm: number;
@@ -107,6 +107,7 @@ export function playerVariety(pos: Position, heightM: number, weightKg: number, 
     waist: clamp((bmi - 29) / 8 + 0.25 * n(), -1, 1),
     calves: clamp(base.calves + 0.3 * n(), 0, 1.2),
     arms: clamp(base.arms + 0.3 * n(), 0, 1.2),
+    thighs: 0,
   };
   // Frames: linemen broad through the shoulders; arm length ±3% (wingspan
   // varies ~6% at a given height across NFL combine measurements).
@@ -115,6 +116,12 @@ export function playerVariety(pos: Position, heightM: number, weightKg: number, 
   // Eye black: common on backs and receivers, rarer up front (drawn last,
   // so the picks above stay what they were for every player).
   const eyeBlack = r() < (pos === 'RB' || skill ? 0.4 : pos === 'LB' || pos === 'DL' || pos === 'TE' ? 0.25 : pos === 'QB' ? 0.15 : 0.1);
+  // Thighs and glutes (round two, docs/characters/CHARACTERS2.md): a back is
+  // compact and thick-legged, a lineman thick through the hips, a receiver
+  // long and lean. Drawn after everything else, so every pick above stays
+  // what it was for every player.
+  const thighBase = pos === 'RB' ? 1 : line ? 0.75 : pos === 'LB' || pos === 'TE' ? 0.6 : pos === 'S' || pos === 'CB' ? 0.3 : pos === 'QB' || pos === 'K' ? 0.15 : 0;
+  morph.thighs = clamp(thighBase + 0.25 * n(), 0, 1.2);
   return { mask, visor, towel, sleeves, sleeveColor, tape, gloveColor, sockStripes, morph, shoulder, arm, eyeBlack };
 }
 

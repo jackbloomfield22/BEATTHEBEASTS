@@ -35,13 +35,18 @@ MIN_AREA = 4e-6  # m² (2 x 4 mm); LOD0's median face is ~6e-5
 CAP_Z = 1.47
 CAP_X = (0.12, 0.30)
 
-TRUNK = ("spine_03", "spine_04", "clavicle", "pad")
+# (The epaulet helper, lib/helpers.py, takes over part of the shell: it is trunk.)
+TRUNK = ("spine_03", "spine_04", "clavicle", "pad", "epaulet")
 REGIONS = {
     "shoulder": (TRUNK, ("upperarm",)),
     "elbow": (("upperarm",), ("forearm",)),
     "hip": (("pelvis", "spine_01"), ("thigh",)),
     "knee": (("thigh",), ("calf",)),
 }
+# The half-angle helpers (lib/helpers.py, round two) take a joint's blend
+# band; their weight counts half to each side of their joint, so a region
+# holds the same faces it held before they did.
+HELPER_REGION = {"elbow_helper": "elbow"}
 
 
 def _side_of(name: str) -> str:
@@ -77,8 +82,9 @@ class SkinProbe:
                 self.W[v.index, bi[n]] = w / tot
             for r, (a, b) in REGIONS.items():
                 for side in ("l", "r"):
-                    wa = sum(w for w, n in ws if _base(n) in a and _side_of(n) in ("", side))
-                    wb = sum(w for w, n in ws if _base(n) in b and _side_of(n) == side)
+                    wh = sum(w for w, n in ws if HELPER_REGION.get(_base(n)) == r and _side_of(n) == side) / 2
+                    wa = wh + sum(w for w, n in ws if _base(n) in a and _side_of(n) in ("", side))
+                    wb = wh + sum(w for w, n in ws if _base(n) in b and _side_of(n) == side)
                     if wa >= MIN_W and wb >= MIN_W:
                         blends[r][v.index] = True
         a, b, c = (self.rest[self.tris[:, k]] for k in range(3))
@@ -224,6 +230,7 @@ def gate_lods(rig, meshes: list) -> dict:
     at 0: the base body). Returns per region the worst shares and the pass."""
     from .anim_rig import Controls
     from .corrective import set_reach
+    from .helpers import drive_helpers
     from .poses import apply_pose
 
     for m in meshes:
@@ -240,6 +247,7 @@ def gate_lods(rig, meshes: list) -> dict:
         for name in names:
             for f, pose in enumerate(clip_poses(name)):
                 apply_pose(rig, c, pose)
+                drive_helpers(rig)  # the half-angle helpers, as the runtime drives them
                 # The arms-overhead correctives at the runtime's weights (lib/corrective.py).
                 set_reach(meshes, rig)
                 bpy.context.view_layer.update()

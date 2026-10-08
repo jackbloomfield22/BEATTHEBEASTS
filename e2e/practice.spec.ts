@@ -98,7 +98,7 @@ test('the catch call: one prompt while the ball is in the air, and the call ligh
 });
 
 test('pre-snap: the prompts, the route preview key, and a hot route the sim runs', async ({ page }) => {
-  await open(page, 5, 'stick'); // Stick
+  await open(page, 2, 'stick'); // Stick
   // First play: the tutorial's first step and the snap prompt with the route and hot-route keys.
   await expect(page.locator('.tutorial-card')).toContainText('Snap');
   await expect(page.locator('.snap-call')).toContainText('Tab');
@@ -123,7 +123,7 @@ test('pre-snap: the prompts, the route preview key, and a hot route the sim runs
 });
 
 test('an audible at the line: the offense re-sets in the run against the same look, and it snaps', async ({ page }) => {
-  await open(page, 5, 'stick'); // Stick, Shotgun Trips Right
+  await open(page, 2, 'stick'); // Stick, Shotgun Trips Right
   const before = await page.evaluate(() => {
     const s = (window as unknown as P).__btbPractice.runner!.state;
     return { seed: s.setup.seed, def: s.setup.def.id };
@@ -147,7 +147,7 @@ test('an audible at the line: the offense re-sets in the run against the same lo
 });
 
 test('a tackle: the carrier goes down and the next snap is at the new spot', async ({ page }) => {
-  await open(page, 5, 'stick'); // Stick
+  await open(page, 2, 'stick'); // Stick
   await page.keyboard.press('Space');
   await tick(page, 78);
   await page.keyboard.down('Digit1');
@@ -168,7 +168,7 @@ test('a tackle: the carrier goes down and the next snap is at the new spot', asy
 });
 
 test('scores: a touchdown run ends the series with a touchdown card', async ({ page }) => {
-  await open(page, 307, 'fourVerts');
+  await open(page, 116, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
   await page.keyboard.down('Digit1');
@@ -182,7 +182,7 @@ test('scores: a touchdown run ends the series with a touchdown card', async ({ p
   await page.keyboard.up('ArrowRight');
   const s = await tickUntil(page, (x) => x.result !== null);
   await page.keyboard.up('ArrowUp');
-  // Seed 307 (sim pressure) with these inputs is a 75-yard catch and run (the replay is exact; tools/sim/e2eseeds.ts, with the Practice Field's chemistry).
+  // Seed 116 (Tampa 2) with these inputs is a 75-yard catch and run (the replay is exact; tools/sim/e2eseeds.ts, with the Practice Field's chemistry; re-found for passing round 2: 307 was).
   expect(s.result!.touchdown).toBe(true);
   expect(s.events.some((e) => e.type === 'touchdown')).toBe(true);
   await tick(page, 120);

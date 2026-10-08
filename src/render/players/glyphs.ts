@@ -78,6 +78,30 @@ export function sdfFromCoverage(cov: ArrayLike<number>, w: number, h: number, sp
   return out;
 }
 
+/**
+ * Box-filter a field down by `ss` each way (each output texel the mean of an
+ * ss x ss block). A distance field is close to linear across a block, so
+ * the mean is the distance at the block's centre: a field computed at a
+ * supersampled resolution keeps its sub-texel edges (glyphAtlas.ts).
+ */
+export function downsampleField(hi: ArrayLike<number>, w: number, h: number, ss: number): Uint8Array {
+  const ow = Math.floor(w / ss);
+  const oh = Math.floor(h / ss);
+  const out = new Uint8Array(ow * oh);
+  const n = ss * ss;
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      let sum = 0;
+      for (let j = 0; j < ss; j++) {
+        const row = (y * ss + j) * w + x * ss;
+        for (let i = 0; i < ss; i++) sum += hi[row + i]!;
+      }
+      out[y * ow + x] = Math.round(sum / n);
+    }
+  }
+  return out;
+}
+
 export interface GlyphMetrics {
   /** Advance width, in em (the cell is 1 em wide). */
   advance: number;

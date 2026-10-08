@@ -261,7 +261,7 @@ def redirect_left() -> Clip:
 def m55_clips() -> list[Clip]:
     ho, pa, tk, rl = handoff(), pa_fake(), take(), redirect_left()
     return [
-        qb_drop_uc(3), qb_drop_uc(5),
+        # (qb_drop_uc3/uc5 are actions_drop.py's since passing round 2.)
         ho, mirrored(ho, "ovl_handoff_l"), pa, mirrored(pa, "ovl_pa_fake_l"), tk, mirrored(tk, "ovl_take_l"),
         tuck(), qb_slide(), getoff(), rl, mirrored(rl, "rush_redirect_r", to_phase=0.0),
     ]

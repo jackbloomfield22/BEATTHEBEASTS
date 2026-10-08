@@ -1,11 +1,13 @@
 // The identity harness in the unit tests (Playtest 2, "every player is
-// himself"): the pairs with the widest gaps, at two reps, so a change that
+// himself"): the pairs with the widest gaps, at four reps, so a change that
 // flattens a rating's effect fails `npm run check` instead of waiting for the
 // milestone run (tools/sim/identity.ts, all twenty at four to six reps).
 import { describe, expect, it } from 'vitest';
 import { PAIRS, runPair, setReps } from '../tools/sim/identity';
 
-setReps(2);
+// (Four since passing round 2: at two, Hill's YAC gap over Welker swung to 0.4 yd on the sample's few long catches once the
+// deep defenders take their angle on the throw; it's 1.3 at four and 1.4 at the harness's six.)
+setReps(4);
 const pair = (a: string) => PAIRS.find((p) => p.a[0] === a)!;
 
 describe('identity: the same plays, different men', () => {
@@ -14,7 +16,7 @@ describe('identity: the same plays, different men', () => {
       const r = runPair(pair(name));
       const failed = r.checks.filter((c) => !c.ok).map((c) => `${c.m} ${c.diff.toFixed(2)}`);
       expect(failed).toEqual([]);
-    }, 240_000);
+    }, 480_000);
   }
 });
 

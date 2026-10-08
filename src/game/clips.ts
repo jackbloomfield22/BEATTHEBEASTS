@@ -180,7 +180,8 @@ export function holdIt(s: PlayState): InputFrame {
 // Seeds found by tools/sim/findclips.ts (re-found for M6's sim).
 export const CLIPS: Clip[] = [
   // Four verticals against Cover 2: the slot's seam caught in stride, then a juke and 42 more after the catch to the end zone (re-found for M6.6's ratings: seed 51; for the second slant pass, the lead on the path he really runs and timing: seed 18; for the third, the rhythm read: seed 16, a juke and 41 more to the end zone; for the passing and tackling passes together: seed 12, 40 more after the catch to the end zone).
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 12, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(2, 100, 'juke') },
+  // (Cover 2 seed 12 → Cover 1 seed 23, the slot's seam, for passing round 2, tools/sim/findclips.ts: caught in stride and 15 yd after the catch with the juke.)
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 23, play: 'trips-four-verts', def: 'cover1', los: 30, script: throwAndRun(1, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // Stick against Cover 1: the short catch, a stiff arm sheds the first tackler a second later, down 15 yd on (11 after the catch).
@@ -200,7 +201,8 @@ export const CONCEPTS: Clip[] = [
   // Curl against man: settles at 10 facing the QB, SECURE on the catch (10 yd).
   { id: 'curl', title: 'Curl', seed: 5, play: 'doubles-curls', def: 'cover1', los: 30, script: concept({ icon: 1, at: 60, call: 'possession' }) },
   // Four verticals against the fire zone: the blitz comes, the ball goes at 1.5 s, the Z up the sideline over the rotated corner (38 yd, 2 yd of separation; re-found for the identity pass's sim, and for the second slant pass: seed 19 → 17, the same play, call and throw. Since the third slant pass's rhythm read he's caught at 1.4 yd and goes the distance, 70 yd).
-  { id: 'go', title: 'Go', seed: 17, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
+  // (Fire zone seed 17 → sim pressure seed 17 for passing round 2, tools/sim/findconcepts.ts --only=go: the same play and throw, 36.5 yd at 1.9 yd of separation.)
+  { id: 'go', title: 'Go', seed: 17, play: 'trips-four-verts', def: 'simpressure', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
   // Play-action post against man: the fake, the post behind it, the ball led into the middle (25 yd).
   // Seed 13 → 40 for the slant squeeze (docs/m66/SLANTS.md): a half safety now breaks on the ball at the pace that gets him there, and on seed 13 he got a hand to it. Seed 40 → 9 for the second slant pass (the lead on his real path, timing), the same play, coverage and throw: 24 yd, 1.5 yd of separation. Seed 9 → 108 for the third (2-man's trail technique: on 9 the corner was 0.9 yd off him), the same play, coverage and throw: 26 yd, 1.4 yd of separation. Seed 108 → the play-action Yankee's post against Cover 2, seed 24, for the tackle physics (docs/physics/TACKLING.md; no seed of the pa-post itself in 1–30 held its separation): 28.6 yd, 2.5 yd of separation.
   { id: 'post', title: 'Post', seed: 24, play: 'singleback-pa-yankee', def: 'cover2', los: 30, script: concept({ icon: 2, at: 80, hold: 10 }) },
@@ -219,7 +221,8 @@ export const CONCEPTS: Clip[] = [
   { id: 'screen', title: 'Screen', seed: 51, play: 'doubles-rb-screen', def: 'cover2', los: 30, script: concept({ icon: 1, at: 104 }) },
   // Back shoulder against man: the corner on top of the Z's go, the ball thrown away from him, GO UP (17 yd; seed 2 → 4 for the second slant pass, the same play, call and throw).
   // (Re-found for the tackle physics, docs/physics/TACKLING.md: on cover 1 seed 4 the corner was on him at the ball. tools/sim/findconcepts.ts --only=back-shoulder.)
-  { id: 'back-shoulder', title: 'Back shoulder', seed: 5, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 64, aim: { x: -1, y: -0.2 }, call: 'aggressive' }) },
+  // (Seed 5 at 64 → seed 10 at 68 for passing round 2, tools/sim/findconcepts.ts --only=back-shoulder: the same throw, 22 yd at 1.4 yd of separation.)
+  { id: 'back-shoulder', title: 'Back shoulder', seed: 10, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 68, aim: { x: -1, y: -0.2 }, call: 'aggressive' }) },
   // The scramble drill: the QB escapes right, the Y breaks off his cross and works back to him in the open grass (10 yd).
   // Re-found for the slant squeeze (docs/m66/SLANTS.md: the underneath zones now plaster when the QB leaves the pocket; on cover 3 seed 9 the ball was picked):
   // tools/sim/findconcepts.ts --only=scramble-drill, the same escape and throw time.
@@ -236,13 +239,15 @@ const pair = (id: string, title: string, base: Omit<Clip, 'id' | 'title' | 'swap
 ];
 export const IDENTITY: Clip[] = [
   // Speed: the play-action post against Cover 2. Hill is behind the safety, open by 2.5 yd, for 45; Welker's ball falls incomplete with a man on him (1.4 yd). (Seed 7 → 6 for the second slant pass, the same play, call and throw; 6 → 67 for the third, the rhythm read: Hill 70 yd at 2.1 yd of separation, Welker's incomplete at 1.1.)
-  ...pair('speed', 'Speed', { seed: 67, play: 'singleback-pa-post', def: 'cover2', los: 30, script: concept({ icon: 1, at: 90, hold: 16 }) }, { off: 'X', name: 'Tyreek Hill', pos: 'WR' }, { off: 'X', name: 'Wes Welker', pos: 'WR' }),
+  // (Passing round 2, tools/sim/findidentity.ts --only=speed: four verticals against Cover 3, seed 25, the ball to the X at 100 held for touch: Hill 70 yd, Welker's falls incomplete.)
+  ...pair('speed', 'Speed', { seed: 25, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 100, hold: 16 }) }, { off: 'X', name: 'Tyreek Hill', pos: 'WR' }, { off: 'X', name: 'Wes Welker', pos: 'WR' }),
   // Elusive against power: I-form power against Cover 2 (seed 11 on Cover 1 → 10 on Cover 2 for the tackle physics, tools/sim/findidentity.ts --only=elusive), the AI carrying. Barry makes the man miss and goes 70; Bettis breaks one and is down at 1.2.
   ...pair('elusive', 'Make a man miss', { seed: 10, play: 'iform-power', def: 'cover2', los: 30, user: false, script: () => NEUTRAL }, { off: 'RB', name: 'Barry Sanders', pos: 'RB' }, { off: 'RB', name: 'Jerome Bettis', pos: 'RB' }),
   // Accuracy: the curl against Cover 3, thrown the same beat. Montana's is 0.2 yd off and caught for 10; Namath's is 1.9 off and falls incomplete (seed 16 → 60 for the second slant pass, the same play, call and throw).
   ...pair('accuracy', 'On the hands', { seed: 60, play: 'doubles-curls', def: 'cover3', los: 30, script: concept({ icon: 1, at: 60 }) }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }, { off: 'QB', name: 'Joe Namath', pos: 'QB' }),
   // The rush: the QB holds it against Cover 1 (seed 19 → 5 for the tackle physics, the snap where White's sack is the strip the result-card test reads). White gets off the tackle and strips him; Aaron Smith never gets off his block.
-  ...pair('rush', 'Through the tackle', { seed: 5, play: 'doubles-dagger', def: 'cover1', los: 30, script: holdIt }, { def: 'LE', name: 'Reggie White', pos: 'DE' }, { def: 'LE', name: 'Aaron Smith', pos: 'DE' }),
+  // (Seed 5 → 52 for passing round 2, tools/sim/findidentity.ts --only=rush and the result card: White sheds at 2.0 s and strips him; Smith never gets off.)
+  ...pair('rush', 'Through the tackle', { seed: 52, play: 'doubles-dagger', def: 'cover1', los: 30, script: holdIt }, { def: 'LE', name: 'Reggie White', pos: 'DE' }, { def: 'LE', name: 'Aaron Smith', pos: 'DE' }),
   // Coverage: four verticals against Cover 1, the ball to the X on his man. Deion gets a hand to it; Kam, out of place at corner, gives up 70.
   // (Seed 15 → 20 for the slant squeeze, docs/m66/SLANTS.md; 20 → 67 for the second slant pass, tools/sim/findidentity.ts --only=coverage: the same play and call, Deion's breakup at 1.3 yd, Kam's 70 yd at 2.8 yd of separation. No seed in 1–80 has Deion's pick now.)
   // (Seed 67 Cover 1 → seed 42 Cover 2 man for the passing pass, docs/passing/PASSING.md: the same play and throw; Deion now picks it, Kam gives up 32 yd at 1.2 yd of separation.)
@@ -277,6 +282,34 @@ export const PASSING: Clip[] = [
   ...pair('arm', 'The arm', { seed: 17, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) }, { off: 'QB', name: 'Dan Marino', pos: 'QB' }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }),
 ];
 
+// Passing round 2 (docs/passing/PASSING2.md): the QB's feet and eyes, the
+// receiver's head and hands, the bobble and the arm, found by
+// tools/sim/findpassing2.ts and recorded with a close camera on the man
+// (tools/shots/video.spec.ts BTB_PASSING2: each clip's `follow`).
+export const PASSING2: (Clip & { follow?: string })[] = [
+  // The 5-step from under center and the hitch, the ball out on the dig's break (cover 3, caught for 15).
+  { id: 'p2-drop5', title: '5-step, hitch, dig', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: concept({ icon: 2, at: 100 }), follow: 'QB,3,-6,2.2,38' },
+  // The same drops as the AI plays them (the hitch is the AI's: the player steps up with the stick): the 5-step and hitch, the drag out on the hitch; the 7-step off the fake.
+  { id: 'p2-drop5-ai', title: '5-step and hitch (AI)', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, user: false, script: () => NEUTRAL, follow: 'QB,3,-6,2.2,38' },
+  { id: 'p2-drop7-ai', title: 'Play action 7-step (AI)', seed: 1, play: 'iform-pa-deep-shot', def: 'cover3', los: 30, user: false, script: () => NEUTRAL, follow: 'QB,3,-7,2.4,40' },
+  // The 3-step from under center: the quick out on the plant.
+  { id: 'p2-drop3', title: '3-step, quick out', seed: 3, play: 'singleback-quick-outs', def: 'cover3', los: 30, script: concept({ icon: 1, at: 58 }), follow: 'QB,3,-6,2.2,38' },
+  // The 7-step off play action: the post against Cover 3.
+  { id: 'p2-drop7', title: 'Play action 7-step, post', seed: 8, play: 'iform-pa-deep-shot', def: 'cover3', los: 30, script: concept({ icon: 1, at: 118 }), follow: 'QB,3,-7,2.4,40' },
+  // From the gun: the catch, the step and the slant on rhythm.
+  { id: 'p2-gun-slant', title: 'Gun quick slant', seed: 6, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 36 }), follow: 'QB,3,-6,2.2,38' },
+  // The same slant on the receiver: the head round to the QB out of the break, the hands late, the eyes into the hands.
+  { id: 'p2-head-slant', title: 'Slant: the head and hands', seed: 6, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 36 }), follow: 'X,5,-5,2,42' },
+  // The go route: eyes up the field, then back over the shoulder for the layered ball.
+  { id: 'p2-shoulder', title: 'Go: over the shoulder', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }), follow: 'Z,7,5,2.4,45' },
+  // The juggle: the slant off his hands and back in.
+  { id: 'p2-bobble', title: 'Bobble and re-catch', seed: 28, play: 'doubles-slants', def: 'cover3', los: 30, script: concept({ icon: 1, at: 36 }), follow: 'X,5,-5,2,42' },
+  // The eyes: the play-action post from a field general (Marino looks the safety off) and from Winston (stares his man down).
+  ...pair('p2-lookoff', 'The eyes', { seed: 2, play: 'singleback-pa-post', def: 'cover3', los: 30, script: concept({ icon: 1, at: 108 }) }, { off: 'QB', name: 'Dan Marino', pos: 'QB' }, { off: 'QB', name: 'Jameis Winston', pos: 'QB' }).map((c) => ({ ...c, follow: 'QB,-13,0,13,55,13' })),
+  // The arm from the sideline: the go ball from Marino (96) and Montana (72).
+  ...pair('p2-arm', 'The arm', { seed: 4, play: 'trips-four-verts', def: 'firezone', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) }, { off: 'QB', name: 'Dan Marino', pos: 'QB' }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }).map((c) => ({ ...c, follow: 'QB,22,36,8,50,22' })),
+];
+
 // The tackling videos (docs/physics/TACKLING.md): each moment the contact
 // physics is about, found by tools/sim/findtackles.ts.
 export const PHYSICS: Clip[] = [
@@ -291,5 +324,6 @@ export const PHYSICS: Clip[] = [
   // The player runs Barry Sanders at a pancaked lineman on the turf and presses the one button: the hurdle; Ronnie Lott's shoestring tackle 4 yd on.
   { id: 'tackle-hurdle', title: 'Over a man on the turf: Barry Sanders', seed: 7, play: 'iform-iso', def: 'cover1', los: 30, script: runAtBody, swap: { off: 'RB', name: 'Barry Sanders', pos: 'RB' } },
   // The slant against Cover 4 (Kam at strong safety): Ed Reed meets Jerry Rice square coming downhill, driven back, spotted at his forward progress.
-  { id: 'tackle-driven-back', title: 'Driven back: Jerry Rice met by Ed Reed', seed: 1, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 30 }), swap: { def: 'SS', name: 'Kam Chancellor', pos: 'S' } },
+  // (Seed 1 → 6 for passing round 2, tools/sim/findtackles.ts --only=tackle-driven-back: the same slant, caught for 11.8 and driven back.)
+  { id: 'tackle-driven-back', title: 'Driven back: Jerry Rice met by Ed Reed', seed: 6, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 30 }), swap: { def: 'SS', name: 'Kam Chancellor', pos: 'S' } },
 ];

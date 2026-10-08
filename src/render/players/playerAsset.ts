@@ -11,7 +11,7 @@ import { OFFICIAL_KIT, REFEREE_KIT } from './kits';
 /** Bones whose rest position variety.ts scales: upperarm (shoulder width), forearm and hand (arm length). */
 const PROPORTION_BONES = ['upperarm_l', 'upperarm_r', 'forearm_l', 'forearm_r', 'hand_l', 'hand_r'];
 /** The variety shapes (tools/blender/lib/shapes.py) at rest, for a body with no Variety. */
-const NO_VARIETY = { pads: 0, neck: 0, waist: 0, calves: 0, arms: 0 };
+const NO_VARIETY = { pads: 0, neck: 0, waist: 0, calves: 0, arms: 0, thighs: 0 };
 /** The reach correctives start off (the exporter's default weight is 1); updateReach drives them on the visible LOD. */
 const NO_REACH = { reach_l: 0, reach_r: 0 };
 
@@ -65,6 +65,57 @@ export function reachWeight(elevationDeg: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/**
+ * The helper bones (tools/blender/lib/helpers.py, round two): deform bones
+ * no clip keys, driven here every frame after the pose, as the build's
+ * skinning gate drives them. Each turns by a share of its followed bone's
+ * swing (the rotation off its rest axis, the twist about its length left
+ * out): the epaulet (the pad's outer cap and lip, and the sleeve) by none
+ * of the arm's through normal play, rising to EPAULET_MAX as the arm goes
+ * overhead; the elbow helper by half of the forearm's. Must match
+ * helpers.py (player.json `helpers`; tests/character-helpers.test.ts).
+ */
+export const HELPERS = {
+  epaulet: { parent: 'clavicle', child: 'upperarm' },
+  elbow_helper: { parent: 'upperarm', child: 'forearm' },
+} as const;
+export const EPAULET_FROM = 95;
+export const EPAULET_TO = 165;
+export const EPAULET_MAX = 0.6;
+export const ELBOW_SHARE = 0.5;
+
+/** The epaulet's share of the arm's swing at an arm elevation (degrees; the reach correctives' measure). */
+export function epauletShare(elevationDeg: number): number {
+  const t = Math.min(1, Math.max(0, (elevationDeg - EPAULET_FROM) / (EPAULET_TO - EPAULET_FROM)));
+  return EPAULET_MAX * t * t * (3 - 2 * t);
+}
+
+const _id = new THREE.Quaternion();
+const _sw = new THREE.Quaternion();
+const _tw = new THREE.Quaternion();
+
+/**
+ * A share of a bone's swing: `local` is its rotation off its rest (rest⁻¹ ·
+ * local quaternion); the twist about its own Y axis (along the bone) is
+ * removed and what's left is slerped from identity by `share`. Writes `out`.
+ */
+export function swingShare(local: THREE.Quaternion, share: number, out: THREE.Quaternion): THREE.Quaternion {
+  _tw.set(0, local.y, 0, local.w);
+  if (_tw.length() < 1e-8) _tw.identity();
+  else _tw.normalize();
+  _sw.copy(local).multiply(_tw.invert());
+  return out.copy(_id.identity()).slerp(_sw, share);
+}
+
+interface Helper {
+  bone: THREE.Bone;
+  child: THREE.Bone;
+  rest: THREE.Quaternion;
+  restInv: THREE.Quaternion;
+  side: 'l' | 'r';
+  kind: keyof typeof HELPERS;
+}
+
 export const WEAR_DOWN = 0.22;
 export const WEAR_UP = 0.4;
 export const WEAR_STEP = { legs: 0.12, torso: 0.16, side: 0.09, helmet: 0.07 };
@@ -100,6 +151,21 @@ export function loadPlayerAsset(url = PLAYER_URL): Promise<PlayerAsset> {
 
 /** Draws nothing in the main pass: no color, no depth. */
 const SHADOW_ONLY = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+
+/**
+ * How far the shadow proxy (the Low LOD) is drawn inside its own surface in
+ * the shadow map, m (round two). The Low LOD's surface strays up to ~1 cm
+ * outside the High or Medium LOD drawn on screen, and where it did it
+ * shadowed the visible mesh from inside: acne and a lit, stair-stepped patch
+ * on the inner thigh at the sprint (the "flat patch behind the knee" in the
+ * Lab, round one's open item 3). Inset, a limb still shadows the next.
+ */
+export const SHADOW_INSET = 0.012;
+const PROXY_DEPTH = new THREE.MeshDepthMaterial();
+PROXY_DEPTH.onBeforeCompile = (shader) => {
+  shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\ntransformed -= normal * ${SHADOW_INSET.toFixed(4)};`);
+};
+PROXY_DEPTH.customProgramCacheKey = () => 'player-shadow-inset';
 
 /**
  * Which body the asset's meshes dress: a player (player_lod<i>: pads,
@@ -168,6 +234,10 @@ export class Player {
   private wearKey = '';
   /** The chest's forward axis in the spine_04 bone's frame (from the rest pose). */
   private readonly chestFwd = new THREE.Vector3(0, 0, 1);
+  /** The helper bones the file carries (none in an older player.glb). */
+  private readonly helpers: Helper[] = [];
+  /** Each arm's elevation this frame (degrees), for the reach correctives and the epaulets. */
+  readonly elevation = { l: 45, r: 45 };
 
   constructor(asset: PlayerAsset, opts: PlayerOptions) {
     this.root = cloneSkinned(asset.scene);
@@ -198,12 +268,22 @@ export class Player {
     this.shadowProxy.morphTargetDictionary = low.morphTargetDictionary;
     this.shadowProxy.frustumCulled = false;
     this.shadowProxy.castShadow = true;
+    this.shadowProxy.customDepthMaterial = PROXY_DEPTH;
     this.shadowProxy.receiveShadow = false;
     this.shadowProxy.renderOrder = -1;
     low.parent!.add(this.shadowProxy);
     for (const n of PROPORTION_BONES) {
       const b = this.bones.get(n);
       if (b) this.restPos.set(n, b.position.clone());
+    }
+    for (const [kind, h] of Object.entries(HELPERS) as [keyof typeof HELPERS, (typeof HELPERS)[keyof typeof HELPERS]][]) {
+      for (const side of ['l', 'r'] as const) {
+        const bone = this.bones.get(`${kind}_${side}`);
+        const child = this.bones.get(`${h.child}_${side}`);
+        if (!bone || !child) continue;
+        // The helper's rest is the followed bone's (same parent, head and roll: helpers.py add_helpers).
+        this.helpers.push({ bone, child, rest: bone.quaternion.clone(), restInv: bone.quaternion.clone().invert(), side, kind });
+      }
     }
     this.shape = bodyShape(opts.heightM, opts.weightKg);
     this.variety = opts.variety ?? null;
@@ -268,7 +348,37 @@ export class Player {
   /** The per-frame body updates that read the drawn pose: turf wear and the reach correctives (updateLod calls it). */
   tick(): void {
     this.updateWear();
+    this.updateElevation();
+    this.updateHelpers();
     this.updateReach();
+  }
+
+  /** Each arm's elevation from the drawn pose: shoulder to elbow against chest to pelvis (tools/blender/lib/corrective.py arm_elevation). */
+  updateElevation(): void {
+    const pelvis = this.bones.get('pelvis');
+    const chest = this.bones.get('spine_04');
+    if (!pelvis || !chest) return;
+    const down = pelvis.getWorldPosition(_a).sub(chest.getWorldPosition(_b)).normalize();
+    for (const side of ['l', 'r'] as const) {
+      const up = this.bones.get(`upperarm_${side}`);
+      const fore = this.bones.get(`forearm_${side}`);
+      if (!up || !fore) continue;
+      const arm = fore.getWorldPosition(_c).sub(up.getWorldPosition(_b)).normalize();
+      this.elevation[side] = THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(arm.dot(down), -1, 1)));
+    }
+  }
+
+  /**
+   * The helper bones, once a frame after the pose (and before the reach
+   * correctives): each takes its share of its followed bone's swing
+   * (HELPERS). A few quaternion operations per helper; four per player.
+   */
+  updateHelpers(): void {
+    for (const h of this.helpers) {
+      _q.copy(h.restInv).multiply(h.child.quaternion);
+      const share = h.kind === 'elbow_helper' ? ELBOW_SHARE : epauletShare(this.elevation[h.side]);
+      h.bone.quaternion.copy(h.rest).multiply(swingShare(_q, share, _q));
+    }
   }
 
   /**
@@ -283,17 +393,9 @@ export class Player {
     const dict = m?.morphTargetDictionary;
     const inf = m?.morphTargetInfluences;
     if (!dict || !inf || dict.reach_l === undefined) return;
-    const pelvis = this.bones.get('pelvis');
-    const chest = this.bones.get('spine_04');
-    if (!pelvis || !chest) return;
-    const down = pelvis.getWorldPosition(_a).sub(chest.getWorldPosition(_b)).normalize();
     for (const side of ['l', 'r'] as const) {
-      const up = this.bones.get(`upperarm_${side}`);
-      const fore = this.bones.get(`forearm_${side}`);
       const k = dict[`reach_${side}`];
-      if (!up || !fore || k === undefined) continue;
-      const arm = fore.getWorldPosition(_c).sub(up.getWorldPosition(_b)).normalize();
-      inf[k] = reachWeight(THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(arm.dot(down), -1, 1))));
+      if (k !== undefined) inf[k] = reachWeight(this.elevation[side]);
     }
   }
 

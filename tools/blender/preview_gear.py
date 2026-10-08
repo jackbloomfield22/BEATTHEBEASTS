@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy  # noqa: E402
 
 from lib import preview  # noqa: E402
+from lib.helpers import add_helpers, drive_helpers  # noqa: E402
 from lib.rig import build_armature  # noqa: E402
 
 CLOSE = {
@@ -44,6 +45,7 @@ def main() -> None:
     preview.HIDDEN.discard(13)  # show the towel
     bpy.ops.wm.read_factory_settings(use_empty=True)
     rig = build_armature("rig")
+    add_helpers(rig)  # the half-angle helpers (lib/helpers.py); no effect on a file without them
     preview.import_player(rig, lod)
     if pose:
         from lib.actions import action_clips
@@ -55,6 +57,7 @@ def main() -> None:
         clips = {cl.name: cl for cl in [*action_clips(), *transitions()]}
         clip, frame = pose.split(":")
         apply_pose(rig, Controls(rig), dict(poses_of(clip, clips))[int(frame)])
+        drive_helpers(rig)
         bpy.context.view_layer.update()
     cam = preview.setup_scene(520)
     tmp = tempfile.mkdtemp()

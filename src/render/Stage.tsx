@@ -14,6 +14,7 @@ import { KickBall } from './game/KickBall';
 import { KickAim } from './game/KickAim';
 import { videoTime } from '@/app/platform';
 import { ColorPipelineEffect } from './post/ColorPipelineEffect';
+import { KIT_KNEE, KIT_RANGE, PLAYER_LIGHT } from './players/playerMaterial';
 import { LIGHTING_PRESETS, type LightingPreset } from './lighting/presets';
 import { renderDpr, useSettings, type QualityPreset } from '@/app/settings';
 import { guessQuality } from './quality';
@@ -93,10 +94,14 @@ function Post({ preset, quality }: { preset: LightingPreset; quality: QualityPre
     color.setGrade(room ? view.grade!.grade : preset.grade, (room ? view.grade!.exposure : preset.exposure) * view.exposureMul);
     color.fade = view.fade;
     const b = bloom.current;
+    const threshold = room ? view.grade!.threshold : preset.bloom.threshold;
     if (b) {
       b.intensity = room ? view.grade!.bloom * (reduceFlashing ? 0.6 : 1) : bloomBase;
-      b.luminanceMaterial.threshold = room ? view.grade!.threshold : preset.bloom.threshold;
+      b.luminanceMaterial.threshold = threshold;
     }
+    // The players' kits roll off under the bloom threshold (playerMaterial.ts PLAYER_LIGHT).
+    PLAYER_LIGHT.uKitKnee.value = KIT_KNEE * threshold;
+    PLAYER_LIGHT.uKitRange.value = KIT_RANGE * threshold;
   });
   const renderPass = useMemo(() => (scene: THREE.Scene, camera: THREE.Camera) => new SwitchRenderPass(scene, camera), []);
   const ao = g.ao !== 'off' && !(import.meta.env.DEV && location.search.includes('noao'));

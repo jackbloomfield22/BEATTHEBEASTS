@@ -39,17 +39,33 @@ import { feetStep, grab, holdKind, knockDown, pileStep, tickDowned } from './tac
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
 import { aiMove, autoMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
-import { autoCatch, catchLook, findsBallAt, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
+import { autoCatch, CATCH_Z, catchLook, findsBallAt, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { has } from './traits';
 import { manOf, type PlayState } from './state';
+import { dropStep, eyesBeforeRead, hitchStep, qbFace } from './pocket';
 import { BACK_X, END_X, FIELD_HALF_W, GOAL_X, OOB_FOOT, STEP_OUT, TICK, type Agent, type Move, type OffSlot, type PlayResult, type WhistleReason } from './types';
-import { DRAWS, HOT_ROUTES } from './plays';
+import { DRAWS, HOT_ROUTES, ZONES } from './plays';
 import { dist, len, norm, sub, v2, type V2 } from './vec';
 import { readTag, routePoints } from './ai';
 
 /** The hitch off a dropback (s): a step up into the pocket before the throw (the rhythm of a five-step drop and hitch). */
 const HITCH = 0.3;
+/** A free (unblocked) defender within POCKET_R of the QB: the pocket's slide or climb, not the hitch. Once he's off it, he doesn't come back to it. */
+function freeRusherNear(s: PlayState, qb: Agent): boolean {
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (!d.down && !blockOf(s, i) && dist(d.pos, qb.pos) < POCKET_R) {
+      qb.mem.noHitch = true;
+      return true;
+    }
+  }
+  return false;
+}
+/** The AI pocket's reach (yd): a free rusher within it moves him (the slide away from him, the climb). */
+const POCKET_R = 4.5;
+/** A play whose drop ends in a hitch: the dropback game (the quick game and screens are thrown off the top of the drop). */
+const hitches = (s: PlayState): boolean => s.setup.play.type !== 'quick' && s.setup.play.type !== 'screen';
 
 /** The window (yd, openness()) a scrambling AI QB still throws into: a man running free. */
 const SCRAMBLE_THROW = 5;
@@ -346,6 +362,8 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
     return;
   }
   const dropX = s.setup.los - play.drop.depth;
+  // His eyes until his first read (pocket.ts): the middle of the field, then a look-off or his first read.
+  if (!s.windup && (s.setup.user ? s.hold.icon === 0 : s.t - s.snapT < play.drop.set + (hitches(s) ? HITCH : 0))) eyesBeforeRead(s, qb, hitches(s) ? HITCH : 0);
   // The scramble: the user's key, or the AI when the pocket's gone and nobody's open.
   if (s.scrambleT < 0 && since > 0.35 && (s.setup.user ? inp.scramble : aiScrambles(s, qb))) startScramble(s, qb);
   if (s.scrambleT >= 0) {
@@ -361,20 +379,31 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
   } else if (s.setup.user && since > 0.35 && (inp.move.x !== 0 || inp.move.y !== 0)) {
     // The user moves the QB in the pocket (camera-relative input already in the field frame): controlled steps, eyes downfield.
     const sp = 0.55;
-    steer(qb, { x: inp.move.x * qb.fx.vmax * sp, y: inp.move.y * qb.fx.vmax * sp }, { face: 0 });
+    steer(qb, { x: inp.move.x * qb.fx.vmax * sp, y: inp.move.y * qb.fx.vmax * sp }, { face: qbFace(s, qb) });
   } else if (play.drop.boot && since < play.drop.set + 0.2 && dist(qb.pos, v2(dropX, by + play.drop.boot)) > 0.6) {
     // The bootleg: out of the fake he rolls to the boot side, gaining depth, eyes downfield.
     const to = v2(dropX, by + play.drop.boot);
     steer(qb, arrive(qb, to, 0.85, 1), { face: 0 });
     qb.anim = 'drop';
-  } else if (!play.drop.boot && qb.pos.x > dropX + 0.1 && since < play.drop.set + 0.2) {
-    steer(qb, { x: -qb.fx.vmax * 0.55, y: (by - qb.pos.y) * 2 }, { face: 0 });
+  } else if (!play.drop.boot && since < play.drop.set && (qb.mem.dropT0 !== undefined || qb.pos.x > dropX + 0.1)) {
+    // The drop, on its rhythm (pocket.ts): to his depth by the set, the clip's steps on the sim's.
+    dropStep(s, qb, 0);
+    qb.anim = 'drop';
+  } else if (!s.setup.user && !play.drop.boot && hitches(s) && since < play.drop.set + HITCH && !s.windup && qb.mem.dropT0 !== undefined && qb.mem.noHitch === undefined && !freeRusherNear(s, qb)) {
+    // The hitch: off a five- or seven-step drop, a step up into the pocket
+    // (pocket.ts HITCH_D), unless a free rusher is already on him: then he
+    // gets away from him (the pocket's slide or climb, below), not up into him.
+    // The AI's: the player's QB steps up with the stick (an automatic step
+    // there put him a yard nearer the rush on every dropback, and his
+    // scrambles a step behind his own blockers: Steve Young's averaged 0 yd).
+
+    hitchStep(s, qb, HITCH, qbFace(s, qb));
     qb.anim = 'drop';
   } else if (!s.setup.user && play.drop.boot && s.windup === null) {
     // Set on the edge after a boot: keep drifting with the flow, square to the line, ready to throw on the run.
     const side = Math.sign(play.drop.boot);
     const room = FIELD_HALF_W - 3 - Math.abs(qb.pos.y);
-    steer(qb, { x: 0.6, y: room > 0 ? side * 2.2 : 0 }, { face: 0, pace: 0.5 });
+    steer(qb, { x: 0.6, y: room > 0 ? side * 2.2 : 0 }, { face: qbFace(s, qb), pace: 0.5 });
   } else if (!s.setup.user) {
     // AI pocket: slide away from the nearest free rusher, step up against edge pressure.
     let push = v2();
@@ -382,9 +411,9 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
       const d = s.agents[i]!;
       if (d.down || blockOf(s, i)) continue;
       const k = dist(d.pos, qb.pos);
-      if (k < 4.5) {
+      if (k < POCKET_R) {
         const away = norm(sub(qb.pos, d.pos));
-        push = { x: push.x + away.x * (4.5 - k), y: push.y + away.y * (4.5 - k) };
+        push = { x: push.x + away.x * (POCKET_R - k), y: push.y + away.y * (POCKET_R - k) };
       }
     }
     const pp = qb.fx.a('pocketPresence');
@@ -395,9 +424,9 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
     // A slow screen: once his line lets the rush go he drifts back, drawing
     // it up the field and buying the beat the convoy needs to get out.
     const drift = play.screen && since >= play.screen.release && qb.pos.x > dropX - SCREEN_DRIFT ? SCREEN_DRIFT_V : 0;
-    steer(qb, { x: push.x * (0.6 + pp) - drift, y: push.y * (0.6 + pp) * 0.8 + esc * 5 }, { face: 0, pace: esc ? 0.9 : 0.6 });
+    steer(qb, { x: push.x * (0.6 + pp) - drift, y: push.y * (0.6 + pp) * 0.8 + esc * 5 }, { face: qbFace(s, qb), pace: esc ? 0.9 : 0.6 });
   } else {
-    steer(qb, { x: 0, y: 0 }, { face: 0 });
+    steer(qb, { x: 0, y: 0 }, { face: qbFace(s, qb) });
   }
   if (s.phase === 'snap' && since > 0.35) s.phase = 'dropback';
   if (s.phase === 'dropback' && since >= play.drop.set) s.phase = 'pocket';
@@ -514,8 +543,7 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
   // The rhythm of the drop: off a five-step or a play-action drop he
   // hitches up into the pocket before he lets it go (the quick game and
   // screens are thrown off the top of the drop). Pressure speeds him up.
-  const quick = s.setup.play.type === 'quick' || s.setup.play.type === 'screen';
-  if (!quick && pressure < 0.6 && s.t - s.snapT < s.setup.play.drop.set + HITCH) return;
+  if (hitches(s) && pressure < 0.6 && s.t - s.snapT < s.setup.play.drop.set + HITCH) return;
   const pick = qbRead(s, qb, pressure);
   if (pick >= 0) {
     // The driven ball; planThrow puts air under it when a defender is in the way.
@@ -525,7 +553,8 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     // A deep ball he layers (passing.ts layer); the read judged the window on the driven ball.
     const tgt = s.agents[s.icons[pick]!]!;
     const bs = backShoulder(s, tgt);
-    start(pick, bs ? 0 : layer(dist(qb.pos, openness(s, qb, tgt, true).at)), bs ? v2(-1, -0.2) : v2());
+    const at = openness(s, qb, tgt, true).at;
+    start(pick, bs ? 0 : overTheTop(s, tgt, at) ? 0 : layer(dist(qb.pos, at)), bs ? v2(-1, -0.2) : v2());
   } else if ((pressure > 0.9 || s.t - s.snapT - s.setup.play.drop.set > 3) && Math.abs(qb.pos.y - (s.setup.ballY ?? 0)) > 3.5) {
     // Nothing there and he's outside the pocket: throw it away.
     start(0, 0.3, v2(), true);
@@ -577,6 +606,28 @@ const BAT_P = 0.45;
  * 4.2% before the second slant pass, when clearLoft lofted over them).
  */
 const BAT_ENGAGED = 0.15;
+
+/**
+ * A defender over the top of the catch point: deeper than the receiver and
+ * within OVER_TOP_W of it across the field (a safety in the middle or a
+ * half, a deep third). The coaching line: layer it over a man trailing him,
+ * drive it in front of a safety coming over the top (the seam "on a rope"
+ * between the linebacker and the safety). A ball layered against a safety
+ * only gives him the hang to get there: passing round 2 found the AI's
+ * layered seams aimed 40+ yd downfield into the safety (tools/sim/deeptail.ts).
+ */
+function overTheTop(s: PlayState, r: Agent, at: V2): boolean {
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (d.down) continue;
+    if (d.pos.x > r.pos.x - OVER_TOP_LEVEL && Math.abs(d.pos.y - at.y) < OVER_TOP_W) return true;
+  }
+  return false;
+}
+/** How far across the field (yd) a deep defender still covers the catch point from over the top: a third's half-width. */
+const OVER_TOP_W = 9;
+/** ...and how far short of the receiver's depth he can be and still be over the top (yd): level with him, a step either way. */
+const OVER_TOP_LEVEL = 1;
 
 /** A vertical route with the man covering him level or on top of him, close: the back-shoulder throw. */
 function backShoulder(s: PlayState, r: Agent): boolean {
@@ -1383,6 +1434,110 @@ function downInPile(s: PlayState, c: Agent, spot: number, stood: boolean): void 
   whistle(s, 'tackle', attack > 0 ? Math.min(spot, GOAL_X - 0.05) : Math.max(spot, 0.05), c.side === 'off');
 }
 
+/**
+ * The ball got to a pair of hands and resolveCatch said what happened: a
+ * catch or a pick (he has it: the carrier), a drop or a deflection (it pops
+ * up, live), or a bobble (passing round 2: it's up off his hands and still
+ * his to secure as it comes down, ballStep's second chance).
+ */
+function atHands(s: PlayState, who: number, out: ReturnType<typeof resolveCatch>, bobbled = false): void {
+  const b = s.ball;
+  const a = s.agents[who]!;
+  if (out === 'catch' || out === 'int') {
+    b.mode = 'held';
+    b.holder = who;
+    s.carrier = who;
+    s.phase = 'carrier';
+    a.anim = 'catch';
+    if (out === 'catch') {
+      // No hitch at the catch (round two): he catches at speed and keeps
+      // going. Only the hands are busy (frames to tuck it before a move:
+      // tuck ~0.07 s, secure ~0.13 s, high point ~0.2 s from the catch
+      // clips); going up for it costs a little of his run as he lands.
+      const type = s.catchType ?? 'rac';
+      const keep = type === 'aggressive' ? 0.9 : 1;
+      a.vel.x *= keep;
+      a.vel.y *= keep;
+      a.busy = Math.max(a.busy, type === 'aggressive' ? 12 : type === 'possession' ? 8 : 4);
+      if (s.pass) s.pass.complete = true;
+      a.mem.caughtAt = s.t;
+      const look = catchLook(s, a, b.pos);
+      s.events.push({ t: s.t, type: 'catch', who: [who], at: { x: a.pos.x, y: a.pos.y }, data: { type, look, ...(bobbled ? { bobble: true } : {}) } });
+      // SECURE in traffic: he cradles it and goes to the ground with it
+      // where he caught it (M6.5 #5), rather than turn upfield into the hit.
+      if (look === 'body' && s.def.some((d) => !s.agents[d]!.down && dist(s.agents[d]!.pos, a.pos) < SECURE_DOWN)) {
+        a.down = true;
+        a.anim = 'down';
+        s.events.push({ t: s.t, type: 'move', who: [who], data: { move: 'secureDown' } });
+        whistle(s, 'tackle', Math.max(s.maxX, ballNose(a)), true);
+        return;
+      }
+      // Laid out for it low and away: he lands with it and is down where
+      // the ball ends up, like the carrier's dive (the catch_dive clip lands
+      // on the forearms and chest about 0.4 s after the catch).
+      if (look === 'dive') {
+        a.move = 'dive';
+        a.busy = Math.max(a.busy, DIVE_CATCH_LAND);
+      }
+    } else {
+      a.busy = Math.max(a.busy, 10);
+      if (s.pass) s.pass.intercepted = true;
+      s.events.push({ t: s.t, type: 'interception', who: [who], at: { x: a.pos.x, y: a.pos.y } });
+    }
+    // A catch out of bounds is an incompletion (no toe-tap unless
+    // possession: GDD §9.2), and so is one behind an end line.
+    const wide = Math.abs(a.pos.y) > FIELD_HALF_W - OOB_FOOT;
+    // Sideline Toe-Tap: he always gets both feet in on a catchable ball (the trait catalog's line).
+    const toe = wide && out === 'catch' && (s.catchType === 'possession' || has(a, 'sideline-toe-tap')) && Math.abs(a.pos.y) < FIELD_HALF_W + 0.4;
+    const deep = a.pos.x > END_X - OOB_FOOT || a.pos.x < BACK_X + OOB_FOOT;
+    if ((wide && !toe) || deep) {
+      if (s.pass) {
+        s.pass.complete = false;
+        s.pass.intercepted = false;
+      }
+      s.events.push({ t: s.t, type: 'catchOutOfBounds', who: [who], at: { x: a.pos.x, y: a.pos.y } });
+      whistle(s, 'incomplete', s.setup.los, true);
+    }
+    return;
+  }
+  if (out === 'drop' || out === 'deflect') {
+    // The ball pops up off his hands: live, anyone can play a tip.
+    b.target = -2;
+    // It dies on contact (Playtest 1: it popped 2.5–4.5 yd/s up like a beach
+// ball): a football off hands or pads loses most of its speed and pops
+// a foot or two, enough for a tip drill in a crowd, no more.
+b.vel = { x: b.vel.x * 0.2 + gauss(s.rng.bounce) * 0.6, y: b.vel.y * 0.2 + gauss(s.rng.bounce) * 0.6, z: 0.8 + 1.2 * s.rng.bounce() };
+    // A contested ball knocked from a receiver's hands: credit the defender who got there.
+    let by = who;
+    if (out === 'deflect' && a.side === 'off') {
+      let bd = Infinity;
+      for (const i of s.def) {
+        const k = dist(s.agents[i]!.pos, a.pos);
+        if (k < bd) {
+          bd = k;
+          by = i;
+        }
+      }
+    }
+    s.events.push({ t: s.t, type: out === 'drop' ? 'drop' : 'deflection', who: by === who ? [who] : [by, who], at: { x: a.pos.x, y: a.pos.y }, ...(out === 'drop' && s.pass?.hard ? { data: { why: s.pass.hard } } : {}) });
+  }
+  if (out === 'bobble') {
+    // Off his hands and up (a foot or two over them), moving with him: he
+    // juggles it on the run and gets his hands back under it as it drops.
+    const vz = BOBBLE_VZ * (0.8 + 0.4 * s.rng.bounce());
+    b.vel = { x: a.vel.x + gauss(s.rng.bounce) * 0.25, y: a.vel.y + gauss(s.rng.bounce) * 0.25, z: vz };
+    b.aim = { x: b.pos.x + b.vel.x * ((2 * vz) / G_YD), y: b.pos.y + b.vel.y * ((2 * vz) / G_YD), z: b.pos.z };
+    b.arrive = s.t + (2 * vz) / G_YD;
+    s.events.push({ t: s.t, type: 'bobble', who: [who], at: { x: a.pos.x, y: a.pos.y } });
+  }
+}
+/** A bobble pops up off his hands at about this (yd/s): a foot or two over them, ~0.4 s up and down (ours, from the broadcast's juggles). */
+const BOBBLE_VZ = 2.2;
+/** A man on him as it comes back down takes this share off the re-catch (a hand in to knock it out). Ours. */
+const RESECURE_HIT = 0.6;
+/** Gravity in yd/s² (ball.ts G). */
+const G_YD = 9.81 / 0.9144;
+
 /** The ball: in hands, in the air, or loose. */
 function ballStep(s: PlayState): void {
   const b = s.ball;
@@ -1419,83 +1574,22 @@ function ballStep(s: PlayState): void {
         return;
       }
       const out = resolveCatch(s, a);
-      if (out === 'catch' || out === 'int') {
-        b.mode = 'held';
-        b.holder = who;
-        s.carrier = who;
-        s.phase = 'carrier';
-        a.anim = 'catch';
-        if (out === 'catch') {
-          // No hitch at the catch (round two): he catches at speed and keeps
-          // going. Only the hands are busy (frames to tuck it before a move:
-          // tuck ~0.07 s, secure ~0.13 s, high point ~0.2 s from the catch
-          // clips); going up for it costs a little of his run as he lands.
-          const type = s.catchType ?? 'rac';
-          const keep = type === 'aggressive' ? 0.9 : 1;
-          a.vel.x *= keep;
-          a.vel.y *= keep;
-          a.busy = Math.max(a.busy, type === 'aggressive' ? 12 : type === 'possession' ? 8 : 4);
-          if (s.pass) s.pass.complete = true;
-          a.mem.caughtAt = s.t;
-          const look = catchLook(s, a, b.pos);
-          s.events.push({ t: s.t, type: 'catch', who: [who], at: { x: a.pos.x, y: a.pos.y }, data: { type, look } });
-          // SECURE in traffic: he cradles it and goes to the ground with it
-          // where he caught it (M6.5 #5), rather than turn upfield into the hit.
-          if (look === 'body' && s.def.some((d) => !s.agents[d]!.down && dist(s.agents[d]!.pos, a.pos) < SECURE_DOWN)) {
-            a.down = true;
-            a.anim = 'down';
-            s.events.push({ t: s.t, type: 'move', who: [who], data: { move: 'secureDown' } });
-            whistle(s, 'tackle', Math.max(s.maxX, ballNose(a)), true);
-            return;
-          }
-          // Laid out for it low and away: he lands with it and is down where
-          // the ball ends up, like the carrier's dive (the catch_dive clip lands
-          // on the forearms and chest about 0.4 s after the catch).
-          if (look === 'dive') {
-            a.move = 'dive';
-            a.busy = Math.max(a.busy, DIVE_CATCH_LAND);
-          }
-        } else {
-          a.busy = Math.max(a.busy, 10);
-          if (s.pass) s.pass.intercepted = true;
-          s.events.push({ t: s.t, type: 'interception', who: [who], at: { x: a.pos.x, y: a.pos.y } });
+      atHands(s, who, out);
+      if (s.result || b.mode !== 'air') return;
+    } else if (s.bobble && b.vel.z < 0) {
+      // The bobble coming back down to his hands: his second chance (resolveCatch's q, less a man on him now).
+      const a = s.agents[s.bobble.who]!;
+      const h = Math.sqrt((b.pos.x - a.pos.x) * (b.pos.x - a.pos.x) + (b.pos.y - a.pos.y) * (b.pos.y - a.pos.y));
+      if (!a.down && b.pos.z <= CATCH_Z + 0.2 && h < reach(a).r) {
+        let hit = 0;
+        for (const i of s.def) {
+          const d = s.agents[i]!;
+          if (!d.down) hit = Math.max(hit, Math.max(0, Math.min(1, (1.1 - dist(d.pos, a.pos)) / 0.6)));
         }
-        // A catch out of bounds is an incompletion (no toe-tap unless
-        // possession: GDD §9.2), and so is one behind an end line.
-        const wide = Math.abs(a.pos.y) > FIELD_HALF_W - OOB_FOOT;
-        // Sideline Toe-Tap: he always gets both feet in on a catchable ball (the trait catalog's line).
-        const toe = wide && out === 'catch' && (s.catchType === 'possession' || has(a, 'sideline-toe-tap')) && Math.abs(a.pos.y) < FIELD_HALF_W + 0.4;
-        const deep = a.pos.x > END_X - OOB_FOOT || a.pos.x < BACK_X + OOB_FOOT;
-        if ((wide && !toe) || deep) {
-          if (s.pass) {
-            s.pass.complete = false;
-            s.pass.intercepted = false;
-          }
-          s.events.push({ t: s.t, type: 'catchOutOfBounds', who: [who], at: { x: a.pos.x, y: a.pos.y } });
-          whistle(s, 'incomplete', s.setup.los, true);
-        }
-        return;
-      }
-      if (out === 'drop' || out === 'deflect') {
-        // The ball pops up off his hands: live, anyone can play a tip.
-        b.target = -2;
-        // It dies on contact (Playtest 1: it popped 2.5–4.5 yd/s up like a beach
-    // ball): a football off hands or pads loses most of its speed and pops
-    // a foot or two, enough for a tip drill in a crowd, no more.
-    b.vel = { x: b.vel.x * 0.2 + gauss(s.rng.bounce) * 0.6, y: b.vel.y * 0.2 + gauss(s.rng.bounce) * 0.6, z: 0.8 + 1.2 * s.rng.bounce() };
-        // A contested ball knocked from a receiver's hands: credit the defender who got there.
-        let by = who;
-        if (out === 'deflect' && a.side === 'off') {
-          let bd = Infinity;
-          for (const i of s.def) {
-            const k = dist(s.agents[i]!.pos, a.pos);
-            if (k < bd) {
-              bd = k;
-              by = i;
-            }
-          }
-        }
-        s.events.push({ t: s.t, type: out === 'drop' ? 'drop' : 'deflection', who: by === who ? [who] : [by, who], at: { x: a.pos.x, y: a.pos.y }, ...(out === 'drop' && s.pass?.hard ? { data: { why: s.pass.hard } } : {}) });
+        const q = s.bobble.q * (1 - RESECURE_HIT * hit);
+        s.bobble = null;
+        atHands(s, a.i, s.rng.catch() < q ? 'catch' : hit > 0.3 ? 'deflect' : 'drop', true);
+        if (s.result || b.mode !== 'air') return;
       }
     }
     if (b.pos.z <= 0.05) {
@@ -1941,6 +2035,37 @@ function flowToBall(s: PlayState, d: Agent): boolean {
 }
 
 /**
+ * A deep defender too far from the throw to flow to it (a deep zone, the
+ * middle-of-the-field safety in man) takes his angle once he's read it: to
+ * where he'd meet the receiver running on after the catch (upfield, flat
+ * out: an AI carrier in the open runs at his top speed), so a ball caught in front of him is a tackle, not a
+ * footrace. Every secondary coach's "break on the throw, take your angle to
+ * the ball". Passing round 2 (tools/sim/deeptail.ts): he stayed in his zone
+ * and drifted to his landmark until the catch, 15 yd off it, so a Cover 1
+ * corner route caught at 20 yd went the distance ~45% of the time, and 40+
+ * yd completions were 7% of completions (NFL ~3%). How far his angle gets
+ * him is his speed and his read (reaction, Play Recognition): his range.
+ */
+function deepAngle(s: PlayState, d: Agent): boolean {
+  const as = s.setup.def.assign[d.slot as keyof typeof s.setup.def.assign];
+  const deep = as.kind === 'zone' && (ZONES[as.zone].deep || as.zone === 'tampa');
+  if (!deep) return false;
+  const r = s.agents[s.ball.target]!;
+  const aim = { x: s.ball.aim.x, y: s.ball.aim.y };
+  const left = Math.max(0, s.ball.arrive - s.t);
+  // His run after the catch: on upfield flat out (carrierPace in the open), drifting the way he's going.
+  const v = len(r.vel);
+  const run = { x: r.fx.vmax, y: v > 1 ? (r.vel.y / v) * 0.3 * r.fx.vmax : 0 };
+  // As if he'd been running that way all along: where the two of us meet at my speed (pursue's 0.95), no sooner than the catch.
+  const meet = intercept(d.pos, d.fx.vmax * 0.95, { x: aim.x - run.x * left, y: aim.y - run.y * left }, run);
+  const at = meet && meet.x > aim.x ? meet : { x: aim.x + FLOW_AHEAD, y: aim.y };
+  // Inside-out: a yard to the middle of him (the sideline is the 12th defender).
+  at.y += Math.sign(-at.y) * Math.min(1, Math.max(0, FIELD_HALF_W - Math.abs(at.y) - 1));
+  steer(d, arrive(d, at, 1, 1));
+  return true;
+}
+
+/**
  * A zone defender reading the QB's shoulders (GDD §10.4): once he's seen
  * the wind-up (his read time; a Ballhawk sees it a third sooner), if he's
  * within JUMP_R of the receiver the QB is turning to, he breaks for where
@@ -2037,6 +2162,7 @@ function defenseRoles(s: PlayState): void {
           continue;
         }
         if (flowToBall(s, d)) continue;
+        if (deepAngle(s, d)) continue;
       }
     }
     const as = call[d.slot as keyof typeof call];

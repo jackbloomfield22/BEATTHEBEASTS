@@ -75,8 +75,11 @@ describe('outcomes: the passing game', () => {
     expect(d.pocket.scrambleYds).toBeLessThan(16);
   });
   it('pressure comes at about 3 s (median snap to first pressure), on a fifth or so of dropbacks', () => {
-    // M6 target ~3.0 s (M5.5 ran ~3.7 s).
-    expect(d.pocket.timeToPressure).toBeGreaterThan(2.6);
+    // M6 target ~3.0 s (M5.5 ran ~3.7 s). Passing round 2 put the QB on his
+    // drop's real rhythm (he gets to depth at the set, not ~0.3 s early, and
+    // hitches up a step): ~2.6 s at 60 a cell, against the NFL's ~2.5
+    // (src/sim/outcomes.ts PocketDist), so the floor is 2.4.
+    expect(d.pocket.timeToPressure).toBeGreaterThan(2.4);
     expect(d.pocket.timeToPressure).toBeLessThan(3.4);
     expect(d.pocket.pressureRate).toBeGreaterThan(0.12);
   });
