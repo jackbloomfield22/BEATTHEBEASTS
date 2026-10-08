@@ -40,7 +40,7 @@ Rounds 1 and 2 (`PASSING.md`, `PASSING2.md`) were judged mostly on the AI's thro
 A key pressed early in the drop also let the ball go while he was still backpedalling (off his back foot, the cone 25% wider for "feet not set").
 
 **Fix.**
-- The key starts the throwing motion (`qbThrow`, `holdThrough`): a tap's ball goes with his arm (his release time, by rating); a hold chooses the touch while the arm comes through, and a hold past his release keeps the ball cocked behind his ear until the key comes up or the touch is full. A tap now comes out 0.07 s sooner; a full touch pass 0.4 s sooner.
+- The key starts the throwing motion (`qbThrow`, `holdThrough`): a tap's ball goes with his arm (his release time, by rating); a hold chooses the touch while the arm comes through, and a hold past his release keeps the ball cocked behind his ear until the key comes up or the touch is full. A tap now comes out 0.07 s sooner; a full touch pass ~0.35 s sooner (the hold and the arm overlap instead of following each other).
 - A key pressed on the drop throws on the plant (the set), as a 3- or 5-step is timed; his front shoulder opens to the target over the last steps (`dropStep` faces him to his read once he's wound up).
 - The drawn arm is paced every frame so its release frame lands on the sim's release (`choreo.ts drive`), starting a release's length before the ball goes; the two-hand hold lets go of the ball on a throw over the legs.
 
@@ -53,7 +53,7 @@ A key pressed early in the drop also let the ball go while he was still backpeda
 - A keyboard throw with the mouse cursor resting near the icon took its placement from the cursor (`controls.ts` line 284): a back-shoulder ball nobody asked for, thrown behind his man.
 
 **Fix.**
-- The QB's accuracy is in the timing on a ball down the field (`timingQb`): ×0.6 at 99 accuracy, 1 at 85, more for a scattershot arm, coming in from 8 to 20 air yards (short throws keep their few tenths of a yard). Montana's deep ball now leads his man to within ~1.8 yd at 1σ; a 70-accuracy passer's misses by ~3.
+- The QB's accuracy is in the timing on a ball down the field (`timingQb`): ×0.7 at 99 accuracy, 1 at 85, ×1.3 at 70, coming in from 8 to 20 air yards (short throws keep their few tenths of a yard). With the base timing raised 0.40 → 0.43 to hold the AI book's completion rate (below), Montana's deep ball (Deep Accuracy 95) misses its man by ~15% less than before and a 70-accuracy passer's by ~40% more: the gap a fan should see. (A first version at ×0.6 put the AI book at 67.4%, over its band.)
 - A receiver tracking a ball a stride or two short runs on at his pace and throttles down late, in the last 0.45 s, as receivers do (`runToBall`).
 - A receiver key places the ball only if the mouse moves while it's down.
 
@@ -64,3 +64,42 @@ A key pressed early in the drop also let the ball go while he was still backpeda
 **Fix.**
 - The hands go to the ball (`choreo.ts catchReach`, `animator.ts reachHands`): over the reach, two-bone IK puts his hands either side of where the ball will be at the secure frame (the sim's flight run forward), a little behind it, elbows down and out; the ball comes into them on its own line.
 - The catch clip's secure frame lands on the sim's catch: the moment the ball comes within his reach (its closing speed), not the thrown spot; and a caught ball is in his hands from 0.1 s before the secure frame.
+
+## The numbers
+
+**The player's throws** (`tools/sim/passing3.ts`, the practice rosters, four coverages × six seeds, on time: the key a release's length before the break; base `cd8db79` against this branch):
+
+| Route (on time) | Ball out (s) | Other routes, yd off their path when it lands | Target's speed at the catch (yd/s) | Complete |
+|---|---|---|---|---|
+| Slant | 0.77 → 0.70 | 1.6 → 0.0 | 8.2 → 7.6 | 46% → 71% |
+| Out | 1.69 → 1.63 | 7.4 → 0.2 | 7.2 → 7.3 | 63% → 63% |
+| Dig | 1.91 → 1.86 | 4.9 → 0.3 | 6.4 → 6.4 | 54% → 71% |
+| Curl | 1.98 → 1.92 | 4.4 → 0.2 | **0.7 → 4.5** (coming back) | 88% → 96% |
+| Post | 1.99 → 1.76 (touch) | 13.9 → 0.0 | 8.3 → 9.4 | 38% → 46% |
+| Go | 1.78 → 1.50 (touch) | 12.8 → 0.4 | 8.5 → 8.8 | 29% → 25% |
+| Crosser | 2.35 → 2.28 | 5.2 → 0.9 | 9.1 → 8.8 | 58% → 71% |
+| Comeback | 2.31 → 2.24 | 6.0 → 0.3 | **1.4 → 4.1** (coming back) | 83% → 92% |
+
+(A few seeds a cell: the completion column moves a lot on a seed or two; the other columns are the point. The "other routes" figure is how far every other route runner is from the path he'd have run with no throw when the ball gets there; the deep throws' before figures include plays that had ended in the unthrown run.)
+
+**The AI pass game** (`tools/sim/outcomes.ts`, 60 a cell):
+
+| | Before (round 2) | After | NFL |
+|---|---|---|---|
+| Completion | 66.5% | 66.6% | ~64–66% |
+| Yards per attempt | 8.3 | 8.1 | ~7 |
+| INT | 2.5% | 2.4% | ~2.2–2.5% |
+| Sacks | 7.6% | 7.6% | ~6.5–7% |
+| aDOT | 9.0 | 9.0 | ~8 |
+| Completions of 20+ / 40+ | 16.8% / 4.4% | 16.3% / 4.3% | ~12–14% / ~3% |
+| 2+ yd open caught | 88.7% | 88.7% | ~80% |
+| YAC, all | 6.2 | 5.9 | |
+
+The other receivers no longer run to the catch point to block before the catch, so they're further from the carrier when he turns upfield: YAC fell 0.3 yd.
+
+**Checks.**
+- Identity: 19 of 20 (Gates vs Lewis fails as before, on top speed and separation at the break; waiting on the owner).
+- Passing identity: 9 of 9 (Montana's ball 0.73 yd off the meant spot against Namath's 1.47).
+- Trait audit: 127 of 127 traits, 25 of 25 combinations.
+- Tackling (`tools/sim/tackling.ts`): runs unchanged (yards after first contact 3.67, gang 43%, driven back 11%, contact to whistle 0.53 s); after the catch 2.70 yd after first contact (2.72 in round 2), driven back 24% (20%), gang 30%.
+- The slant harness's "on time" key moved from tick 48 to 52 so its ball comes out on the same tick as before (the key now starts the arm); with that, Cover 2 man still takes the on-time slant away more than Cover 1 does.
