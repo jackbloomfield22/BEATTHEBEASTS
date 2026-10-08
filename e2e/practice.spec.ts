@@ -49,7 +49,7 @@ async function tickUntil(page: Page, pred: (s: Awaited<ReturnType<typeof state>>
 
 test('a full play: snap, throw, catch, run, tackle or score, result card', async ({ page }) => {
   const errors = trackErrors(page);
-  await open(page, 2, 'fourVerts'); // Four Verticals against the coverage seed 2 draws (Cover 3; seeds re-found for the passing pass with tools/sim/e2eseeds.ts)
+  await open(page, 4, 'fourVerts'); // Four Verticals against the coverage seed 4 draws (Cover 3; seeds re-found with tools/sim/e2eseeds.ts: 2 for the passing pass, 4 for passing round 3, a 32-yd catch and run)
   await page.keyboard.press('Space');
   await tick(page, 1);
   let s = await state(page);
@@ -168,12 +168,12 @@ test('a tackle: the carrier goes down and the next snap is at the new spot', asy
 });
 
 test('scores: a touchdown run ends the series with a touchdown card', async ({ page }) => {
-  await open(page, 116, 'fourVerts');
+  await open(page, 19, 'fourVerts');
   await page.keyboard.press('Space');
   await tick(page, 100);
-  await page.keyboard.down('Digit1');
+  await page.keyboard.down('Digit4');
   await tick(page, 3);
-  await page.keyboard.up('Digit1');
+  await page.keyboard.up('Digit4');
   await tickUntil(page, (x) => x.phase === 'carrier' || x.phase === 'dead');
   // Weave: angle away from the nearest defender (the stick right).
   await page.keyboard.down('ArrowUp');
@@ -182,7 +182,8 @@ test('scores: a touchdown run ends the series with a touchdown card', async ({ p
   await page.keyboard.up('ArrowRight');
   const s = await tickUntil(page, (x) => x.result !== null);
   await page.keyboard.up('ArrowUp');
-  // Seed 116 (Tampa 2) with these inputs is a 75-yard catch and run (the replay is exact; tools/sim/e2eseeds.ts, with the Practice Field's chemistry; re-found for passing round 2: 307 was).
+  // Seed 19 (Cover 1) with these inputs is a 75-yard catch and run on the X's go (the replay is exact; tools/sim/e2eseeds.ts, with the Practice Field's chemistry;
+  // re-found for passing round 2: 307 was; for round 3: 116 on the slot's seam was, and with the other verticals now running their routes through the throw no seed took the seam the distance).
   expect(s.result!.touchdown).toBe(true);
   expect(s.events.some((e) => e.type === 'touchdown')).toBe(true);
   await tick(page, 120);
