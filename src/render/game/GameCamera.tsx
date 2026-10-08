@@ -112,6 +112,18 @@ function targetPose(mode: Mode): Pose | null {
     // A punt: from behind the punter over the protection, the coverage lanes and the returner in frame;
     // once it's off his foot the lens rides the ball up and down the field, the dolly following.
     const sx = kickView.spotX;
+    if (kickView.team === 'bst' && kickView.path) {
+      // The Beasts' punt on their drive (M7): the broadcast's punt shot, not the kicker's-eye one. High behind the
+      // play, it travels downfield with the ball's track on the turf and looks ahead to where it comes down, so the
+      // coverage, the returner and the catch share the frame; it never tilts up after the ball (a speck against the
+      // stands at the top of its flight).
+      const land = kickView.path[kickView.path.length - 1]!;
+      const contact = contactFor('PUNT');
+      const k = smooth(Math.min(1, Math.max(0, (kickView.t - contact) / Math.max(1, kickView.path.length / 30))));
+      const bx = kickView.t < contact ? 0 : kickView.ball[0];
+      const fx = sx + Math.max(bx, land[0] * k);
+      return { ex: fx - 22, ey: land[1] * 0.3, eh: 11, lx: fx + (land[0] - Math.max(bx, land[0] * k)) * 0.45 + 4, ly: land[1] * 0.6, lh: 0.8, fov: 44 };
+    }
     if (!kickView.path || kickView.t < contactFor('PUNT')) return { ex: sx - 11, ey: 0, eh: 4.4, lx: sx + 30, ly: 0, lh: 2, fov: 52 };
     const [bx, by, bz] = kickView.ball;
     return { ex: sx - 11 + bx * 0.55, ey: by * 0.4, eh: 4.4 + bz * 0.25, lx: sx + bx + 4, ly: by, lh: bz * 0.9144 * 0.8, fov: 52 };

@@ -246,4 +246,4 @@ class MontageSession {
 
 export const montage = new MontageSession();
 
-if (import.meta.env.DEV) Object.assign(globalThis, { __btbMontage: montage, __btbMontageUi: useMontage });
+if (import.meta.env.DEV) Object.assign(globalThis, { __btbMontage: montage, __btbMontageUi: useMontage, __btbKickView: kickView });
