@@ -46,8 +46,13 @@ const set = (p: Partial<ReplayUi>) => useReplay.setState(p);
 /** The camera cuts (rather than glides) to the replay angle on its next frame: a new replay. Read by GameCamera. */
 export const replayCam = { cut: true };
 
-/** What the seeks have cost (GameScene's catch-up): for the perf notes in docs/m7/REPLAY.md and the dev console. */
-export const replayStats = { seeks: 0, ticks: 0, steps: 0, ms: 0, worstFrameMs: 0 };
+/**
+ * What the seeks have cost (GameScene's catch-up): for the perf notes in
+ * docs/m7/REPLAY.md and the dev console. `lastHash`: the state hash the last
+ * replay ended on (the browser test checks a snap's replay hands back on the
+ * live play's own state).
+ */
+export const replayStats = { seeks: 0, ticks: 0, steps: 0, ms: 0, worstFrameMs: 0, lastHash: 0 };
 
 /** Which flags play by themselves under the Automatic replays setting. */
 export function autoFlags(setting: 'on' | 'big' | 'off'): FlagKind[] {
@@ -205,6 +210,7 @@ class ReplaySession {
   /** The scene has caught a closing replay up: the live play takes over. */
   finish(): void {
     this.handoff = useReplay.getState().from === 'snap' ? this.origin : -1;
+    if (this.player) replayStats.lastHash = this.player.runner.hash();
     this.player = null;
     this.rosters = null;
     this.closing = false;

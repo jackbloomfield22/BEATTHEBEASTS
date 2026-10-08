@@ -2,11 +2,12 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync } from 'node:fs';
 import { test, type Page } from '@playwright/test';
 
-// The Beasts' drive montage (M7, Playtest 1 #4; docs/m7/MONTAGE.md): a game
-// started straight from a full draft, kicked off, and the Beasts' first
-// possession's montage recorded frame by frame (?video=30: every drawn
-// frame is 1/30 s of game time, so it plays at real speed however slowly
-// this machine renders), with a still of each shot.
+// The Beasts' drive on screen (M7, Playtest 1 #4, cut down after M7 to the
+// deciding play; docs/m7/MONTAGE.md): a game started straight from a full
+// draft, kicked off, and the Beasts' first possession recorded frame by
+// frame (?video=30: every drawn frame is 1/30 s of game time, so it plays
+// at real speed however slowly this machine renders), with a still of the
+// play and of the result.
 //   BTB_MONTAGE=1 BTB_PORT=5220 npx playwright test -c tools/shots/playwright.config.ts
 // BTB_MONTAGE_SEED picks the draft's seed (its game's first drive is what it
 // is: the resolver decides it), BTB_MONTAGE_DRIVES records that many Beasts

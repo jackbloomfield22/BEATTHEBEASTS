@@ -511,6 +511,16 @@ export function GameScene() {
           b.animator.update(10, { speed: 0 });
         }
         officials.current?.place(los, 0);
+        // A punt cut into part-way (the Beasts' drive cuts in with the ball in the punter's hands): the coverage
+        // and the returner are already where that much of the play has taken them.
+        if (punt && kickView.path && kickView.t > 0) {
+          const t1 = kickView.t;
+          for (let t = 0; t < t1; t += 1 / 30) {
+            kickView.t = t;
+            for (const b of bodies) if (b.player.root.visible) puntMotion(b, los, 1 / 30);
+          }
+          kickView.t = t1;
+        }
       }
       for (const b of bodies) {
         if (!b.player.root.visible) continue;

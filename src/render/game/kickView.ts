@@ -46,3 +46,5 @@ export const PUNT_CONTACT = PUNT_SNAP.release + PUNT_SNAP.flight - PUNT_SNAP.cli
 
 /** Seconds from the strike to contact for this kind of kick. */
 export const contactFor = (kind: 'PAT' | 'FG' | 'PUNT'): number => (kind === 'PUNT' ? PUNT_CONTACT : KICK_CONTACT);
+
+if (import.meta.env.DEV) Object.assign(globalThis, { __btbKickView: kickView });
