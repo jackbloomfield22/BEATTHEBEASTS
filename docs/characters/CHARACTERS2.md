@@ -293,8 +293,18 @@ What's better, looked at side by side: the horns are gone with the arms up at ev
 
 ## Checks
 
-FILL
+- `npm run check`: passes (typecheck, lint, 72 test files / 726 tests, data and ratings checks).
+- Practice e2e on its own port (`BTB_E2E_PORT=5323`): 7 of 7, determinism included.
+- Clip and skinning gates: as in "Skinning gate" above.
+- Run by the lead at the pause (2026-10-08), after the agent was stopped for usage; the stills were already captured and committed.
 
 ## What's left
 
-FILL
+- A real ribbed collar trim (the band is correct but reads as a sliver from three-quarter).
+- Round the neck column behind the trapezius.
+- A per-preset highlight knee, so snow keeps its brightness and white kits keep their separation from a snowy field.
+- The pad cap surface is still lumpy and the profile still boxy (the owner's call on lineman pads).
+- Faces are one sculpt; body variety reads mostly in height and width at broadcast size, and the middle of the range (QB, linebacker, tight end) still looks alike.
+- The sleeve's TV number distorts on a lineman's sleeve; white shoulders show dark fold streaks in hard light.
+- LOD2's shoulder crease is limited by its ~98 faces in that region; a better LOD2 topology there is the next step.
+- Not measured on a GPU: re-check `?perf` mid-game on Medium.
