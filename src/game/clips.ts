@@ -4,7 +4,7 @@
 // were found: tools/sim/findclips.ts) and the browser (where the video is
 // recorded) run the same play to the same whistle.
 
-import { findStint, input, NEUTRAL, PERSONNEL, playById, simPlayer, type BeastsDefense, type CatchType, type ContendersRoster, type DefSlot, type InputFrame, type PlayState, type SnapshotLike } from '@/sim';
+import { findStint, input, NEUTRAL, PERSONNEL, playById, simPlayer, type BeastsDefense, type CatchType, type ContendersRoster, type DefSlot, type InputFrame, type PlayState, type RouteName, type SnapshotLike } from '@/sim';
 import { dist, type V2 } from '@/sim/vec';
 
 export interface Clip {
@@ -329,4 +329,34 @@ export const PHYSICS: Clip[] = [
   // The slant against Cover 4 (Kam at strong safety): Ed Reed meets Jerry Rice square coming downhill, driven back, spotted at his forward progress.
   // (Seed 1 → 6 for passing round 2, tools/sim/findtackles.ts --only=tackle-driven-back: the same slant, caught for 11.8 and driven back.)
   { id: 'tackle-driven-back', title: 'Driven back: Jerry Rice met by Ed Reed', seed: 6, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 30 }), swap: { def: 'SS', name: 'Kam Chancellor', pos: 'S' } },
+];
+
+/** The player's throw (passing round 3): a hot route at the line if asked, the key at `at` ticks after the snap (a tap, or held `hold` ticks for touch), no catch call, then upfield with the sprint in the open. */
+export function userThrow(p: { icon: number; at: number; hold?: number; hot?: RouteName }) {
+  return (s: PlayState): InputFrame => {
+    if (s.phase === 'presnap') return input({ snap: true, hotRoute: p.hot ? { icon: p.icon, route: p.hot } : null });
+    if (s.phase === 'carrier') return input({ move: { x: 1, y: 0 }, sprint: s.agents[s.carrier]?.side === 'off' && open(s) });
+    const t = since(s);
+    return input({ throwHeld: t >= p.at && t < p.at + (p.hold ?? 4) ? p.icon : 0 });
+  };
+}
+
+// Passing round 3 (docs/passing/PASSING3.md): the player's own throws, the
+// way the owner plays them, from the default broadcast camera. Each route
+// thrown on time (the key pressed a release's length before his break, so
+// the ball's out on it), and four of them late (pressed as he comes out of
+// the break, a player's reaction). Found by tools/sim/passing3.ts.
+export const PASSING3: Clip[] = [
+  { id: 'p3-slant', title: 'Slant', seed: 1, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 22 }) },
+  { id: 'p3-out', title: 'Out', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 79, hot: 'out' }) },
+  { id: 'p3-dig', title: 'Dig', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 93 }) },
+  { id: 'p3-curl', title: 'Curl', seed: 1, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 97 }) },
+  { id: 'p3-post', title: 'Post', seed: 2, play: 'singleback-pa-post', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 85, hold: 14 }) },
+  { id: 'p3-go', title: 'Go', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: userThrow({ icon: 4, at: 71, hold: 16 }) },
+  { id: 'p3-cross', title: 'Crosser', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 115 }) },
+  { id: 'p3-comeback', title: 'Comeback', seed: 1, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 117, hot: 'comeback' }) },
+  { id: 'p3-slant-late', title: 'Slant, late', seed: 1, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 53 }) },
+  { id: 'p3-out-late', title: 'Out, late', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 120, hot: 'out' }) },
+  { id: 'p3-dig-late', title: 'Dig, late', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 134 }) },
+  { id: 'p3-go-late', title: 'Go, late', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: userThrow({ icon: 4, at: 113, hold: 16 }) },
 ];

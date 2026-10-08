@@ -39,7 +39,7 @@ import { feetStep, grab, holdKind, knockDown, pileStep, tickDowned } from './tac
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
 import { aiMove, autoMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
-import { autoCatch, CATCH_Z, catchLook, findsBallAt, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
+import { autoCatch, CATCH_Z, catchLook, COME_V, findsBallAt, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { has } from './traits';
 import { manOf, type PlayState } from './state';
@@ -1780,10 +1780,15 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
           if (a.route && leg > a.route.idx && !off) runRoute(s, a);
           else runToBall(s, a);
         }
-        // The ball's thrown to someone else: work to the nearest threat to
-        // the catch point, ready to block when it's caught (no contact before
-        // the catch: that's interference).
-        else if (s.phase === 'air' && s.ball.target >= 0 && a.busy === 0) runBlock(s, a, { x: s.ball.aim.x, y: s.ball.aim.y }, true, false);
+        // The ball's thrown to someone else: he runs his route on through it
+        // (a go keeps going, a crosser keeps crossing, a curl sits in his
+        // window), as the coaching has it: the route is run until the ball's
+        // caught, and then he blocks (the carrier branch above). Passing
+        // round 3: from the release every other route runner bent off toward
+        // the catch point to find a man to block (on four verticals all three
+        // others swung 45-60° toward the ball within half a second,
+        // tools/sim/p3trace.ts), the "receivers give up on their routes while
+        // the ball is in the air" the owner saw from the pocket.
         else runRoute(s, a);
         break;
       case 'passBlock':
@@ -1852,8 +1857,25 @@ function runToBall(s: PlayState, a: Agent): void {
   const d = dist(a.pos, to);
   const left = b.arrive - s.t;
   if (settle) {
-    // Come back to the ball: at it by the time it gets there, braking into the catch.
-    steer(a, boundaryGovern(a, arrive(a, to, 1, 1), 0.25));
+    // Come back to the ball (passing.ts comeBackTo): the throw is led to
+    // where he'll meet it coming back down the line at the QB. Sat down, he
+    // stays square to the QB until it's time to go, then drives at it and
+    // takes it on the move; on his way into the settle (a ball out on the
+    // break) he runs on through the spot to it. Passing round 3: he braked
+    // to a stop on the spot and caught it standing (M5's arrive), so a curl
+    // or comeback receiver stood still with the ball in the air.
+    const sat = !!rt && rt.idx >= rt.pts.length;
+    const need = d / Math.max(left, TICK);
+    const qb = s.agents[b.thrower] ?? s.agents[s.qb]!;
+    const faceQb = atan2(qb.pos.y - a.pos.y, qb.pos.x - a.pos.x);
+    if (left > 0.1 && d > 0.25) {
+      if (sat && need < COME_V * 0.9) steer(a, { x: 0, y: 0 }, { face: faceQb });
+      else steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * Math.min(a.fx.vmax, need), y: ((to.y - a.pos.y) / d) * Math.min(a.fx.vmax, need) }, 0.25), { face: faceQb });
+      return;
+    }
+    // The ball's on him: through the catch the way he's coming (or square, if he's had nowhere to go).
+    const v = len(a.vel);
+    steer(a, v > 0.5 ? a.vel : { x: 0, y: 0 }, { face: faceQb });
     return;
   }
   const top = a.fx.vmax;
