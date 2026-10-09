@@ -475,7 +475,8 @@ export function catchMagnet(b: Body, ball: THREE.Vector3, out: THREE.Vector3): n
 const HOLD_EARLY = 0.1;
 
 /** The run-speed catches whose hands go to the ball (the full-body ones are keyed to their own reach). */
-const REACH_CLIPS = new Set(['catch_hands_run', 'catch_hands_run_low', 'catch_hands_high', 'catch_scoop', 'catch_reach_l', 'catch_reach_r', 'catch_contested_l', 'catch_contested_r', 'catch_over_shoulder_l', 'catch_over_shoulder_r', 'catch_one_hand_l', 'catch_one_hand_r']);
+// (Passing round 6: and the high point and the toe tap, full-body clips keyed to a fixed reach: on the recorded toe tap the ball came in 0.4 m from where the clip held the hands.)
+const REACH_CLIPS = new Set(['catch_hands_run', 'catch_hands_run_low', 'catch_hands_high', 'catch_scoop', 'catch_reach_l', 'catch_reach_r', 'catch_contested_l', 'catch_contested_r', 'catch_over_shoulder_l', 'catch_over_shoulder_r', 'catch_one_hand_l', 'catch_one_hand_r', 'catch_high_point', 'catch_toe_tap_l', 'catch_toe_tap_r']);
 /** The hands come to the ball over this long (s of clip) before the secure frame: the late hands. */
 const REACH_IN = 0.2;
 /** How far the hands can go for it (m from between the shoulders) at full weight, and past which they don't chase it. Ours: a long arm's reach. */
