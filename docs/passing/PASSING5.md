@@ -62,3 +62,81 @@ The QB's ball is unchanged: where he meant it and when it arrives. After the thr
 - Its track and fill are thicker, and the "now" gold is brighter. While the cue runs, the open glow stops pulsing and drops its glow (the lime ring still says he's open).
 - A covered man's dimming is on the icon's own parts, not the cue ring, so the cue reads on a covered man too.
 - **Settings › Gameplay › Throw-timing cue** turns it off. This is a new boolean with a default, so the settings version is unchanged: the deep merge fills it in for saved settings. How to Play says where the setting is.
+
+## The numbers
+
+The catch work is drawing, not the sim's dice: who catches the ball, and how often, didn't change. The one sim change is the late out's route on a lofted ball (the QB's ball is the same). The determinism golden didn't move (no AI golden case throws a lofted late out), so it wasn't re-pinned.
+
+**The AI pass game** (`tools/sim/outcomes.ts`, 60 a cell, 14,875 attempts):
+
+| | Before (round 4) | After | NFL |
+|---|---|---|---|
+| Completion | 67.7% | 67.7% | ~64–66% |
+| Yards per attempt | 8.2 | 8.2 | ~7 |
+| INT | 2.4% | 2.4% | ~2.2–2.5% |
+| Sacks | 7.6% | 7.6% | ~6.5–7% |
+| aDOT | 8.9 | 8.9 | ~8 |
+| 2+ yd open caught | 89.5% | 89.5% | ~80% |
+
+The book's completion stays at 67.7%, inside the 62–68% band. Nothing in the catch work moves it, and a nudge toward 65% would have to come from the sim's catch odds or the coverage, which this round didn't touch (see Still open).
+
+**Checks** (before → after):
+
+| Harness | Before | After |
+|---|---|---|
+| Identity (`identity.ts`) | 19 / 20 | 19 / 20 (Gates vs Lewis, waiting on the owner) |
+| Passing identity (`passidentity.ts`) | 9 / 9 | 9 / 9 (Montana 0.73 yd off the meant spot, Namath 1.47; Harrison drops 2.8% of open balls, Slayton 8.7%) |
+| Trait audit (`traitaudit.ts`) | 127 / 127, 25 / 25 | 127 / 127, 25 / 25 |
+| Slants (`slants.ts`), on time zone / man | 62% / 66% | 62% / 66% (identical output) |
+| Screens (`screens.ts`) | | identical output to the base tree |
+| Clip gates (`build_anims.py`) | 178 / 178 | 184 / 184 |
+
+**The late out** (`tools/sim/p5lateout.ts`: the hot-routed out on Doubles Curls pressed a third of a second after the break, four coverages × eight seeds). For the balls the QB has to loft over the flat defender:
+
+| | Before | After |
+|---|---|---|
+| Stood (under 1.5 yd/s) in the last second before the ball | 0.43 s | 0.13 s (the plant) |
+| Coming back to the line at the catch | 0.84 yd/s | 1.69 yd/s |
+| Complete | 5 of 10 | 4 of 10 |
+
+The driven late outs and the quick out are unchanged. The lofted ones are only ten throws, and one fewer was caught, which is within a ball of the noise. The stand that's left is a ball the QB missed by more than his read (seed 4: 1.4 yd off its meant spot, intercepted). There he leaves his route for the ball (`play.ts runToBall`), gets to it early and waits under it; that's the general early-arrival case, not the plant's.
+
+**The coordinator's film** (`src/sim/film.ts`) is regenerated. It was already stale at `e8440d6`: the base tree's own film tool writes the same file this branch does, so the late out doesn't change it.
+
+**What the catches are** (`p5catch.ts`, the AI book, 1,985 completions): 65.6% hands at the chest, 15.6% the reach, 9.5% over the shoulder, 4.7% through contact, 2.1% low, and under 1% each the toe tap, high, body, dive, scoop and the jump. Before, all of the in-stride ones were the same clip (90.3% of the book).
+
+## The videos
+
+Recorded on the frame-true clock at 30 fps, 960×540, on Low (`BTB_VIDEO=1 BTB_PASSING5=1 BTB_DIAG=1`, `tools/shots/video.spec.ts`; `BTB_FOLLOW=1` for the close camera). The before set comes from a frozen copy of `e8440d6` with the clip list added, so it's the same play and the same keys. Re-encoded at crf 28 to keep them small. This container draws a frame in 3–6 s.
+
+- `round5/before/`, `round5/after/`: the default broadcast camera. `p5-hands` is Jerry Rice's stick, `p5-body` is the same snap with Kelvin Benjamin at X, `p5-high` is the curl placed over his head, `p5-low` is the slant at his knees, `p5-scoop` is the hitch at his shoe tops (the sim lays him out: see the critique), `p5-reach` is the slant thrown behind him, `p5-contested` is Gronk's leak through Ronnie Lott, `p5-highpoint` is the GO UP call on the go, `p5-shoulder` is the go over the shoulder, and `p5-toetap` is the quick out at the sideline.
+- `round5/before-close/`, `round5/after-close/`: the same plays from a close camera on the catcher.
+- `round5/compare/`: before on the left, after on the right (`<clip>.mp4` broadcast, `<clip>-close.mp4` close). The identity pair after the change is `p5-rice-vs-benjamin(-close).mp4`: Rice on the left, Benjamin on the right, the same snap.
+- `round5/stills/`: the sheets this write-up cites. `clips-before-over-run.jpg` shows the old clips laid over the run as the runtime lays them; `clips-after-*.jpg` shows the new ones; `close-*-before-after.jpg` and `broadcast-*-before-after.jpg` run from five frames before the catch to seven after, before on top, after below.
+
+## Watched: an honest critique
+
+I read every clip as contact sheets and full-resolution crops (round four's cue dig was recorded again on both trees for the cue), before against after, from five frames before the catch to seven after (`round5/stills/`), alongside the per-frame log.
+
+- **The in-stride catch is at the chest now, and it stays there.** Before (`stills/close-rice-vs-benjamin-before-after.jpg`, top row), Rice's hands reach out low and to the side early, the ball meets them at the belt, and for the next half second he runs with it on his hip. After (second row), the hands come up later, meet it out in front at chest height, and bring it in under his chin, then high and tight. The log says the same: the ball held at 1.2 m a quarter second after the catch, not 0.95 m. From the broadcast camera (`stills/broadcast-hands-before-after.jpg`) the difference is small but readable: the ball sits on the numbers instead of the belt, and the catch beat keeps him larger in frame for a few frames after the catch.
+- **The pair reads.** On the same snap, Benjamin (`p5-body`, rows three and four) keeps his elbows in and lets it hit his chest, trapping it with his forearms and hunching over it, while Rice plucks it with his arms long. Before, the two were drawn the same, frame for frame. This is the clearest "every player is himself" change in the round. From the broadcast camera it reads as Rice's arms out against Benjamin's arms in; you need to be watching for it.
+- **High, low and reach are new shapes.** The curl over his head (`stills/close-high-before-after.jpg`): before, his hands stay at his chest and the ball snaps down into them from above his helmet; after, both arms go up, he takes it above his face mask and pulls it down. The slant at his knees (`close-low-before-after.jpg`): the trunk folds over it and it comes up to his chest instead of being carried at the belt. The slant thrown behind him (`close-reach-before-after.jpg`): both arms go long to it with the trunk leaning after them, where before one arm went a little way out and the ball ended at his belly. All three are obvious from the close camera. From the broadcast camera the high catch is obvious; the reach and the low catch are visible if you look for them.
+- **Through contact.** Gronk on the leak (`p5-contested`, close): before, his hands are low at his side and he runs off with the ball at his belly while Lott hits him. After, his hands come up strong in front of his face, he snatches it, chins it under his face mask with both forearms and hunches through the hit. That reads as a contested catch secured. The box-out lean (0.7 of the pair's lean) is subtle at this distance; the clip's dropped shoulder carries more of it than the lean does.
+- **The high point, over the shoulder and the toe tap** are round M6.5's clips, and they look much as they did (`p5-highpoint`, `p5-shoulder`, `p5-toetap`). On the go over the shoulder, both before and after, the drawn ball is still a yard off his hands the frame the sim calls the catch and flies into them over the next two frames. At 30 fps it reads as the ball dropping into the basket, but it's the least precise of the catches.
+- **The scoop didn't make the video.** On the clip I found for it (the hitch at his shoe tops), the sim calls the catch a dive (`catchLook`: low and over a yard away), and the dive wins in both versions: he lays out for it. The scoop clip itself is shown laid over the run in `stills/clips-after-hands-high-low-scoop.jpg`. In the AI book it's 0.3% of catches.
+- **The ball.** It no longer shrinks at the catch: it eases from its broadcast size to its true size over 0.2 s. It never left the sim's flight before the catch, and it never does now. It's held in the right arm after every tuck, including the left-side reach and contest. I haven't found a frame where it passes through the body, but the tuck frames are small at 960×540.
+- **The late out** drives back to the lofted ball instead of standing at his plant (0.43 s stood → 0.13 s). I checked this in the trace, not on video; the AI's late outs are driven balls, which are unchanged.
+- **The cue** (`stills/cue-covered-and-now-before-after.jpg`: round four's dig on the cue, recorded on both trees). On the covered tight end (icon 4) the cue used to be dimmed with the rest of the icon, barely there; now its white fill and gold release read clearly around the dimmed icon. On the open man lit gold for "now" (icon 1, frame 58), the gold ring is thicker and the lime pulse no longer competes with it. At 960 px it's still a small ring: a player who wants it louder will want it bigger, and one who doesn't can turn it off.
+
+Would the owner, playing, feel that catches now look natural? **Mostly, from the default camera; clearly, from up close.** The biggest thing he'll feel without knowing why is that the ball goes to the chest and stays high, instead of being pulled down to the belt and carried on the hip: that was the "doesn't look right", and it was every in-stride catch. Catches are no longer all the same: a high ball goes up, a ball behind him gets a long reach, traffic gets a chinned ball, and a weak-handed man looks weak-handed. What's left is that at broadcast distance (~60 px tall at 960 wide) the hands are a few pixels, so the shapes read through the silhouette (arms up, arms long, arms in) more than the hands. The catch beat on the camera helps. It isn't a replay-style close-up, and it shouldn't be one in live play.
+
+## Still open
+
+- **The deep ball's last yard.** On a fast ball the sim calls the catch while the drawn ball is still up to a yard off his hands: its reach is measured from his centre, and the drawn ball runs a tick behind. The ball flies the rest of the way in two frames. A catch radius measured from the hands, or the secure frame a frame later on balls over 18 yd/s, would close it.
+- **The scoop** loses to the sim's dive whenever the ball is low and more than a yard away. A low ball within reach should be scooped running, not laid out for. That's the sim's `catchLook` threshold (`away > 1.1`), and changing it moves when receivers go to the turf.
+- **The carry is always in the right arm** (`ovl_carry_r`, the carry gaits). A catch on the left sideline should be tucked in the outside (left) arm. That needs mirrored carry gaits and a carry-side rule.
+- **Early arrival.** A man who gets to an off-target ball early stands under it (`runToBall`). The late out's stand that's left is this case.
+- **The box-out** is a lean share and a dropped shoulder. A big man walling the defender off with his body, the defender drawn off his line, would need the contact solver (`contact.ts`) to displace the weaker man, not only lean him.
+- **The AI book's completion** is still 67.7%, inside the band but above the NFL's ~65%. The catch work is drawing only, so it can't move it. A nudge would come from the sim's catch odds or the coverage.
+- **60 fps in the browser.** These recordings are 30 fps at 960×540. The give (0.05 s) and the hands rising (0.17 s) are one to five frames here.
+- **Gates vs Lewis** (identity 19/20) still waits on the owner.
