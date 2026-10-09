@@ -64,10 +64,15 @@ function headingOf(a: Agent): V2 {
   return sp > 1 ? { x: a.vel.x / sp, y: a.vel.y / sp } : { x: cos(a.face), y: sin(a.face) };
 }
 
+/** How far out in front of his centre his hands meet the ball (yd): HANDS_NEAR to HANDS_FAR by his pluck. */
+export function handsReach(a: Agent): number {
+  return HANDS_NEAR + (HANDS_FAR - HANDS_NEAR) * pluckOf(a);
+}
+
 /** Where his hands meet the ball now (yd, on the ground): out in front of him along his run by his pluck. */
 export function handsAt(a: Agent, dt = 0): V2 {
   const h = headingOf(a);
-  const k = HANDS_NEAR + (HANDS_FAR - HANDS_NEAR) * pluckOf(a);
+  const k = handsReach(a);
   return { x: a.pos.x + a.vel.x * dt + h.x * k, y: a.pos.y + a.vel.y * dt + h.y * k };
 }
 
@@ -314,8 +319,6 @@ const AT_CATCH = 2.6;
  * charts ~10% of an elite passer's short throws off target (σ ≈ 0.36 yd at
  * 10 yd for a 95 accuracy) and ~35% of deep ones (σ ≈ 0.85 at 40).
  */
-/** How much of his hands' lead the contest takes back (0: the defender plays the ball where it is). See resolveCatch. */
-const CONTEST_BACK = 1;
 /** How far from the ball (yd) a defender still contests the catch: fully at a yard, not at all from here. M5.5 used 2 yd; at 2.6 a defender closing on the ball at the catch still gets a hand in. */
 const CONTEST_R = 2.6;
 /** The mechanics miss for accuracy alone, × (1 − accuracy/99): a 70 passer ~4% of his clean throws, a 95 under 1%. */
@@ -835,7 +838,8 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   if (wb && route0) rec.route = workBackTo(rec, route0, meant, Tf) ?? rec.route;
   const kind = touch || Tf > hang(to) * 1.01 ? 'touch' : 'driven';
   const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, chem: fChem, place: aim.x, sigma, timing: tSigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
-  return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err, spiral: spiralOf(accN, fPressure, offPlatform, moving, missed, hit), rpm: rpmOf(power), hit };
+  // (Air yards to his body, where the spot's marked: the lead to his hands out in front of him isn't yardage. Passing round 6.)
+  return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air - hd.x * LEAD_HANDS), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err, spiral: spiralOf(accN, fPressure, offPlatform, moving, missed, hit), rpm: rpmOf(power), hit };
 }
 
 /**
@@ -1145,12 +1149,12 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
     // within about a yard; by two yards he's out of it), whether he's
     // playing the ball (read the throw) and his leverage (at the ball as
     // soon as the receiver, or trailing him to it).
-    // Where he's playing it from: the ball, drawn back along his hands toward
-    // his body by CONTEST_BACK of the way (passing round 6: the sim takes it
-    // at his hands now, out in front of him; the contest's reach and its
-    // odds were sized on the ball taken round his body).
-    const ho = handsAt(a);
-    const ball = { x: b.pos.x - (ho.x - a.pos.x) * CONTEST_BACK, y: b.pos.y - (ho.y - a.pos.y) * CONTEST_BACK };
+    // Where it's contested: where it came into his reach (passing round 6:
+    // the sim takes it at his hands now, a few ticks on, but a defender
+    // plays the ball on its way in to them, and the contest's reach and its
+    // odds were sized on the ball taken where it first got to him).
+    const at0 = a.i === b.target && typeof a.mem.inReachT === 'number' && a.mem.inReachT >= b.releaseT ? (a.mem.inReachAt as V2 | null) : null;
+    const ball = at0 ? { x: at0.x, y: at0.y } : { x: b.pos.x, y: b.pos.y };
     const mine = dist(a.pos, ball);
     let contest = 0;
     let by: Agent | null = null;
@@ -1427,7 +1431,17 @@ export function stepAir(s: PlayState): number {
   // The man it's thrown to takes it in his hands, out in front of him
   // (passing round 6): while it's still coming in to them, and will still be
   // his to catch next tick, it flies on (nobody else is nearer it).
-  if (best >= 0 && best === b.target && s.agents[best]!.side === 'off' && comingIn(s, s.agents[best]!)) return -1;
+  if (best >= 0 && best === b.target && s.agents[best]!.side === 'off') {
+    const a = s.agents[best]!;
+    // ...for at most DEFER_MAX from the tick it first came into his reach (a ball still coming in after that, he goes and gets it).
+    const fresh = !(typeof a.mem.inReachT === 'number' && a.mem.inReachT >= b.releaseT);
+    if (fresh) {
+      a.mem.inReachT = s.t;
+      a.mem.inReachAt = { x: b.pos.x, y: b.pos.y };
+    }
+    const since = a.mem.inReachT as number;
+    if (s.t - since < DEFER_MAX - 1e-9 && comingIn(s, a)) return -1;
+  }
   return best;
 }
 
@@ -1467,6 +1481,16 @@ export function comingIn(s: PlayState, a: Agent): boolean {
  * his centre was (passing round 6 moved it out in front with the lead).
  */
 const BODY_REACH = 0.55;
+/**
+ * The longest (s) the catch waits for the ball to get to his hands once
+ * it's in his reach: a deep ball barely closing on a man running away from
+ * it would otherwise fly on for a quarter second with him under it, and
+ * every tick it does, the man chasing him gets closer (the identity
+ * harness: Tyreek Hill's yards after the catch fell 0.4 yd against Wes
+ * Welker's with no cap). Past it the hands go and get it (the drawing
+ * reaches them to it: choreo.ts catchReach). Ours: a tenth of a second.
+ */
+const DEFER_MAX = 6 / 60;
 /** Within this of the line from his chest to his hands (yd, on the ground) the ball is in his hands' reach now. Ours: about a ball's length. */
 const IN_HANDS = 0.25;
 /** Squared distance (yd², on the ground) from a ball to the line from his centre out to his hands, `dt` s on at his velocity. */

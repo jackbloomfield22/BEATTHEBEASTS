@@ -490,6 +490,7 @@ const _hl = new THREE.Vector3();
 const _hr = new THREE.Vector3();
 const _sh = new THREE.Vector3();
 const _bd = new THREE.Vector3();
+const _ac = new THREE.Vector3();
 
 /**
  * The hands to the ball (passing round 3). The catch clips reach to a fixed
@@ -501,7 +502,7 @@ const _bd = new THREE.Vector3();
  * diamond, the basket), and the ball comes into them on its own line. Render
  * only; after the animator's update.
  */
-export function catchReach(b: Body, i: number, s: PlayState): void {
+export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector3 | null = null): void {
   const c = b.catchClip;
   const g = b.grip;
   if (!c || !REACH_CLIPS.has(c)) return;
@@ -519,6 +520,17 @@ export function catchReach(b: Body, i: number, s: PlayState): void {
     // clip's pose the frame the sim calls it caught (round four's in-game
     // log: the hands 0.4 m off the ball one frame, on the belt the next).
     if (!g || g.w <= 0 || ball.mode !== 'held' || ball.holder !== i) return;
+    // (Passing round 6) The catch frame (the last tick in the air drawn into the catch): the hands go onto
+    // the ball where it's drawn on its flight, and hold there in his frame through the give.
+    if (drawn) {
+      _bd.set(worldX(ball.vel.y) - worldX(0), 0, worldZ(ball.vel.x) - worldZ(0));
+      if (_bd.lengthSq() < 1e-6) _bd.set(0, 0, 1);
+      _bd.normalize();
+      handsOn(b, drawn, _bd, one);
+      root.worldToLocal(g.l.copy(_hl));
+      root.worldToLocal(g.r.copy(_hr));
+      g.w = 1;
+    }
     const k = g.w * (1 - THREE.MathUtils.smoothstep(t, secure, secure + GIVE_T));
     if (k <= 0) return;
     root.localToWorld(_hl.copy(g.l));
@@ -548,17 +560,14 @@ export function catchReach(b: Body, i: number, s: PlayState): void {
     if (g) g.w = 0;
     return;
   }
+  // (Passing round 6) Over the last tenth of a second before the secure frame the hands track the ball
+  // where it's drawn now, so on the catch frame they're on it, not on a prediction of it.
+  if (drawn) _bp.lerp(drawn, THREE.MathUtils.smoothstep(t, secure - 0.1, secure));
   // Either side of it across its line, a little behind it (the hands meet it, the ball comes into them).
   _bd.set(worldX(ball.vel.y) - worldX(0), 0, worldZ(ball.vel.x) - worldZ(0));
   if (_bd.lengthSq() < 1e-6) _bd.set(0, 0, 1);
   _bd.normalize();
-  const across = _hr.set(_bd.z, 0, -_bd.x);
-  // Which of those is his left: the side his left shoulder is on.
-  sl.getWorldPosition(_hl);
-  const leftSign = (_hl.x - _sh.x) * across.x + (_hl.z - _sh.z) * across.z >= 0 ? 1 : -1;
-  _hl.copy(_bp).addScaledVector(_bd, -HANDS_BEHIND).addScaledVector(across, HANDS_APART * leftSign);
-  _hr.copy(_bp).addScaledVector(_bd, -HANDS_BEHIND).addScaledVector(across, -HANDS_APART * leftSign);
-  if (one) (one === 'l' ? _hl : _hr).copy(_bp).addScaledVector(_bd, -HANDS_BEHIND);
+  handsOn(b, _bp, _bd, one);
   // Kept in his frame for the give after the catch tick.
   if (g) {
     root.worldToLocal(g.l.copy(_hl));
@@ -567,6 +576,25 @@ export function catchReach(b: Body, i: number, s: PlayState): void {
   }
   b.animator.reachHands(one === 'r' ? null : _hl, w, one === 'l' ? null : _hr, w);
 }
+/** The hand targets (_hl, _hr, world) on a ball at `at` flying along `dir` (horizontal, unit): either side of it across its line, a little behind it; one hand on it for a one-hander. */
+function handsOn(b: Body, at: THREE.Vector3, dir: THREE.Vector3, one: 'l' | 'r' | null): void {
+  const bones = b.player.bones;
+  const sl = bones.get('upperarm_l');
+  const sr = bones.get('upperarm_r');
+  if (sl && sr) {
+    sl.getWorldPosition(_hl);
+    sr.getWorldPosition(_sh);
+    _sh.add(_hl).multiplyScalar(0.5);
+  }
+  // (Its own vector: round five built it in _hr, which the right hand's target then overwrote mid-expression, so the right hand went off the ball's line.)
+  const across = _ac.set(dir.z, 0, -dir.x);
+  // Which of those is his left: the side his left shoulder is on.
+  const leftSign = (_hl.x - _sh.x) * across.x + (_hl.z - _sh.z) * across.z >= 0 ? 1 : -1;
+  _hl.copy(at).addScaledVector(dir, -HANDS_BEHIND).addScaledVector(across, HANDS_APART * leftSign);
+  _hr.copy(at).addScaledVector(dir, -HANDS_BEHIND).addScaledVector(across, -HANDS_APART * leftSign);
+  if (one) (one === 'l' ? _hl : _hr).copy(at).addScaledVector(dir, -HANDS_BEHIND);
+}
+
 /** After the catch the hands hold where they met the ball and give into the clip's own pose over this long (s of clip): the absorb, then the ball brought in. Ours: the clip's give and its ball at the sternum are keyed 0.05 and 0.15 s after the secure frame. */
 const GIVE_T = 0.16;
 /** The hands' spread either side of the ball (m: about its width) and how far behind it along its flight they meet it (m). Ours. */

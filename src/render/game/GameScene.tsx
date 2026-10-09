@@ -224,6 +224,7 @@ const _flightOn = new THREE.Vector3();
  * frame in the air, and how long since the sim called it caught. It
  * carries on from there into the hands at about its own pace (`dur`).
  */
+const _drawnBall = new THREE.Vector3();
 const catchIn = { air: false, age: -1, dur: 0, pos: new THREE.Vector3(), vel: new THREE.Vector3(), quat: new THREE.Quaternion(), scale: 1 };
 /**
  * The drawn ball's broadcast size (BALL_GROW) eases back to true size in the
@@ -420,6 +421,10 @@ export function GameScene() {
     const userCarrier = cur.carrier >= 0 && s.agents[cur.carrier]!.side === 'off';
     const controlled = ph === 'carrier' ? (userCarrier ? cur.carrier : -1) : ph === 'snap' || ph === 'dropback' || ph === 'pocket' ? s.qb : -1;
     if (controlled < 0) latency.motion(null);
+    // Where the ball is drawn this frame on its own flight (placeBall's interpolation), for the hands to meet it (passing round 6).
+    const bb0 = prev.ball;
+    const bb1 = cur.ball;
+    const drawnBall = bb0.mode === 'air' ? _drawnBall.set(worldX(bb0.y + (bb1.y - bb0.y) * alpha), worldY(bb0.z + (bb1.z - bb0.z) * alpha), worldZ(bb0.x + (bb1.x - bb0.x) * alpha)) : null;
     bodies.forEach((b, i) => {
       const p0 = prev.agents[i]!;
       const p1 = cur.agents[i]!;
@@ -469,7 +474,7 @@ export function GameScene() {
       b.lastSpeed = d.speed;
       b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean });
       // The hands to the ball on a catch (passing round 3), over the clip's own reach.
-      catchReach(b, i, s);
+      catchReach(b, i, s, drawnBall);
       b.ragdoll.update(animDt);
       // A body hitting the turf hard kicks up dust (a big hit's landing).
       const land = b.ragdoll.landing;

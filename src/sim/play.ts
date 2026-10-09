@@ -39,7 +39,7 @@ import { feetStep, grab, holdKind, knockDown, pileStep, tickDowned } from './tac
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
 import { aiMove, autoMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
-import { autoCatch, CATCH_Z, catchLook, COME_V, comesBack, findsBallAt, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
+import { autoCatch, CATCH_Z, catchLook, COME_V, comesBack, findsBallAt, handsReach, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { has } from './traits';
 import { manOf, type PlayState } from './state';
@@ -1893,7 +1893,11 @@ function runToBall(s: PlayState, a: Agent): void {
   // can run under: which is what accuracy is for.
   const findT = findsBallAt(s, a);
   const read = b.arrive > findT ? Math.max(0, Math.min(1, ((s.t - findT) / (b.arrive - findT)) * 1.33)) : 1;
-  const to = { x: b.meant.x + (b.aim.x - b.meant.x) * read, y: b.meant.y + (b.aim.y - b.meant.y) * read };
+  const ballAt = { x: b.meant.x + (b.aim.x - b.meant.x) * read, y: b.meant.y + (b.aim.y - b.meant.y) * read };
+  // His body goes to where his hands meet it (passing round 6): the ball's spot less his hands' reach out in front of him (passing.ts handsAt), the way he runs at it.
+  const reachK = handsReach(a);
+  const k0 = dist(a.pos, ballAt);
+  const to = k0 > reachK ? { x: ballAt.x - ((ballAt.x - a.pos.x) / k0) * reachK, y: ballAt.y - ((ballAt.y - a.pos.y) / k0) * reachK } : { x: a.pos.x, y: a.pos.y };
   const d = dist(a.pos, to);
   const left = b.arrive - s.t;
   if (settle) {

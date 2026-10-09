@@ -183,7 +183,8 @@ export const CLIPS: Clip[] = [
   // (Cover 2 seed 12 → Cover 1 seed 23, the slot's seam, for passing round 2, tools/sim/findclips.ts: caught in stride and 15 yd after the catch with the juke.)
   // (Seed 23 → 45 for passing round 3, tools/sim/findclips.ts: the key starts the arm and the other receivers run their routes through the throw; the slot's seam caught and 14 yd after it with the juke.)
   // (Cover 1 seed 45 → Cover 3 seed 25 for passing round 4, tools/sim/findclips.ts: the deep ball in the bucket; the slot's seam caught and 23 yd after it.)
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 25, play: 'trips-four-verts', def: 'cover3', los: 30, script: throwAndRun(1, 100, 'juke') },
+  // (Seed 25, icon 1 → seed 47, icon 2 for passing round 6, tools/sim/p6_refind.ts: the catch at his hands; the tight end's seam against Cover 3, caught and 15 yd after it.)
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 47, play: 'trips-four-verts', def: 'cover3', los: 30, script: throwAndRun(2, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // Stick against Cover 1: the short catch, a stiff arm sheds the first tackler a second later, down 15 yd on (11 after the catch).
@@ -235,7 +236,8 @@ export const CONCEPTS: Clip[] = [
   // The scramble drill: the QB escapes right, the Y breaks off his cross and works back to him in the open grass (10 yd).
   // Re-found for the slant squeeze (docs/m66/SLANTS.md: the underneath zones now plaster when the QB leaves the pocket; on cover 3 seed 9 the ball was picked):
   // tools/sim/findconcepts.ts --only=scramble-drill, the same escape and throw time.
-  { id: 'scramble-drill', title: 'Scramble drill', seed: 17, play: 'trips-y-cross', def: 'cover4', los: 30, script: concept({ icon: 1, at: 150, scramble: { at: 110, dir: { x: 0.25, y: 1 } } }) },
+  // (Seed 17 → 18 for passing round 6, tools/sim/p6_refind.ts: the same escape and throw, caught 11.6 yd downfield.)
+  { id: 'scramble-drill', title: 'Scramble drill', seed: 18, play: 'trips-y-cross', def: 'cover4', los: 30, script: concept({ icon: 1, at: 150, scramble: { at: 110, dir: { x: 0.25, y: 1 } } }) },
 ];
 
 // The side-by-side identity videos (Playtest 2, "every player is himself"):
