@@ -1491,13 +1491,12 @@ const BODY_REACH = 0.55;
 /**
  * The longest (s) the catch waits for the ball to get to his hands once
  * it's in his reach: a deep ball barely closing on a man running away from
- * it would otherwise fly on for a quarter second with him under it, and
- * every tick it does, the man chasing him gets closer (the identity
- * harness: Tyreek Hill's yards after the catch fell 0.4 yd against Wes
- * Welker's with no cap). Past it the hands go and get it (the drawing
- * reaches them to it: choreo.ts catchReach). Ours: a tenth of a second.
+ * it would otherwise fly on with him under it while the man chasing him gets
+ * closer. Past it the hands go and get it (the drawing reaches them to it:
+ * choreo.ts catchReach). Ours: a quarter second, longer than any in-stride
+ * ball takes (the go's last yard into the hands is ~0.1 s, p6lead.ts).
  */
-const DEFER_MAX = 6 / 60;
+const DEFER_MAX = 15 / 60;
 /** Within this of the line from his chest to his hands (yd, on the ground) the ball is in his hands' reach now. Ours: about a ball's length. */
 const IN_HANDS = 0.25;
 /** Squared distance (yd², on the ground) from a ball to the line from his centre out to his hands, `dt` s on at his velocity. */

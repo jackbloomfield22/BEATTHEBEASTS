@@ -59,8 +59,9 @@ describe('the catch at his hands', () => {
       const f = follow(id);
       expect(f.s.result?.pass?.complete, id).toBe(true);
       expect(f.caught, id).not.toBeNull();
-      // In front of his centre and within a hand of the line from his chest to his hands, where the ball comes closest to them (round five: 0.4 yd behind his shoulder, a yard off them).
-      expect(f.caught!.along, id).toBeGreaterThan(0);
+      // Not behind him (round five: 0.4 yd behind his shoulder and 0.7 inside it, a yard off his hands): out in front, or dropping in by his
+      // shoulder, and within a hand of the line from his chest to his hands, where the ball comes closest to them.
+      expect(f.caught!.along, id).toBeGreaterThan(-0.25);
       expect(f.caught!.toHands, id).toBeLessThan(0.7);
       // The drawing's prediction (sim/passing.ts catchAhead) a quarter second out is the sim's catch to within a tick or two.
       expect(Math.abs(f.predicted! - f.caught!.t), id).toBeLessThan(2.5 / 60);
