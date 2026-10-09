@@ -7,7 +7,7 @@ import type { Player } from '../players/playerAsset';
 import { YARD } from '../world/constants';
 import { worldDir, worldX, worldY, worldZ } from '@/game/coords';
 import { latency } from '@/game/latency';
-import { findsBallAt, reach, releaseOf, type CatchLook } from '@/sim/passing';
+import { catchAhead, findsBallAt, releaseOf, type CatchLook } from '@/sim/passing';
 import { arrivalOf, catchStyle, contactAt, meetTime, pluckOf, type CatchStyle } from '@/sim/catchstyle';
 import { dropPlan, dropStart, GUN_CATCH, planFrom, UC_EXCHANGE, type DropPlan } from '@/sim/pocket';
 import { pressureOn, routeOf } from '@/sim/ai';
@@ -252,19 +252,13 @@ function lyingClip(b: Body, name: string, t0 = 0): void {
 const CATCH_FULL = new Set(['catch_high_point', 'catch_body_down', 'catch_dive_l', 'catch_dive_r', 'catch_toe_tap_l', 'catch_toe_tap_r']);
 /** The ones that leave him lying on the ball. */
 const CATCH_LYING = new Set(['catch_body_down', 'catch_dive_l', 'catch_dive_r']);
-/** The most (s) the catch is taken ahead of the ball's arrival at its spot: a slow ball he's running at is in his reach a little early, but no more than this. Ours (the slant and the out measured 0.03-0.06 s). */
-const ENTRY_MAX = 0.08;
 /**
- * Where the hands meet the ball (passing round 5), m from his centre: a
- * Catching 95 at the end of his arms (MEET_FAR, about where the sim's reach
- * puts the ball when it calls the catch), a 60 with his elbows bent and the
- * ball closer in (MEET_NEAR), a body catch at the chest (BODY_MEET). Ours,
- * from the broadcast's "hands catcher" against "body catcher" and the arm:
- * shoulder to fingers ~0.7 m. The secure frame comes that much later than
- * the sim's catch (at most MEET_LATE_MAX): the drawn ball flies on into him.
+ * A body catch lets the ball into his chest (BODY_MEET, m from his centre:
+ * passing round 5): its secure frame comes that much after the ball reaches
+ * his line (at most MEET_LATE_MAX past its arrival), the ball flying on past
+ * his hands into him. Every other catch is secured on the sim's own catch,
+ * at his hands (passing round 6: sim/passing.ts handsAt, the pluck).
  */
-const MEET_FAR = 0.72;
-const MEET_NEAR = 0.45;
 const BODY_MEET = 0.22;
 const MEET_LATE_MAX = 0.06;
 /** Late hands: an in-stride catch's hands come up this long (s) before the ball. Receiver coaching: the arms pump until the last moment (a corner reads early hands); the clip's reach is keyed 0.17 s out. */
@@ -328,6 +322,28 @@ export function catchClip(s: PlayState, i: number, style: CatchStyle): string {
       return aimLeft ? 'catch_one_hand_l' : 'catch_one_hand_r';
   }
 }
+
+/** Seconds (drawn time) until the sim calls the catch for him: the tick the ball gets to his hands (sim/passing.ts catchAhead), or its arrival at its aim when it never does. */
+function simCatchIn(s: PlayState, a: Agent, simT: number): number {
+  const ahead = catchAhead(s, a);
+  return (ahead ? ahead.dt : Math.max(0, s.ball.arrive - s.t)) + (s.t - simT);
+}
+
+/** Pace the catch clip so its secure frame lands on the sim's catch (between PACE_MIN and PACE_MAX of its own speed; at its own speed from the secure frame on). */
+function paceCatch(b: Body, s: PlayState, a: Agent, simT: number): void {
+  const c = b.catchClip!;
+  const t = catchTime(b);
+  const sec = eventAt(b, c, 'secure');
+  if (t === null || sec === null) return;
+  const left = simCatchIn(s, a, simT);
+  const rate = t >= sec || left <= 0 ? 1 : Math.max(PACE_MIN, Math.min(PACE_MAX, (sec - t) / left));
+  const tr = b.animator.transition;
+  if (tr && tr.name === c && !tr.done) b.animator.retime(c, { rate });
+  else b.animator.retimeOverlay(c, rate);
+}
+/** How far the catch clip's pace may bend to meet the sim's catch (× its keyed speed). Ours: past these the hands visibly rush or stall. */
+const PACE_MIN = 0.6;
+const PACE_MAX = 1.6;
 
 /** A clip this library has, or the in-stride hands catch (an older library without passing round five's set). */
 function clipOr(b: Body, clip: string): string {
@@ -496,9 +512,13 @@ export function catchReach(b: Body, i: number, s: PlayState): void {
   }
   let w = THREE.MathUtils.smoothstep(t, secure - REACH_IN, secure - 0.02);
   if (w <= 0) return;
-  // The ball at the secure frame (sim yd, z up): its flight run forward (drag is a few cm over this).
+  // The ball at the secure frame (sim yd, z up): where the sim will call the
+  // catch (passing round 6: the tick it gets to his hands, its own flight
+  // stepped forward), else its flight run forward to the secure frame.
+  const ahead = catchAhead(s, s.agents[i]!);
   const dt = Math.max(0, Math.min(0.3, secure - t));
-  _bp.set(worldX(ball.pos.y + ball.vel.y * dt), worldY(ball.pos.z + ball.vel.z * dt - 0.5 * G_YD * dt * dt), worldZ(ball.pos.x + ball.vel.x * dt));
+  if (ahead) _bp.set(worldX(ahead.pos.y), worldY(ahead.pos.z), worldZ(ahead.pos.x));
+  else _bp.set(worldX(ball.pos.y + ball.vel.y * dt), worldY(ball.pos.z + ball.vel.z * dt - 0.5 * G_YD * dt * dt), worldZ(ball.pos.x + ball.vel.x * dt));
   // Not for a ball he can't get his hands to.
   const bones = b.player.bones;
   const sl = bones.get('upperarm_l');
@@ -1203,25 +1223,16 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // (passing round 5: sim/catchstyle.ts), started so its secure frame lands
   // where his hands meet the ball.
   if (ball.mode === 'air' && ball.target === i && s.bobble?.who !== i && b.catchFor !== ball.arrive && ball.arrive - simT <= CATCH_LOOKAHEAD) {
-    // The sim takes it as it comes within his reach, a beat before it gets
-    // to the spot it was thrown to (passing round 3): the secure frame lands
-    // there for a sure hand, who meets it at the end of his arms; a poorer
-    // one lets it come in closer (PLUCK), a body catcher into his chest.
-    const closing = Math.hypot(ball.vel.x - a.vel.x, ball.vel.y - a.vel.y);
     const style = catchStyle(s, a);
     const clip = clipOr(b, catchClip(s, i, style));
     const pluck = pluckOf(a);
-    // (Passing round 5) The secure frame lands where his hands meet the ball:
-    // when it comes within MEET of his line, run forward (sim/catchstyle.ts
-    // meetTime), not at the arrival less his reach. On a crosser the ball
-    // comes from his side, and the old timing had the hands closing on a
-    // ball still a yard and a half off, out of their reach (the IK let go:
-    // the in-game log, round five's p5-hands).
-    const meet = clip === 'catch_body' ? BODY_MEET : REACH_CLIPS.has(clip) ? MEET_NEAR + (MEET_FAR - MEET_NEAR) * pluck : null;
-    const left =
-      meet !== null
-        ? Math.min(ball.arrive - simT + MEET_LATE_MAX, meetTime(s, a, meet / YARD) - (simT - s.t))
-        : ball.arrive - simT - Math.min(ENTRY_MAX, reach(a).r / Math.max(1, closing));
+    // (Passing round 6) The secure frame lands on the sim's own catch: the
+    // tick the ball gets to his hands, out in front of him by his pluck
+    // (sim/passing.ts handsAt, catchAhead), so the drawn ball and the hands
+    // meet on the frame the sim calls it. Round five timed it on a guess at
+    // where his hands would meet it while the sim took the ball a yard off
+    // them. A body catch lets the ball on past his hands into his chest.
+    const left = clip === 'catch_body' ? Math.min(ball.arrive - simT + MEET_LATE_MAX, meetTime(s, a, BODY_MEET / YARD) - (simT - s.t)) : simCatchIn(s, a, simT);
     const lead = eventAt(b, clip, 'secure');
     if (lead === null) {
       // (An older clip library without the catch set: the M5 overlay.)
@@ -1242,6 +1253,11 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
       startCatch(b, clip, Math.max(0, lead - left));
     }
   }
+  // (Passing round 6) Kept on the sim's catch as it comes: he speeds up or
+  // eases off in the last tenths, and the clip's secure frame is paced to
+  // land on the tick the ball gets to his hands, not where it was predicted
+  // when the clip started.
+  if (b.catchClip && b.catchClip !== 'catch_body' && ball.mode === 'air' && ball.target === i && s.bobble?.who !== i) paceCatch(b, s, a, simT);
   // What the hands hold.
   const holder = ball.mode === 'held' && s.phase !== 'presnap' && simT - s.snapT > 0.3 ? ball.holder : -1;
   // (The throw on the move is an overlay over the legs: its hands are the throw's too, not the two-hand hold's.

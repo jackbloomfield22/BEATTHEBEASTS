@@ -526,6 +526,17 @@ export function GameScene() {
     const inSnap = cur.phase === 'presnap' || (snapT >= 0 && t - snapT < 0.34);
     // True size in the hands; in the air and on the turf it grows with distance from the camera (BALL_FAR).
     ball.scale.setScalar(1);
+    // The catch tick (passing round 6): the frame drawn between the last tick in the air and the catch shows the
+    // ball on its own flight, between the sim's two spots: the sim takes it at his hands, and his hands are there
+    // (choreo.ts catchReach), so it's in them. From the next frame it's held in the hands as they give.
+    if (held && !inSnap && bodies && b0.mode === 'air' && catchIn.air && b1.holder !== r.state.qb && ballInHands(bodies[b1.holder]!, r.state, ball)) {
+      ball.position.set(worldX(b0.y + (b1.y - b0.y) * a), worldY(b0.z + (b1.z - b0.z) * a), worldZ(b0.x + (b1.x - b0.x) * a));
+      ball.quaternion.copy(catchIn.quat);
+      ball.scale.setScalar(catchIn.scale);
+      catchIn.pos.copy(ball.position);
+      heldAt(flight, ball);
+      return;
+    }
     if (held && !inSnap && bodies && ballInHands(bodies[b1.holder]!, r.state, ball)) {
       // Just caught: the ball finishes its flight into the hands (passing round 3: the sim takes it as it comes
       // within his reach, up to a yard short of him, and it jumped into his hands in a frame).
