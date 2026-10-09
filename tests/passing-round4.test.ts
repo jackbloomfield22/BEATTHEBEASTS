@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createPlay, defById, input, playById, practiceRosters, stepPlay, type InputFrame, type PlayState, type RouteName, type SnapshotLike } from '@/sim';
 import { throwCue } from '@/sim/cue';
+import { bucket, planThrow } from '@/sim/passing';
 import { findStint, simPlayer } from '@/sim/roster';
 import { cueAt } from '@/render/game/cueRing';
 import { PASSING3 } from '@/game/clips';
@@ -85,5 +86,48 @@ describe('the late out', () => {
     // Inside the sideline with room (not at its edge), and not running toward it.
     expect(FIELD_HALF_W - Math.abs(at!.y)).toBeGreaterThan(2.5);
     expect(at!.vy * Math.sign(at!.y)).toBeLessThan(0.5);
+  });
+});
+
+describe('the deep ball', () => {
+  /** The go (trips four verticals, the outside man) 1.3 s in: the QB set, the man 12 yd down the field with the corner on him. */
+  function atGo(qb: string, seed = 3): { s: PlayState; rec: ReturnType<PlayState['agents']['at']> & object } {
+    const s = play('trips-four-verts', 'cover1', seed, qb);
+    for (let k = 0; k < 600 && !s.result && (s.snapT < 0 || s.t - s.snapT < 1.3); k++) stepPlay(s, s.phase === 'presnap' ? input({ snap: true }) : input({}));
+    return { s, rec: s.agents[s.icons[3]!]! };
+  }
+
+  it('an accurate deep passer puts it in the bucket (ahead and away from the man on him); a scattershot arm throws it at him', () => {
+    const m = atGo('Joe Montana');
+    const qbM = m.s.agents[m.s.qb]!;
+    const spot = { x: m.rec.pos.x + 18, y: m.rec.pos.y };
+    const bM = bucket(m.s, qbM, m.rec, spot, { x: 1, y: 0 }, { x: 0, y: 0 });
+    const p = atGo('Chad Pennington');
+    const bP = bucket(p.s, p.s.agents[p.s.qb]!, p.rec, spot, { x: 1, y: 0 }, { x: 0, y: 0 });
+    expect(Math.hypot(bM.x, bM.y)).toBeGreaterThan(0.5);
+    expect(Math.hypot(bP.x, bP.y)).toBeLessThan(0.3 * Math.hypot(bM.x, bM.y));
+    // Away from the nearest defender, across his run.
+    let near = m.s.agents[m.s.def[0]!]!;
+    for (const i of m.s.def) if (Math.hypot(m.s.agents[i]!.pos.x - m.rec.pos.x, m.s.agents[i]!.pos.y - m.rec.pos.y) < Math.hypot(near.pos.x - m.rec.pos.x, near.pos.y - m.rec.pos.y)) near = m.s.agents[i]!;
+    if (Math.abs(near.pos.y - m.rec.pos.y) > 0.3) expect(Math.sign(bM.y)).toBe(-Math.sign(near.pos.y - m.rec.pos.y));
+    // A placement the player asked for is his own.
+    expect(bucket(m.s, qbM, m.rec, spot, { x: 1, y: 0 }, { x: 0.8, y: 0 })).toEqual({ x: 0, y: 0 });
+  });
+
+  it("a weak arm's long ball comes up short of where he meant it; a cannon's doesn't", () => {
+    const along = (qb: string) => {
+      let sum = 0;
+      for (let seed = 1; seed <= 24; seed++) {
+        const g = atGo(qb, seed);
+        const q = g.s.agents[g.s.qb]!;
+        const plan = planThrow(g.s, q, g.rec, 0, { x: 0, y: 0 }, 0, false);
+        const ux = plan.meant.x - plan.from.x;
+        const uy = plan.meant.y - plan.from.y;
+        const k = Math.hypot(ux, uy);
+        sum += ((plan.to.x - plan.meant.x) * ux + (plan.to.y - plan.meant.y) * uy) / k;
+      }
+      return sum / 24;
+    };
+    expect(along('Chad Pennington')).toBeLessThan(along('Dan Marino') - 0.5);
   });
 });

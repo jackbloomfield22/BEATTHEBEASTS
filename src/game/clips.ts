@@ -371,3 +371,19 @@ export const PASSING3: Clip[] = [
   { id: 'p3-dig-late', title: 'Dig, late', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 134 }) },
   { id: 'p3-go-late', title: 'Go, late', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: userThrow({ icon: 4, at: 113, hold: 16 }) },
 ];
+
+// Passing round 4 (docs/passing/PASSING4.md): the player's throws pressed
+// on the throw-timing cue (the tick it lights: tools/sim/cuetick.ts), the
+// same QB's cue against Marino's and Winston's on the same dig, the late
+// out, the deep ball, and the catch in stride from close (BTB_FOLLOW).
+// Fixed ticks, so the same keys can be recorded on the tree before the cue.
+export const PASSING4: Clip[] = [
+  { id: 'p4-cue-dig', title: 'Dig on the cue', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 98 }) },
+  { id: 'p4-cue-dig-marino', title: 'Dig on the cue: Marino', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 101 }), swap: { off: 'QB', name: 'Dan Marino', pos: 'QB' } },
+  { id: 'p4-cue-dig-winston', title: 'Dig on the cue: Winston', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 91 }), swap: { off: 'QB', name: 'Jameis Winston', pos: 'QB' } },
+  { id: 'p4-out', title: 'Out on the cue', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 84, hot: 'out' }) },
+  { id: 'p4-out-late', title: 'Out, late', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 120, hot: 'out' }) },
+  { id: 'p4-go', title: 'Go on the cue', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: userThrow({ icon: 4, at: 63, hold: 16 }) },
+  { id: 'p4-post', title: 'Post on the cue', seed: 4, play: 'singleback-pa-post', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 91, hold: 14 }) },
+  { id: 'p4-slant', title: 'Slant (the catch)', seed: 1, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 22 }) },
+];
