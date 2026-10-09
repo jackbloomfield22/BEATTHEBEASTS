@@ -434,4 +434,6 @@ export const PASSING6: Clip[] = [
   { id: 'p6-shoulder', title: 'Over the shoulder: the go, touch', seed: 4, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
   { id: 'p6-highpoint', title: 'High point: GO UP', seed: 1, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 60, aim: { x: 0, y: 1 }, call: 'aggressive' }) },
   { id: 'p6-toetap', title: 'Toe tap: the quick out', seed: 12, play: 'doubles-quick-outs', def: 'cover2', los: 30, user: false, script: () => NEUTRAL },
+  // The ball's arm: the X's slant on the left, caught with room and run 9 yd after it (tools/sim/p6_carryfind.ts): tucked, then moved to the arm away from the tackler.
+  { id: 'p6-carry', title: 'The ball in the outside arm', seed: 12, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 30 }) },
 ];

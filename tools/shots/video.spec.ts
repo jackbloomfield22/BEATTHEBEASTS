@@ -58,7 +58,7 @@ const FOLLOW5: Record<string, string> = {
 // docs/passing/round6/<BTB_PASSING_TAG>; BTB_FOLLOW=1 records each from the close camera on its catcher (FOLLOW6).
 const PASSING6 = !!process.env.BTB_PASSING6;
 const FOLLOW6: Record<string, string> = {
-  'p6-go': 'X,6,-5,2.2,42',
+  'p6-go': 'X,6,5,2.2,42',
   'p6-post': 'X,6,-5,2.2,42',
   'p6-corner': 'SLOT,6,-5,2.2,42',
   'p6-cross': 'TE,5,-5,2,42',
@@ -67,6 +67,7 @@ const FOLLOW6: Record<string, string> = {
   'p6-shoulder': 'Z,6,5,2.2,42',
   'p6-highpoint': 'X,6,-5,2.2,42',
   'p6-toetap': 'X,2,6,1.8,40',
+  'p6-carry': 'X,4,5,1.8,40',
 };
 const FOLLOW: Record<string, string> = {
   'p2-drop5': 'QB,3,-6,2.2,38',

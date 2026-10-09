@@ -473,7 +473,7 @@ export function releaseOf(qb: Agent): number {
  * Where the ball meets him: the flight time iterated against where he'll be
  * (`hang` is the flight to a spot), and the way he'll be running there.
  */
-function leadFor(rec: Agent, hang: (at: V2) => number, from: V2): { spot: V2; rv: V2; T: number; speed: number; offScript: number } {
+function leadFor(rec: Agent, hang: (at: V2) => number, from: V2): { spot: V2; rv: V2; T: number; speed: number; offScript: number; settled: number } {
   let T = 0.8;
   let run = leadRun(rec, T);
   let spot = run.pos;
@@ -487,16 +487,16 @@ function leadFor(rec: Agent, hang: (at: V2) => number, from: V2): { spot: V2; rv
     const dx = from.x - run.pos.x;
     const dy = from.y - run.pos.y;
     const k = Math.sqrt(dx * dx + dy * dy) || 1;
-    return { spot, rv: { x: dx / k, y: dy / k }, T, speed: len(run.vel), offScript: run.offScript };
+    return { spot, rv: { x: dx / k, y: dy / k }, T, speed: len(run.vel), offScript: run.offScript, settled: run.settled };
   }
   const v = len(run.vel) > 0.5 ? run.vel : rec.vel;
   const sp = len(v);
-  return { spot, rv: sp > 0.5 ? { x: v.x / sp, y: v.y / sp } : { x: 1, y: 0 }, T, speed: len(run.vel), offScript: run.offScript };
+  return { spot, rv: sp > 0.5 ? { x: v.x / sp, y: v.y / sp } : { x: 1, y: 0 }, T, speed: len(run.vel), offScript: run.offScript, settled: run.settled };
 }
 
-/** The way his hands are out in front of him at the catch: along his run, or at the QB when he's sitting down for it. */
-function handsDir(spot: V2, rv: V2, speed: number, from: V2): V2 {
-  if (speed > 0.5) return rv;
+/** The way his hands are out in front of him at the catch: along his run, or at the QB when he's sitting down for it (a settle route: he'll have sat by then, or he's barely moving). */
+function handsDir(spot: V2, rv: V2, speed: number, from: V2, settled = 0): V2 {
+  if (speed > 0.5 && settled <= 0) return rv;
   const dx = from.x - spot.x;
   const dy = from.y - spot.y;
   const k = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -729,13 +729,13 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   // (M5 to M6.6 led him for 0.05 s more than the ball flies, with no reason
   // given: the driven slant landed ~0.5 yd in front of him, and with the
   // cone on top a fifth of them out of his reach. On time is on him.)
-  const { spot, rv, speed: recSpeed, T: leadT, offScript } = leadFor(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }), from);
+  const { spot, rv, speed: recSpeed, T: leadT, offScript, settled } = leadFor(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }), from);
   // Placement input: lead / back shoulder along his path (the way he'll be running at the catch), high / low.
   const place = 1.6 * aim.x + HOLD_LEAD * Math.max(0, Math.min(1, loft));
   // The deep ball in the bucket (passing round 4): ahead of him and away from the man on him.
   const bk = bucket(s, qb, rec, spot, rv, aim);
   // To his hands, out in front of him (passing round 6: LEAD_HANDS).
-  const hd = handsDir(spot, rv, recSpeed, from);
+  const hd = handsDir(spot, rv, recSpeed, from, settled);
   let tx = spot.x + rv.x * place + bk.x + hd.x * LEAD_HANDS;
   // The QB leads him in bounds (passing round 4): a lead along a man running at the sideline is kept IN_BOUNDS inside it, where he can catch it with his feet down.
   let ty = Math.max(-(FIELD_HALF_W - IN_BOUNDS), Math.min(FIELD_HALF_W - IN_BOUNDS, spot.y + rv.y * place + bk.y + hd.y * LEAD_HANDS));
@@ -903,7 +903,7 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   );
   const { spot, rv } = run;
   const bk = bucket(s, qb, rec, spot, rv, aim);
-  const hd = handsDir(spot, rv, run.speed, from);
+  const hd = handsDir(spot, rv, run.speed, from, run.settled);
   let x = spot.x + rv.x * 1.6 * aim.x + bk.x + hd.x * LEAD_HANDS;
   let y = Math.max(-(FIELD_HALF_W - IN_BOUNDS), Math.min(FIELD_HALF_W - IN_BOUNDS, spot.y + rv.y * 1.6 * aim.x + bk.y + hd.y * LEAD_HANDS));
   const d = dist(from, { x, y });
@@ -1144,8 +1144,16 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
   const cx = px + rx * tc;
   const cy = py + ry * tc;
   const cz = pz + b.vel.z * tc;
-  const off = Math.sqrt(cx * cx + cy * cy + cz * cz * 0.6);
+  let off = Math.sqrt(cx * cx + cy * cy + cz * cz * 0.6);
   if (a.side === 'off') {
+    // ...or from his body, when it comes nearer that (a ball into his chest or by his shoulder; a man standing turns to one at his side).
+    const qx = b.pos.x - a.pos.x;
+    const qy = b.pos.y - a.pos.y;
+    const tb = Math.max(0, Math.min(0.2, -(qx * rx + qy * ry + pz * b.vel.z) / Math.max(1e-6, vv)));
+    const ox = qx + rx * tb;
+    const oy = qy + ry * tb;
+    const oz = pz + b.vel.z * tb;
+    off = Math.min(off, Math.sqrt(ox * ox + oy * oy + oz * oz * 0.6));
     // Separation decides it (feedback item 7). The defender best placed to
     // play the ball: how close he is to it at the catch point (in phase is
     // within about a yard; by two yards he's out of it), whether he's
@@ -1424,7 +1432,7 @@ export function stepAir(s: PlayState): number {
       const h = handsAt(a);
       const ex = b.pos.x - h.x;
       const ey = b.pos.y - h.y;
-      dh = Math.min(dh + r - BODY_REACH, Math.sqrt(ex * ex + ey * ey));
+      dh = Math.min(dh + r - bodyReach(a, r), Math.sqrt(ex * ex + ey * ey));
     }
     // Defenders only play the ball once they've read it (mem.onBall).
     if (a.side === 'def' && !a.mem.onBall && dh > 0.55) continue;
@@ -1478,7 +1486,8 @@ export function comingIn(s: PlayState, a: Agent): boolean {
   const h = handsAt(a, TICK);
   const hx = p.x - h.x;
   const hy = p.y - h.y;
-  return p.z >= 0.15 && p.z <= top && (hx * hx + hy * hy < r * r || cx * cx + cy * cy < BODY_REACH * BODY_REACH);
+  const br = bodyReach(a, r);
+  return p.z >= 0.15 && p.z <= top && (hx * hx + hy * hy < r * r || cx * cx + cy * cy < br * br);
 }
 /**
  * The man it's thrown to reaches round his hands out in front of him (his
@@ -1488,6 +1497,13 @@ export function comingIn(s: PlayState, a: Agent): boolean {
  * his centre was (passing round 6 moved it out in front with the lead).
  */
 const BODY_REACH = 0.55;
+/** His reach round his body (yd): all of it (`r`) standing or settling, turning to a ball at his side as he sits for it; BODY_REACH running flat out, from REACH_SLOW to REACH_FAST yd/s. Ours: a man running can't reach back for a ball, a man standing can turn to one. */
+function bodyReach(a: Agent, r: number): number {
+  const k = Math.max(0, Math.min(1, (len(a.vel) - REACH_SLOW) / (REACH_FAST - REACH_SLOW)));
+  return r + (BODY_REACH - r) * k;
+}
+const REACH_SLOW = 1.5;
+const REACH_FAST = 4;
 /**
  * The longest (s) the catch waits for the ball to get to his hands once
  * it's in his reach: a deep ball barely closing on a man running away from
@@ -1540,7 +1556,8 @@ export function catchAhead(s: PlayState, a: Agent, horizon = 1.2): { dt: number;
     const dy = p.y - h.y;
     const ex = p.x - g.pos.x;
     const ey = p.y - g.pos.y;
-    if (dx * dx + dy * dy >= r * r && ex * ex + ey * ey >= BODY_REACH * BODY_REACH) continue;
+    const br = bodyReach(a, r);
+    if (dx * dx + dy * dy >= r * r && ex * ex + ey * ey >= br * br) continue;
     if (comingIn(look, g)) continue;
     return { dt: k * TICK, pos: { x: p.x, y: p.y, z: p.z } };
   }
