@@ -182,7 +182,8 @@ export const CLIPS: Clip[] = [
   // Four verticals against Cover 2: the slot's seam caught in stride, then a juke and 42 more after the catch to the end zone (re-found for M6.6's ratings: seed 51; for the second slant pass, the lead on the path he really runs and timing: seed 18; for the third, the rhythm read: seed 16, a juke and 41 more to the end zone; for the passing and tackling passes together: seed 12, 40 more after the catch to the end zone).
   // (Cover 2 seed 12 → Cover 1 seed 23, the slot's seam, for passing round 2, tools/sim/findclips.ts: caught in stride and 15 yd after the catch with the juke.)
   // (Seed 23 → 45 for passing round 3, tools/sim/findclips.ts: the key starts the arm and the other receivers run their routes through the throw; the slot's seam caught and 14 yd after it with the juke.)
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 45, play: 'trips-four-verts', def: 'cover1', los: 30, script: throwAndRun(1, 100, 'juke') },
+  // (Cover 1 seed 45 → Cover 3 seed 25 for passing round 4, tools/sim/findclips.ts: the deep ball in the bucket; the slot's seam caught and 23 yd after it.)
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 25, play: 'trips-four-verts', def: 'cover3', los: 30, script: throwAndRun(1, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // Stick against Cover 1: the short catch, a stiff arm sheds the first tackler a second later, down 15 yd on (11 after the catch).
@@ -193,7 +194,8 @@ export const CLIPS: Clip[] = [
   // A catch-and-run touchdown (the touchdown celebrations' browser test plays it): Four Verticals against Cover 2, icon 1 caught and taken
   // 70 yd to the end zone (2026-10-08, after the passing pass's round two; completion-rac is a tackle by design, so it can't stand in).
   // (Seed 8 → 30 for passing round 3: the key starts the arm; caught at the 40 and taken 39 yd to the end zone.)
-  { id: 'touchdown', title: 'Catch-and-run touchdown', seed: 30, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(1, 100, 'juke') },
+  // (Seed 30 → 78 for passing round 4: the deep ball in the bucket; caught at the 39 and taken 39 yd to the end zone.)
+  { id: 'touchdown', title: 'Catch-and-run touchdown', seed: 78, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(1, 100, 'juke') },
 ];
 
 // The ten broadcast concepts (M6.5): found by tools/sim/findconcepts.ts, the
@@ -260,7 +262,8 @@ export const IDENTITY: Clip[] = [
   // (Seed 15 → 20 for the slant squeeze, docs/m66/SLANTS.md; 20 → 67 for the second slant pass, tools/sim/findidentity.ts --only=coverage: the same play and call, Deion's breakup at 1.3 yd, Kam's 70 yd at 2.8 yd of separation. No seed in 1–80 has Deion's pick now.)
   // (Seed 67 Cover 1 → seed 42 Cover 2 man for the passing pass, docs/passing/PASSING.md: the same play and throw; Deion now picks it, Kam gives up 32 yd at 1.2 yd of separation.)
   // (Cover 2 man seed 42 → Cover 1 seed 4 for passing round 3, tools/sim/findidentity.ts --only=coverage: Deion picks it; Kam gives up 40 yd at 2.7 yd of separation.)
-  ...pair('coverage', 'Half the field', { seed: 4, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
+  // (Cover 1 seed 4 → Cover 2 man seed 37 for passing round 4, tools/sim/findidentity.ts --only=coverage: with the deep ball in the bucket the seed-4 ball got to the X, who lost it; now Deion breaks it up at the catch point, Kam gives up 39 yd.)
+  ...pair('coverage', 'Half the field', { seed: 37, play: 'trips-four-verts', def: 'cover2man', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
 ];
 
 // The passing game, end to end (docs/passing/PASSING.md): one clip per
@@ -370,4 +373,20 @@ export const PASSING3: Clip[] = [
   { id: 'p3-out-late', title: 'Out, late', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 120, hot: 'out' }) },
   { id: 'p3-dig-late', title: 'Dig, late', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 134 }) },
   { id: 'p3-go-late', title: 'Go, late', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: userThrow({ icon: 4, at: 113, hold: 16 }) },
+];
+
+// Passing round 4 (docs/passing/PASSING4.md): the player's throws pressed
+// on the throw-timing cue (the tick it lights: tools/sim/cuetick.ts), the
+// same QB's cue against Marino's and Winston's on the same dig, the late
+// out, the deep ball, and the catch in stride from close (BTB_FOLLOW).
+// Fixed ticks, so the same keys can be recorded on the tree before the cue.
+export const PASSING4: Clip[] = [
+  { id: 'p4-cue-dig', title: 'Dig on the cue', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 98 }) },
+  { id: 'p4-cue-dig-marino', title: 'Dig on the cue: Marino', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 101 }), swap: { off: 'QB', name: 'Dan Marino', pos: 'QB' } },
+  { id: 'p4-cue-dig-winston', title: 'Dig on the cue: Winston', seed: 3, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 91 }), swap: { off: 'QB', name: 'Jameis Winston', pos: 'QB' } },
+  { id: 'p4-out', title: 'Out on the cue', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 84, hot: 'out' }) },
+  { id: 'p4-out-late', title: 'Out, late', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 120, hot: 'out' }) },
+  { id: 'p4-go', title: 'Go on the cue', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: userThrow({ icon: 4, at: 63, hold: 16 }) },
+  { id: 'p4-post', title: 'Post on the cue', seed: 4, play: 'singleback-pa-post', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 91, hold: 14 }) },
+  { id: 'p4-slant', title: 'Slant (the catch)', seed: 1, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 22 }) },
 ];

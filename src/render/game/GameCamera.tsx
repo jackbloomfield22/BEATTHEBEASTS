@@ -183,6 +183,9 @@ function targetPose(mode: Mode): Pose | null {
   return base;
 }
 
+/** The most the air camera's line turns off straight downfield (rad: 15°). Ours. */
+const AIR_YAW = (15 * Math.PI) / 180;
+
 /** The throw being followed: where and when it left, and the flight time it was given. */
 const flight = { arrive: -1, x0: 0, y0: 0, total: 1 };
 
@@ -208,14 +211,17 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   // ball the moment it's thrown and settles as the ball arrives.
   const p = Math.min(1, Math.max(0, 1 - (b.arrive - s.t) / flight.total));
   const e = 1 - (1 - p) * (1 - p);
-  // The camera's line: the throw's direction, leaning downfield.
+  // The camera's line: the throw's direction, leaning downfield, and never
+  // swung more than AIR_YAW off straight down the field (passing round 4:
+  // on an out to the boundary it swung ~35° toward the catch in a second,
+  // so the player lost the frame he judged the lead in; the broadcast's
+  // high camera pans with the ball, it doesn't wheel round).
   const dx = ax - flight.x0;
   const dy = ay - flight.y0;
-  let ux = Math.max(0, dx) + 0.35 * Math.hypot(dx, dy) + 1e-3;
-  let uy = dy * 0.8;
-  const m = Math.hypot(ux, uy);
-  ux /= m;
-  uy /= m;
+  const ux0 = Math.max(0, dx) + 0.35 * Math.hypot(dx, dy) + 1e-3;
+  const yaw = Math.max(-AIR_YAW, Math.min(AIR_YAW, Math.atan2(dy * 0.8, ux0)));
+  const ux = Math.cos(yaw);
+  const uy = Math.sin(yaw);
   // Look: the ball early, the catch late. The catch is between the aim
   // point and the receiver closing on it (he's often a stride short).
   const r = b.target >= 0 ? cur.agents[b.target] : undefined;
