@@ -616,7 +616,7 @@ function batAtLine(s: PlayState): boolean {
     const d = s.agents[i]!;
     if (d.down || (d.p.pos !== 'DE' && d.p.pos !== 'DT') || s.touched.includes(i)) continue;
     const dh = Math.sqrt((b.pos.x - d.pos.x) * (b.pos.x - d.pos.x) + (b.pos.y - d.pos.y) * (b.pos.y - d.pos.y));
-    if (dh > BAT_R || b.pos.z > reach(d).top || b.pos.z < 1.2) continue;
+    if (dh > BAT_R || b.pos.z > reach(d).top || b.pos.z < CATCH_Z - BAT_UNDER) continue;
     s.touched.push(i);
     const tall = Math.max(0, Math.min(1, (d.p.heightIn - 72) / 6));
     // Locked up with a blocker his hands are on the man in front of him: he
@@ -633,6 +633,8 @@ function batAtLine(s: PlayState): boolean {
   return false;
 }
 const BAT_T = 0.3;
+/** A ball this far (yd) under the chest height it's thrown to goes under a rusher's hands at the line (1.2 yd when it was thrown to 1.25; passing round 6 raised the throw to the chest, CATCH_Z, and the line it passes under with it). */
+const BAT_UNDER = 0.05;
 const BAT_R = 0.7;
 const BAT_P = 0.45;
 /**

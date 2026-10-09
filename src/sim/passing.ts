@@ -1051,7 +1051,9 @@ export function catchLook(s: PlayState, r: Agent, at: { x: number; y: number; z:
   // from his body, so a low ball a step in front laid him out (the dive won
   // every scoop: PASSING5.md).
   const k = HANDS_NEAR + (HANDS_FAR - HANDS_NEAR) * pluckOf(r);
-  const away = Math.sqrt((at.x - px - hx * k) ** 2 + (at.y - py - hy * k) ** 2);
+  const ax = at.x - px - hx * k;
+  const ay = at.y - py - hy * k;
+  const away = Math.sqrt(ax * ax + ay * ay);
   const air = at.x - s.setup.los;
   const bv = len(s.ball.vel);
   const fromBehind = sp > 5 && bv > 1 && (s.ball.vel.x * hx + s.ball.vel.y * hy) / bv > 0.55;
@@ -1149,11 +1151,13 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
     // within about a yard; by two yards he's out of it), whether he's
     // playing the ball (read the throw) and his leverage (at the ball as
     // soon as the receiver, or trailing him to it).
-    // Where it's contested: where it came into his reach (passing round 6:
-    // the sim takes it at his hands now, a few ticks on, but a defender
-    // plays the ball on its way in to them, and the contest's reach and its
-    // odds were sized on the ball taken where it first got to him).
-    const at0 = a.i === b.target && typeof a.mem.inReachT === 'number' && a.mem.inReachT >= b.releaseT ? (a.mem.inReachAt as V2 | null) : null;
+    // Where it's contested: where it first came within his reach of his body
+    // (passing round 6: the sim takes it at his hands now, out in front of
+    // him and a few ticks on, but a defender plays the ball on its way in to
+    // them, and the contest's reach and its odds were sized on the ball taken
+    // there, round five's catch point). A ball taken out in front before it
+    // ever got that close is contested where it's caught.
+    const at0 = a.i === b.target && typeof a.mem.bodyReachT === 'number' && a.mem.bodyReachT >= b.releaseT ? (a.mem.bodyReachAt as V2 | null) : null;
     const ball = at0 ? { x: at0.x, y: at0.y } : { x: b.pos.x, y: b.pos.y };
     const mine = dist(a.pos, ball);
     let contest = 0;
@@ -1412,8 +1416,15 @@ export function stepAir(s: PlayState): number {
     // in front of him (passing round 6: the QB leads him there, so his reach
     // round the ball he's led to is what it was round his body).
     if (a.i === b.target && a.side === 'off') {
+      // Where it first came within his reach of his body (round five's catch point): it's contested there (resolveCatch).
+      if (dh < r && !(typeof a.mem.bodyReachT === 'number' && a.mem.bodyReachT >= b.releaseT)) {
+        a.mem.bodyReachT = s.t;
+        a.mem.bodyReachAt = { x: b.pos.x, y: b.pos.y };
+      }
       const h = handsAt(a);
-      dh = Math.min(dh + r - BODY_REACH, Math.sqrt((b.pos.x - h.x) ** 2 + (b.pos.y - h.y) ** 2));
+      const ex = b.pos.x - h.x;
+      const ey = b.pos.y - h.y;
+      dh = Math.min(dh + r - BODY_REACH, Math.sqrt(ex * ex + ey * ey));
     }
     // Defenders only play the ball once they've read it (mem.onBall).
     if (a.side === 'def' && !a.mem.onBall && dh > 0.55) continue;
@@ -1434,11 +1445,7 @@ export function stepAir(s: PlayState): number {
   if (best >= 0 && best === b.target && s.agents[best]!.side === 'off') {
     const a = s.agents[best]!;
     // ...for at most DEFER_MAX from the tick it first came into his reach (a ball still coming in after that, he goes and gets it).
-    const fresh = !(typeof a.mem.inReachT === 'number' && a.mem.inReachT >= b.releaseT);
-    if (fresh) {
-      a.mem.inReachT = s.t;
-      a.mem.inReachAt = { x: b.pos.x, y: b.pos.y };
-    }
+    if (!(typeof a.mem.inReachT === 'number' && a.mem.inReachT >= b.releaseT)) a.mem.inReachT = s.t;
     const since = a.mem.inReachT as number;
     if (s.t - since < DEFER_MAX - 1e-9 && comingIn(s, a)) return -1;
   }
