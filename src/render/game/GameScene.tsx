@@ -298,6 +298,8 @@ export function GameScene() {
       if (urlFlags.video) (window as unknown as { __btbBodies?: Body[] }).__btbBodies = all;
     }, console.error);
     scene.add(marks.group, ball, routeArt.group);
+    // The drawn ball, for the recording's per-frame catch log (tools/shots/video.spec.ts BTB_DIAG); recording only.
+    if (urlFlags.video) (window as unknown as { __btbBall?: THREE.Object3D }).__btbBall = ball;
     return () => {
       alive = false;
       if (group) scene.remove(group);
