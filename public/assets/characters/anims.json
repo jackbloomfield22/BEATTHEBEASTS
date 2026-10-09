@@ -9640,8 +9640,8 @@
     },
     "catch_hands_run": {
       "kind": "overlay",
-      "frames": 18,
-      "duration": 0.6,
+      "frames": 27,
+      "duration": 0.9,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -9652,13 +9652,13 @@
         "l": [
           [
             0,
-            18
+            27
           ]
         ],
         "r": [
           [
             0,
-            18
+            27
           ]
         ]
       },
@@ -9671,8 +9671,8 @@
         "pass": true
       },
       "events": {
-        "secure": 8,
-        "tuck": 13
+        "secure": 9,
+        "tuck": 19
       },
       "mask": [
         "clavicle_l",
@@ -9709,8 +9709,8 @@
     },
     "catch_hands_run_low": {
       "kind": "overlay",
-      "frames": 18,
-      "duration": 0.6,
+      "frames": 27,
+      "duration": 0.9,
       "loop": false,
       "speed": 0.0,
       "dir": [
@@ -9721,13 +9721,13 @@
         "l": [
           [
             0,
-            18
+            27
           ]
         ],
         "r": [
           [
             0,
-            18
+            27
           ]
         ]
       },
@@ -9740,8 +9740,8 @@
         "pass": true
       },
       "events": {
-        "secure": 8,
-        "tuck": 14
+        "secure": 9,
+        "tuck": 19
       },
       "mask": [
         "clavicle_l",
@@ -14520,5 +14520,5 @@
       ]
     }
   },
-  "bytes": 8647588
+  "bytes": 8655108
 }

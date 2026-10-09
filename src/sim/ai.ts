@@ -71,6 +71,26 @@ export function routePoints(s: PlayState, a: Agent, as: RouteName | null = route
   const push = down >= 3 && sit[sit.length - 1] && s.setup.toGo <= 15 && lastD < s.setup.toGo ? s.setup.toGo + 0.5 - lastD : 0;
   if (push > 0) for (const p of raw) p.x = Math.min(END_X - ROUTE_ROOM, p.x + push);
   const pts = raw.map((p) => v2(p.x, Math.max(-lim, Math.min(lim, p.y))));
+  if (OUT_TO_BOUNDARY.includes(name)) {
+    // An out is run to the sideline and, if the ball isn't there by then,
+    // back down the line to the QB: he plants at the boundary landmark and
+    // comes back toward the line, inside the sideline, where the ball meets
+    // him (passing.ts comeBackTo leads him there, play.ts runToBall drives
+    // him at it). Passing round 4: an out ran out of field turned up the
+    // sideline (the branch below) and one from the slot ran on to it, so a
+    // late out was led to a man drifting toward the boundary and slowing
+    // there with the ball in the air (tools/sim/p3trace.ts p3-out-late: from
+    // 8 to 3 yd/s over the last second, caught 1.6 yd from the sideline).
+    const at = pts[pts.length - 1]!;
+    const edge = out * lim;
+    if (Math.abs(at.y - edge) > 0.5) {
+      pts.push(v2(at.x, edge));
+      sit.push(false);
+    }
+    pts.push(v2(at.x - OUT_BACK, out * (lim - OUT_IN)));
+    sit.push(true);
+    return { pts, sit, name };
+  }
   // A route that runs out of field (an out, a flat, an arrow or a wheel
   // from a wide split or the far hash) turns upfield along the boundary
   // ROUTE_ROOM inside it, rather than ending at the sideline.
@@ -82,6 +102,12 @@ export function routePoints(s: PlayState, a: Agent, as: RouteName | null = route
   }
   return { pts, sit, name };
 }
+
+/** The routes run to the sideline and back down it (routePoints): the out, the quick out and the sail (the flood's deep out). */
+const OUT_TO_BOUNDARY: readonly RouteName[] = ['out', 'qout', 'sail'];
+/** How far (yd) he comes back toward the line from the boundary landmark, and in from it: two steps downhill and a step inside, the way a comeback's last leg comes back (ours, from the broadcast's late outs). */
+const OUT_BACK = 1.5;
+const OUT_IN = 0.8;
 
 /** Build each receiver's route in world space at the snap (and who's in the slot: a Slot Weapon's option reads). */
 export function setRoutes(s: PlayState): void {
@@ -425,7 +451,8 @@ function optionRead(s: PlayState, a: Agent, name: RouteName | null): void {
   }
   const qb = s.agents[s.qb]!;
   const out = Math.sign(q.y - (s.setup.ballY ?? 0)) || 1;
-  const sit = rt.sit[rt.sit.length - 1] === true;
+  // (A settle route by the book's drawing: an out now ends in a settle back down the sideline, routePoints, and it reads as the out it is.)
+  const sit = ROUTES[name][ROUTES[name].length - 1]!.sit === true;
   const lim = FIELD_HALF_W - ROUTE_ROOM;
   const head = rt.pts.slice(0, stem + 1);
   const heads = rt.sit.slice(0, stem + 1);

@@ -50,7 +50,7 @@ import { dist, len, norm, sub, v2, type V2 } from './vec';
 import { readTag, routePoints } from './ai';
 
 /** The hitch off a dropback (s): a step up into the pocket before the throw (the rhythm of a five-step drop and hitch). */
-const HITCH = 0.3;
+export const HITCH = 0.3;
 /** A free (unblocked) defender within POCKET_R of the QB: the pocket's slide or climb, not the hitch. Once he's off it, he doesn't come back to it. */
 function freeRusherNear(s: PlayState, qb: Agent): boolean {
   for (const i of s.def) {

@@ -146,8 +146,8 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `sig_rb` | signature | 93 | 0.0 | 0.00 | 0.00 | 17.2 | — | pass |
 | `sig_te` | signature | 105 | 0.0 | 0.00 | 0.00 | 18.6 | — | pass |
 | `sig_ol` | signature | 86 | 0.0 | 0.00 | 0.00 | 35.0 | — | pass |
-| `catch_hands_run` | overlay | 18 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `catch_hands_run_low` | overlay | 18 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_hands_run` | overlay | 27 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_hands_run_low` | overlay | 27 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_high_point` | transition | 49 | 0.0 | 0.36 | 0.00 | 20.1 | — | pass |
 | `catch_body` | overlay | 22 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_body_down` | transition | 39 | 0.0 | 0.01 | 0.00 | 22.0 | — | pass |

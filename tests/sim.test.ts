@@ -520,7 +520,11 @@ describe('sim: hot routes (M5.5)', () => {
       stepPlay(s, script(s));
       const r = s.agents[s.icons[0]!]!;
       expect(s.hot[r.slot as OffSlot]).toBe(route);
-      expect(r.route!.pts.length).toBe(ROUTES[route].length);
+      // (An out, a quick out or a sail runs on to the sideline and back down it: passing round 4, ai.ts routePoints.)
+      if (route === 'out' || route === 'qout' || route === 'sail') {
+        expect(r.route!.pts.length).toBeGreaterThan(ROUTES[route].length);
+        expect(r.route!.sit[r.route!.sit.length - 1]).toBe(true);
+      } else expect(r.route!.pts.length).toBe(ROUTES[route].length);
       expect(s.events.some((e) => e.type === 'hotRoute')).toBe(true);
       runToWhistle(s, script);
       const again = runToWhistle(make(), script);

@@ -483,12 +483,133 @@ const COME_SET = 0.15;
 /** The most he comes back (yd), for a perfect route runner (60% of it for a 0): about two steps. Ours. */
 const COME_MAX = 1.5;
 
+/**
+ * A late out (passing round 4): the ball's thrown to a man still running his
+ * out toward the sideline, and it'll hang longer than it takes him to get
+ * there. He doesn't run on to the boundary and wait under it: he plants
+ * short of it, with time to come back (OUT_COME_T), and works back down the
+ * line to the ball, inside the sideline, the way the out's last leg comes
+ * back (ai.ts routePoints, OUT_TO_BOUNDARY). Returns his route from here
+ * (the plant and the settle moved in), or null when the ball gets there
+ * before he'd reach the boundary anyway (an out on time) or it isn't an out.
+ * An out is found by its shape: its last leg comes back to the line (a
+ * settle), the leg before it runs across the field to a landmark by the
+ * sideline.
+ */
+export function workBack(rec: Agent, hang: (at: V2) => number): { pts: V2[]; sit: boolean[]; idx: number } | null {
+  const rt = rec.route;
+  if (!rt || !comesBack(rt)) return null;
+  const n = rt.pts.length;
+  if (n < 3 || rt.idx !== n - 2) return null;
+  const E = rt.pts[n - 2]!;
+  const S = rt.pts[n - 1]!;
+  const P0 = rt.pts[n - 3]!;
+  const across = E.y - P0.y;
+  if (FIELD_HALF_W - Math.abs(E.y) > OUT_EDGE || Math.abs(across) < 3 * Math.abs(E.x - P0.x) || Math.sign(across) !== Math.sign(E.y)) return null;
+  const L = dist(rec.pos, E);
+  const v = Math.max(len(rec.vel), 0.6 * rec.fx.vmax);
+  const T = hang(S);
+  const plantAt = T - OUT_COME_T;
+  // The ball meets him on his way out, short of the boundary (an out on time, or a man with room to the sideline): the lead's.
+  if (L / v <= plantAt || v * T < L - OUT_NEAR || L < 1) return null;
+  const u = { x: (E.x - rec.pos.x) / L, y: (E.y - rec.pos.y) / L };
+  const d = Math.min(L, Math.max(OUT_PLANT_MIN, v * Math.max(0, plantAt)));
+  const P = { x: rec.pos.x + u.x * d, y: rec.pos.y + u.y * d };
+  return { pts: [...rt.pts.slice(0, n - 2), P, { x: P.x + S.x - E.x, y: P.y + S.y - E.y }], sit: [...rt.sit], idx: n - 2 };
+}
+/**
+ * The deep ball in the bucket (passing round 4): a vertical (a go, a post,
+ * a seam, a fade) with a man on him isn't thrown at him. The QB puts it
+ * ahead of him and over the shoulder away from the defender ("throw him
+ * open": the outside shoulder against inside leverage, the inside one
+ * against a man outside, ahead of a trailer), where the receiver can run
+ * under it and the defender has to go through him to play it. Before this
+ * the deep ball was meant for the man's own spot: on the player's go thrown
+ * on time it came down ~0.6 yd behind him and ~0.6 inside, with the corner
+ * level and 0.8 yd from the ball (tools/sim/deepball.ts), and 46% were
+ * broken up. How well he does it is his deep accuracy (none at 70, all of
+ * it by 95: Montana and Marino drop it in the bucket, a scattershot arm
+ * throws it at the man); it comes in with the depth (BUCKET_FROM to
+ * BUCKET_FULL air yards). A placement the player asked for (the mouse) is
+ * his own. Read-only.
+ */
+export function bucket(s: PlayState, qb: Agent, rec: Agent, spot: V2, rv: V2, aim: V2): V2 {
+  if (Math.abs(aim.x) > 0.2 || Math.abs(aim.y) > 0.2 || rv.x < BUCKET_VERT) return { x: 0, y: 0 };
+  const air = spot.x - s.setup.los;
+  const kd = Math.max(0, Math.min(1, (air - BUCKET_FROM) / (BUCKET_FULL - BUCKET_FROM)));
+  const ka = Math.max(0, Math.min(1, (qb.fx.r('deepAcc') - BUCKET_ACC0) / (BUCKET_ACC1 - BUCKET_ACC0)));
+  if (kd * ka <= 0) return { x: 0, y: 0 };
+  let near: Agent | null = null;
+  let nd = BUCKET_NEAR;
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (d.down) continue;
+    const k = dist(d.pos, rec.pos);
+    if (k < nd) {
+      nd = k;
+      near = d;
+    }
+  }
+  if (!near) return { x: 0, y: 0 };
+  // The defender in his run's frame: along it (+ ahead of him) and across it (+ toward his sideline).
+  const side = Math.sign(rec.pos.y) || 1;
+  let px = -rv.y;
+  let py = rv.x;
+  if (py * side < 0) {
+    px = -px;
+    py = -py;
+  }
+  const dA = (near.pos.x - rec.pos.x) * rv.x + (near.pos.y - rec.pos.y) * rv.y;
+  const dC = (near.pos.x - rec.pos.x) * px + (near.pos.y - rec.pos.y) * py;
+  // Away from him across the run (to the sideline side when he's straight behind or over the top).
+  const ac = (Math.abs(dC) < BUCKET_SQUARE ? 1 : -Math.sign(dC)) * BUCKET_SIDE;
+  // Ahead of a man trailing or level; over the top of him, no further (the back shoulder is the AI's answer there).
+  const al = dA < BUCKET_LEVEL ? BUCKET_LEAD : 0;
+  const k = kd * ka;
+  return { x: (rv.x * al + px * ac) * k, y: (rv.y * al + py * ac) * k };
+}
+/** A route leg this much downfield (the run's x share) is a vertical for the bucket. */
+const BUCKET_VERT = 0.6;
+/** The bucket comes in from this many air yards to all of it by BUCKET_FULL (a go thrown off the hitch is caught ~20 yd down the field). Ours. */
+const BUCKET_FROM = 12;
+const BUCKET_FULL = 20;
+/** Deep accuracy from none of it to all of it. Ours: the gap a fan sees between a 95 and a 75. */
+const BUCKET_ACC0 = 70;
+const BUCKET_ACC1 = 95;
+/** A defender within this of him (yd) is the man he throws away from; nobody that close, the ball's thrown at him. */
+const BUCKET_NEAR = 4;
+/** A defender within this across his run (yd) is straight behind or over him. */
+const BUCKET_SQUARE = 0.3;
+/** The placement (yd): ~0.7 across, to the far shoulder, and 0.6 ahead of a trailer, inside a receiver's reach of where he'll be (passing.ts reach: ~0.85 yd). Ours, from the broadcast's deep completions. */
+const BUCKET_SIDE = 0.7;
+const BUCKET_LEAD = 0.6;
+/** A defender less than this far ahead of him (yd) is trailing or level. */
+const BUCKET_LEVEL = 0.8;
+
+/** A throw past this share of his range starts to come up short, by up to UNDER_MAX yd at the limit. Ours: a 75 arm's 45-yd post lands ~0.8 yd short, a 96 arm's not at all. */
+const UNDER_FROM = 0.6;
+const UNDER_MAX = 2;
+
+/** The meant catch point is kept this far (yd) inside the sideline: a ball he can catch with both feet in (a toe tap when it drifts toward the line). Ours. */
+const IN_BOUNDS = 0.8;
+/** The out's landmark is within this of the sideline (yd): the routes routePoints runs to the boundary. */
+const OUT_EDGE = 2;
+/** The time (s) a late out's receiver plants before the ball gets there, to come back to it: the plant (~0.2 s at a hard break) and two steps back. Ours. */
+const OUT_COME_T = 0.5;
+/** He works back only for a ball that would otherwise meet him within this of the landmark (yd; it's OUT_EDGE inside the sideline): with more room than that, it meets him running his out. Ours. */
+const OUT_NEAR = 2.5;
+/** He runs on at least this far (yd) before he plants: he's at speed, a step and the plant. Ours. */
+const OUT_PLANT_MIN = 1;
+
 export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2, pressure: number, offPlatform: boolean, hit = false): ThrowPlan {
   const power = qb.fx.r('throwPower');
   const { vmax, range } = arm(qb);
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
   const hang0 = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
+  // A late out: he'll plant short of the sideline and come back to it (workBack); the QB throws to that.
+  const wb = workBack(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }));
+  if (wb) rec.route = wb;
   // Hit as he throws: he led him for the ball he meant, but the arm never
   // finishes, so it comes out slow and fluttering (HIT_HANG) and arrives late, behind him.
   const hang = (to: V3) => hang0(to) * (hit ? HIT_HANG : 1);
@@ -499,8 +620,11 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const { spot, rv, speed: recSpeed, T: leadT, offScript } = leadFor(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }), from);
   // Placement input: lead / back shoulder along his path (the way he'll be running at the catch), high / low.
   const place = 1.6 * aim.x + HOLD_LEAD * Math.max(0, Math.min(1, loft));
-  let tx = spot.x + rv.x * place;
-  let ty = spot.y + rv.y * place;
+  // The deep ball in the bucket (passing round 4): ahead of him and away from the man on him.
+  const bk = bucket(s, qb, rec, spot, rv, aim);
+  let tx = spot.x + rv.x * place + bk.x;
+  // The QB leads him in bounds (passing round 4): a lead along a man running at the sideline is kept IN_BOUNDS inside it, where he can catch it with his feet down.
+  let ty = Math.max(-(FIELD_HALF_W - IN_BOUNDS), Math.min(FIELD_HALF_W - IN_BOUNDS, spot.y + rv.y * place + bk.y));
   let tz = CATCH_Z + 0.55 * aim.y;
   const meant = { x: tx, y: ty };
   const d = dist(from, { x: tx, y: ty });
@@ -563,7 +687,13 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const sail = s.rng.throw() < 0.55;
   const ux = (tx - from.x) / Math.max(1e-6, d);
   const uy = (ty - from.y) / Math.max(1e-6, d);
-  const along = missed ? (sail ? 3 + 1.5 * s.rng.throw() : -(2.5 + s.rng.throw())) : 0;
+  // Near the end of his arm a ball comes up short (passing round 4): a weak
+  // arm's deep ball dies on the man and he has to wait for it, a cannon's
+  // gets there. From UNDER_FROM of his range, up to UNDER_MAX yd short at
+  // the limit, along the throw. Before, his misses either side of the man
+  // were the same from any arm until the range ran out.
+  const short = UNDER_MAX * Math.max(0, Math.min(1, (d / range - UNDER_FROM) / (1 - UNDER_FROM)));
+  const along = (missed ? (sail ? 3 + 1.5 * s.rng.throw() : -(2.5 + s.rng.throw())) : 0) - short;
   // Timing: the QB throws to where this man should be when it gets there;
   // how close he is to it is how long he's been led for (the flight, and any
   // time he's been running on past his route), his speed, his route running
@@ -640,8 +770,14 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   const { vmax, range } = arm(qb);
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
+  const hangP = (at: V2) => {
+    const to = { x: at.x, y: at.y, z: CATCH_Z };
+    return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
+  };
+  // (A late out comes back to it: the reticle shows where, on a copy of him.)
+  const wb = workBack(rec, hangP);
   const run = leadFor(
-    rec,
+    wb ? { ...rec, route: wb } : rec,
     (at) => {
       const to = { x: at.x, y: at.y, z: CATCH_Z };
       return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
@@ -649,8 +785,9 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
     from,
   );
   const { spot, rv } = run;
-  let x = spot.x + rv.x * 1.6 * aim.x;
-  let y = spot.y + rv.y * 1.6 * aim.x;
+  const bk = bucket(s, qb, rec, spot, rv, aim);
+  let x = spot.x + rv.x * 1.6 * aim.x + bk.x;
+  let y = Math.max(-(FIELD_HALF_W - IN_BOUNDS), Math.min(FIELD_HALF_W - IN_BOUNDS, spot.y + rv.y * 1.6 * aim.x + bk.y));
   const d = dist(from, { x, y });
   if (d > range) {
     x = from.x + (x - from.x) * (range / d);

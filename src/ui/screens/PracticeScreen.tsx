@@ -42,7 +42,7 @@ import {
 } from "../components/controls";
 import { InputGlyph, TabKey, useBindings } from "../components/Glyph";
 import { PlayArt, RouteGlyph } from "../game/PlayArt";
-import { BLITZ_TAGS, hudDom, RING_LEN } from "../game/hudDom";
+import { BLITZ_TAGS, CUE_LEN, hudDom, RING_LEN } from "../game/hudDom";
 import { ReplayCue, ReplayHud, useReplayKey } from "../game/ReplayHud";
 import { CelebrationPrompt, useCelebrating } from "../game/CelebrationPrompt";
 import "../styles/game.css";
@@ -427,6 +427,7 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
           >
             <svg className="rec-ring" viewBox="0 0 40 40">
               <circle cx="20" cy="20" r="17" className="ring-base" />
+
               <circle
                 cx="20"
                 cy="20"
@@ -436,6 +437,12 @@ export function PlayHud({ bug = true }: { bug?: boolean } = {}) {
                 strokeDasharray={RING_LEN}
                 strokeDashoffset={RING_LEN}
               />
+            </svg>
+            {/* The throw-timing cue (passing round 4, GameScene placeHud): its own ring outside the icon's (the open glow doesn't pulse it), his QB's release at its end, and the fill that reaches it when it's time to press. */}
+            <svg className="cue-ring" viewBox="0 0 48 48">
+              <circle cx="24" cy="24" r="21.5" className="cue-track" />
+              <circle cx="24" cy="24" r="21.5" className="cue-rel" ref={(el) => void (hudDom.cueRel[k] = el)} strokeDasharray={`0 ${CUE_LEN}`} />
+              <circle cx="24" cy="24" r="21.5" className="cue-fill" ref={(el) => void (hudDom.cueFill[k] = el)} strokeDasharray={CUE_LEN} strokeDashoffset={CUE_LEN} />
             </svg>
             <span className={`rec-glyph${pad ? " is-pad" : ""}`}>
               {pad ? key(`pocket.throw${k + 1}`) : key.text(`pocket.throw${k + 1}`)}

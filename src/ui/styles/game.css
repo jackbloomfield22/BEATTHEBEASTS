@@ -39,6 +39,20 @@
 .rec-icon > * { position: absolute; }
 .rec-ring { left: -1.3rem; top: -1.3rem; width: 2.6rem; height: 2.6rem; transform: rotate(-90deg); }
 .ring-base { fill: rgba(8,7,15,.72); stroke: var(--c); stroke-width: 2.2; }
+/* The throw-timing cue (passing round 4): its own ring just outside the icon's (3.4rem across, so the open glow's pulse doesn't swallow it). The gold segment at its end is this QB's release; the white fill reaches it when the key should go down, and the whole ring lights gold until the ball should be out (his break). Late, it drains away. A dark track under it keeps it readable on grass and on white jerseys. */
+.cue-ring { left: -1.7rem; top: -1.7rem; width: 3.4rem; height: 3.4rem; transform: rotate(-90deg); overflow: visible; pointer-events: none; }
+.cue-track, .cue-rel, .cue-fill { fill: none; opacity: 0; }
+.cue-track { stroke: rgba(8,7,15,.55); stroke-width: 4.4; }
+.cue-rel { stroke: #ffd24a; stroke-width: 2.8; }
+.cue-fill { stroke: #fff; stroke-width: 2.8; }
+.rec-icon[data-cue='fill'] .cue-track { opacity: 1; }
+.rec-icon[data-cue='fill'] .cue-rel { opacity: .75; }
+.rec-icon[data-cue='fill'] .cue-fill { opacity: .95; }
+.rec-icon[data-cue='now'] .cue-track { opacity: 1; }
+.rec-icon[data-cue='now'] .cue-fill { opacity: 1; stroke: #ffd24a; stroke-width: 3.4; filter: drop-shadow(0 0 4px #ffd24a); }
+.rec-icon[data-cue='now'] .rec-glyph { color: #ffd24a; }
+.rec-icon[data-cue='late'] .cue-track { opacity: .6; }
+.rec-icon[data-cue='late'] .cue-fill { opacity: .5; }
 .ring-charge { fill: none; stroke: #fff; stroke-width: 3.4; opacity: 0; transition: opacity 80ms; filter: drop-shadow(0 0 3px var(--c)); }
 .rec-glyph { left: -1.3rem; top: -1.3rem; width: 2.6rem; height: 2.6rem; display: grid; place-items: center; font-weight: 800; font-size: 1.05rem; color: var(--c); text-shadow: 0 0 .6rem rgba(0,0,0,.8); }
 .rec-screen { left: 50%; top: -1.45rem; transform: translateX(-50%); padding: .08rem .45rem; border-radius: .3rem; background: var(--lime); color: #0b0a12; font-size: .66rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; animation: open-pulse 1.2s ease-in-out infinite; }
