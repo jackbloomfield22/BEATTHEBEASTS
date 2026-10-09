@@ -104,6 +104,7 @@ function buildTabs(nav: { openEditor: () => void; applyPreset: (p: QualityPreset
         { kind: 'toggle', label: 'Big-hit slow motion', desc: 'The very biggest hits play in slow motion for a moment.', get: (s) => s.gameplay.bigHitSlowmo, set: (d, v) => { d.gameplay.bigHitSlowmo = v; } },
         { kind: 'action', label: 'Skin-tone editor', desc: 'Assign skin tones to every player and defender. Saved to the game data so they carry across sessions and devices.', run: nav.openEditor, value: 'Open ▸' },
         { kind: 'toggle', label: 'Slow first catch', desc: 'Your first catch of a session plays in slow motion while the ball is in the air, to learn the catch call.', get: (s) => s.gameplay.firstCatchSlowmo, set: (d, v) => { d.gameplay.firstCatchSlowmo = v; } },
+        { kind: 'toggle', label: 'Throw-timing cue', desc: 'A ring around each receiver icon fills toward your QB\'s release and lights gold when it\'s time to throw for the ball to be out as he breaks.', get: (s) => s.gameplay.throwCue, set: (d, v) => { d.gameplay.throwCue = v; } },
         { kind: 'action', label: 'Reset gameplay settings', desc: 'Restore the defaults on this tab.', run: () => nav.reset('gameplay') },
       ],
     },
