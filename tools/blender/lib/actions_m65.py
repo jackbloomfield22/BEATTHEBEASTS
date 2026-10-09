@@ -140,46 +140,7 @@ def events(secure: float, tuck: float) -> dict:
 
 
 # --- RUN: the hands catch in stride ------------------------------------------------
-
-
-def hands_run() -> Clip:
-    """Diamond at the chest, the hands to it, the give, into the chest, high and tight (overlay: the legs keep running).
-
-    Passing round 4 (docs/passing/PASSING4.md): the round-three clip held
-    the ball out in the hands for 0.17 s (secure on frame 8, tucked on 13)
-    and its hands came up 0.09 s before the ball, so a catch in stride read
-    as a snatch. Now, from receiver coaching ("eyes, hands, tuck": look it
-    into the hands, let the hands give, bring it in, then put it away): the
-    hands come up from the run to the chest as the ball comes (~0.2 s out),
-    out to it in the diamond at the last moment (late hands), give back
-    toward the chest as it lands (~0.06 s, the absorb), bring it in to the
-    sternum with both hands on it (the eyes still on it), and only then put
-    it away high and tight in the outside arm: ~0.33 s from the hands to the
-    tuck, two strides, with the legs never breaking stride.
-    """
-    T = 0.9
-    ts, tt = 9 / FPS, 19 / FPS
-    z = 1.30
-    up = upper({"l": (0.10, -0.33, z - 0.10), "r": (-0.10, -0.33, z - 0.10)}, {**RELAXED, **DIAMOND_WRIST}, {"l": (0.6, 0.15, z - 0.5), "r": (-0.6, 0.15, z - 0.5)})
-    reach = upper({"l": (0.065, -0.50, z), "r": (-0.065, -0.50, z)}, {**SPREAD, **DIAMOND_WRIST}, {"l": (0.7, 0.0, z - 0.4), "r": (-0.7, 0.0, z - 0.4)})
-    give = upper({"l": (0.055, -0.41, z - 0.03), "r": (-0.055, -0.41, z - 0.03)}, {**GRIP, **DIAMOND_WRIST}, {"l": (0.7, 0.1, z - 0.45), "r": (-0.7, 0.1, z - 0.45)})
-    chest = upper({"l": (0.06, -0.30, z - 0.08), "r": (-0.05, -0.28, z - 0.05)}, {**GRIP, "hand_l": (10, 0, -20), "hand_r": (-10, 0, 15)}, {"l": (0.55, 0.3, z - 0.4), "r": (-0.55, 0.3, z - 0.4)})
-    keys = [(0.0, ready_pose()), (ts - 0.20, up), (ts - 0.07, reach), (ts, reach), (ts + 0.06, give), (ts + 0.16, chest), (tt, tuck_pose()), (T, tuck_pose())]
-    return Clip("catch_hands_run", "overlay", T, lambda t: keyed(keys, t), mask=ARMS, events=events(ts, tt))
-
-
-def hands_run_low() -> Clip:
-    """Below the waist: pinkies together, palms up, scooped up into the chest, then the tuck (round four's give and tuck, as hands_run)."""
-    T = 0.9
-    ts, tt = 9 / FPS, 19 / FPS
-    z = 0.86
-    up = upper({"l": (0.10, -0.32, z + 0.12), "r": (-0.10, -0.32, z + 0.12)}, {**RELAXED, **PINKIES_WRIST}, {"l": (0.55, 0.15, z + 0.15), "r": (-0.55, 0.15, z + 0.15)})
-    reach = upper({"l": (0.07, -0.44, z), "r": (-0.07, -0.44, z)}, {**SPREAD, **PINKIES_WRIST}, {"l": (0.55, 0.1, z + 0.1), "r": (-0.55, 0.1, z + 0.1)})
-    reach.joints.update({"spine_03": (8, 0, 0), "spine_04": (6, 0, 0)})
-    give = upper({"l": (0.06, -0.40, z + 0.06), "r": (-0.06, -0.40, z + 0.06)}, {**GRIP, **PINKIES_WRIST}, {"l": (0.55, 0.1, z + 0.15), "r": (-0.55, 0.1, z + 0.15)})
-    chest = upper({"l": (0.06, -0.30, 1.20), "r": (-0.05, -0.28, 1.23)}, {**GRIP, "hand_l": (10, 0, -20), "hand_r": (-10, 0, 15)}, {"l": (0.55, 0.3, 0.85), "r": (-0.55, 0.3, 0.85)})
-    keys = [(0.0, ready_pose()), (ts - 0.20, up), (ts - 0.07, reach), (ts, reach), (ts + 0.06, give), (ts + 0.17, chest), (tt, tuck_pose()), (T, tuck_pose())]
-    return Clip("catch_hands_run_low", "overlay", T, lambda t: keyed(keys, t), mask=ARMS, events=events(ts, tt))
+# (Re-keyed on the run's trunk for passing round 5: actions_p5.py hands_run and hands_run_low.)
 
 
 # --- SECURE: the body catch -------------------------------------------------------------
@@ -194,13 +155,7 @@ def cradle_poses() -> tuple[Pose, Pose]:
     return basket, wrap
 
 
-def body() -> Clip:
-    """Cradle, wrap, cover (overlay: the arms and the upper spine fold over it)."""
-    T = 0.75
-    ts, tt = 8 / FPS, 16 / FPS
-    basket, wrap = cradle_poses()
-    keys = [(0.0, ready_pose()), (ts - 0.1, basket), (ts, basket), (ts + 0.08, wrap), (tt, protect_pose()), (T, protect_pose())]
-    return Clip("catch_body", "overlay", T, lambda t: keyed(keys, t), mask=ARMS + SPINE_UP, events=events(ts, tt))
+# (The overlay body catch is actions_p5.py's since passing round 5; body_down keys its own cradle from cradle_poses.)
 
 
 # Lying face down over the ball: the forearms under the chest wrapped round
@@ -753,7 +708,7 @@ def mirrored_right_tuck(c: Clip, name: str, t0: float, t1: float, to_phase: floa
 def m65_clips() -> list[Clip]:
     dv, tp = dive_left(), toe_tap_left()
     return [
-        hands_run(), hands_run_low(), high_point(), body(), body_down(),
+        high_point(), body_down(),
         over_shoulder("l"), over_shoulder("r"),
         dv, mirrored(dv, "catch_dive_r"),
         tp, mirrored_right_tuck(tp, "catch_toe_tap_r", 12 / FPS, 20 / FPS, to_phase=0.0),

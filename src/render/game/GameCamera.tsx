@@ -162,6 +162,12 @@ function targetPose(mode: Mode): Pose | null {
     // Normal plays: behind him, 11 yd back and 6 up (M6.6: pushed in from
     // 13 and 6.8, Playtest 2 "it can push in a little closer on normal plays").
     const near: Pose = { ex: c.x - dir * 11, ey: c.y * 0.75, eh: 6, lx, ly, lh: 0.6, fov: 50 };
+    // The catch beat (passing round 5): for a moment after the ball is
+    // caught the air camera's framing holds on him (carried along with him),
+    // tight on the hands and the tuck, then eases out to the run. Before,
+    // the carrier pose took over the frame the sim called the catch.
+    const beat = catchBeat(s, cur.carrier, c, near);
+    if (beat) return beat;
     const k = dir > 0 ? smooth(breakaway.k) : 0;
     if (k <= 0) return near;
     // The breakaway: high and wide at three-quarters, 40° off his run from
@@ -181,6 +187,35 @@ function targetPose(mode: Mode): Pose | null {
     };
   }
   return base;
+}
+
+/** The air camera's last framing (the catch beat holds it for a moment after the catch) and the catch it's holding on. */
+const lastAir: { pose: Pose | null; arrive: number; at: { x: number; y: number } } = { pose: null, arrive: -1, at: { x: 0, y: 0 } };
+/**
+ * The catch beat: how long (s) the air camera's framing holds on the catcher
+ * after the catch before it has eased out to the carrier follow, and when
+ * the ease starts. Ours, sized so the hands, the give and the tuck (~0.33 s
+ * in the clips) are framed tight at broadcast distance without the run
+ * after the catch leaving the frame; the game clock never slows.
+ */
+const BEAT_T = 0.45;
+const BEAT_HOLD = 0.12;
+
+/** The framing on a just-caught ball: the air camera's last pose, carried with the catcher, blending out to `near`; null when there's no beat. */
+function catchBeat(s: NonNullable<typeof practice.runner>['state'], who: number, c: { x: number; y: number }, near: Pose): Pose | null {
+  const air = lastAir.pose;
+  if (!air || lastAir.arrive !== s.ball.arrive || s.ball.target !== who) return null;
+  const caught = s.agents[who]!.mem.caughtAt;
+  if (typeof caught !== 'number' || s.agents[who]!.side !== 'off') return null;
+  const since = s.t - caught;
+  if (since < 0 || since >= BEAT_T) return null;
+  const k = smooth(Math.min(1, Math.max(0, (since - BEAT_HOLD) / (BEAT_T - BEAT_HOLD))));
+  // The held framing rides with him: translated by how far he's run since the ball got to him.
+  const dx = c.x - lastAir.at.x;
+  const dy = c.y - lastAir.at.y;
+  const hold: Pose = { ex: air.ex + dx, ey: air.ey + dy, eh: air.eh, lx: air.lx + dx, ly: air.ly + dy, lh: air.lh, fov: air.fov };
+  const mix = (a: number, b: number) => a + (b - a) * k;
+  return { ex: mix(hold.ex, near.ex), ey: mix(hold.ey, near.ey), eh: mix(hold.eh, near.eh), lx: mix(hold.lx, near.lx), ly: mix(hold.ly, near.ly), lh: mix(hold.lh, near.lh), fov: mix(hold.fov, near.fov) };
 }
 
 /** The most the air camera's line turns off straight downfield (rad: 15°). Ours. */
@@ -233,7 +268,7 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   // arrival (round two: the push-in ends ~17% wider than M5.5's 9 yd, 3.4 up,
   // so the receiver and the nearest defenders are all in frame).
   const back = 20 - 9.5 * e;
-  return {
+  const pose: Pose = {
     ex: lx - ux * back,
     ey: ly - uy * back,
     eh: 8 - 4.1 * e,
@@ -243,6 +278,13 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
     lh: 0.4 + 0.2 * e,
     fov: 50 - 12 * e,
   };
+  // Kept for the catch beat (with where the receiver is), while the ball is in the air.
+  if (cur.phase === 'air') {
+    lastAir.pose = pose;
+    lastAir.arrive = b.arrive;
+    if (r) lastAir.at = { x: r.x, y: r.y };
+  }
+  return pose;
 }
 
 /** Game time the video camera last stepped to. */
@@ -296,7 +338,10 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     const sp = springs.current;
     // Eye slower than the look: the lens leads, the dolly follows.
     // In the air the whole rig tightens up so it keeps pace with the ball.
-    const air = practice.runner?.cur.phase === 'air' && modeSetting === 'broadcast';
+    const rr = practice.runner;
+    const caughtAt = rr && rr.cur.phase === 'carrier' && rr.cur.carrier >= 0 ? rr.state.agents[rr.cur.carrier]!.mem.caughtAt : undefined;
+    const beating = !!rr && typeof caughtAt === 'number' && rr.state.t - caughtAt < BEAT_T;
+    const air = (rr?.cur.phase === 'air' || beating) && modeSetting === 'broadcast';
     // (?follow rides its man close: a stiff rig, or a man on the move leaves the frame.)
     const w = urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));

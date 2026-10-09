@@ -164,6 +164,24 @@ class AudioEngine {
     }
   }
 
+  /**
+   * The ball into a receiver's hands (passing round 5, synthesized): the
+   * leather's slap on the gloves, a short bright band of noise over a soft
+   * low thump; a body catch is duller and lower (the ball into the pads),
+   * a ball caught through contact has more thump. `delay` s from now (the
+   * drawn hands meet it a frame or two after the sim's catch).
+   */
+  catchPop(kind: 'hands' | 'body' | 'contact', delay = 0): void {
+    if (!this.ctx) return;
+    if (kind === 'body') {
+      this.noiseHit(0.07, 700, 1.1, 0.16, 'sfx', delay);
+      this.tone(82, 0.12, 'sine', 0.14, 'sfx', 55, delay);
+      return;
+    }
+    this.noiseHit(0.04, 2300, 1.6, kind === 'contact' ? 0.2 : 0.17, 'sfx', delay);
+    this.tone(118, 0.08, 'sine', kind === 'contact' ? 0.16 : 0.08, 'sfx', 74, delay);
+  }
+
   /** Foot on the ball (M6.6): a leather thock, `delay` s from now (the kick's contact after the snap). A mis-hit sounds thinner. */
   kickThump(delay: number, clean: boolean): void {
     if (!this.ctx) return;

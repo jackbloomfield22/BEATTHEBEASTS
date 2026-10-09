@@ -518,6 +518,32 @@ export function workBack(rec: Agent, hang: (at: V2) => number): { pts: V2[]; sit
   return { pts: [...rt.pts.slice(0, n - 2), P, { x: P.x + S.x - E.x, y: P.y + S.y - E.y }], sit: [...rt.sit], idx: n - 2 };
 }
 /**
+ * The late out's plant on the ball's real hang (passing round 5). workBack
+ * times his plant on the driven ball (`hang0`); when the QB has to put air
+ * on it over a man underneath (clearLoft) or his arm can't drive it there
+ * (fitArm), it hangs longer, and round four's recordings had him plant,
+ * square up and wait half a second, coming back at a walk. Here the plant is
+ * timed again on the hang the ball will really have to the spot he'd be led
+ * to, so he runs on to the later plant and drives back to it as it comes
+ * down. Returns the route to run and the hang to lead him with, or null when
+ * it isn't a late out (workBack's null). Read-only.
+ */
+function outPlan(s: PlayState, rec: Agent, from: V3, hang0: (to: V3) => number, vmax: number): { route: { pts: V2[]; sit: boolean[]; idx: number }; hang: (at: V2) => number } | null {
+  const h0 = (at: V2) => hang0({ x: at.x, y: at.y, z: CATCH_Z });
+  const wb = workBack(rec, h0);
+  if (!wb) return null;
+  const lead = leadFor({ ...rec, route: wb }, h0, from);
+  const at3: V3 = { x: lead.spot.x, y: Math.max(-(FIELD_HALF_W - IN_BOUNDS), Math.min(FIELD_HALF_W - IN_BOUNDS, lead.spot.y)), z: CATCH_Z };
+  const extra = fitArm(from, at3, clearLoft(s, from, at3, hang0(at3)), vmax).T - hang0(at3);
+  if (extra <= OUT_RETIME) return { route: wb, hang: h0 };
+  const hl = (at: V2) => h0(at) + extra;
+  const wb2 = workBack(rec, hl);
+  return wb2 ? { route: wb2, hang: hl } : { route: wb, hang: h0 };
+}
+/** A late out's plant is timed again when the ball will hang this much (s) longer than the driven ball: a few ticks. Ours. */
+const OUT_RETIME = 0.08;
+
+/**
  * The deep ball in the bucket (passing round 4): a vertical (a go, a post,
  * a seam, a fade) with a man on him isn't thrown at him. The QB puts it
  * ahead of him and over the shoulder away from the defender ("throw him
@@ -607,9 +633,10 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
   const hang0 = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
-  // A late out: he'll plant short of the sideline and come back to it (workBack); the QB throws to that.
-  const wb = workBack(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }));
-  if (wb) rec.route = wb;
+  // A late out: he'll plant short of the sideline and come back to it (workBack); the QB throws to that,
+  // the plant timed on the hang the ball will really have (outPlan).
+  const op = outPlan(s, rec, from, hang0, vmax);
+  if (op) rec.route = op.route;
   // Hit as he throws: he led him for the ball he meant, but the arm never
   // finishes, so it comes out slow and fluttering (HIT_HANG) and arrives late, behind him.
   const hang = (to: V3) => hang0(to) * (hit ? HIT_HANG : 1);
@@ -617,7 +644,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   // (M5 to M6.6 led him for 0.05 s more than the ball flies, with no reason
   // given: the driven slant landed ~0.5 yd in front of him, and with the
   // cone on top a fifth of them out of his reach. On time is on him.)
-  const { spot, rv, speed: recSpeed, T: leadT, offScript } = leadFor(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }), from);
+  const { spot, rv, speed: recSpeed, T: leadT, offScript } = leadFor(rec, op ? op.hang : (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }), from);
   // Placement input: lead / back shoulder along his path (the way he'll be running at the catch), high / low.
   const place = 1.6 * aim.x + HOLD_LEAD * Math.max(0, Math.min(1, loft));
   // The deep ball in the bucket (passing round 4): ahead of him and away from the man on him.
@@ -775,15 +802,8 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
     return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
   };
   // (A late out comes back to it: the reticle shows where, on a copy of him.)
-  const wb = workBack(rec, hangP);
-  const run = leadFor(
-    wb ? { ...rec, route: wb } : rec,
-    (at) => {
-      const to = { x: at.x, y: at.y, z: CATCH_Z };
-      return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
-    },
-    from,
-  );
+  const op = outPlan(s, rec, from, (to) => hangP(to), vmax);
+  const run = leadFor(op ? { ...rec, route: op.route } : rec, op ? op.hang : hangP, from);
   const { spot, rv } = run;
   const bk = bucket(s, qb, rec, spot, rv, aim);
   let x = spot.x + rv.x * 1.6 * aim.x + bk.x;

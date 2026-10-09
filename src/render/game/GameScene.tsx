@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { getSettings } from '@/app/settings';
 import { loadAnimLibrary, type AnimLibrary } from '@/anim/library';
 import { PlayerAnimator } from '@/anim/animator';
 import { Ragdoll } from '@/anim/ragdoll';
@@ -162,7 +163,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: Pl
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, throwClip: null, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null };
+    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, throwClip: null, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null, grip: null, box: 0.5 };
   });
 }
 
@@ -223,7 +224,14 @@ const _flightOn = new THREE.Vector3();
  * frame in the air, and how long since the sim called it caught. It
  * carries on from there into the hands at about its own pace (`dur`).
  */
-const catchIn = { air: false, age: -1, dur: 0, pos: new THREE.Vector3(), vel: new THREE.Vector3(), quat: new THREE.Quaternion() };
+const catchIn = { air: false, age: -1, dur: 0, pos: new THREE.Vector3(), vel: new THREE.Vector3(), quat: new THREE.Quaternion(), scale: 1 };
+/**
+ * The drawn ball's broadcast size (BALL_GROW) eases back to true size in the
+ * hands over this long after the catch (s). Passing round 5: it was set to
+ * true size the frame the sim called the catch, so a ball caught 30 m from
+ * the camera shrank by a third in one frame: a pop at the catch.
+ */
+const SCALE_IN = 0.2;
 /** The ball's last stretch into the hands (s): the sim calls the catch as it comes within his reach, 0.03–0.08 s before it gets to him; at least a frame, at most this. Ours. */
 const CATCH_IN = 0.1;
 const CATCH_IN_MIN = 1 / 30;
@@ -237,6 +245,8 @@ const CATCH_IN_MIN = 1 / 30;
 const BALL_NEAR = 12;
 const BALL_FAR = 45;
 const BALL_GROW = 1.6;
+/** A catch this far past the line (yd) lifts the crowd (passing round 5: the deep completions a stadium rises for; ours, the broadcast's "explosive play" of 20+ yards). */
+const DEEP_CATCH = 20;
 /** Fastest the drawn facing turns (rad/s): a sharp pivot, ~180° in a quarter second. */
 const YAW_MAX = 12;
 const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move: null, down: false, stamina: 1 };
@@ -482,6 +492,7 @@ export function GameScene() {
       cb.ext = b.ext;
       cb.scale = b.player.shape.scale;
       cb.free = !b.fallen && !b.lie && !b.ragdoll.active && !s.agents[i]!.down;
+      cb.box = b.box;
     });
     contactBodies.length = bodies.length;
     contact.update(contactBodies, contactPairs, animDt);
@@ -524,12 +535,15 @@ export function GameScene() {
         // At the ball's own pace (the rest of its way to the hands), a frame or three.
         catchIn.dur = THREE.MathUtils.clamp(catchIn.pos.distanceTo(ball.position) / Math.max(1, catchIn.vel.length()), CATCH_IN_MIN, CATCH_IN);
       }
-      if (catchIn.age >= 0 && catchIn.age < catchIn.dur) {
+      if (catchIn.age >= 0 && catchIn.age < catchIn.dur + SCALE_IN) {
         catchIn.age += dt;
         const k = Math.min(1, catchIn.age / catchIn.dur);
-        _flightOn.copy(catchIn.pos);
-        ball.position.lerpVectors(_flightOn, ball.position, k);
-        ball.quaternion.slerpQuaternions(catchIn.quat, ball.quaternion, k);
+        if (k < 1) {
+          _flightOn.copy(catchIn.pos);
+          ball.position.lerpVectors(_flightOn, ball.position, k);
+          ball.quaternion.slerpQuaternions(catchIn.quat, ball.quaternion, k);
+        }
+        ball.scale.setScalar(catchIn.scale + (1 - catchIn.scale) * THREE.MathUtils.smootherstep(catchIn.age, 0, catchIn.dur + SCALE_IN));
       }
       heldAt(flight, ball);
       return;
@@ -560,6 +574,7 @@ export function GameScene() {
     }
     const far = THREE.MathUtils.clamp((ball.position.distanceTo(camera.position) - BALL_NEAR) / (BALL_FAR - BALL_NEAR), 0, 1);
     ball.scale.setScalar(1 + (BALL_GROW - 1) * far);
+    catchIn.scale = ball.scale.x;
   }
 
   function placeMarks(los: number, toGo: number) {
@@ -617,8 +632,8 @@ export function GameScene() {
         el.style.transform = `translate(${v.x.toFixed(1)}px, ${v.y.toFixed(1)}px)`;
         const o = reading ? v.open : 'none';
         if (el.dataset.open !== o) el.dataset.open = o;
-        // The throw-timing cue (passing round 4): when to press for the ball to be out on his break.
-        placeCue(k, el, s, idx, hudTime(cur.t, r.alpha), practice.playId, latency.frame, v.visible && cur.phase !== 'presnap' && !!s.setup.user);
+        // The throw-timing cue (passing round 4): when to press for the ball to be out on his break (a setting turns it off: passing round 5).
+        placeCue(k, el, s, idx, hudTime(cur.t, r.alpha), practice.playId, latency.frame, v.visible && cur.phase !== 'presnap' && !!s.setup.user && getSettings()?.gameplay.throwCue !== false);
       }
       // The power ring: fills while the icon is held (a tap stays empty: touch).
       const ring = hudDom.rings[k];
@@ -720,6 +735,17 @@ export function GameScene() {
       else if (e.type === 'hit' && e.data?.big) crowdEnergy.trigger('bigPlay', now);
       if (e.type === 'hit') Audio.hit(Number(e.data?.force ?? 4), !!e.data?.big);
       else if (e.type === 'drop') crowdEnergy.trigger('groan', now);
+      else if (e.type === 'catch') {
+        // The ball into his hands (passing round 5): the slap of it, the
+        // body catch duller, through contact harder; a ball caught 20 yards
+        // down the field lifts the crowd.
+        const i = e.who?.[0] ?? -1;
+        const b = i >= 0 ? bodies?.[i] : undefined;
+        const style = b?.grip?.style;
+        Audio.catchPop(style === 'body' || e.data?.look === 'body' ? 'body' : style === 'contested' ? 'contact' : 'hands');
+        const st = practice.runner?.state;
+        if (st && e.at && e.at.x - st.setup.los >= DEEP_CATCH && st.agents[i]?.side === 'off') crowdEnergy.trigger('bigPlay', now);
+      }
     }
   }
 

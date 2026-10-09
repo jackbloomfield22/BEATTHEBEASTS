@@ -143,7 +143,8 @@ function diagFrame(n: number) {
 const frame = (page: Page) => page.evaluate(() => (window as unknown as { __btbRenderFrame(): void }).__btbRenderFrame());
 
 async function record(page: Page, clip: Clip) {
-  const dir = `tools/shots/out/video/${clip.id}`;
+  // (Round five records a clip from two cameras at once: each its own frames.)
+  const dir = `tools/shots/out/video/${clip.id}${PASSING5 ? `-${process.env.BTB_PASSING_TAG ?? 'after'}` : ''}`;
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   // No tutorial card in the videos.
