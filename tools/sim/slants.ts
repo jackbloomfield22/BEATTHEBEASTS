@@ -29,8 +29,14 @@ export interface SlantScript {
   backFrom?: number;
 }
 
-/** On time: the three-step drop, the key down as he sets (0.8 s) and the ball out on the break (~1.2 s after the snap, with the windup). */
-export const ON_TIME: SlantScript = { id: 'on-time', at: 48 };
+/**
+ * On time: the three-step drop, the key down as he sets and the ball out on
+ * the break (~1.2 s after the snap, with the windup). The key at 0.87 s:
+ * since passing round 3 the arm starts on the press, not the tap's release
+ * (it was 48, a 4-tick tap, before), so this is the same ball out on the
+ * same tick (docs/passing/PASSING3.md).
+ */
+export const ON_TIME: SlantScript = { id: 'on-time', at: 52 };
 /** The exploit: back away from the rush for 1.5–2.5 s, then throw it. */
 export const LATE: SlantScript[] = [
   { id: 'late-1.5', at: 24 + 90, backFrom: 24 },

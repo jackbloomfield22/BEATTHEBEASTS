@@ -46,17 +46,17 @@ export function lead(r: Agent, T: number): V2 {
   return leadRun(r, T).pos;
 }
 /** lead(), and the way he'll be running there (his velocity at the catch point). */
-export function leadRun(r: Agent, T: number): { pos: V2; vel: V2; offScript: number } {
+export function leadRun(r: Agent, T: number): { pos: V2; vel: V2; offScript: number; settled: number } {
   const rt = r.route;
   if (!rt) {
     // No route: on along the way he's going, flat out.
     const sp = len(r.vel);
-    if (sp < 0.5) return { pos: { x: r.pos.x, y: r.pos.y }, vel: { x: r.vel.x, y: r.vel.y }, offScript: 0 };
+    if (sp < 0.5) return { pos: { x: r.pos.x, y: r.pos.y }, vel: { x: r.vel.x, y: r.vel.y }, offScript: 0, settled: 0 };
     const d = fullSpeedRun(r, T);
-    return { pos: { x: r.pos.x + (r.vel.x / sp) * d, y: r.pos.y + (r.vel.y / sp) * d }, vel: { x: r.vel.x, y: r.vel.y }, offScript: 0 };
+    return { pos: { x: r.pos.x + (r.vel.x / sp) * d, y: r.pos.y + (r.vel.y / sp) * d }, vel: { x: r.vel.x, y: r.vel.y }, offScript: 0, settled: 0 };
   }
-  // Settled on a sit route: he's there.
-  if (rt.idx >= rt.pts.length && rt.sit[rt.pts.length - 1]) return { pos: { x: r.pos.x, y: r.pos.y }, vel: { x: 0, y: 0 }, offScript: 0 };
+  // Settled on a sit route: he's there (and has been sitting for all of the flight).
+  if (rt.idx >= rt.pts.length && rt.sit[rt.pts.length - 1]) return { pos: { x: r.pos.x, y: r.pos.y }, vel: { x: 0, y: 0 }, offScript: 0, settled: T };
   // Run his route forward on a copy of him, tick by tick, on the movement
   // model he really runs on (ai.ts stepRoute: the stem at ~92%, braking
   // into each break, the plant, building back up, and every turn rounded at
@@ -75,11 +75,11 @@ export function leadRun(r: Agent, T: number): { pos: V2; vel: V2; offScript: num
     if (g.busy > 0) {
       g.busy--;
       steer(g, { x: 0, y: 0 });
-    } else if (!stepRoute(g)) return { pos: g.pos, vel: g.vel, offScript: 0 };
+    } else if (!stepRoute(g)) return { pos: g.pos, vel: g.vel, offScript: 0, settled: T - k * TICK };
   }
   // The part-tick left, and past the cap (a throw hanging more than LEAD_TICKS), on the way he's going.
   const rest = T - n * TICK;
-  return { pos: { x: g.pos.x + g.vel.x * rest, y: g.pos.y + g.vel.y * rest }, vel: g.vel, offScript: rt.idx >= rt.pts.length ? OFF_SCRIPT : T - ends };
+  return { pos: { x: g.pos.x + g.vel.x * rest, y: g.pos.y + g.vel.y * rest }, vel: g.vel, offScript: rt.idx >= rt.pts.length ? OFF_SCRIPT : T - ends, settled: 0 };
 }
 /** The longest a lead runs his route forward (ticks: 4 s, longer than any throw hangs). */
 const LEAD_TICKS = 240;
@@ -294,20 +294,45 @@ export function findsBallAt(s: PlayState, a: Agent): number {
  * straight legs while he ran it round, so every throw to a man on a bend
  * landed ~1 yd off him whoever threw it or ran it.
  */
-export function timingSigma(s: PlayState, rec: Agent, air: number, speed: number, horizon: number): number {
+export function timingSigma(s: PlayState, rec: Agent, air: number, speed: number, horizon: number, acc: number): number {
   const rr = Math.max(air < 12 ? rec.fx.a('shortRoute') : rec.fx.a('deepRoute'), rec.fx.a('routeRunning'));
   const chem = Math.max(0, Math.min(1, s.setup.chem?.[rec.slot as OffSlot] ?? 0));
-  return TIMING * (1 - TIMING_RR * rr) * (1 - CHEM_TIMING * chem) * speed * horizon * Math.min(1, horizon / TIMING_H);
+  return TIMING * timingQb(acc, air) * (1 - TIMING_RR * rr) * (1 - CHEM_TIMING * chem) * speed * horizon * Math.min(1, horizon / TIMING_H);
 }
+/**
+ * The QB's share of the timing (passing round 3): on a ball down the field,
+ * how well he puts it where his man will be, by his accuracy for the throw's
+ * depth. Round two's timing was the receiver's and the chemistry's alone, so
+ * Joe Montana's deep ball missed its man along his run by as much as
+ * anyone's: ~2.7 yd at 1σ on a 1.7-s go to Jerry Rice, four times his cone,
+ * and the player watched a great passer's deep balls land a couple of yards
+ * behind or past his man (tools/sim/passing3.ts). An accurate passer leads
+ * him: × TIMING_QB_TOP at 99, 1 at TIMING_QB_REF, growing past it for a
+ * scattershot arm. It comes in with the depth (none by TIMING_QB_FROM air
+ * yards, all of it by TIMING_QB_FULL): on a short ball the timing is the
+ * route's (a few tenths of a yard either way), and the AI pass game's
+ * completion, held up by the short game, stays in its band. Ours.
+ */
+export function timingQb(acc: number, air: number): number {
+  const k = Math.max(0, Math.min(1, (air - TIMING_QB_FROM) / (TIMING_QB_FULL - TIMING_QB_FROM)));
+  return 1 + (TIMING_QB_TOP - 1 + (1 - TIMING_QB_TOP) * Math.max(0, (99 - acc) / (99 - TIMING_QB_REF))) * k;
+}
+const TIMING_QB_TOP = 0.7;
+const TIMING_QB_REF = 85;
+const TIMING_QB_FROM = 8;
+const TIMING_QB_FULL = 20;
 /**
  * Calibrated on the AI pass game (tools/sim/outcomes.ts, 20 a cell): with
  * the lead running his real path and no timing, the 80s 49ers completed
  * 74% against the Beasts for 9.5 yd an attempt, open men catching 95% of
  * their targets (PFF's ~80%: tests/outcomes.test.ts); 0.4 (and the
  * receiver tracking the ball, play.ts runToBall) puts them at 69% and 8.4,
- * open men at 89%.
+ * open men at 89%. Passing round 3: 0.43. The QB's accuracy now takes up to
+ * 30% off a deep ball's (timingQb), and the other receivers no longer drag
+ * their men to the catch point, so the 60-a-cell book went 66.5% → 67.4%;
+ * 0.43 brings it back to 66.6% (8.1 yd an attempt).
  */
-const TIMING = 0.4;
+const TIMING = 0.43;
 /** The horizon (s) past which it grows only with the horizon, not faster: a deep ball's hang. */
 const TIMING_H = 2;
 /** A perfect route runner takes 60% of it off: where he is is mostly how he runs it. */
@@ -393,17 +418,70 @@ export function releaseOf(qb: Agent): number {
  * Where the ball meets him: the flight time iterated against where he'll be
  * (`hang` is the flight to a spot), and the way he'll be running there.
  */
-function leadFor(rec: Agent, hang: (at: V2) => number): { spot: V2; rv: V2; T: number; speed: number; offScript: number } {
+function leadFor(rec: Agent, hang: (at: V2) => number, from: V2): { spot: V2; rv: V2; T: number; speed: number; offScript: number } {
   let T = 0.8;
   let run = leadRun(rec, T);
+  let spot = run.pos;
   for (let k = 0; k < 4; k++) {
-    T = hang(run.pos);
+    T = hang(spot);
     run = leadRun(rec, T);
+    spot = comeBackTo(rec, run.pos, run.settled, from);
+  }
+  // Coming back to it on a settle route: the way he'll be moving at the catch is at the QB.
+  if (spot !== run.pos) {
+    const dx = from.x - run.pos.x;
+    const dy = from.y - run.pos.y;
+    const k = Math.sqrt(dx * dx + dy * dy) || 1;
+    return { spot, rv: { x: dx / k, y: dy / k }, T, speed: len(run.vel), offScript: run.offScript };
   }
   const v = len(run.vel) > 0.5 ? run.vel : rec.vel;
   const sp = len(v);
-  return { spot: run.pos, rv: sp > 0.5 ? { x: v.x / sp, y: v.y / sp } : { x: 1, y: 0 }, T, speed: len(run.vel), offScript: run.offScript };
+  return { spot, rv: sp > 0.5 ? { x: v.x / sp, y: v.y / sp } : { x: 1, y: 0 }, T, speed: len(run.vel), offScript: run.offScript };
 }
+
+/**
+ * Coming back to the ball (passing round 3): a man sat down on a settle
+ * route (a curl, a comeback, a hitch, a spot) doesn't wait for it standing
+ * still. He sits, squares to the QB, and as it comes he drives back down the
+ * line to it (the coaching point on every settle route: "come back to the
+ * football", so the defender on his back can't undercut it). He's sat for
+ * `settled` s before the ball gets there (passing.ts leadRun); after a beat
+ * (COME_SET) he comes at COME_V, at most COME_MAX yd, a sharp route runner a
+ * little further (he's out of his break and back to it quicker). The QB
+ * throws to where he'll meet it, as he throws every man to where he'll be.
+ * Before this the ball was thrown to the spot where he stood, and the
+ * player watched his curl and comeback runners stand still with the ball in
+ * the air (the owner: "a comeback comes back to the ball").
+ */
+export function comeBackTo(rec: Agent, at: V2, settled: number, from: V2): V2 {
+  if (settled <= 0 || !rec.route || !comesBack(rec.route)) return at;
+  // Sat down already, he takes a beat (COME_SET) to go; still on his way into the settle, he carries on through it.
+  const sat = rec.route.idx >= rec.route.pts.length;
+  const rr = Math.max(rec.fx.a('shortRoute'), rec.fx.a('routeRunning'));
+  const d = Math.min(COME_MAX * (0.6 + 0.4 * rr), COME_V * Math.max(0, settled - (sat ? COME_SET : 0)));
+  if (d <= 0) return at;
+  const dx = from.x - at.x;
+  const dy = from.y - at.y;
+  const k = Math.sqrt(dx * dx + dy * dy);
+  if (k < 3 * d) return at;
+  return { x: at.x + (dx / k) * d, y: at.y + (dy / k) * d };
+}
+/**
+ * A settle route whose last leg turns back toward the line (the curl, the
+ * comeback, the hitch): the ones coached to come back to the ball. A flat,
+ * a spot or a checkdown settles on its way out, facing the QB, and the ball
+ * comes to him there (coming back off those is turning round).
+ */
+export function comesBack(rt: { pts: V2[]; sit: boolean[] }): boolean {
+  const n = rt.pts.length;
+  return n >= 2 && rt.sit[n - 1] === true && rt.pts[n - 1]!.x < rt.pts[n - 2]!.x - 0.5;
+}
+/** The pace (yd/s) he comes back to the ball at: two hard steps, about half his speed. Ours, from the broadcast's curls and comebacks. */
+export const COME_V = 4;
+/** The beat (s) he's sat, square to the QB, before he comes back to it. Ours. */
+const COME_SET = 0.15;
+/** The most he comes back (yd), for a perfect route runner (60% of it for a 0): about two steps. Ours. */
+const COME_MAX = 1.5;
 
 export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2, pressure: number, offPlatform: boolean, hit = false): ThrowPlan {
   const power = qb.fx.r('throwPower');
@@ -418,7 +496,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   // (M5 to M6.6 led him for 0.05 s more than the ball flies, with no reason
   // given: the driven slant landed ~0.5 yd in front of him, and with the
   // cone on top a fifth of them out of his reach. On time is on him.)
-  const { spot, rv, speed: recSpeed, T: leadT, offScript } = leadFor(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }));
+  const { spot, rv, speed: recSpeed, T: leadT, offScript } = leadFor(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }), from);
   // Placement input: lead / back shoulder along his path (the way he'll be running at the catch), high / low.
   const place = 1.6 * aim.x + HOLD_LEAD * Math.max(0, Math.min(1, loft));
   let tx = spot.x + rv.x * place;
@@ -490,7 +568,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   // how close he is to it is how long he's been led for (the flight, and any
   // time he's been running on past his route), his speed, his route running
   // and their chemistry (timingSigma). Along his run: a step early or late.
-  const tSigma = timingSigma(s, rec, air, recSpeed, leadT + offScript);
+  const tSigma = timingSigma(s, rec, air, recSpeed, leadT + offScript, acc);
   const late = gauss(s.rng.throw) * tSigma;
   const ex = gauss(s.rng.throw) * sigma + along * ux + late * rv.x;
   const ey = gauss(s.rng.throw) * sigma + along * uy + late * rv.y;
@@ -562,10 +640,14 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   const { vmax, range } = arm(qb);
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
-  const run = leadFor(rec, (at) => {
-    const to = { x: at.x, y: at.y, z: CATCH_Z };
-    return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
-  });
+  const run = leadFor(
+    rec,
+    (at) => {
+      const to = { x: at.x, y: at.y, z: CATCH_Z };
+      return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
+    },
+    from,
+  );
   const { spot, rv } = run;
   let x = spot.x + rv.x * 1.6 * aim.x;
   let y = spot.y + rv.y * 1.6 * aim.x;
@@ -587,7 +669,7 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   // (The same moving cost as planThrow, Off Platform included, so the reticle tells the truth.)
   const cone = errorAt20(acc) * coneScale(d) * (1 + (has(qb, 'off-platform') ? 0.5 : 1) * moving * (0.15 + 0.9 * (1 - qb.fx.a('throwOnRun'))));
   // ...and the timing along his run, folded in (the reticle is a circle).
-  const timing = timingSigma(s, rec, air, run.speed, run.T + run.offScript);
+  const timing = timingSigma(s, rec, air, run.speed, run.T + run.offScript, acc);
   return { x, y, sigma: Math.sqrt(cone * cone + timing * timing) };
 }
 

@@ -322,6 +322,12 @@ export class PlayerAnimator {
     if (o) this.actionLayer = o;
   }
 
+  /** Change the rate of the one-shot overlay playing now, if it's this clip (a throw on the run paced to the sim's release). */
+  retimeOverlay(name: string, rate: number): void {
+    const o = this.actionLayer;
+    if (o && !o.out && o.name === name) o.rate = rate;
+  }
+
   /** Let the one-shot overlay go (it fades out): a full-body clip takes the arms over. */
   stopOverlay(): void {
     if (this.actionLayer) this.actionLayer.out = true;
@@ -601,6 +607,40 @@ export class PlayerAnimator {
     // 4 and 5.
     this.lookAt(input.lookAt ?? null, dt, !!input.lookWide);
     this.pads(dt);
+  }
+
+  /**
+   * The hands to the ball (passing round 3): after the frame's pose, the
+   * arms are bent by two-bone IK so each hand (its fingers' root) goes to a
+   * world point, blended by its weight (0 leaves the clip's arm). The
+   * elbows bend down and out, the way a receiver's do with his hands up
+   * for a ball; the hands keep the clip's orientation (the diamond, the
+   * basket). Called by the catch (render/game/choreo.ts catchReach) after
+   * update(), so it layers on the catch clip's own reach.
+   */
+  reachHands(l: THREE.Vector3 | null, wl: number, r: THREE.Vector3 | null, wr: number): void {
+    const right = _w.set(-1, 0, 0).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
+    for (const [side, target, w] of [['l', l, wl] as const, ['r', r, wr] as const]) {
+      if (!target || w <= 0) continue;
+      const upper = this.player.bones.get(`upperarm_${side}`);
+      const lower = this.player.bones.get(`forearm_${side}`);
+      const hand = this.player.bones.get(`hand_${side}`);
+      const fingers = this.player.bones.get(`fingers_01_${side}`);
+      if (!upper || !lower || !hand || !fingers) continue;
+      const handWorld = hand.getWorldQuaternion(new THREE.Quaternion());
+      // The wrist target: the target less the clip's wrist-to-fingers offset (the ball sits in the fingers, not the wrist).
+      hand.getWorldPosition(_v);
+      fingers.getWorldPosition(_fwd);
+      const wrist = new THREE.Vector3().copy(target).sub(_fwd).add(_v);
+      // Elbow pole: below the elbow and out to his side.
+      lower.getWorldPosition(_pole);
+      _pole.y -= 0.4;
+      _pole.addScaledVector(right, side === 'r' ? 0.25 : -0.25);
+      solveTwoBone(upper, lower, hand, wrist, _pole, Math.min(1, w));
+      const pq = hand.parent!.getWorldQuaternion(new THREE.Quaternion());
+      hand.quaternion.copy(pq.invert().multiply(handWorld));
+      hand.updateMatrixWorld(true);
+    }
   }
 
   private lean(speed: number, yawRate: number, accel: number, press = 0): void {

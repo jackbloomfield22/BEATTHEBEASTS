@@ -39,7 +39,7 @@ import { feetStep, grab, holdKind, knockDown, pileStep, tickDowned } from './tac
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
 import { aiMove, autoMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
-import { autoCatch, CATCH_Z, catchLook, findsBallAt, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
+import { autoCatch, CATCH_Z, catchLook, COME_V, comesBack, findsBallAt, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
 import { gauss } from './rand';
 import { has } from './traits';
 import { manOf, type PlayState } from './state';
@@ -387,7 +387,9 @@ function qbBeforeThrow(s: PlayState, inp: InputFrame): void {
     qb.anim = 'drop';
   } else if (!play.drop.boot && since < play.drop.set && (qb.mem.dropT0 !== undefined || qb.pos.x > dropX + 0.1)) {
     // The drop, on its rhythm (pocket.ts): to his depth by the set, the clip's steps on the sim's.
-    dropStep(s, qb, 0);
+    // Wound up in it (the player's key on the drop: the ball goes on the plant),
+    // he opens his front shoulder to the target over the last steps.
+    dropStep(s, qb, s.windup && !s.windup.away ? qbFace(s, qb) : 0);
     qb.anim = 'drop';
   } else if (!s.setup.user && !play.drop.boot && hitches(s) && since < play.drop.set + HITCH && !s.windup && qb.mem.dropT0 !== undefined && qb.mem.noHitch === undefined && !freeRusherNear(s, qb)) {
     // The hitch: off a five- or seven-step drop, a step up into the pocket
@@ -459,6 +461,7 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     // leaves his hand (Playtest 1: it was taken on the key's release and
     // frozen for the ~0.3–0.5 s of the throwing motion).
     if (s.setup.user && !s.windup.away) s.windup.aim = { x: inp.aim.x, y: inp.aim.y };
+    if (s.setup.user && s.windup.held) holdThrough(s, s.windup, inp);
     if (s.t >= s.windup.at) {
       const w = s.windup;
       s.windup = null;
@@ -482,8 +485,15 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     }
     return;
   }
-  const start = (icon: number, charge: number, aim: V2, away = false) => {
-    s.windup = { at: s.t + releaseOf(qb), from: s.t, icon, charge, aim, away };
+  const start = (icon: number, charge: number, aim: V2, away = false, held = false) => {
+    // The player's key on the drop throws on its rhythm: the arm comes through
+    // as the back foot plants (the set), not with him still backpedalling
+    // (passing round 3: a key pressed in the drop let it go a step early, off
+    // his back foot, the motion over the drop's legs). A boot throws on the move.
+    const drop = s.setup.play.drop;
+    const plant = s.setup.user && !drop.boot && since < drop.set ? s.snapT + drop.set : -Infinity;
+    const at = Math.max(s.t + releaseOf(qb), plant);
+    s.windup = { at, from: s.t, icon, charge, aim, away, nat: at, held };
     qb.anim = 'throw';
     s.eyes = away ? s.eyes : { ...s.agents[s.icons[icon]!]!.pos };
   };
@@ -497,17 +507,18 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
       start(0, 0.3, v2(), true);
       return;
     }
+    // The key starts the throwing motion (passing round 3). It used to start
+    // on the key's release: a tap came out a tap's length late, and a touch
+    // pass held for its loft sat in his hand for the whole hold before the
+    // arm even began (a full one ~1.1 s from the press to the ball), so the
+    // ball the player meant for the break came out well after it. Now the
+    // arm starts on the press, the hold chooses the touch while it comes
+    // through (holdThrough), and the ball goes with the arm or, held longer,
+    // when the key comes up.
     if (inp.throwHeld > 0 && inp.throwHeld <= s.icons.length) {
-      if (s.hold.icon !== inp.throwHeld) s.hold = { icon: inp.throwHeld, ticks: 0 };
-      s.hold.ticks++;
-      s.eyes = { ...s.agents[s.icons[inp.throwHeld - 1]!]!.pos };
-    } else if (s.hold.icon > 0) {
-      const held = s.hold.ticks * TICK;
-      // A tap drives it; a hold adds touch (more air the longer he holds).
-      const tap = s.setup.tapMax ?? TAP_MAX;
-      const charge = held <= tap ? 0 : Math.min(1, (held - tap) / LOFT_CHARGE);
-      start(s.hold.icon - 1, charge, { x: inp.aim.x, y: inp.aim.y });
-      s.hold = { icon: 0, ticks: 0 };
+      s.hold = { icon: inp.throwHeld, ticks: 1 };
+      start(inp.throwHeld - 1, 0, { x: inp.aim.x, y: inp.aim.y }, false, true);
+      holdThrough(s, s.windup!, inp);
     }
     return;
   }
@@ -563,6 +574,32 @@ function qbThrow(s: PlayState, inp: InputFrame): void {
     const qbY = qb.pos.y - (s.setup.ballY ?? 0);
     qb.mem.escape = qbY >= 0 ? 1 : -1;
   }
+}
+
+/**
+ * The player's key through the throwing motion (passing round 3). While it's
+ * down the touch builds (a tap is the driven ball; past the tap, more air
+ * the longer it's held, full by LOFT_CHARGE more); the arm comes through on
+ * his release time either way, and a hold past it keeps the ball cocked at
+ * the top until the key comes up or the touch is full. The planned release
+ * (`at`) is the full touch's while the key is down past a tap, so the drawn
+ * arm paces to it (choreo.ts), and the key's release brings it in.
+ */
+function holdThrough(s: PlayState, w: NonNullable<PlayState['windup']>, inp: InputFrame): void {
+  const tap = s.setup.tapMax ?? TAP_MAX;
+  const down = inp.throwHeld === w.icon + 1;
+  if (down && s.t > w.from) s.hold.ticks++;
+  const held = s.hold.ticks * TICK;
+  w.charge = held <= tap ? 0 : Math.min(1, (held - tap) / LOFT_CHARGE);
+  if (down) s.eyes = { ...s.agents[s.icons[w.icon]!]!.pos };
+  if (down && w.charge < 1) {
+    w.at = held > tap ? Math.max(w.nat, w.from + tap + LOFT_CHARGE) : w.nat;
+    return;
+  }
+  // Up (or the touch is full): the ball goes with the arm, or now if the arm's waited at the top.
+  w.held = false;
+  w.at = Math.max(w.nat, s.t);
+  s.hold = { icon: 0, ticks: 0 };
 }
 
 /**
@@ -1780,10 +1817,18 @@ function offenseRoles(s: PlayState, inp: InputFrame): void {
           if (a.route && leg > a.route.idx && !off) runRoute(s, a);
           else runToBall(s, a);
         }
-        // The ball's thrown to someone else: work to the nearest threat to
-        // the catch point, ready to block when it's caught (no contact before
-        // the catch: that's interference).
-        else if (s.phase === 'air' && s.ball.target >= 0 && a.busy === 0) runBlock(s, a, { x: s.ball.aim.x, y: s.ball.aim.y }, true, false);
+        // The ball's thrown to someone else: he runs his route on through it
+        // (a go keeps going, a crosser keeps crossing, a curl sits in his
+        // window), as the coaching has it: the route is run until the ball's
+        // caught, and then he blocks (the carrier branch above). Passing
+        // round 3: from the release every other route runner bent off toward
+        // the catch point to find a man to block (on four verticals all three
+        // others swung 45-60° toward the ball within half a second,
+        // tools/sim/p3trace.ts), the "receivers give up on their routes while
+        // the ball is in the air" the owner saw from the pocket. (Out of
+        // room at the back of the end zone, he pulls up there: a route run on
+        // through a long play would carry him out over the end line.)
+        else if (a.vel.x > 0 && END_X - END_ROOM - a.pos.x < (a.vel.x * a.vel.x) / (2 * a.fx.cutAccel * 0.8) + 0.5) steer(a, arrive(a, v2(END_X - END_ROOM, a.pos.y), 1, 1));
         else runRoute(s, a);
         break;
       case 'passBlock':
@@ -1852,8 +1897,42 @@ function runToBall(s: PlayState, a: Agent): void {
   const d = dist(a.pos, to);
   const left = b.arrive - s.t;
   if (settle) {
-    // Come back to the ball: at it by the time it gets there, braking into the catch.
-    steer(a, boundaryGovern(a, arrive(a, to, 1, 1), 0.25));
+    // A settle route that turns back to the QB (a curl, a comeback, a
+    // hitch: passing.ts comeBackTo): the throw is led to where he'll meet it
+    // coming back down the line. He runs into his settle as the lead ran
+    // him, squares up to the QB until it's time to go, then drives at it
+    // and takes it on the move. Passing round 3: he braked to a stop on the
+    // ball's spot and caught it standing (M5's arrive), so a curl or
+    // comeback receiver stood still with the ball in the air. The rest (a
+    // flat, a spot, a checkdown) settle facing the QB and it comes to them.
+    if (!rt || !comesBack(rt)) {
+      steer(a, boundaryGovern(a, arrive(a, to, 1, 1), 0.25));
+      return;
+    }
+    const qb = s.agents[b.thrower] ?? s.agents[s.qb]!;
+    const faceQb = atan2(qb.pos.y - a.pos.y, qb.pos.x - a.pos.x);
+    const need = d / Math.max(left, TICK);
+    if (rt.idx < rt.pts.length) {
+      // On his way into the settle with it in the air (a ball out on the
+      // break): he carries on through the spot to where it meets him, at the
+      // pace that gets him there with it (he doesn't brake to a stop on the
+      // spot first, then come back); well off it, straight to it.
+      if (dist(to, rt.pts[rt.pts.length - 1]!) < COME_OFF && left > 0.1 && d > 0.25) {
+        steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * Math.min(a.fx.vmax, need), y: ((to.y - a.pos.y) / d) * Math.min(a.fx.vmax, need) }, 0.25), { face: faceQb });
+        return;
+      }
+      if (left > 0.1 && d > 0.25) {
+        steer(a, boundaryGovern(a, arrive(a, to, 1, 1), 0.25));
+        return;
+      }
+    }
+    if (left > 0.1 && d > 0.25) {
+      if (need < COME_V * 0.9) steer(a, { x: 0, y: 0 }, { face: faceQb });
+      else steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * Math.min(a.fx.vmax, need), y: ((to.y - a.pos.y) / d) * Math.min(a.fx.vmax, need) }, 0.25), { face: faceQb });
+      return;
+    }
+    // The ball's on him: through the catch the way he's coming (or square, if he's had nowhere to go).
+    steer(a, len(a.vel) > 0.5 ? a.vel : { x: 0, y: 0 }, { face: faceQb });
     return;
   }
   const top = a.fx.vmax;
@@ -1871,8 +1950,21 @@ function runToBall(s: PlayState, a: Agent): void {
     // meets it, instead of running on past the spot and having it arrive
     // behind him. (With the lead now on his real path, a ball on time needs
     // his full speed anyway.)
+    // Passing round 3: a ball a stride or two short of his run he tracks in
+    // at his pace and throttles down for late, in the last THROTTLE_T, as a
+    // receiver does (he paced to it from the moment he read it, so on a
+    // deep ball the player watched him ease up a yard or two a second with
+    // the ball in the air: "giving up on the route"). Never so long that he'd
+    // be on the spot before the ball; a ball well short, or placed behind
+    // him, he gathers for at once.
     const back = (b.place ?? 0) < -0.5;
-    const sp = Math.min(top, back || need < 0.6 * cur || read > 0 ? need : Math.max(need, cur));
+    let sp = need;
+    if (!back && need >= 0.6 * cur && need < cur) {
+      const k = Math.max(0, Math.min(1, (left - THROTTLE_T) / THROTTLE_T));
+      const hold = Math.min(cur, Math.max(need, (d - THROTTLE_ROOM) / Math.max(TICK, left - THROTTLE_T / 2)));
+      sp = need + (hold - need) * k;
+    }
+    sp = Math.min(top, sp);
     steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp }, 0.25));
     return;
   }
@@ -1889,6 +1981,17 @@ function pursueTackle(s: PlayState, a: Agent, t: Agent): void {
   }
   pursue(s, a, t);
 }
+
+/** A route runner pulls up this far (yd) inside the end line, braking in time to (ours: a stride). */
+const END_ROOM = 1;
+
+/** A short ball: he runs on at his pace, easing off from twice this long (s) before it arrives, and meets it at the pace that gets him there over the last of it (ours: about three strides). */
+const THROTTLE_T = 0.6;
+/** ...keeping at least this much (yd) of the way to the spot for the throttling down. Ours. */
+const THROTTLE_ROOM = 1;
+
+/** A ball thrown this far (yd) off a come-back man's settle point he goes to straight off, not through his settle first. Ours: about two strides. */
+const COME_OFF = 2;
 
 /** Defenders who rally to a throw: at most two (round-two feedback: four or five used to arrive at once). */
 const MAX_RALLY = 2;
@@ -2290,7 +2393,8 @@ function lineCheck(s: PlayState, c: Agent, moved: V2 | null = null): void {
   const at = (f: number) => ({ x: p0.x + (p1.x - p0.x) * f, y: p0.y + (p1.y - p0.y) * f });
   if (fg !== null && (fo === null || fg < fo)) {
     const o = at(fg);
-    s.events.push({ t: s.t, type: 'touchdown', who: [c.i], at: { x: ballNose(c, o.x), y: o.y } });
+    // (A catch at the back of the end zone, his feet in, is a score where he caught it: the ball's nose a stride on can be past the end line.)
+    s.events.push({ t: s.t, type: 'touchdown', who: [c.i], at: { x: Math.min(ballNose(c, o.x), END_X), y: o.y } });
     whistle(s, 'touchdown', attack > 0 ? GOAL_X : 0, attack > 0, true);
     return;
   }
