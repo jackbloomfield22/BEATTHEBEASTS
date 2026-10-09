@@ -583,7 +583,10 @@ describe('sim: M5.5 feedback round (items 3–7)', () => {
       if (!caught || (s.pass?.airYards ?? 0) < 15) continue;
       seen++;
       // Led to where he'll be at full speed: the ball meets him on the run.
-      expect(before).toBeGreaterThan(0.75);
+      // (Passing round 3: a deep ball a stride short he tracks at full stride
+      // and throttles down for late, so an underthrown one is taken at the
+      // pace that meets it, ~70%+ of his top speed; never a stop to wait.)
+      expect(before).toBeGreaterThan(0.7);
     }
     expect(seen).toBeGreaterThan(0);
   });

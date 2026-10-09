@@ -22,13 +22,17 @@ const coverFor = (seed: number) => DEF_CALLS[(seed >>> 4) % DEF_CALLS.length]!;
 const CHEM = { SLOT: 0.3, TE: 0.3 };
 const make = (seed: number) => createPlay({ seed, offense: r.offense, defense: r.defense, play: playById('trips-four-verts'), def: coverFor(seed), los: 25, ballY: 0, toGo: 10, user: true, difficulty: 'pro', fatigue: {}, chem: CHEM });
 
-/** The touchdown test: snap, 100 ticks, icon 1 held 3 ticks, then up-right 20 ticks from the first 10-tick check in the carrier phase, then up. */
+/**
+ * The touchdown test: snap, 100 ticks, icon 4 (the X's go) held 3 ticks, then up-right 20 ticks from the first 10-tick check in the carrier phase, then up.
+ * (Icon 1, the slot's seam, until passing round 3: with the other verticals running their routes through the throw instead of
+ * turning in to screen the catch point, no seed in 1–2500 took the seam the distance.)
+ */
 function touchdownRun(seed: number): PlayState {
   const s = make(seed);
   const step = (f: InputFrame) => stepPlay(s, f);
   step(input({ snap: true }));
   for (let k = 1; k < 100 && !s.result; k++) step(NEUTRAL);
-  for (let k = 0; k < 3 && !s.result; k++) step(input({ throwHeld: 1 }));
+  for (let k = 0; k < 3 && !s.result; k++) step(input({ throwHeld: 4 }));
   // tickUntil: check, then 10 ticks, until carrier or dead.
   for (let k = 0; k < 900 && !s.result; k += 10) {
     if (s.phase === 'carrier' || s.phase === 'dead') break;

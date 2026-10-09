@@ -10,7 +10,7 @@ import type { V2 } from '@/sim/vec';
 import { latency, type LatKind } from './latency';
 import { AIM_RADIUS, view } from './view';
 
-type HoldSource = { kind: 'key'; action: string } | { kind: 'mouse' } | { kind: 'pad'; action: string };
+type HoldSource = { kind: 'key'; action: string; mx: number; my: number } | { kind: 'mouse' } | { kind: 'pad'; action: string };
 
 /** The receiver hold as the sim has counted it (PlayState.hold): the icon and the ticks it has seen. */
 export interface SimHold {
@@ -74,6 +74,8 @@ export function holdStep(h: ThrowHold, still: boolean, sim: SimHold | null): boo
 const THROW_ACTIONS = ['pocket.throw1', 'pocket.throw2', 'pocket.throw3', 'pocket.throw4', 'pocket.throw5'];
 /** Clicks this close to an icon (CSS px) pick it. */
 const CLICK_RADIUS = 70;
+/** The mouse must move this far (CSS px) during a receiver key's hold to place the ball (a hand resting on it doesn't). */
+const AIM_MOVED = 6;
 
 /**
  * A stick (x right, y up on screen) to the field frame, given the camera's
@@ -258,7 +260,7 @@ export class Controls {
             this.hold = {
               icon: k + 1,
               fresh: true,
-              src: this.edgeDevice.get(a) === 'gamepad' ? { kind: 'pad', action: a } : { kind: 'key', action: a },
+              src: this.edgeDevice.get(a) === 'gamepad' ? { kind: 'pad', action: a } : { kind: 'key', action: a, mx: Input.mouse.x, my: Input.mouse.y },
               downAt: this.edgeTime.get(a) ?? performance.now(),
               upAt: null,
               extra: 0,
@@ -279,9 +281,13 @@ export class Controls {
           this.aim = this.placement(L.x * AIM_RADIUS, -L.y * AIM_RADIUS, h.icon);
         } else {
           // Mouse: the cursor's offset from the icon (ignored when it's far away).
+          // A receiver key places it only once the mouse is moved while it's down
+          // (passing round 3): a cursor left resting near an icon put the key's
+          // ball behind the man, a back shoulder nobody asked for.
           const ox = Input.mouse.x - v.x;
           const oy = Input.mouse.y - v.y;
-          this.aim = Math.hypot(ox, oy) < AIM_RADIUS * 2.5 ? this.placement(ox, oy, h.icon) : this.placement(0, 0, h.icon);
+          const still = h.src.kind === 'key' && Math.hypot(Input.mouse.x - h.src.mx, Input.mouse.y - h.src.my) < AIM_MOVED;
+          this.aim = !still && Math.hypot(ox, oy) < AIM_RADIUS * 2.5 ? this.placement(ox, oy, h.icon) : this.placement(0, 0, h.icon);
         }
         f.aim = { ...this.aim };
         if (!still && h.upAt === null) {

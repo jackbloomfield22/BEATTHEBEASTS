@@ -38,7 +38,7 @@ import { createFootball } from './football';
 import { ballWorldVel, createBallFlight, heldAt, placeFlight, resetFlight } from './ballFlight';
 import { createFieldMarks } from './fieldMarks';
 import { frameEvents } from './frameEvents';
-import { ballInHands, catchMagnet, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
+import { ballInHands, catchMagnet, catchReach, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
 import { Officials } from './officials';
 import { kickView } from './kickView';
 
@@ -161,7 +161,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: Pl
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null };
+    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, throwClip: null, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null };
   });
 }
 
@@ -216,6 +216,16 @@ function puntMotion(b: Body, los: number, dt: number): number {
 const _p = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _hands = new THREE.Vector3();
+const _flightOn = new THREE.Vector3();
+/**
+ * The catch's last stretch (passing round 3): the drawn ball as it was last
+ * frame in the air, and how long since the sim called it caught. It
+ * carries on from there into the hands at about its own pace (`dur`).
+ */
+const catchIn = { air: false, age: -1, dur: 0, pos: new THREE.Vector3(), vel: new THREE.Vector3(), quat: new THREE.Quaternion() };
+/** The ball's last stretch into the hands (s): the sim calls the catch as it comes within his reach, 0.03–0.08 s before it gets to him; at least a frame, at most this. Ours. */
+const CATCH_IN = 0.1;
+const CATCH_IN_MIN = 1 / 30;
 /**
  * The ball's readability on the broadcast camera (render only): true size
  * within BALL_NEAR m of the camera, growing to BALL_GROW× by BALL_FAR. A
@@ -445,6 +455,8 @@ export function GameScene() {
       b.lastYaw = yaw;
       b.lastSpeed = d.speed;
       b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean });
+      // The hands to the ball on a catch (passing round 3), over the clip's own reach.
+      catchReach(b, i, s);
       b.ragdoll.update(animDt);
       // A body hitting the turf hard kicks up dust (a big hit's landing).
       const land = b.ragdoll.landing;
@@ -501,9 +513,25 @@ export function GameScene() {
     // True size in the hands; in the air and on the turf it grows with distance from the camera (BALL_FAR).
     ball.scale.setScalar(1);
     if (held && !inSnap && bodies && ballInHands(bodies[b1.holder]!, r.state, ball)) {
+      // Just caught: the ball finishes its flight into the hands (passing round 3: the sim takes it as it comes
+      // within his reach, up to a yard short of him, and it jumped into his hands in a frame).
+      if (catchIn.air && b1.holder !== r.state.qb) {
+        catchIn.air = false;
+        catchIn.age = 0;
+        // At the ball's own pace (the rest of its way to the hands), a frame or three.
+        catchIn.dur = THREE.MathUtils.clamp(catchIn.pos.distanceTo(ball.position) / Math.max(1, catchIn.vel.length()), CATCH_IN_MIN, CATCH_IN);
+      }
+      if (catchIn.age >= 0 && catchIn.age < catchIn.dur) {
+        catchIn.age += dt;
+        const k = Math.min(1, catchIn.age / catchIn.dur);
+        _flightOn.copy(catchIn.pos);
+        ball.position.lerpVectors(_flightOn, ball.position, k);
+        ball.quaternion.slerpQuaternions(catchIn.quat, ball.quaternion, k);
+      }
       heldAt(flight, ball);
       return;
     }
+    catchIn.age = -1;
     ball.position.set(worldX(b0.y + (b1.y - b0.y) * a), worldY(b0.z + (b1.z - b0.z) * a), worldZ(b0.x + (b1.x - b0.x) * a));
     if (cur.phase === 'presnap') {
       // On the ground, pointing downfield.
@@ -519,6 +547,13 @@ export function GameScene() {
     if (b1.mode === 'air' && r.state.ball.target >= 0 && bodies) {
       const k = catchMagnet(bodies[r.state.ball.target]!, ball.position, _hands);
       if (k > 0) ball.position.lerp(_hands, k);
+    }
+    // Where the drawn ball is and where it's going, for the catch (above).
+    catchIn.air = b1.mode === 'air';
+    if (catchIn.air) {
+      catchIn.pos.copy(ball.position);
+      ballWorldVel(b1.vx, b1.vy, b1.vz, catchIn.vel);
+      catchIn.quat.copy(ball.quaternion);
     }
     const far = THREE.MathUtils.clamp((ball.position.distanceTo(camera.position) - BALL_NEAR) / (BALL_FAR - BALL_NEAR), 0, 1);
     ball.scale.setScalar(1 + (BALL_GROW - 1) * far);
@@ -537,7 +572,8 @@ export function GameScene() {
     const cur = r.cur;
     const rect = gl.domElement.getBoundingClientRect();
     const pocket = cur.phase === 'presnap' || cur.phase === 'snap' || cur.phase === 'dropback' || cur.phase === 'pocket';
-    const thrown = s.windup !== null;
+    // (A windup the player's still holding for touch keeps the icons and the ring up: the motion's started, the throw isn't chosen yet.)
+    const thrown = s.windup !== null && !s.windup.held;
     // How open each target is (the icons glow when open, dim when covered),
     // after the snap and before the throw; refreshed every few frames.
     const reading = !thrown && cur.phase !== 'presnap' && cur.phase !== 'snap';

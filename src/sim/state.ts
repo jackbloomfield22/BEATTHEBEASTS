@@ -114,8 +114,13 @@ export interface PlayState {
   pumpUntil: number;
   /** Throw charge: ticks the current icon has been held, and which. */
   hold: { icon: number; ticks: number };
-  /** A throw wound up: released at `at` (play time). */
-  windup: { at: number; from: number; icon: number; charge: number; aim: V2; away: boolean } | null;
+  /**
+   * A throw wound up: started at `from`, released at `at` (play time).
+   * `nat` is when his arm would let it go on its own (from + his release
+   * time); `held` while the player still has the receiver's key down (the
+   * motion has started, the touch is still being chosen: passing round 3).
+   */
+  windup: { at: number; from: number; icon: number; charge: number; aim: V2; away: boolean; nat: number; held: boolean } | null;
   catchType: CatchType | null;
   /** Hot routes called at the line, by offensive slot (they replace the play's route at the snap). */
   hot: Partial<Record<OffSlot, RouteName>>;
