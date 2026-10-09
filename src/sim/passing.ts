@@ -570,9 +570,9 @@ export function bucket(s: PlayState, qb: Agent, rec: Agent, spot: V2, rv: V2, ai
 }
 /** A route leg this much downfield (the run's x share) is a vertical for the bucket. */
 const BUCKET_VERT = 0.6;
-/** The bucket comes in from this many air yards to all of it by BUCKET_FULL (a deep ball: PFF's 20+). Ours. */
-const BUCKET_FROM = 15;
-const BUCKET_FULL = 25;
+/** The bucket comes in from this many air yards to all of it by BUCKET_FULL (a go thrown off the hitch is caught ~20 yd down the field). Ours. */
+const BUCKET_FROM = 12;
+const BUCKET_FULL = 20;
 /** Deep accuracy from none of it to all of it. Ours: the gap a fan sees between a 95 and a 75. */
 const BUCKET_ACC0 = 70;
 const BUCKET_ACC1 = 95;
