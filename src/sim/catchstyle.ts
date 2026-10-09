@@ -113,6 +113,30 @@ export function contactAt(s: PlayState, r: Agent): Agent | null {
   return best;
 }
 
+/**
+ * When (s from now) the ball comes within `meet` yd of him across the
+ * ground (his centre line, run forward at his velocity; the ball's flight
+ * run forward with gravity, its drag a few cm over this): where his hands
+ * meet it. A sure-handed man's hands meet it at the end of his arms, a
+ * poorer one's closer in (choreo.ts PLUCK). The ball's arrival when it never
+ * does within the look-ahead. Read-only.
+ */
+export function meetTime(s: PlayState, r: Agent, meet: number): number {
+  const b = s.ball;
+  const left = Math.max(0, b.arrive - s.t);
+  const horizon = Math.min(MEET_HORIZON, left + MEET_PAST);
+  for (let t = 0; t <= horizon; t += MEET_STEP) {
+    const dx = b.pos.x + b.vel.x * t - (r.pos.x + r.vel.x * t);
+    const dy = b.pos.y + b.vel.y * t - (r.pos.y + r.vel.y * t);
+    if (dx * dx + dy * dy <= meet * meet) return t;
+  }
+  return left;
+}
+/** meetTime looks this far ahead (s: the catch clips' longest lead and a little), on to this long past the arrival, in these steps (s: a 120th, half a sim tick). Ours. */
+const MEET_HORIZON = 1.0;
+const MEET_PAST = 0.1;
+const MEET_STEP = 1 / 120;
+
 /** How the catch is drawn: the sim's look, refined by where the ball gets to him and who he is. */
 export function catchStyle(s: PlayState, r: Agent, at: { x: number; y: number; z: number } = s.ball.aim): CatchStyle {
   const look = catchLook(s, r, at);

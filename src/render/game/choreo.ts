@@ -8,7 +8,7 @@ import { YARD } from '../world/constants';
 import { worldDir, worldX, worldY, worldZ } from '@/game/coords';
 import { latency } from '@/game/latency';
 import { findsBallAt, reach, releaseOf, type CatchLook } from '@/sim/passing';
-import { arrivalOf, catchStyle, contactAt, pluckOf, type CatchStyle } from '@/sim/catchstyle';
+import { arrivalOf, catchStyle, contactAt, meetTime, pluckOf, type CatchStyle } from '@/sim/catchstyle';
 import { dropPlan, dropStart, GUN_CATCH, planFrom, UC_EXCHANGE, type DropPlan } from '@/sim/pocket';
 import { pressureOn, routeOf } from '@/sim/ai';
 import { threatOf } from '@/sim/moves';
@@ -1211,9 +1211,17 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     const style = catchStyle(s, a);
     const clip = clipOr(b, catchClip(s, i, style));
     const pluck = pluckOf(a);
+    // (Passing round 5) The secure frame lands where his hands meet the ball:
+    // when it comes within MEET of his line, run forward (sim/catchstyle.ts
+    // meetTime), not at the arrival less his reach. On a crosser the ball
+    // comes from his side, and the old timing had the hands closing on a
+    // ball still a yard and a half off, out of their reach (the IK let go:
+    // the in-game log, round five's p5-hands).
     const meet = clip === 'catch_body' ? BODY_MEET : REACH_CLIPS.has(clip) ? MEET_NEAR + (MEET_FAR - MEET_NEAR) * pluck : null;
-    const inside = meet === null ? 0 : Math.min(MEET_LATE_MAX, Math.max(0, reach(a).r * YARD - meet) / Math.max(1, closing * YARD));
-    const left = ball.arrive - simT - Math.min(ENTRY_MAX, reach(a).r / Math.max(1, closing)) + inside;
+    const left =
+      meet !== null
+        ? Math.min(ball.arrive - simT + MEET_LATE_MAX, meetTime(s, a, meet / YARD) - (simT - s.t))
+        : ball.arrive - simT - Math.min(ENTRY_MAX, reach(a).r / Math.max(1, closing));
     const lead = eventAt(b, clip, 'secure');
     if (lead === null) {
       // (An older clip library without the catch set: the M5 overlay.)
