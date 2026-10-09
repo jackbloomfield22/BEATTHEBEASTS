@@ -28,5 +28,5 @@ export const BLITZ_TAGS = 4;
 /** Circumference of the power ring's circle (r = 17). */
 export const RING_LEN = 2 * Math.PI * 17;
 
-/** Circumference of the throw-timing cue's circle (r = 20.5, just outside the icon's ring). */
-export const CUE_LEN = 2 * Math.PI * 20.5;
+/** Circumference of the throw-timing cue's circle (r = 21.5 in its 48-unit ring, outside the icon's). */
+export const CUE_LEN = 2 * Math.PI * 21.5;
