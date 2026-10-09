@@ -65,6 +65,21 @@ export interface Body {
   grip: CatchGrip | null;
   /** Passing round 5: his share of a contested pair's lean (contact.ts): 0.5 even, more for the man who boxes the other out. */
   box: number;
+  /** Passing round 6: the arm the ball is carried in (carrySide), or null before he has it. */
+  carry?: CarryArm | null;
+}
+
+/**
+ * The ball's arm (passing round 6): which arm it's in, the arm he wants it
+ * in and since when (sim s), and a switch under way (from which arm, and
+ * when it started), the ball crossing his chest under both hands.
+ */
+export interface CarryArm {
+  side: 'l' | 'r';
+  want: 'l' | 'r';
+  since: number;
+  from: 'l' | 'r';
+  at: number;
 }
 
 /**
@@ -119,6 +134,7 @@ export function resetBody(b: Body): void {
   b.contest = null;
   b.grip = null;
   b.box = 0.5;
+  b.carry = null;
   b.animator.onTurn = null;
 }
 
@@ -912,7 +928,10 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
           const drawing = a.catchClip !== null && catchTime(a) !== null;
           const secures = a.catchClip === 'catch_body' || a.catchClip?.startsWith('catch_contested_') === true;
           const keep = drawing && (look === 'hands' || (look === 'body' && secures));
-          const want = keep ? a.catchClip! : clipOr(a, catchClip(s, who[0]!, LOOK_STYLE[look]));
+          const want0 = keep ? a.catchClip! : clipOr(a, catchClip(s, who[0]!, LOOK_STYLE[look]));
+          // (Passing round 6) The same catch on the other side (over the other shoulder, the other sideline) is the one already drawn: the ball is in
+          // his hands out in front of him now, so the side read off it at the catch can differ from the one read as it came; restarting it was a pop.
+          const want = drawing && a.catchClip!.replace(/_[lr]$/, '') === want0.replace(/_[lr]$/, '') ? a.catchClip! : want0;
           const committed = drawing && CATCH_FULL.has(a.catchClip!);
           if (a.catchClip !== want && !committed) startCatch(a, want, eventAt(a, want, 'secure') ?? SECURE);
         } else if (!a.catchClip) a.animator.playOverlay('ovl_catch', { t0: SECURE });
@@ -1115,6 +1134,8 @@ export interface Drive {
   drive: number;
   press: number;
   dip: number;
+  /** The ball in his left arm (passing round 6: the left-arm carry families), 0..1. */
+  carryLeft?: number;
 }
 
 const _look = new THREE.Vector3();
@@ -1270,7 +1291,10 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     // A catch clip owns the hands until it has tucked the ball; the reach for the line holds it out in the hand.
     const catching = catchHold(b) !== null;
     carrying = !pocket && !catching;
-    anim.setHold(catching || b.reach ? null : pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' ? 'ovl_protect' : 'ovl_carry_r');
+    // The ball's arm (passing round 6): crossing his chest under both hands while it switches.
+    const arm = carrying && !b.reach ? carrySide(b, s, i, simT) : null;
+    const crossing = !!arm && simT - arm.at < SWITCH_T;
+    anim.setHold(catching || b.reach ? null : pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' || crossing ? 'ovl_protect' : arm?.side === 'l' ? 'ovl_carry_l' : 'ovl_carry_r');
     if (a.move === 'protect') latency.respond('protect');
   } else anim.setHold(null);
   // Down without a clip that lies him down: he falls, once (a dove-and-
@@ -1344,6 +1368,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   }
   // The ball carrier runs like one (M6.5 #11): the carry gaits, and his eyes up.
   if (carrying && !b.fallen) carrierDrive(b, i, s, simT, out, clipBusy(b, tr));
+  if (carrying && b.carry?.side === 'l') out.carryLeft = 1;
   // In a tackle (sim/tackle.ts): pads low, legs churning, both hands on the ball.
   if (carrying && !b.fallen && s.pile?.c === i) {
     out.drive = 1;
@@ -1352,6 +1377,52 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     anim.setHold('ovl_protect');
   }
   return out;
+}
+
+// --- The ball's arm (passing round 6) ----------------------------------------------------
+// Runners are coached to carry the ball in the arm away from the nearest
+// tackler (the outside arm in the open field, toward the sideline), so the
+// near arm is free to fend and the ball is away from the strip, and to switch
+// it to the other arm when they cut across. Render only, from the sim's state.
+
+/** A tackler within this (yd) decides the arm; farther, the sideline does. Ours: about two strides. */
+const ARM_THREAT_R = 5;
+/** Out from the middle of the field this far (yd) the sideline decides; inside it, the arm he has. */
+const ARM_WIDE = 4;
+/** He wants it in the other arm this long (s) before it goes there, and keeps an arm at least ARM_HOLD (no flicking it back and forth). A cut switches it at once. */
+const ARM_WANT = 0.25;
+const ARM_HOLD = 0.8;
+/** The switch: the ball crosses his chest under both hands over this long (s). Ours: a quick two-hand exchange. */
+const SWITCH_T = 0.22;
+
+/** The ball's arm for the carrier this frame, deciding and starting a switch when it's time. */
+function carrySide(b: Body, s: PlayState, i: number, simT: number): CarryArm {
+  const a = s.agents[i]!;
+  const c = (b.carry ??= { side: 'r', want: 'r', since: simT, from: 'r', at: -9 });
+  const sp = Math.hypot(a.vel.x, a.vel.y);
+  const hx = sp > 1 ? a.vel.x / sp : Math.cos(a.face);
+  const hy = sp > 1 ? a.vel.y / sp : Math.sin(a.face);
+  // The sim's y is to the left of its x: a point is on his left when the cross product is positive.
+  const leftOf = (dx: number, dy: number) => hx * dy - hy * dx > 0;
+  let want = c.want;
+  const d = threatOf(s, a);
+  if (d && Math.hypot(d.pos.x - a.pos.x, d.pos.y - a.pos.y) < ARM_THREAT_R) want = leftOf(d.pos.x - a.pos.x, d.pos.y - a.pos.y) ? 'r' : 'l';
+  else if (Math.abs(a.pos.y) > ARM_WIDE) want = leftOf(0, Math.sign(a.pos.y)) ? 'l' : 'r';
+  if (want !== c.want) {
+    c.want = want;
+    c.since = simT;
+  }
+  // A move clip keyed with the ball in the right arm (the spin, the juke, the stiff arm with the left): it goes back to the right arm for it.
+  const tr = b.animator.transition;
+  const move = !!tr && !tr.done && !tr.name.startsWith('cut_plant') && !tr.name.startsWith('catch_');
+  const target = move ? 'r' : c.want;
+  const cutting = !!tr && !tr.done && tr.name.startsWith('cut_plant');
+  if (target !== c.side && simT - c.at >= SWITCH_T && (move || cutting || (simT - c.since >= ARM_WANT && simT - c.at >= ARM_HOLD))) {
+    c.from = c.side;
+    c.side = target;
+    c.at = simT;
+  }
+  return c;
 }
 
 const _h = new THREE.Vector3();
@@ -1395,6 +1466,19 @@ export function ballInHands(b: Body, s: PlayState, ball: THREE.Object3D): boolea
     ball.position.copy(_h).addScaledVector(_d, 0.06);
   } else {
     ball.position.copy(_h).addScaledVector(_d, -0.09);
+    // (Passing round 6) Carried in the left arm, or crossing his chest to the other one.
+    const c = b.carry;
+    const el = bones.get('forearm_l');
+    if (c && el && holder !== s.qb && (c.side === 'l' || c.from === 'l')) {
+      hl.getWorldPosition(_c);
+      el.getWorldPosition(_e);
+      _w.subVectors(_c, _e).normalize();
+      _c.addScaledVector(_w, -0.09);
+      const k = THREE.MathUtils.smoothstep(s.t - c.at, 0, SWITCH_T);
+      const toL = c.side === 'l' ? k : 1 - k;
+      ball.position.lerp(_c, toL);
+      _d.lerp(_w, toL).normalize();
+    }
   }
   ball.quaternion.setFromUnitVectors(_X, _d);
   // Caught and not yet tucked: in the hands (easing into the tuck above).

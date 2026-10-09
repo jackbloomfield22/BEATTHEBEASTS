@@ -85,7 +85,11 @@ describe('the gait families', () => {
       familyWeights(c, t, d, w);
       expect(w.reduce((a, b) => a + b, 0)).toBeCloseTo(1);
     }
-    expect(familyWeights(1, 1, 1, w)).toEqual([0, 0, 0, 1]); // the drive wins over traffic
+    expect(familyWeights(1, 1, 1, w)).toEqual([0, 0, 0, 1, 0, 0, 0]); // the drive wins over traffic
+    // (Passing round 6) The ball in the left arm: the same shares on the left-arm families.
+    expect(familyWeights(1, 1, 1, w, 1)).toEqual([0, 0, 0, 0, 0, 0, 1]);
+    familyWeights(0.7, 0.3, 0.2, w, 0.4);
+    expect(w.reduce((a, b) => a + b, 0)).toBeCloseTo(1);
     expect(familyWeights(0, 1, 1, w)[0]).toBe(1); // not a carrier: the receiver's gaits
   });
 

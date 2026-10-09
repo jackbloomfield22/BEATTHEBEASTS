@@ -58,14 +58,19 @@ export function sampleSorted(sorted: readonly GaitClip[], speed: number, scale: 
  * choppy traffic set or the burst's drive (the drive wins over traffic: a
  * burst is the clearing of it). Written into `out` as [base, carry, traffic, drive].
  */
-export function familyWeights(carry: number, traffic: number, drive: number, out: number[]): number[] {
+export function familyWeights(carry: number, traffic: number, drive: number, out: number[], left = 0): number[] {
   const c = Math.min(1, Math.max(0, carry));
   const t = Math.min(1, Math.max(0, traffic));
   const d = Math.min(1, Math.max(0, drive));
+  // (Passing round 6) The ball's arm: the carrier families' weight shared between the right-arm ones and the left-arm ones (families 4-6).
+  const l = Math.min(1, Math.max(0, left));
   out[0] = 1 - c;
-  out[1] = c * (1 - t) * (1 - d);
-  out[2] = c * t * (1 - d);
-  out[3] = c * d;
+  out[1] = c * (1 - t) * (1 - d) * (1 - l);
+  out[2] = c * t * (1 - d) * (1 - l);
+  out[3] = c * d * (1 - l);
+  out[4] = c * (1 - t) * (1 - d) * l;
+  out[5] = c * t * (1 - d) * l;
+  out[6] = c * d * l;
   return out;
 }
 

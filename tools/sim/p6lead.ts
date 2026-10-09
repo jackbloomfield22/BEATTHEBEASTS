@@ -31,6 +31,11 @@ const ALL: { id: string; play: string; icon: number; hot?: RouteName }[] = [
   { id: 'cross', play: 'trips-y-cross', icon: 1 },
   { id: 'out', play: 'doubles-curls', icon: 1, hot: 'out' },
   { id: 'dig', play: 'singleback-drive', icon: 2 },
+  { id: 'curl', play: 'doubles-curls', icon: 1 },
+  { id: 'comeback', play: 'doubles-curls', icon: 2, hot: 'comeback' },
+  { id: 'hitch', play: 'doubles-hitch-seam', icon: 1 },
+  { id: 'flat', play: 'doubles-curls', icon: 3 },
+  { id: 'slant', play: 'doubles-slants', icon: 1 },
 ];
 const want = args.get('cases')?.split(',');
 const CASES = want ? ALL.filter((c) => want.includes(c.id)) : ALL;
@@ -52,6 +57,7 @@ interface Row {
   early: number;
   miss: number;
   turn: number;
+  stood: number;
 }
 const all: Record<string, Row[]> = {};
 for (const c of CASES)
@@ -63,6 +69,7 @@ for (const c of CASES)
       let rel: { t: number; x: number; y: number; ux: number; uy: number; v: number; mx: number; my: number; hang: number; miss: number } | null = null;
       let vMin = Infinity;
       let wait = 0;
+      let stood = 0;
       let row: Row | null = null;
       for (let k = 0; k < 900 && !s.result; k++) {
         let f: InputFrame;
@@ -87,6 +94,8 @@ for (const c of CASES)
           }
           vMin = Math.min(vMin, sp);
           if (rel.v > 4 && sp < 0.5 * rel.v) wait += 1 / 60;
+          // Stood under it: barely moving with the ball still more than a quarter second away.
+          if (sp < 1.5 && s.ball.arrive - s.t > 0.25) stood += 1 / 60;
           // The tick the sim calls it (the ball reaches someone this step): read before, check after.
           const bx = s.ball.pos.x;
           void bx;
@@ -117,6 +126,7 @@ for (const c of CASES)
             early: rel.t + rel.hang - s.t,
             miss: rel.miss,
             turn,
+            stood,
           };
         }
       }
@@ -128,16 +138,16 @@ for (const c of CASES)
       (all[c.id] ??= []).push(row);
       if (DETAIL)
         console.log(
-          `${c.id}/${def}/${seed} lead ${row.lead.toFixed(1)} of run ${row.run.toFixed(1)} (hang ${row.hang.toFixed(2)}) v ${row.vRel.toFixed(1)} -> catch ${row.vCatch.toFixed(1)} min ${row.vMin.toFixed(1)} wait ${row.wait.toFixed(2)} | ball at catch along ${row.bAlong.toFixed(2)} across ${row.bAcross.toFixed(2)} z ${row.bZ.toFixed(2)} early ${row.early.toFixed(2)} turn ${row.turn.toFixed(0)} miss ${row.miss.toFixed(2)} | ${row.out}`,
+          `${c.id}/${def}/${seed} lead ${row.lead.toFixed(1)} of run ${row.run.toFixed(1)} (hang ${row.hang.toFixed(2)}) v ${row.vRel.toFixed(1)} -> catch ${row.vCatch.toFixed(1)} min ${row.vMin.toFixed(1)} wait ${row.wait.toFixed(2)} | ball at catch along ${row.bAlong.toFixed(2)} across ${row.bAcross.toFixed(2)} z ${row.bZ.toFixed(2)} early ${row.early.toFixed(2)} turn ${row.turn.toFixed(0)} miss ${row.miss.toFixed(2)} stood ${row.stood.toFixed(2)} | ${row.out}`,
         );
     }
 const m = (R: Row[], f: (r: Row) => number) => R.reduce((a, r) => a + f(r), 0) / Math.max(1, R.length);
 console.log(`QB ${QB ?? 'practice'} (tap on the cue)`);
-console.log('case     n  cmp | lead  run  lead/run hang | v rel  v catch/rel  v min/rel  wait s | ball at catch: along across  z    early s | turn deg  miss yd');
+console.log('case     n  cmp | lead  run  lead/run hang | v rel  v catch/rel  v min/rel  wait s | ball at catch: along across  z    early s | turn deg  miss yd | stood s');
 for (const [k, R] of Object.entries(all)) {
   const n = R.length;
   const pc = (o: string) => `${((100 * R.filter((r) => r.out === o).length) / n).toFixed(0).padStart(3)}%`;
   console.log(
-    `${k.padEnd(7)} ${String(n).padStart(3)} ${pc('catch')} | ${m(R, (r) => r.lead).toFixed(1).padStart(4)} ${m(R, (r) => r.run).toFixed(1).padStart(4)}  ${m(R, (r) => r.lead / Math.max(0.1, r.run)).toFixed(2)}  ${m(R, (r) => r.hang).toFixed(2)} | ${m(R, (r) => r.vRel).toFixed(1).padStart(5)}  ${m(R, (r) => r.vCatch / Math.max(0.1, r.vRel)).toFixed(2).padStart(9)}  ${m(R, (r) => r.vMin / Math.max(0.1, r.vRel)).toFixed(2).padStart(9)}  ${m(R, (r) => r.wait).toFixed(2).padStart(6)} |  ${m(R, (r) => r.bAlong).toFixed(2).padStart(6)} ${m(R, (r) => r.bAcross).toFixed(2).padStart(6)} ${m(R, (r) => r.bZ).toFixed(2)}  ${m(R, (r) => r.early).toFixed(2).padStart(5)} | ${m(R, (r) => r.turn).toFixed(0).padStart(5)}  ${m(R, (r) => r.miss).toFixed(2)}`,
+    `${k.padEnd(7)} ${String(n).padStart(3)} ${pc('catch')} | ${m(R, (r) => r.lead).toFixed(1).padStart(4)} ${m(R, (r) => r.run).toFixed(1).padStart(4)}  ${m(R, (r) => r.lead / Math.max(0.1, r.run)).toFixed(2)}  ${m(R, (r) => r.hang).toFixed(2)} | ${m(R, (r) => r.vRel).toFixed(1).padStart(5)}  ${m(R, (r) => r.vCatch / Math.max(0.1, r.vRel)).toFixed(2).padStart(9)}  ${m(R, (r) => r.vMin / Math.max(0.1, r.vRel)).toFixed(2).padStart(9)}  ${m(R, (r) => r.wait).toFixed(2).padStart(6)} |  ${m(R, (r) => r.bAlong).toFixed(2).padStart(6)} ${m(R, (r) => r.bAcross).toFixed(2).padStart(6)} ${m(R, (r) => r.bZ).toFixed(2)}  ${m(R, (r) => r.early).toFixed(2).padStart(5)} | ${m(R, (r) => r.turn).toFixed(0).padStart(5)}  ${m(R, (r) => r.miss).toFixed(2)} | ${m(R, (r) => r.stood).toFixed(2)}`,
   );
 }

@@ -410,3 +410,30 @@ export const PASSING5: Clip[] = [
   { id: 'p5-shoulder', title: 'Over the shoulder: the go', seed: 4, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
   { id: 'p5-toetap', title: 'Toe tap: the quick out', seed: 12, play: 'doubles-quick-outs', def: 'cover2', los: 30, user: false, script: () => NEUTRAL },
 ];
+
+/** The concept's throw with a hot route called at the line (passing round 6: the out, hot-routed on Curl Flat). */
+function hotConcept(p: ConceptPlan & { hot: RouteName }) {
+  const c = concept(p);
+  return (s: PlayState): InputFrame => (s.phase === 'presnap' ? input({ snap: true, hotRoute: { icon: p.icon, route: p.hot } }) : c(s));
+}
+
+// Passing round 6 (docs/passing/PASSING6.md): the player's own throws on the
+// cue (the tick the throw-timing cue says, found by tools/sim/p6find.ts) to
+// the go, the post, the corner, the crosser and the out, from the default
+// broadcast camera and a close one on the catcher (tools/shots/video.spec.ts
+// BTB_PASSING6, FOLLOW6): is the ball thrown to where he's going, does he run
+// under it in stride, and do the ball and his hands meet on the catch? The
+// weak arm's go (Chad Pennington: Throw Power 59, Deep Accuracy 75) is the
+// same throw from a QB who misses; the high point, over the shoulder and the
+// toe tap are round five's plays, for the re-keyed clips.
+export const PASSING6: Clip[] = [
+  { id: 'p6-go', title: 'The go on the cue: Montana to Rice', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 63 }) },
+  { id: 'p6-post', title: 'The post on the cue', seed: 5, play: 'singleback-pa-post', def: 'cover3', los: 30, script: concept({ icon: 1, at: 91 }) },
+  { id: 'p6-corner', title: 'The corner on the cue', seed: 3, play: 'doubles-smash', def: 'cover3', los: 30, script: concept({ icon: 1, at: 80 }) },
+  { id: 'p6-cross', title: 'The crosser on the cue', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: concept({ icon: 1, at: 120 }) },
+  { id: 'p6-out', title: 'The out on the cue (left sideline)', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: hotConcept({ icon: 1, at: 84, hot: 'out' }) },
+  { id: 'p6-weak-go', title: 'The go from a weak arm: Chad Pennington', seed: 5, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 59 }), swap: { off: 'QB', name: 'Chad Pennington', pos: 'QB' } },
+  { id: 'p6-shoulder', title: 'Over the shoulder: the go, touch', seed: 4, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
+  { id: 'p6-highpoint', title: 'High point: GO UP', seed: 1, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 60, aim: { x: 0, y: 1 }, call: 'aggressive' }) },
+  { id: 'p6-toetap', title: 'Toe tap: the quick out', seed: 12, play: 'doubles-quick-outs', def: 'cover2', los: 30, user: false, script: () => NEUTRAL },
+];
