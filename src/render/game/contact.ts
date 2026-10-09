@@ -85,6 +85,8 @@ export interface ContactBody extends Trunk {
   scale: number;
   /** Standing and free: not lying, falling or in a clip that owns his body (a tackle). */
   free: boolean;
+  /** His share (0..1) of a contested pair's lean into each other (passing round 5, choreo.ts boxShare): 0.5 even, more for the man boxing the other out. */
+  box?: number;
 }
 
 export interface ContactTarget {
@@ -140,9 +142,10 @@ export function contactTargets(bodies: readonly ContactBody[], contested: readon
     if (d < 1e-6) continue;
     const ux = dx / d;
     const uz = dz / d;
-    // Each closes half the gap (and the press) at his pads, pivoting at the feet.
-    for (const [k, s, body] of [[i, 1, a], [j, -1, b]] as const) {
-      const ang = Math.min(LEAN_MAX, Math.atan2(gap / 2 + PRESS, PAD_HEIGHT * body.scale));
+    // Each closes his share of the gap (half, unless one man is boxing the other out) and the press at his pads, pivoting at the feet.
+    const sa = Math.max(0, Math.min(1, a.box ?? 0.5));
+    for (const [k, s, body, sh] of [[i, 1, a, sa], [j, -1, b, 1 - sa]] as const) {
+      const ang = Math.min(LEAN_MAX, Math.atan2(gap * sh + PRESS, PAD_HEIGHT * body.scale));
       out[k]!.lx += ux * s * ang;
       out[k]!.lz += uz * s * ang;
     }

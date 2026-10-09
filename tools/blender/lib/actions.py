@@ -800,6 +800,7 @@ def action_clips() -> list[Clip]:
     from .actions_m55 import m55_clips  # (imports this module's helpers)
     from .actions_m6 import m6_clips
     from .actions_m65 import m65_clips
+    from .actions_p5 import hands_run, hands_run_low, p5_clips
     from .actions_m65_carrier import carrier_clips
     from .actions_m65_contact import contact_clips
     from .actions_m7_cel import cel_clips
@@ -814,7 +815,7 @@ def action_clips() -> list[Clip]:
         jl, mirrored(jl, "juke_r", to_phase=0.0), spin(), dive(), tackle(), getup_prone(), getup_supine(),
         *m55_clips(),
         *m6_clips(),
-        *m65_clips(),
+        hands_run(), hands_run_low(), *m65_clips(), *p5_clips(),
         *carrier_clips(),
         *contact_clips(),
         *cel_clips(),

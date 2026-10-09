@@ -42,14 +42,14 @@
 /* The throw-timing cue (passing round 4): its own ring just outside the icon's (3.4rem across, so the open glow's pulse doesn't swallow it). The gold segment at its end is this QB's release; the white fill reaches it when the key should go down, and the whole ring lights gold until the ball should be out (his break). Late, it drains away. A dark track under it keeps it readable on grass and on white jerseys. */
 .cue-ring { left: -1.7rem; top: -1.7rem; width: 3.4rem; height: 3.4rem; transform: rotate(-90deg); overflow: visible; pointer-events: none; }
 .cue-track, .cue-rel, .cue-fill { fill: none; opacity: 0; }
-.cue-track { stroke: rgba(8,7,15,.55); stroke-width: 4.4; }
-.cue-rel { stroke: #ffd24a; stroke-width: 2.8; }
-.cue-fill { stroke: #fff; stroke-width: 2.8; }
+.cue-track { stroke: rgba(8,7,15,.7); stroke-width: 5.2; }
+.cue-rel { stroke: #ffd24a; stroke-width: 3.2; }
+.cue-fill { stroke: #fff; stroke-width: 3.2; }
 .rec-icon[data-cue='fill'] .cue-track { opacity: 1; }
 .rec-icon[data-cue='fill'] .cue-rel { opacity: .75; }
 .rec-icon[data-cue='fill'] .cue-fill { opacity: .95; }
 .rec-icon[data-cue='now'] .cue-track { opacity: 1; }
-.rec-icon[data-cue='now'] .cue-fill { opacity: 1; stroke: #ffd24a; stroke-width: 3.4; filter: drop-shadow(0 0 4px #ffd24a); }
+.rec-icon[data-cue='now'] .cue-fill { opacity: 1; stroke: #ffd24a; stroke-width: 4.2; filter: drop-shadow(0 0 5px #ffd24a); }
 .rec-icon[data-cue='now'] .rec-glyph { color: #ffd24a; }
 .rec-icon[data-cue='late'] .cue-track { opacity: .6; }
 .rec-icon[data-cue='late'] .cue-fill { opacity: .5; }
@@ -97,8 +97,12 @@
 /* Open / covered: the icon glows and pulses when the man is open, dims when he's covered. */
 .rec-icon[data-open='open'] .ring-base { stroke: var(--lime); stroke-width: 4; filter: drop-shadow(0 0 .35rem var(--lime)); }
 .rec-icon[data-open='open'] .rec-ring { animation: open-pulse .9s ease-in-out infinite; }
-.rec-icon[data-open='covered'] { opacity: .58; filter: saturate(.25); }
-.rec-icon[data-open='covered'] .rec-name { opacity: .7; }
+/* (Passing round 5) The covered dimming is on the icon's own parts, not the cue ring, so the cue reads on a covered man too (a ball out on time beats a man who looks covered now). */
+.rec-icon[data-open='covered'] > :not(.cue-ring) { opacity: .58; filter: saturate(.25); }
+.rec-icon[data-open='covered'] .rec-name { opacity: .4; }
+/* While the cue is running the open glow calms down (no pulse, a softer glow), so the eye goes to the fill and the gold; the lime ring still says he's open. */
+.rec-icon[data-open='open'][data-cue='fill'] .rec-ring, .rec-icon[data-open='open'][data-cue='now'] .rec-ring { animation: none; }
+.rec-icon[data-open='open'][data-cue='fill'] .ring-base, .rec-icon[data-open='open'][data-cue='now'] .ring-base { filter: none; stroke-width: 3; }
 @keyframes open-pulse { 0%, 100% { transform: rotate(-90deg) scale(1); } 50% { transform: rotate(-90deg) scale(1.16); } }
 .prompt-row .legend { gap: .35rem; color: var(--ink-3); }
 .prompt-row .dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; margin-left: .3rem; }

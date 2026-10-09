@@ -9704,7 +9704,10 @@
         "index_03_r",
         "thumb_01_r",
         "thumb_02_r",
-        "thumb_03_r"
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
       ]
     },
     "catch_hands_run_low": {
@@ -9773,7 +9776,10 @@
         "index_03_r",
         "thumb_01_r",
         "thumb_02_r",
-        "thumb_03_r"
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
       ]
     },
     "catch_high_point": {
@@ -9879,78 +9885,6 @@
         "secure": 22,
         "tuck": 29
       }
-    },
-    "catch_body": {
-      "kind": "overlay",
-      "frames": 22,
-      "duration": 0.7333333333333333,
-      "loop": false,
-      "speed": 0.0,
-      "dir": [
-        0,
-        0
-      ],
-      "contacts": {
-        "l": [
-          [
-            0,
-            22
-          ]
-        ],
-        "r": [
-          [
-            0,
-            22
-          ]
-        ]
-      },
-      "gates": {
-        "slide_cm": 0.0,
-        "loop_deg": 0.0,
-        "clear_cm": 23.8,
-        "com_cm": null,
-        "reach_cm": 0.0,
-        "pass": true
-      },
-      "events": {
-        "secure": 8,
-        "tuck": 16
-      },
-      "mask": [
-        "clavicle_l",
-        "upperarm_l",
-        "upperarm_twist_l",
-        "forearm_l",
-        "forearm_twist_l",
-        "hand_l",
-        "fingers_01_l",
-        "fingers_02_l",
-        "fingers_03_l",
-        "index_01_l",
-        "index_02_l",
-        "index_03_l",
-        "thumb_01_l",
-        "thumb_02_l",
-        "thumb_03_l",
-        "clavicle_r",
-        "upperarm_r",
-        "upperarm_twist_r",
-        "forearm_r",
-        "forearm_twist_r",
-        "hand_r",
-        "fingers_01_r",
-        "fingers_02_r",
-        "fingers_03_r",
-        "index_01_r",
-        "index_02_r",
-        "index_03_r",
-        "thumb_01_r",
-        "thumb_02_r",
-        "thumb_03_r",
-        "spine_02",
-        "spine_03",
-        "spine_04"
-      ]
     },
     "catch_body_down": {
       "kind": "transition",
@@ -10754,6 +10688,510 @@
       "events": {
         "secure": 8,
         "tuck": 19
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "catch_body": {
+      "kind": "overlay",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 8,
+        "tuck": 17
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "catch_hands_high": {
+      "kind": "overlay",
+      "frames": 27,
+      "duration": 0.9,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            27
+          ]
+        ],
+        "r": [
+          [
+            0,
+            27
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 9,
+        "tuck": 19
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "catch_scoop": {
+      "kind": "overlay",
+      "frames": 28,
+      "duration": 0.9333333333333333,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            28
+          ]
+        ],
+        "r": [
+          [
+            0,
+            28
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 10,
+        "tuck": 21
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "catch_reach_l": {
+      "kind": "overlay",
+      "frames": 27,
+      "duration": 0.9,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            27
+          ]
+        ],
+        "r": [
+          [
+            0,
+            27
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 9,
+        "tuck": 20
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "catch_reach_r": {
+      "kind": "overlay",
+      "frames": 27,
+      "duration": 0.9,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            27
+          ]
+        ],
+        "r": [
+          [
+            0,
+            27
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 9,
+        "tuck": 20
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "catch_contested_l": {
+      "kind": "overlay",
+      "frames": 30,
+      "duration": 1.0,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            30
+          ]
+        ],
+        "r": [
+          [
+            0,
+            30
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 9,
+        "tuck": 21
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "catch_contested_r": {
+      "kind": "overlay",
+      "frames": 30,
+      "duration": 1.0,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            30
+          ]
+        ],
+        "r": [
+          [
+            0,
+            30
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 9,
+        "tuck": 21
       },
       "mask": [
         "clavicle_l",
@@ -14520,5 +14958,5 @@
       ]
     }
   },
-  "bytes": 8655108
+  "bytes": 8864600
 }

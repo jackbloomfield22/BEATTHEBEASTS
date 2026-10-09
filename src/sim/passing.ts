@@ -518,6 +518,53 @@ export function workBack(rec: Agent, hang: (at: V2) => number): { pts: V2[]; sit
   return { pts: [...rt.pts.slice(0, n - 2), P, { x: P.x + S.x - E.x, y: P.y + S.y - E.y }], sit: [...rt.sit], idx: n - 2 };
 }
 /**
+ * The late out's plant on the ball's real hang (passing round 5). workBack
+ * times his plant on the driven ball; when the QB has to put air on it
+ * over the flat defender (clearLoft) or his arm can't drive it there
+ * (fitArm), it hangs longer, and round four's recordings had him plant,
+ * square up and come back to it at a walk. The ball is where the QB meant
+ * it either way; here he runs his out on (toward the landmark, `route0`'s
+ * plant) to the plant that leaves him just the time to come back to that
+ * spot at COME_V, so he's driving back down the line to it as it comes down
+ * (his route's settle a step past it: he comes back through the catch).
+ * Returns his route from here, or null when the ball isn't late for the
+ * plant he has. Read-only.
+ */
+export function workBackTo(rec: Agent, route0: { pts: V2[] }, at: V2, T: number): { pts: V2[]; sit: boolean[]; idx: number } | null {
+  const rt = rec.route;
+  if (!rt) return null;
+  const n = rt.pts.length;
+  if (n < 3 || route0.pts.length !== n || rt.idx !== n - 2) return null;
+  const E = route0.pts[n - 2]!;
+  const L = dist(rec.pos, E);
+  if (L < 1) return null;
+  const ux = (E.x - rec.pos.x) / L;
+  const uy = (E.y - rec.pos.y) / L;
+  const v = Math.max(len(rec.vel), 0.6 * rec.fx.vmax);
+  // Time to the plant x yd on, a beat to plant, and back to the ball at COME_V, against the ball's hang.
+  const over = (x: number) => x / v + COME_SET + dist({ x: rec.pos.x + ux * x, y: rec.pos.y + uy * x }, at) / COME_V - T;
+  let lo = dist(rec.pos, rt.pts[n - 2]!);
+  if (over(lo) >= -OUT_RETIME) return null;
+  let hi = L;
+  if (over(hi) <= 0) lo = hi;
+  else
+    for (let k = 0; k < 24; k++) {
+      const m = (lo + hi) / 2;
+      if (over(m) < 0) lo = m;
+      else hi = m;
+    }
+  const P = { x: rec.pos.x + ux * lo, y: rec.pos.y + uy * lo };
+  const back = dist(P, at);
+  if (back < 0.5) return null;
+  const S = { x: at.x + ((at.x - P.x) / back) * OUT_THROUGH, y: at.y + ((at.y - P.y) / back) * OUT_THROUGH };
+  return { pts: [...rt.pts.slice(0, n - 2), P, S], sit: [...rt.sit], idx: rt.idx };
+}
+/** A late out's plant is moved out when he'd be at it this much (s) early for the ball: a few ticks. Ours. */
+const OUT_RETIME = 0.08;
+/** His settle is this far (yd) past the ball's spot along his way back: he comes back through the catch, not to a stop on it. Ours: a stride. */
+const OUT_THROUGH = 1;
+
+/**
  * The deep ball in the bucket (passing round 4): a vertical (a go, a post,
  * a seam, a fade) with a man on him isn't thrown at him. The QB puts it
  * ahead of him and over the shoulder away from the defender ("throw him
@@ -608,6 +655,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
   const hang0 = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
   // A late out: he'll plant short of the sideline and come back to it (workBack); the QB throws to that.
+  const route0 = rec.route;
   const wb = workBack(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }));
   if (wb) rec.route = wb;
   // Hit as he throws: he led him for the ball he meant, but the arm never
@@ -720,6 +768,8 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   // ball from a 75 arm left at 58 mph against his 54: tools/sim/ballarc.ts).
   // A weaker arm has to put more air under it instead (ball.ts fitArm).
   const { T: Tf, v0 } = fitArm(from, to, clearLoft(s, from, to, hang(to)), vmax);
+  // The late out's plant on the ball's real hang (passing round 5): lofted over a man underneath, it hangs longer than the driven ball his plant was timed on.
+  if (wb && route0) rec.route = workBackTo(rec, route0, meant, Tf) ?? rec.route;
   const kind = touch || Tf > hang(to) * 1.01 ? 'touch' : 'driven';
   const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, chem: fChem, place: aim.x, sigma, timing: tSigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
   return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err, spiral: spiralOf(accN, fPressure, offPlatform, moving, missed, hit), rpm: rpmOf(power), hit };

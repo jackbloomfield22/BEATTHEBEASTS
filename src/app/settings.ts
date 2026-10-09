@@ -63,6 +63,8 @@ export interface Settings {
     firstCatchSlowmo: boolean;
     /** The Beasts' possessions: a broadcast montage of the drive's key play (M7), or the Meanwhile card. */
     beastsDrives: 'montage' | 'card';
+    /** The throw-timing cue on the receiver icons (passing round 4; on by default, a setting since round five). */
+    throwCue: boolean;
   };
   accessibility: {
     colorblind: 'off' | 'deuteranopia' | 'protanopia' | 'tritanopia';
@@ -127,7 +129,7 @@ export function defaultSettings(keyboard: Bindings, gamepad: Bindings): Settings
     graphics: { preset: 'medium', ...PRESET_GRAPHICS.medium },
     controls: { mouseSensitivity: 1, invertY: false, reticleSensitivity: 1, bulletHoldMs: 180, ballInAir: 'assist', keyboard, gamepad },
     audio: { master: 0.8, music: 0.6, sfx: 0.8, crowd: 0.8, ui: 0.7, ambience: 0.6, muteUnfocused: true },
-    gameplay: { difficulty: 'pro', gameLength: 6, quarterMinutes: 5, camera: 'broadcast', lighting: 'golden', skipIntros: false, fastReveal: false, autoReplay: 'big', bigHitSlowmo: true, firstCatchSlowmo: false, beastsDrives: 'montage' },
+    gameplay: { difficulty: 'pro', gameLength: 6, quarterMinutes: 5, camera: 'broadcast', lighting: 'golden', skipIntros: false, fastReveal: false, autoReplay: 'big', bigHitSlowmo: true, firstCatchSlowmo: false, beastsDrives: 'montage', throwCue: true },
     accessibility: { colorblind: 'off', captionSize: 'medium', reduceShake: false, reduceFlashing: false, holdToToggle: false, uiScale: 1 },
   };
 }

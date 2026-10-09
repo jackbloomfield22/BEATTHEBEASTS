@@ -390,3 +390,23 @@ export const PASSING4: Clip[] = [
   { id: 'p4-post', title: 'Post on the cue', seed: 4, play: 'singleback-pa-post', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 91, hold: 14 }) },
   { id: 'p4-slant', title: 'Slant (the catch)', seed: 1, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 22 }) },
 ];
+
+// Passing round 5 (docs/passing/PASSING5.md): one play for each kind of
+// catch (sim/catchstyle.ts), found by tools/sim/p5find.ts: the AI's own
+// throws where they show it, the player's placement (high, the GO UP call)
+// where they don't. Recorded from the broadcast camera and from a close one
+// on the catcher (tools/shots/video.spec.ts BTB_PASSING5, FOLLOW5).
+// The hands pair: Jerry Rice (Catching 99) plucks the stick out of the air;
+// Kelvin Benjamin (63, Body Catcher) on the same snap lets it into his chest.
+export const PASSING5: Clip[] = [
+  { id: 'p5-hands', title: 'Hands: Jerry Rice', seed: 10, play: 'trips-stick', def: 'cover2', los: 30, user: false, script: () => NEUTRAL },
+  { id: 'p5-body', title: 'Body catch: Kelvin Benjamin', seed: 10, play: 'trips-stick', def: 'cover2', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'X', name: 'Kelvin Benjamin', pos: 'WR' } },
+  { id: 'p5-high', title: 'Hands high: the curl over the head', seed: 1, play: 'doubles-curls', def: 'cover3', los: 30, script: concept({ icon: 1, at: 97, aim: { x: 0, y: 1 } }) },
+  { id: 'p5-low', title: 'Hands low: the slant at the knees', seed: 5, play: 'doubles-slants', def: 'cover1', los: 30, user: false, script: () => NEUTRAL },
+  { id: 'p5-scoop', title: 'Scoop: the hitch at the shoe tops', seed: 5, play: 'doubles-hitch-seam', def: 'firezone', los: 30, user: false, script: () => NEUTRAL },
+  { id: 'p5-reach', title: 'Reach: the slant behind him', seed: 8, play: 'doubles-slants', def: 'cover3', los: 30, user: false, script: () => NEUTRAL },
+  { id: 'p5-contested', title: 'Through contact: Gronk', seed: 3, play: 'heavy-pa-te-leak', def: 'cover3', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'TE', name: 'Rob Gronkowski', pos: 'TE' } },
+  { id: 'p5-highpoint', title: 'High point: GO UP', seed: 1, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 60, aim: { x: 0, y: 1 }, call: 'aggressive' }) },
+  { id: 'p5-shoulder', title: 'Over the shoulder: the go', seed: 4, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
+  { id: 'p5-toetap', title: 'Toe tap: the quick out', seed: 12, play: 'doubles-quick-outs', def: 'cover2', los: 30, user: false, script: () => NEUTRAL },
+];
