@@ -106,6 +106,25 @@ interface DraftStore {
 }
 
 let loading: Promise<Catalog> | null = null;
+
+/**
+ * Fetch JSON, trying again on a dropped request or a bad status: `tries`
+ * attempts, waiting `waitMs` × the attempt number between them (a busy dev
+ * server or a network blip would otherwise leave the draft on its loading
+ * screen for good). Ours: 3 tries over ~0.75 s.
+ */
+export async function fetchJsonRetry<T = unknown>(url: string, tries = 3, waitMs = 250, get: (u: string) => Promise<Response> = (u) => fetch(u)): Promise<T> {
+  for (let k = 1; ; k++) {
+    try {
+      const r = await get(url);
+      if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+      return (await r.json()) as T;
+    } catch (e) {
+      if (k >= tries) throw e;
+      await new Promise((ok) => setTimeout(ok, waitMs * k));
+    }
+  }
+}
 let beginToken = 0;
 
 export const useDraft = create<DraftStore>((set, get) => ({
@@ -127,10 +146,19 @@ export const useDraft = create<DraftStore>((set, get) => ({
   saved: loadJSON<SavedDraft>('lastDraft') ?? null,
 
   load() {
-    loading ??= Promise.all([fetch(ratingsUrl).then((r) => r.json()), fetch(jerseysUrl).then((r) => r.json()), fetch(honorsUrl).then((r) => r.json())]).then(([snap, jer, hon]) => {
+    type Honors = Pick<DraftStore, 'allPro'> & Partial<Pick<DraftStore, 'proBowl'>>;
+    loading ??= Promise.all([
+      fetchJsonRetry<Parameters<typeof makeCatalog>[0]>(ratingsUrl),
+      fetchJsonRetry<{ numbers: Parameters<typeof makeCatalog>[1] }>(jerseysUrl),
+      fetchJsonRetry<Honors>(honorsUrl),
+    ]).then(([snap, jer, hon]) => {
       const cat = makeCatalog(snap, jer.numbers);
       set({ cat, allPro: hon.allPro, proBowl: hon.proBowl ?? {} });
       return cat;
+    });
+    // A failed load isn't kept: the next begin tries again instead of awaiting the same rejection forever.
+    loading.catch(() => {
+      loading = null;
     });
     return loading;
   },
