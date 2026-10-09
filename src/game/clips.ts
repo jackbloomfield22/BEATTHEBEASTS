@@ -260,7 +260,8 @@ export const IDENTITY: Clip[] = [
   // (Seed 15 → 20 for the slant squeeze, docs/m66/SLANTS.md; 20 → 67 for the second slant pass, tools/sim/findidentity.ts --only=coverage: the same play and call, Deion's breakup at 1.3 yd, Kam's 70 yd at 2.8 yd of separation. No seed in 1–80 has Deion's pick now.)
   // (Seed 67 Cover 1 → seed 42 Cover 2 man for the passing pass, docs/passing/PASSING.md: the same play and throw; Deion now picks it, Kam gives up 32 yd at 1.2 yd of separation.)
   // (Cover 2 man seed 42 → Cover 1 seed 4 for passing round 3, tools/sim/findidentity.ts --only=coverage: Deion picks it; Kam gives up 40 yd at 2.7 yd of separation.)
-  ...pair('coverage', 'Half the field', { seed: 4, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
+  // (Cover 1 seed 4 → Cover 2 man seed 37 for passing round 4, tools/sim/findidentity.ts --only=coverage: with the deep ball in the bucket the seed-4 ball got to the X, who lost it; now Deion breaks it up at the catch point, Kam gives up 39 yd.)
+  ...pair('coverage', 'Half the field', { seed: 37, play: 'trips-four-verts', def: 'cover2man', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
 ];
 
 // The passing game, end to end (docs/passing/PASSING.md): one clip per

@@ -27,11 +27,9 @@ for (const c of CASES)
         const s = createPlay({ seed, offense: r.offense, defense: r.defense, play: playById(c.play), def: defById(def), los: 30, toGo: 10, user: true });
         const f = userThrow({ icon: c.icon, at: c.brk + late, hot: c.hot });
         let last: { room: number; vOut: number; vx: number } | null = null;
-        let tgt = -1;
         for (let k = 0; k < 900 && !s.result; k++) {
           if (s.phase === 'air' && s.ball.target >= 0) {
-            tgt = s.ball.target;
-            const a = s.agents[tgt]!;
+            const a = s.agents[s.ball.target]!;
             const side = Math.sign(a.pos.y) || 1;
             last = { room: FIELD_HALF_W - Math.abs(a.pos.y), vOut: a.vel.y * side, vx: a.vel.x };
           }
