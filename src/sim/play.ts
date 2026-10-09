@@ -1951,7 +1951,7 @@ function runToBall(s: PlayState, a: Agent): void {
     // behind him. (With the lead now on his real path, a ball on time needs
     // his full speed anyway.)
     // Passing round 3: a ball a stride or two short of his run he tracks in
-    // at his pace and throttles down for late, in the last THROTTLE_T, as a
+    // at his pace and throttles down for late, as a
     // receiver does (he paced to it from the moment he read it, so on a
     // deep ball the player watched him ease up a yard or two a second with
     // the ball in the air: "giving up on the route"). Never so long that he'd
@@ -1959,10 +1959,20 @@ function runToBall(s: PlayState, a: Agent): void {
     // him, he gathers for at once.
     const back = (b.place ?? 0) < -0.5;
     let sp = need;
-    if (!back && need >= 0.6 * cur && need < cur) {
-      const k = Math.max(0, Math.min(1, (left - THROTTLE_T) / THROTTLE_T));
-      const hold = Math.min(cur, Math.max(need, (d - THROTTLE_ROOM) / Math.max(TICK, left - THROTTLE_T / 2)));
-      sp = need + (hold - need) * k;
+    if (!back && need < cur) {
+      // Passing round 6: under a ball short of where he's going he holds
+      // his stride and brakes late, at his own deceleration (a receiver's
+      // plant: BRAKE_K of his cut), to meet it as it comes down, as a
+      // receiver tracking it does, rather than easing up the moment he
+      // reads it (round five's recordings: an underthrown man jogging under
+      // the ball for most of its flight, there early and waiting). Too short
+      // to stop for even braking now: he pulls up at once and comes back to it.
+      // (Round three throttled only a ball a stride or two short, and only
+      // over its last THROTTLE_T; anything shorter he slowed for at once.)
+      const A = BRAKE_K * a.fx.cutAccel;
+      const dv = Math.sqrt(2 * A * Math.max(0, cur * left - d));
+      if (dv > cur) sp = need;
+      else sp = left - dv / A > TICK ? cur : Math.max(cur - dv, cur - A * TICK);
     }
     sp = Math.min(top, sp);
     steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp }, 0.25));
@@ -1985,10 +1995,8 @@ function pursueTackle(s: PlayState, a: Agent, t: Agent): void {
 /** A route runner pulls up this far (yd) inside the end line, braking in time to (ours: a stride). */
 const END_ROOM = 1;
 
-/** A short ball: he runs on at his pace, easing off from twice this long (s) before it arrives, and meets it at the pace that gets him there over the last of it (ours: about three strides). */
-const THROTTLE_T = 0.6;
-/** ...keeping at least this much (yd) of the way to the spot for the throttling down. Ours. */
-const THROTTLE_ROOM = 1;
+/** Under a short ball he brakes at this share of his cut deceleration (fx.cutAccel): a hard plant, short of the all-out cut he'd make to change direction. Ours: an agile receiver brakes later, a big one earlier. */
+const BRAKE_K = 0.7;
 
 /** A ball thrown this far (yd) off a come-back man's settle point he goes to straight off, not through his settle first. Ours: about two strides. */
 const COME_OFF = 2;

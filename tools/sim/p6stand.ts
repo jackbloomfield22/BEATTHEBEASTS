@@ -12,7 +12,7 @@ const args = new Map(process.argv.slice(2).map((a) => a.replace(/^--/, '').split
 const SEEDS = Number(args.get('seeds') ?? 4);
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const base = practiceRosters(snap);
-type Row = { off: number; stood: number; slow: number; out: string; id: string; settle: boolean };
+type Row = { off: number; stood: number; slow: number; mid: number; out: string; id: string; settle: boolean };
 const rows: Row[] = [];
 for (const play of PASS_PLAYS.filter((p) => !p.hailMary && p.type !== 'screen'))
   for (const def of DEF_CALLS)
@@ -24,6 +24,8 @@ for (const play of PASS_PLAYS.filter((p) => !p.hailMary && p.type !== 'screen'))
       let stood = 0;
       let off = 0;
       let settle = false;
+      let mid = -1;
+      let rel = 0;
       for (let k = 0; k < 900 && !s.result; k++) {
         if (s.phase === 'air' && s.ball.target >= 0) {
           const r = s.agents[s.ball.target]!;
@@ -33,7 +35,10 @@ for (const play of PASS_PLAYS.filter((p) => !p.hailMary && p.type !== 'screen'))
             v0 = sp;
             off = Math.hypot(s.ball.aim.x - s.ball.meant.x, s.ball.aim.y - s.ball.meant.y);
             settle = !!r.route && r.route.sit[r.route.pts.length - 1] === true;
+            rel = s.t;
           }
+          // His speed two-thirds of the way through the flight: easing up early shows here, the late plant doesn't.
+          if (mid < 0 && s.t - rel >= (2 / 3) * (s.ball.arrive - rel)) mid = sp;
           vMin = Math.min(vMin, sp);
           if (sp < 1.5 && s.ball.arrive - s.t > 0.25) stood += 1 / 60;
         }
@@ -41,7 +46,7 @@ for (const play of PASS_PLAYS.filter((p) => !p.hailMary && p.type !== 'screen'))
       }
       if (tgt < 0 || !s.result?.pass?.attempted) continue;
       const res = s.result.pass;
-      rows.push({ off, stood, slow: v0 > 3 ? vMin / v0 : 1, out: res.complete ? 'C' : res.intercepted ? 'I' : 'X', id: `${play.id}/${def.id}/${seed}`, settle });
+      rows.push({ off, stood, slow: v0 > 3 ? vMin / v0 : 1, mid: v0 > 3 && mid >= 0 ? mid / v0 : 1, out: res.complete ? 'C' : res.intercepted ? 'I' : 'X', id: `${play.id}/${def.id}/${seed}`, settle });
       if (args.has('detail') && stood > 0.2) console.log(`${play.id}/${def.id}/${seed} off ${off.toFixed(2)} stood ${stood.toFixed(2)} slow ${(v0 > 3 ? vMin / v0 : 1).toFixed(2)} settle ${settle} ${rows.at(-1)!.out}`);
     }
 const bands: [string, (r: Row) => boolean][] = [
@@ -50,11 +55,11 @@ const bands: [string, (r: Row) => boolean][] = [
   ['off 1.5-3', (r) => r.off >= 1.5 && r.off < 3],
   ['off 3+', (r) => r.off >= 3],
 ];
-console.log('band          n   stood>0.2s  mean stood  slowest/v0  cmp   (settle routes excluded / only)');
+console.log('band          n   stood>0.2s  mean stood  slowest/v0  at 2/3 /v0  cmp   (settle routes excluded / only)');
 for (const settle of [false, true])
   for (const [k, f] of bands) {
     const R = rows.filter((r) => f(r) && r.settle === settle);
     if (!R.length) continue;
     const m = (g: (r: Row) => number) => R.reduce((a, r) => a + g(r), 0) / R.length;
-    console.log(`${(settle ? 'S ' : '  ') + k.padEnd(12)} ${String(R.length).padStart(4)}   ${((100 * R.filter((r) => r.stood > 0.2).length) / R.length).toFixed(0).padStart(4)}%      ${m((r) => r.stood).toFixed(2)}        ${m((r) => r.slow).toFixed(2)}     ${((100 * R.filter((r) => r.out === 'C').length) / R.length).toFixed(0)}%`);
+    console.log(`${(settle ? 'S ' : '  ') + k.padEnd(12)} ${String(R.length).padStart(4)}   ${((100 * R.filter((r) => r.stood > 0.2).length) / R.length).toFixed(0).padStart(4)}%      ${m((r) => r.stood).toFixed(2)}        ${m((r) => r.slow).toFixed(2)}        ${m((r) => r.mid).toFixed(2)}     ${((100 * R.filter((r) => r.out === 'C').length) / R.length).toFixed(0)}%`);
   }
