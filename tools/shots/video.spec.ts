@@ -118,7 +118,9 @@ const DIAG = !!process.env.BTB_DIAG;
 function diagFrame(n: number) {
   type V = { x: number; y: number; z: number };
   type B = { player: { root: { position: V & { clone(): V }; rotation: { y: number } }; bones: Map<string, { getWorldPosition(v: V): V }> }; catchClip: string | null; animator: { transition: { name: string; t: number } | null; overlayAction: { name: string; t: number } | null; holdLayer?: { name: string; w: number } | null; actionLayer?: { name: string; w: number } | null } };
-  const w = window as unknown as { __btbBodies?: B[]; __btbBall?: { position: V }; __btbPractice: { runner: { state: { t: number; phase: string; carrier: number; ball: { mode: string; target: number; pos: V; arrive: number } } } } };
+  const w = window as unknown as { __btbBodies?: B[]; __btbBall?: { position: V }; __btbPractice: { runner: { state: { t: number; phase: string; carrier: number; ball: { mode: string; target: number; pos: V; arrive: number } } } | null } };
+  // (No runner yet: a swapped-in roster is still loading.)
+  if (!w.__btbPractice.runner) return { n };
   const s = w.__btbPractice.runner.state;
   const i = s.ball.target >= 0 ? s.ball.target : s.carrier;
   const r2 = (v: number) => Math.round(v * 100) / 100;
