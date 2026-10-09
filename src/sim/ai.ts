@@ -451,7 +451,8 @@ function optionRead(s: PlayState, a: Agent, name: RouteName | null): void {
   }
   const qb = s.agents[s.qb]!;
   const out = Math.sign(q.y - (s.setup.ballY ?? 0)) || 1;
-  const sit = rt.sit[rt.sit.length - 1] === true;
+  // (A settle route by the book's drawing: an out now ends in a settle back down the sideline, routePoints, and it reads as the out it is.)
+  const sit = ROUTES[name][ROUTES[name].length - 1]!.sit === true;
   const lim = FIELD_HALF_W - ROUTE_ROOM;
   const head = rt.pts.slice(0, stem + 1);
   const heads = rt.sit.slice(0, stem + 1);
