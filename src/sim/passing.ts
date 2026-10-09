@@ -1042,7 +1042,12 @@ export function catchLook(s: PlayState, r: Agent, at: { x: number; y: number; z:
   const px = r.pos.x + r.vel.x * T;
   const py = r.pos.y + r.vel.y * T;
   const across = Math.abs((at.x - px) * -hy + (at.y - py) * hx);
-  const away = Math.sqrt((at.x - px) * (at.x - px) + (at.y - py) * (at.y - py));
+  // How far it is from his hands, out in front of him (passing round 6): a
+  // low ball he's running onto is scooped in stride; round five measured it
+  // from his body, so a low ball a step in front laid him out (the dive won
+  // every scoop: PASSING5.md).
+  const k = HANDS_NEAR + (HANDS_FAR - HANDS_NEAR) * pluckOf(r);
+  const away = Math.sqrt((at.x - px - hx * k) ** 2 + (at.y - py - hy * k) ** 2);
   const air = at.x - s.setup.los;
   const bv = len(s.ball.vel);
   const fromBehind = sp > 5 && bv > 1 && (s.ball.vel.x * hx + s.ball.vel.y * hy) / bv > 0.55;

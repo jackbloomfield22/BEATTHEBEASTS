@@ -405,17 +405,12 @@ export const PASSING5: Clip[] = [
   { id: 'p5-low', title: 'Hands low: the slant at the knees', seed: 5, play: 'doubles-slants', def: 'cover1', los: 30, user: false, script: () => NEUTRAL },
   { id: 'p5-scoop', title: 'Scoop: the hitch at the shoe tops', seed: 5, play: 'doubles-hitch-seam', def: 'firezone', los: 30, user: false, script: () => NEUTRAL },
   { id: 'p5-reach', title: 'Reach: the slant behind him', seed: 8, play: 'doubles-slants', def: 'cover3', los: 30, user: false, script: () => NEUTRAL },
-  { id: 'p5-contested', title: 'Through contact: Gronk', seed: 3, play: 'heavy-pa-te-leak', def: 'cover3', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'TE', name: 'Rob Gronkowski', pos: 'TE' } },
+  // (Re-found for passing round 6: with the catch at his hands the leak's ball meets Gronk a stride before Lott gets there; the Y-cross against Cover 1 has Lott on him at the catch: tools/sim/p5find.ts --style=contested.)
+  { id: 'p5-contested', title: 'Through contact: Gronk', seed: 3, play: 'trips-y-cross', def: 'cover1', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'TE', name: 'Rob Gronkowski', pos: 'TE' } },
   { id: 'p5-highpoint', title: 'High point: GO UP', seed: 1, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 60, aim: { x: 0, y: 1 }, call: 'aggressive' }) },
   { id: 'p5-shoulder', title: 'Over the shoulder: the go', seed: 4, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
   { id: 'p5-toetap', title: 'Toe tap: the quick out', seed: 12, play: 'doubles-quick-outs', def: 'cover2', los: 30, user: false, script: () => NEUTRAL },
 ];
-
-/** The concept's throw with a hot route called at the line (passing round 6: the out, hot-routed on Curl Flat). */
-function hotConcept(p: ConceptPlan & { hot: RouteName }) {
-  const c = concept(p);
-  return (s: PlayState): InputFrame => (s.phase === 'presnap' ? input({ snap: true, hotRoute: { icon: p.icon, route: p.hot } }) : c(s));
-}
 
 // Passing round 6 (docs/passing/PASSING6.md): the player's own throws on the
 // cue (the tick the throw-timing cue says, found by tools/sim/p6find.ts) to
@@ -431,7 +426,7 @@ export const PASSING6: Clip[] = [
   { id: 'p6-post', title: 'The post on the cue', seed: 5, play: 'singleback-pa-post', def: 'cover3', los: 30, script: concept({ icon: 1, at: 91 }) },
   { id: 'p6-corner', title: 'The corner on the cue', seed: 3, play: 'doubles-smash', def: 'cover3', los: 30, script: concept({ icon: 1, at: 80 }) },
   { id: 'p6-cross', title: 'The crosser on the cue', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: concept({ icon: 1, at: 120 }) },
-  { id: 'p6-out', title: 'The out on the cue (left sideline)', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: hotConcept({ icon: 1, at: 84, hot: 'out' }) },
+  { id: 'p6-out', title: 'The out on the cue (left sideline)', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 84, hot: 'out' }) },
   { id: 'p6-weak-go', title: 'The go from a weak arm: Chad Pennington', seed: 5, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 59 }), swap: { off: 'QB', name: 'Chad Pennington', pos: 'QB' } },
   { id: 'p6-shoulder', title: 'Over the shoulder: the go, touch', seed: 4, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
   { id: 'p6-highpoint', title: 'High point: GO UP', seed: 1, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 60, aim: { x: 0, y: 1 }, call: 'aggressive' }) },
