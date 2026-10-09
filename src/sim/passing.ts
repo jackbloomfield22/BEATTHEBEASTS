@@ -483,12 +483,57 @@ const COME_SET = 0.15;
 /** The most he comes back (yd), for a perfect route runner (60% of it for a 0): about two steps. Ours. */
 const COME_MAX = 1.5;
 
+/**
+ * A late out (passing round 4): the ball's thrown to a man still running his
+ * out toward the sideline, and it'll hang longer than it takes him to get
+ * there. He doesn't run on to the boundary and wait under it: he plants
+ * short of it, with time to come back (OUT_COME_T), and works back down the
+ * line to the ball, inside the sideline, the way the out's last leg comes
+ * back (ai.ts routePoints, OUT_TO_BOUNDARY). Returns his route from here
+ * (the plant and the settle moved in), or null when the ball gets there
+ * before he'd reach the boundary anyway (an out on time) or it isn't an out.
+ * An out is found by its shape: its last leg comes back to the line (a
+ * settle), the leg before it runs across the field to a landmark by the
+ * sideline.
+ */
+export function workBack(rec: Agent, hang: (at: V2) => number): { pts: V2[]; sit: boolean[]; idx: number } | null {
+  const rt = rec.route;
+  if (!rt || !comesBack(rt)) return null;
+  const n = rt.pts.length;
+  if (n < 3 || rt.idx !== n - 2) return null;
+  const E = rt.pts[n - 2]!;
+  const S = rt.pts[n - 1]!;
+  const P0 = rt.pts[n - 3]!;
+  const across = E.y - P0.y;
+  if (FIELD_HALF_W - Math.abs(E.y) > OUT_EDGE || Math.abs(across) < 3 * Math.abs(E.x - P0.x) || Math.sign(across) !== Math.sign(E.y)) return null;
+  const L = dist(rec.pos, E);
+  const v = Math.max(len(rec.vel), 0.6 * rec.fx.vmax);
+  const T = hang(S);
+  const plantAt = T - OUT_COME_T;
+  if (L / v <= plantAt || L < 1) return null;
+  const u = { x: (E.x - rec.pos.x) / L, y: (E.y - rec.pos.y) / L };
+  const d = Math.min(L, Math.max(OUT_PLANT_MIN, v * Math.max(0, plantAt)));
+  const P = { x: rec.pos.x + u.x * d, y: rec.pos.y + u.y * d };
+  return { pts: [...rt.pts.slice(0, n - 2), P, { x: P.x + S.x - E.x, y: P.y + S.y - E.y }], sit: [...rt.sit], idx: n - 2 };
+}
+/** The meant catch point is kept this far (yd) inside the sideline: a ball he can catch with both feet in (a toe tap when it drifts toward the line). Ours. */
+const IN_BOUNDS = 0.8;
+/** The out's landmark is within this of the sideline (yd): the routes routePoints runs to the boundary. */
+const OUT_EDGE = 2;
+/** The time (s) a late out's receiver plants before the ball gets there, to come back to it: the plant (~0.2 s at a hard break) and two steps back. Ours. */
+const OUT_COME_T = 0.5;
+/** He runs on at least this far (yd) before he plants: he's at speed, a step and the plant. Ours. */
+const OUT_PLANT_MIN = 1;
+
 export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2, pressure: number, offPlatform: boolean, hit = false): ThrowPlan {
   const power = qb.fx.r('throwPower');
   const { vmax, range } = arm(qb);
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
   const hang0 = (to: V3) => Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
+  // A late out: he'll plant short of the sideline and come back to it (workBack); the QB throws to that.
+  const wb = workBack(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }));
+  if (wb) rec.route = wb;
   // Hit as he throws: he led him for the ball he meant, but the arm never
   // finishes, so it comes out slow and fluttering (HIT_HANG) and arrives late, behind him.
   const hang = (to: V3) => hang0(to) * (hit ? HIT_HANG : 1);
@@ -500,7 +545,8 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   // Placement input: lead / back shoulder along his path (the way he'll be running at the catch), high / low.
   const place = 1.6 * aim.x + HOLD_LEAD * Math.max(0, Math.min(1, loft));
   let tx = spot.x + rv.x * place;
-  let ty = spot.y + rv.y * place;
+  // The QB leads him in bounds (passing round 4): a lead along a man running at the sideline is kept IN_BOUNDS inside it, where he can catch it with his feet down.
+  let ty = Math.max(-(FIELD_HALF_W - IN_BOUNDS), Math.min(FIELD_HALF_W - IN_BOUNDS, spot.y + rv.y * place));
   let tz = CATCH_Z + 0.55 * aim.y;
   const meant = { x: tx, y: ty };
   const d = dist(from, { x: tx, y: ty });
@@ -640,8 +686,14 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   const { vmax, range } = arm(qb);
   const touch = loft > 0;
   const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
+  const hangP = (at: V2) => {
+    const to = { x: at.x, y: at.y, z: CATCH_Z };
+    return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
+  };
+  // (A late out comes back to it: the reticle shows where, on a copy of him.)
+  const wb = workBack(rec, hangP);
   const run = leadFor(
-    rec,
+    wb ? { ...rec, route: wb } : rec,
     (at) => {
       const to = { x: at.x, y: at.y, z: CATCH_Z };
       return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
@@ -650,7 +702,7 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
   );
   const { spot, rv } = run;
   let x = spot.x + rv.x * 1.6 * aim.x;
-  let y = spot.y + rv.y * 1.6 * aim.x;
+  let y = Math.max(-(FIELD_HALF_W - IN_BOUNDS), Math.min(FIELD_HALF_W - IN_BOUNDS, spot.y + rv.y * 1.6 * aim.x));
   const d = dist(from, { x, y });
   if (d > range) {
     x = from.x + (x - from.x) * (range / d);

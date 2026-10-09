@@ -4,6 +4,8 @@ import { createPlay, defById, input, playById, practiceRosters, stepPlay, type I
 import { throwCue } from '@/sim/cue';
 import { findStint, simPlayer } from '@/sim/roster';
 import { cueAt } from '@/render/game/cueRing';
+import { PASSING3 } from '@/game/clips';
+import { FIELD_HALF_W } from '@/sim/types';
 
 // Passing round 4 (docs/passing/PASSING4.md).
 
@@ -64,5 +66,24 @@ describe('the throw-timing cue', () => {
   it('gives no cue to a screen or before the snap', () => {
     const s = play('doubles-slants', 'cover3', 1);
     expect(throwCue(s, s.agents[s.icons[0]!]!)).toBeNull();
+  });
+});
+
+describe('the late out', () => {
+  it('comes back to the ball inside the sideline instead of drifting to it under the ball', () => {
+    const c = PASSING3.find((x) => x.id === 'p3-out-late')!;
+    const s = play(c.play, c.def, c.seed);
+    let at: { y: number; vy: number } | null = null;
+    let last: { y: number; vy: number } | null = null;
+    for (let k = 0; k < 600 && !s.result && !at; k++) {
+      // (His run into the catch: the tick before it, before any hit on him.)
+      if (s.phase === 'air' && s.pass) last = { y: s.agents[s.pass.target]!.pos.y, vy: s.agents[s.pass.target]!.vel.y };
+      stepPlay(s, c.script(s));
+      if (s.events.some((x) => x.type === 'catch' || x.type === 'drop' || x.type === 'deflection' || x.type === 'interception')) at = last;
+    }
+    expect(at).not.toBeNull();
+    // Inside the sideline with room (not at its edge), and not running toward it.
+    expect(FIELD_HALF_W - Math.abs(at!.y)).toBeGreaterThan(2.5);
+    expect(at!.vy * Math.sign(at!.y)).toBeLessThan(0.5);
   });
 });
