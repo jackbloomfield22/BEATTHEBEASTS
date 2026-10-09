@@ -37,6 +37,7 @@ import { prepareLate, shadowAttach } from '../lighting/shadows';
 import { createFootball } from './football';
 import { ballWorldVel, createBallFlight, heldAt, placeFlight, resetFlight } from './ballFlight';
 import { createFieldMarks } from './fieldMarks';
+import { hudTime, placeCue } from './cueRing';
 import { frameEvents } from './frameEvents';
 import { ballInHands, catchMagnet, catchReach, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
 import { Officials } from './officials';
@@ -614,6 +615,8 @@ export function GameScene() {
         el.style.transform = `translate(${v.x.toFixed(1)}px, ${v.y.toFixed(1)}px)`;
         const o = reading ? v.open : 'none';
         if (el.dataset.open !== o) el.dataset.open = o;
+        // The throw-timing cue (passing round 4): when to press for the ball to be out on his break.
+        placeCue(k, el, s, idx, hudTime(cur.t, r.alpha), practice.playId, latency.frame, v.visible && cur.phase !== 'presnap' && !!s.setup.user);
       }
       // The power ring: fills while the icon is held (a tap stays empty: touch).
       const ring = hudDom.rings[k];

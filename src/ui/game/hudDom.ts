@@ -6,6 +6,9 @@
 export const hudDom = {
   icons: [] as (HTMLElement | null)[],
   rings: [] as (SVGCircleElement | null)[],
+  /** The throw-timing cue (passing round 4): the ring filling to the press, and his QB's release segment at its end. */
+  cueFill: [] as (SVGCircleElement | null)[],
+  cueRel: [] as (SVGCircleElement | null)[],
   reticle: null as HTMLElement | null,
   stamina: null as HTMLElement | null,
   /** The carrier's cluster (stamina and his move keys), placed under him every frame. */
@@ -24,3 +27,6 @@ export const BLITZ_TAGS = 4;
 
 /** Circumference of the power ring's circle (r = 17). */
 export const RING_LEN = 2 * Math.PI * 17;
+
+/** Circumference of the throw-timing cue's circle (r = 20.5, just outside the icon's ring). */
+export const CUE_LEN = 2 * Math.PI * 20.5;
