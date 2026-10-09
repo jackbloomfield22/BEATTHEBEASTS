@@ -510,7 +510,8 @@ export function workBack(rec: Agent, hang: (at: V2) => number): { pts: V2[]; sit
   const v = Math.max(len(rec.vel), 0.6 * rec.fx.vmax);
   const T = hang(S);
   const plantAt = T - OUT_COME_T;
-  if (L / v <= plantAt || L < 1) return null;
+  // The ball meets him on his way out, short of the boundary (an out on time, or a man with room to the sideline): the lead's.
+  if (L / v <= plantAt || v * T < L - OUT_NEAR || L < 1) return null;
   const u = { x: (E.x - rec.pos.x) / L, y: (E.y - rec.pos.y) / L };
   const d = Math.min(L, Math.max(OUT_PLANT_MIN, v * Math.max(0, plantAt)));
   const P = { x: rec.pos.x + u.x * d, y: rec.pos.y + u.y * d };
@@ -595,6 +596,8 @@ const IN_BOUNDS = 0.8;
 const OUT_EDGE = 2;
 /** The time (s) a late out's receiver plants before the ball gets there, to come back to it: the plant (~0.2 s at a hard break) and two steps back. Ours. */
 const OUT_COME_T = 0.5;
+/** He works back only for a ball that would otherwise meet him within this of the landmark (yd; it's OUT_EDGE inside the sideline): with more room than that, it meets him running his out. Ours. */
+const OUT_NEAR = 2.5;
 /** He runs on at least this far (yd) before he plants: he's at speed, a step and the plant. Ours. */
 const OUT_PLANT_MIN = 1;
 
