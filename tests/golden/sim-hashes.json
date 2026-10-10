@@ -85,8 +85,8 @@
  },
  {
   "key": "trips-stick/tampa2/11",
-  "hash": 4054342540,
-  "ticks": 208,
+  "hash": 1736324372,
+  "ticks": 227,
   "reason": "tackle"
  },
  {
@@ -373,8 +373,8 @@
  },
  {
   "key": "bunch-snag/cover1/11",
-  "hash": 3749947237,
-  "ticks": 223,
+  "hash": 43844178,
+  "ticks": 221,
   "reason": "tackle"
  },
  {
@@ -409,8 +409,8 @@
  },
  {
   "key": "bunch-snag/cover2man/11",
-  "hash": 4179744482,
-  "ticks": 292,
+  "hash": 489811399,
+  "ticks": 299,
   "reason": "tackle"
  },
  {
@@ -421,7 +421,7 @@
  },
  {
   "key": "bunch-snag/cover1blitz/11",
-  "hash": 1288035983,
+  "hash": 2569185408,
   "ticks": 411,
   "reason": "tackle"
  },
@@ -433,8 +433,8 @@
  },
  {
   "key": "bunch-snag/cover1off/11",
-  "hash": 2734083055,
-  "ticks": 221,
+  "hash": 2532055547,
+  "ticks": 223,
   "reason": "tackle"
  },
  {
@@ -601,8 +601,8 @@
  },
  {
   "key": "doubles-smash/cover3/11",
-  "hash": 2156255877,
-  "ticks": 256,
+  "hash": 2505931232,
+  "ticks": 257,
   "reason": "tackle"
  },
  {
@@ -613,8 +613,8 @@
  },
  {
   "key": "doubles-smash/cover1/11",
-  "hash": 3763027889,
-  "ticks": 469,
+  "hash": 647903687,
+  "ticks": 470,
   "reason": "touchdown"
  },
  {
@@ -625,9 +625,9 @@
  },
  {
   "key": "doubles-smash/cover2/11",
-  "hash": 1811296796,
-  "ticks": 259,
-  "reason": "incomplete"
+  "hash": 2391785693,
+  "ticks": 247,
+  "reason": "tackle"
  },
  {
   "key": "doubles-smash/cover2/4242/user",
@@ -637,8 +637,8 @@
  },
  {
   "key": "doubles-smash/cover4/11",
-  "hash": 4031542036,
-  "ticks": 240,
+  "hash": 2692304163,
+  "ticks": 242,
   "reason": "tackle"
  },
  {
@@ -649,8 +649,8 @@
  },
  {
   "key": "doubles-smash/cover2man/11",
-  "hash": 2651265818,
-  "ticks": 265,
+  "hash": 221458357,
+  "ticks": 249,
   "reason": "tackle"
  },
  {
@@ -661,8 +661,8 @@
  },
  {
   "key": "doubles-smash/cover1blitz/11",
-  "hash": 481882023,
-  "ticks": 469,
+  "hash": 3140701513,
+  "ticks": 468,
   "reason": "touchdown"
  },
  {
@@ -673,8 +673,8 @@
  },
  {
   "key": "doubles-smash/cover1off/11",
-  "hash": 1393600069,
-  "ticks": 472,
+  "hash": 1073711165,
+  "ticks": 471,
   "reason": "touchdown"
  },
  {
@@ -685,9 +685,9 @@
  },
  {
   "key": "doubles-smash/tampa2/11",
-  "hash": 4246824386,
-  "ticks": 259,
-  "reason": "incomplete"
+  "hash": 651253787,
+  "ticks": 247,
+  "reason": "tackle"
  },
  {
   "key": "doubles-smash/tampa2/4242/user",
@@ -1225,8 +1225,8 @@
  },
  {
   "key": "trips-four-verts/cover2/11",
-  "hash": 2709445800,
-  "ticks": 267,
+  "hash": 2071285861,
+  "ticks": 268,
   "reason": "tackle"
  },
  {
@@ -1381,8 +1381,8 @@
  },
  {
   "key": "doubles-dagger/cover1blitz/11",
-  "hash": 454959156,
-  "ticks": 379,
+  "hash": 4095732401,
+  "ticks": 381,
   "reason": "tackle"
  },
  {
@@ -1429,9 +1429,9 @@
  },
  {
   "key": "doubles-dagger/simpressure/11",
-  "hash": 1324769471,
-  "ticks": 405,
-  "reason": "outOfBounds"
+  "hash": 1527886643,
+  "ticks": 350,
+  "reason": "incomplete"
  },
  {
   "key": "doubles-dagger/simpressure/4242/user",
@@ -1489,8 +1489,8 @@
  },
  {
   "key": "singleback-pa-post/cover2man/11",
-  "hash": 1497234189,
-  "ticks": 380,
+  "hash": 2051725768,
+  "ticks": 390,
   "reason": "tackle"
  },
  {
@@ -1657,8 +1657,8 @@
  },
  {
   "key": "singleback-pa-yankee/firezone/11",
-  "hash": 368803996,
-  "ticks": 483,
+  "hash": 572393518,
+  "ticks": 481,
   "reason": "tackle"
  },
  {
@@ -2053,8 +2053,8 @@
  },
  {
   "key": "doubles-hitch-seam/cover1/11",
-  "hash": 370159639,
-  "ticks": 255,
+  "hash": 2606779744,
+  "ticks": 263,
   "reason": "tackle"
  },
  {
@@ -2221,8 +2221,8 @@
  },
  {
   "key": "empty-spot/cover1blitz/11",
-  "hash": 3269626318,
-  "ticks": 321,
+  "hash": 233532996,
+  "ticks": 322,
   "reason": "outOfBounds"
  },
  {
@@ -2773,8 +2773,8 @@
  },
  {
   "key": "ace-pa-crossers/cover1/11",
-  "hash": 1985796635,
-  "ticks": 414,
+  "hash": 1865809166,
+  "ticks": 410,
   "reason": "incomplete"
  },
  {
@@ -3253,8 +3253,8 @@
  },
  {
   "key": "heavy-pa-te-leak/cover1/11",
-  "hash": 3827970718,
-  "ticks": 276,
+  "hash": 2060355409,
+  "ticks": 278,
   "reason": "tackle"
  },
  {
@@ -3301,8 +3301,8 @@
  },
  {
   "key": "heavy-pa-te-leak/cover1blitz/11",
-  "hash": 720996530,
-  "ticks": 276,
+  "hash": 1930011508,
+  "ticks": 278,
   "reason": "tackle"
  },
  {
@@ -3373,8 +3373,8 @@
  },
  {
   "key": "h-pa-swing/cover1/11",
-  "hash": 293983595,
-  "ticks": 288,
+  "hash": 517152365,
+  "ticks": 292,
   "reason": "outOfBounds"
  },
  {
@@ -3409,8 +3409,8 @@
  },
  {
   "key": "h-pa-swing/cover2man/11",
-  "hash": 713003170,
-  "ticks": 303,
+  "hash": 2057222937,
+  "ticks": 304,
   "reason": "outOfBounds"
  },
  {
@@ -3421,8 +3421,8 @@
  },
  {
   "key": "h-pa-swing/cover1blitz/11",
-  "hash": 1310166058,
-  "ticks": 283,
+  "hash": 1770887321,
+  "ticks": 286,
   "reason": "outOfBounds"
  },
  {
@@ -3433,8 +3433,8 @@
  },
  {
   "key": "h-pa-swing/cover1off/11",
-  "hash": 863915875,
-  "ticks": 289,
+  "hash": 3307787205,
+  "ticks": 293,
   "reason": "outOfBounds"
  },
  {
