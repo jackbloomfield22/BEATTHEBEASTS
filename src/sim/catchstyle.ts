@@ -24,7 +24,7 @@
 
 import type { Agent } from './types';
 import type { PlayState } from './state';
-import { catchLook } from './passing';
+import { catchLook, pluckOf } from './passing';
 import { has } from './traits';
 import { cos, sin } from '@/engine/math/detmath';
 
@@ -63,15 +63,8 @@ export function bodyCatchShare(r: Agent): number {
   return p;
 }
 
-/**
- * How far out in front of the body the hands meet the ball (0..1): the
- * pluck. A 95 Catching reaches out and takes it at the end of his arms (1);
- * a 60 waits for it to come to him (0). Ours, linear over the band real
- * receivers live in (Catching 60–95: the snapshot's WR median is 71).
- */
-export function pluckOf(r: Agent): number {
-  return Math.max(0, Math.min(1, (r.fx.a('catching') - 60 / 99) / (35 / 99)));
-}
+/** How far out in front of the body the hands meet the ball (0..1): passing.ts pluckOf (the sim's catch is at his hands since passing round 6). */
+export { pluckOf };
 
 /** A small deterministic hash in [0, 1) of the play and the throw (not a sim stream). */
 function hash01(a: number, b: number, c: number): number {

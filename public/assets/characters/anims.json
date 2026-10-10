@@ -9782,110 +9782,6 @@
         "spine_04"
       ]
     },
-    "catch_high_point": {
-      "kind": "transition",
-      "frames": 49,
-      "duration": 1.6333333333333333,
-      "loop": false,
-      "speed": 0.0,
-      "dir": [
-        0.0,
-        1.0
-      ],
-      "contacts": {
-        "l": [
-          [
-            9,
-            13
-          ],
-          [
-            31,
-            37
-          ]
-        ],
-        "r": [
-          [
-            0,
-            6
-          ],
-          [
-            31,
-            35
-          ],
-          [
-            39,
-            44
-          ]
-        ]
-      },
-      "gates": {
-        "slide_cm": 0.36,
-        "loop_deg": 0.0,
-        "clear_cm": 20.1,
-        "com_cm": null,
-        "reach_cm": 18.46,
-        "pass": true
-      },
-      "travel": [
-        0.0,
-        0.191,
-        0.3771,
-        0.5586,
-        0.7352,
-        0.9071,
-        1.0743,
-        1.2367,
-        1.3943,
-        1.5471,
-        1.6952,
-        1.8386,
-        1.9771,
-        2.1112,
-        2.2434,
-        2.3743,
-        2.5038,
-        2.6321,
-        2.7591,
-        2.8848,
-        3.0092,
-        3.1323,
-        3.2541,
-        3.3746,
-        3.4938,
-        3.6117,
-        3.7283,
-        3.8436,
-        3.9576,
-        4.0703,
-        4.1818,
-        4.2918,
-        4.3998,
-        4.5056,
-        4.6092,
-        4.7105,
-        4.8096,
-        4.9073,
-        5.011,
-        5.1225,
-        5.2417,
-        5.3688,
-        5.5037,
-        5.6463,
-        5.7968,
-        5.955,
-        6.1211,
-        6.2949,
-        6.4766,
-        6.666
-      ],
-      "from": "loco_run",
-      "to": "loco_run",
-      "fromPhase": 0.5,
-      "events": {
-        "secure": 22,
-        "tuck": 29
-      }
-    },
     "catch_body_down": {
       "kind": "transition",
       "frames": 39,
@@ -9983,150 +9879,6 @@
         "secure": 8,
         "tuck": 16
       }
-    },
-    "catch_over_shoulder_l": {
-      "kind": "overlay",
-      "frames": 21,
-      "duration": 0.7,
-      "loop": false,
-      "speed": 0.0,
-      "dir": [
-        0,
-        0
-      ],
-      "contacts": {
-        "l": [
-          [
-            0,
-            21
-          ]
-        ],
-        "r": [
-          [
-            0,
-            21
-          ]
-        ]
-      },
-      "gates": {
-        "slide_cm": 0.0,
-        "loop_deg": 0.0,
-        "clear_cm": 23.8,
-        "com_cm": null,
-        "reach_cm": 0.0,
-        "pass": true
-      },
-      "events": {
-        "secure": 10,
-        "tuck": 17
-      },
-      "mask": [
-        "clavicle_l",
-        "upperarm_l",
-        "upperarm_twist_l",
-        "forearm_l",
-        "forearm_twist_l",
-        "hand_l",
-        "fingers_01_l",
-        "fingers_02_l",
-        "fingers_03_l",
-        "index_01_l",
-        "index_02_l",
-        "index_03_l",
-        "thumb_01_l",
-        "thumb_02_l",
-        "thumb_03_l",
-        "clavicle_r",
-        "upperarm_r",
-        "upperarm_twist_r",
-        "forearm_r",
-        "forearm_twist_r",
-        "hand_r",
-        "fingers_01_r",
-        "fingers_02_r",
-        "fingers_03_r",
-        "index_01_r",
-        "index_02_r",
-        "index_03_r",
-        "thumb_01_r",
-        "thumb_02_r",
-        "thumb_03_r",
-        "spine_02",
-        "spine_03",
-        "spine_04"
-      ]
-    },
-    "catch_over_shoulder_r": {
-      "kind": "overlay",
-      "frames": 21,
-      "duration": 0.7,
-      "loop": false,
-      "speed": 0.0,
-      "dir": [
-        0,
-        0
-      ],
-      "contacts": {
-        "l": [
-          [
-            0,
-            21
-          ]
-        ],
-        "r": [
-          [
-            0,
-            21
-          ]
-        ]
-      },
-      "gates": {
-        "slide_cm": 0.0,
-        "loop_deg": 0.0,
-        "clear_cm": 23.8,
-        "com_cm": null,
-        "reach_cm": 0.0,
-        "pass": true
-      },
-      "events": {
-        "secure": 10,
-        "tuck": 17
-      },
-      "mask": [
-        "clavicle_l",
-        "upperarm_l",
-        "upperarm_twist_l",
-        "forearm_l",
-        "forearm_twist_l",
-        "hand_l",
-        "fingers_01_l",
-        "fingers_02_l",
-        "fingers_03_l",
-        "index_01_l",
-        "index_02_l",
-        "index_03_l",
-        "thumb_01_l",
-        "thumb_02_l",
-        "thumb_03_l",
-        "clavicle_r",
-        "upperarm_r",
-        "upperarm_twist_r",
-        "forearm_r",
-        "forearm_twist_r",
-        "hand_r",
-        "fingers_01_r",
-        "fingers_02_r",
-        "fingers_03_r",
-        "index_01_r",
-        "index_02_r",
-        "index_03_r",
-        "thumb_01_r",
-        "thumb_02_r",
-        "thumb_03_r",
-        "spine_02",
-        "spine_03",
-        "spine_04"
-      ]
     },
     "catch_dive_l": {
       "kind": "transition",
@@ -10348,237 +10100,6 @@
       "events": {
         "secure": 10,
         "tuck": 16
-      }
-    },
-    "catch_toe_tap_l": {
-      "kind": "transition",
-      "frames": 30,
-      "duration": 1.0,
-      "loop": false,
-      "speed": 0.0,
-      "dir": [
-        0.0,
-        1.0
-      ],
-      "contacts": {
-        "l": [
-          [
-            0,
-            5
-          ],
-          [
-            15,
-            18
-          ],
-          [
-            24,
-            27
-          ]
-        ],
-        "r": [
-          [
-            9,
-            14
-          ]
-        ]
-      },
-      "gates": {
-        "slide_cm": 0.0,
-        "loop_deg": 0.0,
-        "clear_cm": 20.4,
-        "com_cm": null,
-        "reach_cm": 29.53,
-        "pass": true
-      },
-      "travel": [
-        0.0,
-        0.1911,
-        0.378,
-        0.5607,
-        0.7393,
-        0.9141,
-        1.085,
-        1.2522,
-        1.416,
-        1.5762,
-        1.7332,
-        1.887,
-        2.0378,
-        2.1856,
-        2.3307,
-        2.473,
-        2.6128,
-        2.7502,
-        2.8852,
-        3.0181,
-        3.1489,
-        3.2778,
-        3.4048,
-        3.5302,
-        3.654,
-        3.7764,
-        3.8974,
-        4.0173,
-        4.1361,
-        4.254,
-        4.371
-      ],
-      "from": "loco_run",
-      "to": "loco_jog",
-      "toPhase": 0.5,
-      "side": [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.002,
-        0.0133,
-        0.0325,
-        0.057,
-        0.0844,
-        0.1123,
-        0.1383,
-        0.1598,
-        0.1745,
-        0.18,
-        0.181,
-        0.1911,
-        0.2111,
-        0.2392,
-        0.2737,
-        0.3129,
-        0.3551,
-        0.3987,
-        0.442,
-        0.4833,
-        0.5208,
-        0.5529,
-        0.5779,
-        0.5942,
-        0.6
-      ],
-      "fromPhase": 0.0,
-      "events": {
-        "secure": 12,
-        "tuck": 20,
-        "tap": 16
-      }
-    },
-    "catch_toe_tap_r": {
-      "kind": "transition",
-      "frames": 30,
-      "duration": 1.0,
-      "loop": false,
-      "speed": 0.0,
-      "dir": [
-        0.0,
-        1.0
-      ],
-      "contacts": {
-        "l": [
-          [
-            9,
-            14
-          ]
-        ],
-        "r": [
-          [
-            0,
-            5
-          ],
-          [
-            15,
-            18
-          ],
-          [
-            24,
-            27
-          ]
-        ]
-      },
-      "gates": {
-        "slide_cm": 0.0,
-        "loop_deg": 0.0,
-        "clear_cm": 20.4,
-        "com_cm": null,
-        "reach_cm": 29.53,
-        "pass": true
-      },
-      "travel": [
-        0.0,
-        0.1911,
-        0.378,
-        0.5607,
-        0.7393,
-        0.9141,
-        1.085,
-        1.2522,
-        1.416,
-        1.5762,
-        1.7332,
-        1.887,
-        2.0378,
-        2.1856,
-        2.3307,
-        2.473,
-        2.6128,
-        2.7502,
-        2.8852,
-        3.0181,
-        3.1489,
-        3.2778,
-        3.4048,
-        3.5302,
-        3.654,
-        3.7764,
-        3.8974,
-        4.0173,
-        4.1361,
-        4.254,
-        4.371
-      ],
-      "from": "loco_run",
-      "to": "loco_jog",
-      "side": [
-        -0.0,
-        -0.0,
-        -0.0,
-        -0.0,
-        -0.0,
-        -0.0,
-        -0.002,
-        -0.0133,
-        -0.0325,
-        -0.057,
-        -0.0844,
-        -0.1123,
-        -0.1383,
-        -0.1598,
-        -0.1745,
-        -0.18,
-        -0.181,
-        -0.1911,
-        -0.2111,
-        -0.2392,
-        -0.2737,
-        -0.3129,
-        -0.3551,
-        -0.3987,
-        -0.442,
-        -0.4833,
-        -0.5208,
-        -0.5529,
-        -0.5779,
-        -0.5942,
-        -0.6
-      ],
-      "fromPhase": 0.5,
-      "events": {
-        "secure": 12,
-        "tuck": 20,
-        "tap": 16
       }
     },
     "catch_one_hand_l": {
@@ -11227,6 +10748,799 @@
         "spine_02",
         "spine_03",
         "spine_04"
+      ]
+    },
+    "catch_over_shoulder_l": {
+      "kind": "overlay",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 9,
+        "tuck": 18
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "catch_over_shoulder_r": {
+      "kind": "overlay",
+      "frames": 24,
+      "duration": 0.8,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            24
+          ]
+        ],
+        "r": [
+          [
+            0,
+            24
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "events": {
+        "secure": 9,
+        "tuck": 18
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l",
+        "clavicle_r",
+        "upperarm_r",
+        "upperarm_twist_r",
+        "forearm_r",
+        "forearm_twist_r",
+        "hand_r",
+        "fingers_01_r",
+        "fingers_02_r",
+        "fingers_03_r",
+        "index_01_r",
+        "index_02_r",
+        "index_03_r",
+        "thumb_01_r",
+        "thumb_02_r",
+        "thumb_03_r",
+        "spine_02",
+        "spine_03",
+        "spine_04"
+      ]
+    },
+    "catch_high_point": {
+      "kind": "transition",
+      "frames": 49,
+      "duration": 1.6333333333333333,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            9,
+            13
+          ],
+          [
+            31,
+            37
+          ]
+        ],
+        "r": [
+          [
+            0,
+            6
+          ],
+          [
+            31,
+            35
+          ],
+          [
+            39,
+            44
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.33,
+        "loop_deg": 0.0,
+        "clear_cm": 20.5,
+        "com_cm": null,
+        "reach_cm": 18.0,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.191,
+        0.3771,
+        0.5586,
+        0.7352,
+        0.9071,
+        1.0743,
+        1.2367,
+        1.3943,
+        1.5471,
+        1.6952,
+        1.8386,
+        1.9771,
+        2.1112,
+        2.2434,
+        2.3743,
+        2.5038,
+        2.6321,
+        2.7591,
+        2.8848,
+        3.0092,
+        3.1323,
+        3.2541,
+        3.3746,
+        3.4938,
+        3.6117,
+        3.7283,
+        3.8436,
+        3.9576,
+        4.0703,
+        4.1818,
+        4.2918,
+        4.3998,
+        4.5056,
+        4.6092,
+        4.7105,
+        4.8096,
+        4.9073,
+        5.011,
+        5.1225,
+        5.2417,
+        5.3688,
+        5.5037,
+        5.6463,
+        5.7968,
+        5.955,
+        6.1211,
+        6.2949,
+        6.4766,
+        6.666
+      ],
+      "from": "loco_run",
+      "to": "loco_run",
+      "fromPhase": 0.5,
+      "events": {
+        "secure": 22,
+        "tuck": 30
+      }
+    },
+    "catch_toe_tap_l": {
+      "kind": "transition",
+      "frames": 30,
+      "duration": 1.0,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            5
+          ],
+          [
+            15,
+            18
+          ],
+          [
+            24,
+            27
+          ]
+        ],
+        "r": [
+          [
+            9,
+            14
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 20.4,
+        "com_cm": null,
+        "reach_cm": 52.68,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.1911,
+        0.378,
+        0.5607,
+        0.7393,
+        0.9141,
+        1.085,
+        1.2522,
+        1.416,
+        1.5762,
+        1.7332,
+        1.887,
+        2.0378,
+        2.1856,
+        2.3307,
+        2.473,
+        2.6128,
+        2.7502,
+        2.8852,
+        3.0181,
+        3.1489,
+        3.2778,
+        3.4048,
+        3.5302,
+        3.654,
+        3.7764,
+        3.8974,
+        4.0173,
+        4.1361,
+        4.254,
+        4.371
+      ],
+      "from": "loco_run",
+      "to": "loco_jog",
+      "toPhase": 0.5,
+      "side": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.002,
+        0.0133,
+        0.0325,
+        0.057,
+        0.0844,
+        0.1123,
+        0.1383,
+        0.1598,
+        0.1745,
+        0.18,
+        0.181,
+        0.1911,
+        0.2111,
+        0.2392,
+        0.2737,
+        0.3129,
+        0.3551,
+        0.3987,
+        0.442,
+        0.4833,
+        0.5208,
+        0.5529,
+        0.5779,
+        0.5942,
+        0.6
+      ],
+      "fromPhase": 0.0,
+      "events": {
+        "secure": 12,
+        "tuck": 21,
+        "tap": 16
+      }
+    },
+    "catch_toe_tap_r": {
+      "kind": "transition",
+      "frames": 30,
+      "duration": 1.0,
+      "loop": false,
+      "speed": 0.0,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            9,
+            14
+          ]
+        ],
+        "r": [
+          [
+            0,
+            5
+          ],
+          [
+            15,
+            18
+          ],
+          [
+            24,
+            27
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 20.4,
+        "com_cm": null,
+        "reach_cm": 52.68,
+        "pass": true
+      },
+      "travel": [
+        0.0,
+        0.1911,
+        0.378,
+        0.5607,
+        0.7393,
+        0.9141,
+        1.085,
+        1.2522,
+        1.416,
+        1.5762,
+        1.7332,
+        1.887,
+        2.0378,
+        2.1856,
+        2.3307,
+        2.473,
+        2.6128,
+        2.7502,
+        2.8852,
+        3.0181,
+        3.1489,
+        3.2778,
+        3.4048,
+        3.5302,
+        3.654,
+        3.7764,
+        3.8974,
+        4.0173,
+        4.1361,
+        4.254,
+        4.371
+      ],
+      "from": "loco_run",
+      "to": "loco_jog",
+      "side": [
+        -0.0,
+        -0.0,
+        -0.0,
+        -0.0,
+        -0.0,
+        -0.0,
+        -0.002,
+        -0.0133,
+        -0.0325,
+        -0.057,
+        -0.0844,
+        -0.1123,
+        -0.1383,
+        -0.1598,
+        -0.1745,
+        -0.18,
+        -0.181,
+        -0.1911,
+        -0.2111,
+        -0.2392,
+        -0.2737,
+        -0.3129,
+        -0.3551,
+        -0.3987,
+        -0.442,
+        -0.4833,
+        -0.5208,
+        -0.5529,
+        -0.5779,
+        -0.5942,
+        -0.6
+      ],
+      "fromPhase": 0.5,
+      "events": {
+        "secure": 12,
+        "tuck": 21,
+        "tap": 16
+      }
+    },
+    "carry_jog_l": {
+      "kind": "locomotion",
+      "frames": 22,
+      "duration": 0.7333333333333333,
+      "loop": true,
+      "speed": 3.5,
+      "dir": [
+        -0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            8
+          ]
+        ],
+        "r": [
+          [
+            11,
+            19
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.01,
+        "loop_deg": 0.0,
+        "clear_cm": 19.8,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "carry_run_l": {
+      "kind": "locomotion",
+      "frames": 20,
+      "duration": 0.6666666666666666,
+      "loop": true,
+      "speed": 5.8,
+      "dir": [
+        -0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            5
+          ]
+        ],
+        "r": [
+          [
+            10,
+            15
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.2,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "carry_sprint_l": {
+      "kind": "locomotion",
+      "frames": 14,
+      "duration": 0.4666666666666667,
+      "loop": true,
+      "speed": 8.5,
+      "dir": [
+        -0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            4
+          ]
+        ],
+        "r": [
+          [
+            7,
+            11
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 24.7,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "carry_traffic_jog_l": {
+      "kind": "locomotion",
+      "frames": 18,
+      "duration": 0.6,
+      "loop": true,
+      "speed": 3.2,
+      "dir": [
+        -0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            8
+          ]
+        ],
+        "r": [
+          [
+            9,
+            17
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 21.7,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "carry_traffic_run_l": {
+      "kind": "locomotion",
+      "frames": 15,
+      "duration": 0.5,
+      "loop": true,
+      "speed": 5.6,
+      "dir": [
+        -0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            5
+          ]
+        ],
+        "r": [
+          [
+            8,
+            13
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.7,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "carry_drive_jog_l": {
+      "kind": "locomotion",
+      "frames": 20,
+      "duration": 0.6666666666666666,
+      "loop": true,
+      "speed": 4.0,
+      "dir": [
+        -0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ]
+        ],
+        "r": [
+          [
+            10,
+            17
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.1,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "carry_drive_run_l": {
+      "kind": "locomotion",
+      "frames": 16,
+      "duration": 0.5333333333333333,
+      "loop": true,
+      "speed": 6.2,
+      "dir": [
+        -0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            5
+          ]
+        ],
+        "r": [
+          [
+            8,
+            13
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.1,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "carry_drive_sprint_l": {
+      "kind": "locomotion",
+      "frames": 14,
+      "duration": 0.4666666666666667,
+      "loop": true,
+      "speed": 8.2,
+      "dir": [
+        -0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            4
+          ]
+        ],
+        "r": [
+          [
+            7,
+            11
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 24.6,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "ovl_carry_l": {
+      "kind": "overlay",
+      "frames": 30,
+      "duration": 1.0,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            30
+          ]
+        ],
+        "r": [
+          [
+            0,
+            30
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 23.8,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      },
+      "mask": [
+        "clavicle_l",
+        "upperarm_l",
+        "upperarm_twist_l",
+        "forearm_l",
+        "forearm_twist_l",
+        "hand_l",
+        "fingers_01_l",
+        "fingers_02_l",
+        "fingers_03_l",
+        "index_01_l",
+        "index_02_l",
+        "index_03_l",
+        "thumb_01_l",
+        "thumb_02_l",
+        "thumb_03_l"
       ]
     },
     "carry_jog": {
@@ -12908,5 +13222,5 @@
       ]
     }
   },
-  "bytes": 7833384
+  "bytes": 8070156
 }

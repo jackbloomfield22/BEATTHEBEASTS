@@ -47,8 +47,9 @@ export interface AnimLibrary {
   gaits: GaitClip[];
   /**
    * The gait families, each slow to fast (M6.5 #11): [receiver, carrier in
-   * space, carrier in traffic, carrier's drive]. A family whose clips are
-   * missing (an older library) is the receiver's.
+   * space, carrier in traffic, carrier's drive], then the three carrier ones
+   * with the ball in the left arm (passing round 6). A family whose clips are
+   * missing (an older library) is the receiver's (a left one, its right twin).
    */
   families: GaitClip[][];
 }
@@ -59,6 +60,10 @@ export const FAMILIES = [
   ['loco_walk', 'carry_jog', 'carry_run', 'carry_sprint'],
   ['loco_walk', 'carry_traffic_jog', 'carry_traffic_run'],
   ['loco_walk', 'carry_drive_jog', 'carry_drive_run', 'carry_drive_sprint'],
+  // Passing round 6: the same three carrier families with the ball in the left arm (tools/blender/lib/actions_p6.py carry_left).
+  ['loco_walk', 'carry_jog_l', 'carry_run_l', 'carry_sprint_l'],
+  ['loco_walk', 'carry_traffic_jog_l', 'carry_traffic_run_l'],
+  ['loco_walk', 'carry_drive_jog_l', 'carry_drive_run_l', 'carry_drive_sprint_l'],
 ] as const;
 
 function gaitClip(n: string, m: ClipMeta): GaitClip {
@@ -95,9 +100,11 @@ export function loadAnimLibrary(): Promise<AnimLibrary> {
         .map((n) => made.get(n) ?? made.set(n, gaitClip(n, json.clips[n]!)).get(n)!)
         .sort((x, y) => x.speed - y.speed);
     const gaits = family(FAMILIES[0]);
-    const families = FAMILIES.map((f, i) => {
+    const families: GaitClip[][] = [];
+    FAMILIES.forEach((f, i) => {
       const g = family(f);
-      return i > 0 && g.length < f.length ? gaits : g;
+      // (A family missing from an older library: the receiver's; a left-arm family missing: its right-arm twin.)
+      families.push(i > 0 && g.length < f.length ? (i > 3 ? families[i - 3]! : gaits) : g);
     });
     return { clips, meta: json.clips, fps: json.fps, gaits, families };
   });

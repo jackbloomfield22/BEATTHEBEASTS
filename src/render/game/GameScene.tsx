@@ -163,7 +163,7 @@ function buildTeam(players: SimPlayer[], slots: string[], kit: string, asset: Pl
       variety: playerVariety(RENDER_POS[p.pos], body.heightM, body.weightKg, p.name),
       ...body,
     });
-    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, throwClip: null, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null, grip: null, box: 0.5 };
+    return { player, who: p.id, kit, animator: new PlayerAnimator(player, lib), ragdoll: new Ragdoll(player), slot: slots[k]!, lastYaw: 0, lastSpeed: 0, throwAt: -1, throwClip: null, catchFor: -1, lie: null, fallen: false, lyingClip: false, yaw: 0, gaitSpeed: 0, once: new Set<string>(), catchClip: null, reach: false, hurdled: new Set<number>(), head: 0, headT: -1, cutAt: -9, ext: bodyExtent(RENDER_POS[p.pos], body.heightM, body.weightKg), contest: null, grip: null, box: 0.5, carry: null };
   });
 }
 
@@ -224,6 +224,7 @@ const _flightOn = new THREE.Vector3();
  * frame in the air, and how long since the sim called it caught. It
  * carries on from there into the hands at about its own pace (`dur`).
  */
+const _drawnBall = new THREE.Vector3();
 const catchIn = { air: false, age: -1, dur: 0, pos: new THREE.Vector3(), vel: new THREE.Vector3(), quat: new THREE.Quaternion(), scale: 1 };
 /**
  * The drawn ball's broadcast size (BALL_GROW) eases back to true size in the
@@ -420,6 +421,10 @@ export function GameScene() {
     const userCarrier = cur.carrier >= 0 && s.agents[cur.carrier]!.side === 'off';
     const controlled = ph === 'carrier' ? (userCarrier ? cur.carrier : -1) : ph === 'snap' || ph === 'dropback' || ph === 'pocket' ? s.qb : -1;
     if (controlled < 0) latency.motion(null);
+    // Where the ball is drawn this frame on its own flight (placeBall's interpolation), for the hands to meet it (passing round 6).
+    const bb0 = prev.ball;
+    const bb1 = cur.ball;
+    const drawnBall = bb0.mode === 'air' ? _drawnBall.set(worldX(bb0.y + (bb1.y - bb0.y) * alpha), worldY(bb0.z + (bb1.z - bb0.z) * alpha), worldZ(bb0.x + (bb1.x - bb0.x) * alpha)) : null;
     bodies.forEach((b, i) => {
       const p0 = prev.agents[i]!;
       const p1 = cur.agents[i]!;
@@ -467,9 +472,9 @@ export function GameScene() {
       const accel = animDt > 0 ? (d.speed - b.lastSpeed) / Math.max(animDt, 1 / 120) : 0;
       b.lastYaw = yaw;
       b.lastSpeed = d.speed;
-      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean });
+      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean });
       // The hands to the ball on a catch (passing round 3), over the clip's own reach.
-      catchReach(b, i, s);
+      catchReach(b, i, s, drawnBall);
       b.ragdoll.update(animDt);
       // A body hitting the turf hard kicks up dust (a big hit's landing).
       const land = b.ragdoll.landing;
@@ -526,6 +531,17 @@ export function GameScene() {
     const inSnap = cur.phase === 'presnap' || (snapT >= 0 && t - snapT < 0.34);
     // True size in the hands; in the air and on the turf it grows with distance from the camera (BALL_FAR).
     ball.scale.setScalar(1);
+    // The catch tick (passing round 6): the frame drawn between the last tick in the air and the catch shows the
+    // ball on its own flight, between the sim's two spots: the sim takes it at his hands, and his hands are there
+    // (choreo.ts catchReach), so it's in them. From the next frame it's held in the hands as they give.
+    if (held && !inSnap && bodies && b0.mode === 'air' && catchIn.air && b1.holder !== r.state.qb && ballInHands(bodies[b1.holder]!, r.state, ball)) {
+      ball.position.set(worldX(b0.y + (b1.y - b0.y) * a), worldY(b0.z + (b1.z - b0.z) * a), worldZ(b0.x + (b1.x - b0.x) * a));
+      ball.quaternion.copy(catchIn.quat);
+      ball.scale.setScalar(catchIn.scale);
+      catchIn.pos.copy(ball.position);
+      heldAt(flight, ball);
+      return;
+    }
     if (held && !inSnap && bodies && ballInHands(bodies[b1.holder]!, r.state, ball)) {
       // Just caught: the ball finishes its flight into the hands (passing round 3: the sim takes it as it comes
       // within his reach, up to a yard short of him, and it jumped into his hands in a frame).
