@@ -344,7 +344,8 @@ export const PHYSICS: Clip[] = [
   // The slant against Cover 4 (Kam at strong safety): Ed Reed meets Jerry Rice square coming downhill, driven back, spotted at his forward progress.
   // (Seed 1 → 6 for passing round 2, tools/sim/findtackles.ts --only=tackle-driven-back: the same slant, caught for 11.8 and driven back.)
   // (Seed 6 → 39 for passing round 3, tools/sim/findtackles.ts --only=tackle-driven-back: the same slant, caught for 7.2 and driven back.)
-  { id: 'tackle-driven-back', title: 'Driven back: Jerry Rice met by Ed Reed', seed: 39, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 30 }), swap: { def: 'SS', name: 'Kam Chancellor', pos: 'S' } },
+  // (Cover 4 seed 39 → the fire zone, seed 9, for passing round 6, tools/sim/findtackles.ts --only=tackle-driven-back: the same slant, caught for 9.3 and driven back.)
+  { id: 'tackle-driven-back', title: 'Driven back: Jerry Rice met by Ed Reed', seed: 9, play: 'doubles-slants', def: 'firezone', los: 30, script: concept({ icon: 1, at: 30 }), swap: { def: 'SS', name: 'Kam Chancellor', pos: 'S' } },
 ];
 
 /** The player's throw (passing round 3): a hot route at the line if asked, the key at `at` ticks after the snap (a tap, or held `hold` ticks for touch), no catch call, then upfield with the sprint in the open. */

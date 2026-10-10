@@ -1,7 +1,7 @@
 {
  "frames": 2376,
  "worst": 54,
- "p99": 34,
+ "p99": 33,
  "spikes": [
   {
    "frame": 25,
@@ -244,39 +244,19 @@
    "phase": "air"
   },
   {
-   "frame": 104,
+   "frame": 102,
    "slot": "X",
-   "bone": "forearm_r",
+   "bone": "upperarm_r",
    "rate": 33,
    "clip": "catch_toe_tap_r",
    "overlay": "",
-   "anim": "carry",
-   "phase": "carrier"
-  },
-  {
-   "frame": 105,
-   "slot": "X",
-   "bone": "forearm_l",
-   "rate": 38,
-   "clip": "catch_toe_tap_r",
-   "overlay": "",
-   "anim": "carry",
-   "phase": "carrier"
+   "anim": "run",
+   "phase": "air"
   },
   {
    "frame": 106,
    "slot": "X",
    "bone": "upperarm_l",
-   "rate": 40,
-   "clip": "catch_toe_tap_r",
-   "overlay": "",
-   "anim": "carry",
-   "phase": "carrier"
-  },
-  {
-   "frame": 106,
-   "slot": "X",
-   "bone": "upperarm_r",
    "rate": 35,
    "clip": "catch_toe_tap_r",
    "overlay": "",
