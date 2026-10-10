@@ -106,25 +106,25 @@ All are keyed in-house (`python3 tools/blender/build_anims.py`: **193 of 193** c
 
 | | Before (round 5) | After | NFL |
 |---|---|---|---|
-| Completion | 67.7% | **66.5%** | ~64–66% |
+| Completion | 67.7% | **67.3%** | ~64–66% |
 | Yards per attempt | 8.2 | **7.8** | ~7 |
 | INT | 2.4% | 2.3% | ~2.2–2.5% |
 | Sacks | 7.6% | 7.6% | ~6.5–7% |
 | aDOT | 8.9 | 8.9 | ~8 |
-| Completions of 20+ / 40+ | 16.2% / 4.4% | 14.9% / 3.7% | ~12–14% / ~3% |
-| 2+ yd open caught | 89.5% | 86.8% | ~80% |
+| Completions of 20+ / 40+ | 16.2% / 4.4% | 14.8% / 3.7% | ~12–14% / ~3% |
+| 2+ yd open caught | 89.5% | 88.1% | ~80% |
 
-The book moved toward the NFL on every line, and completion is no longer at the top of the band. The deep routes are a touch harder. The ball is at his hands a few ticks later than it was at his body, so the man chasing him is a little closer: corner 57% → 52%, go 40% → 42%, post 31% → 44% (64 throws). The short game is unchanged (drag 77%, quick out 80% → 79%, slant 47% → 50%).
+The book moved toward the NFL on every line but completion, which is within half a point of where it was and inside the band. The deep routes are a touch harder: the ball is at his hands a few ticks later than it was at his body, so the man chasing him is a little closer (corner 57% → 52%, go 40% → 42%, post 31% → 44% on 64 throws). The short game is unchanged (drag 77% → 78%, quick out 80% → 79%, slant 47% → 50%).
 
 **Checks** (before → after):
 
 | Harness | Before | After |
 |---|---|---|
-| Identity (`identity.ts`) | 19 / 20 | IDENTITY_AFTER |
-| Passing identity (`passidentity.ts`) | 9 / 9 | PASSID_AFTER |
-| Trait audit (`traitaudit.ts`) | 127 / 127, 25 / 25 | TRAIT_AFTER |
-| Slants (`slants.ts`), on time zone / man | 62% / 66% | SLANTS_AFTER |
-| Screens (`screens.ts`) | | SCREENS_AFTER |
+| Identity (`identity.ts`) | 19 / 20 | 19 / 20 (Gates vs Lewis, waiting on the owner; Tyreek Hill over Wes Welker after the catch +0.86 yd, Moss over Ward +1.08) |
+| Passing identity (`passidentity.ts`) | 9 / 9 | 9 / 9 (Montana 0.73 yd off the meant spot, Namath 1.45; Harrison drops 2.9% of open balls, Slayton 13.6%: see Still open) |
+| Trait audit (`traitaudit.ts`) | 127 / 127, 25 / 25 | 127 / 127, 25 / 25 |
+| Slants (`slants.ts`), on time zone / man | 62% / 66% | 67% / 68%; late zone (1.5 / 2.0 / 2.5 s) 38 / 45 / 40% → 37 / 35 / 31%, late man ~17% either way |
+| Screens (`screens.ts`) | RB screen 90–98% a call, bubble 78–100% | RB screen 88–98%, bubble 80–100%; the bubble's yards after the catch ~0.5 yd lower |
 | Clip gates (`build_anims.py`) | 184 / 184 | 193 / 193 |
 
 **The catch, in the sim** (`p6lead.ts`, the player's tap on the cue, 64 throws a route):
@@ -135,7 +135,7 @@ The book moved toward the NFL on every line, and completion is no longer at the 
 | Post | 1.03 → 1.07 | +0.09 → +0.83 | −0.45 → −0.06 | 53% → 47% |
 | Corner | 1.07 → 1.09 | −0.19 → +0.60 | +0.36 → +0.26 | 61% → 59% |
 | Crosser | 1.02 → 1.05 | −0.73 → −0.15 | | 52% → 55% |
-| Out | 1.40 → 1.47 | −0.28 → +0.72 | | 75% → 69% |
+| Out | 1.40 → 1.47 | −0.28 → +0.72 | | 75% → 70% |
 | Slant | 1.21 → 1.34 | +0.44 → +1.14 | | 73% → 59% |
 
 - The QB was already throwing to where the man was going: the lead was a full run ahead of him at the release (round four's finding, measured again).
@@ -151,6 +151,9 @@ The book moved toward the NFL on every line, and completion is no longer at the 
 | ...and the ball's move into the hands on the next frame | 1.03 m | 0.16 m |
 | The out | 0.91 m, then 1.06 m | 0.04 m, then 0.24 m |
 | The crosser (before only) | 1.02 m, then 1.03 m | |
+| Over the shoulder (the Z's go, touch) | | 0.01 m, then 0.29 m |
+| The high point | | 0.01 m, then 0.15 m |
+| The toe tap | ~0.4 m (by eye: the hands up and outside, the ball by his helmet) | 0.03 m, then 0.19 m |
 
 **The man under the ball** (`p6stand.ts`, the AI book, his speed two-thirds of the way through the flight ÷ his speed at the release):
 
@@ -166,10 +169,18 @@ No man on a route that runs through the catch stands under the ball in either ve
 **Re-found for this round:**
 - the determinism golden: 568 of 920 cases moved, every one a pass play (the catch at his hands, the lead to the hands, the chest-high ball);
 - the coordinator's film (`src/sim/film.ts`, with its own tool);
-- the feel clips (`tools/sim/p6_refind.ts`, `p6_feel.ts`): completion-rac (Cover 3 seed 47 → 65, the tight end's seam), broken-tackle (icon 2 → 3, the same snap), the touchdown clip (Cover 2 seed 78 → 79, still 70 yd to the end zone; the M7 celebrations' browser test plays it); the scramble drill holds at seed 17;
-- round five's contested clip (Gronk on Lott: the leak → the Y-cross against Cover 1, seed 3).
+- the feel clips (`tools/sim/p6_refind.ts`, `p6_feel.ts`): completion-rac (Cover 3 seed 25 → 65, the tight end's seam), broken-tackle (icon 2 → 3, the same snap), the touchdown clip (Cover 2 seed 78 → 79, still 70 yd to the end zone; the M7 celebrations' browser test plays it); the scramble drill holds at seed 17;
+- round five's contested clip (Gronk on Lott: the leak → the Y-cross against Cover 1, seed 3);
+- the coverage identity clip (Deion against Kam: Cover 2 man seed 37 → Cover 1 seed 4; Deion picks it, Kam gives up 41 yd at 3.2 yd of separation);
+- the driven-back tackling clip (the slant against Cover 4 seed 39 → the fire zone seed 9, caught for 9.3 and driven back).
 
-The e2e seeds (`tools/sim/e2eseeds.ts`: the full play on 4, the touchdown on 19, the stick tackle on 2) still hold.
+The e2e seeds (`tools/sim/e2eseeds.ts`): the full play on 4 and the stick tackle on 2 still hold; the touchdown moved from 19 to 22 (on 19 the go is now caught and tackled at the 39).
+
+Two slant unit tests (`tests/slants.test.ts`) hold their pairs at a larger sample:
+- the coverage linebackers against the run-first ones: 12 reps a cell, up from 6;
+- Cover 2 man against Cover 1: 24, up from 12.
+
+At the old samples the gaps read 3 and 4 points. At scale (`slants.ts`, 40 reps) they are 12 (47% against 59%) and 7 (60% against 67%). The intent is unchanged.
 
 ## The videos
 
@@ -179,16 +190,60 @@ Recorded on the frame-true clock at 30 fps, 960×540, on Low (`BTB_VIDEO=1 BTB_P
   - `p6-go`: Montana to Rice's go on the cue, over the shoulder.
   - `p6-out`: the hot-routed out on the left sideline.
   - `p6-weak-go`: the same go thrown by Chad Pennington.
+  - `p6-carry`: the X's slant on the left, caught with room and run (the ball's arm).
   - `p6-cross`: before only.
-  - after only: `p6-shoulder` (the Z's go, touch), `p6-highpoint` (GO UP), `p6-toetap` (the quick out at the sideline), `p6-carry` (the ball in the outside arm). Their before is round five's `round5/after/p5-shoulder`, `p5-highpoint` and `p5-toetap`: the same plays on the same tree.
-- `round6/before-close/`, `round6/after-close/`: the close camera on the catcher.
-- `round6/compare/`: before on the left, after on the right.
-- `round6/stills/`: the sheets cited below.
+  - after only: `p6-shoulder` (the Z's go, touch), `p6-highpoint` (GO UP), `p6-toetap` (the quick out at the sideline). Their before is round five's `round5/after/p5-shoulder`, `p5-highpoint` and `p5-toetap`: the same plays on the same tree. Its catch comes a few ticks earlier there, so the side-by-sides drift by a frame or two.
+- `round6/before-close/`, `round6/after-close/`: the close camera on the catcher (go, out, carry, and after only the shoulder, high point and toe tap; the weak go before only).
+- `round6/compare/`: before on the left, after on the right. `<clip>.mp4` is broadcast, `<clip>-close.mp4` is close.
+- `round6/stills/`:
+  - `broadcast-go-flight-before-after.jpg`: the go's flight from a second before the catch;
+  - `close-go-before-after.jpg`, `broadcast-go-before-after.jpg`: the catch;
+  - `close-toetap-zoom-before-after.jpg`, `close-highpoint-zoom-before-after.jpg`: the new clips at the catch, cropped;
+  - `close-<clip>-before-after.jpg`, `broadcast-<clip>-before-after.jpg`: eight frames before the catch to seven after, before on top;
+  - `close-carry-after.jpg`: the switch to the outside arm.
 
 ## Watched: an honest critique
 
-CRITIQUE
+I read every recording as contact sheets and full-resolution crops, frame by frame through the catch, next to the per-frame log.
+
+- **The last yard is gone.**
+  - Before, on the go and the out, the frame the sim called the catch drew the ball nearly a metre from his hands, and the next frame it was in them. You see it at 30 fps as the ball snapping into him.
+  - After, on every recorded catch (the go, the out, over the shoulder, the high point, the toe tap) the drawn ball is within 1–6 cm of the midpoint of his fingers on the catch frame, and moves 15–30 cm into the give on the next. That's its own pace slowing in the hands.
+  - From the close camera on the go (`stills/close-go-before-after.jpg`, bottom row) the ball comes down over his shoulder into hands that are out in front of his face mask, rather than appearing beside his helmet and jumping forward.
+- **Is the QB visibly leading him? Honestly, about as much as before, and he was already.**
+  - The sim had the lead right in rounds 4 and 5: the ball meant a full run ahead of him at the release (lead ÷ run 1.03–1.09 on the go, the post, the corner and the crosser).
+  - From the broadcast camera (`stills/broadcast-go-flight-before-after.jpg`) the ball is in front of him for its whole flight in both versions, and he runs to it without breaking stride.
+  - What changed is the end. Before, the ball came in *behind* his shoulder (0.41 yd behind his centre on the go) and was pulled forward into his hands, which reads as underthrown even though it wasn't. After, it's taken in front of him (+0.38 yd on the go, +0.6 to +0.8 on the post and corner), in his hands, as he runs onto it.
+  - I think that's the honest root of "QB doesn't lead receivers" on the deep ball. It's improved, but at broadcast distance it's a difference of a yard in where the ball meets a 60-pixel man. The owner will feel it more as "the deep ball looks caught" than as "the throw is ahead of him".
+  - The crosser is still taken a little behind his centre (−0.15 yd), because the ball comes from the side and the closest point to his hands is beside him. On the out the ball comes in front (+0.72).
+- **A weak arm visibly misses.**
+  - Pennington's go on the recorded snap (Cover 3 seed 5) lands 2.3 yd off its meant spot, short and inside; Rice brakes from 8.8 to 6.3 yd/s to come back to it and it's knocked away. Across the 64 throws Pennington misses by 2.1 yd to Montana's 1.0, and his man's slowest is 85% of his speed to Montana's 92%.
+  - From the broadcast camera it reads as the man throttling under a short ball (`compare/p6-weak-go.mp4`). Before, he'd have eased up the moment he read it.
+- **The deep ball's catches.**
+  - *Over the shoulder* (`close-shoulder-before-after.jpg`): the hands are up and away in front of the face mask, with the upper back turned toward the ball. Before, they were close to the face, low, the chest square. The close camera on the recorded Z's go has the corner between it and the catch, so the turn is partly hidden. In Blender (`tools/blender/preview_catches.py`) the new clip reads clearly. From the broadcast camera it's "hands up as the ball comes over", which the old clip didn't give.
+  - *The high point* (`close-highpoint-zoom-before-after.jpg`): before, the hands met the ball at the face mask on the way down. After, both arms are straight up, the hands meet it above the helmet at the top of the jump, and the body is long. This is the clearest visual gain of the three, and it reads from the broadcast camera.
+  - *The toe tap* (`close-toetap-zoom-before-after.jpg`): before, the hands were up and outside while the ball came in by his helmet, 0.4 m away. After, the hands go to the ball at arm's length outside him, take it there and pull it in. The lean out over the white is bigger. From behind (the close camera's angle) it's less obvious than from the side, and the toe drag is a few pixels at 960 wide.
+- **The carry.**
+  - On the slant to the left with room (`p6-carry`), the catch is tucked in the right arm as before. Half a second later both hands come onto it at the chest and it goes across to the left arm (the rule's choice from the nearest tackler and the sideline), and he runs with it there.
+  - On this play the tackler arrives within another half second, so the left-arm run is short.
+  - From the broadcast camera the switch is a small movement of a small man. You'd notice the ball on the outside if you were looking for it.
+  - The left-arm gaits blend in on the shared phase without a hitch in the legs that I can see in the frames.
+- **The man under the ball.** The AI book's men under off-target balls keep 94–99% of their speed through two-thirds of the flight (85–98% before) and plant late. I checked this in the numbers and on the weak go, not across many recordings.
+
+Would the owner, playing, feel the QB leads receivers and catches look natural?
+
+- **The catch: yes**, and it's the change he'll notice first. The deep ball now ends in the hands every time, out in front, with no snap, and the high point and the toe tap look like those catches.
+- **The lead: more than before, but not as a new thing.** The ball was already thrown ahead of him. Now it's also *caught* ahead of him, which is the part he could see.
+- If he still feels the deep ball isn't led, the next lever is the throw's placement for an accurate QB (round four's "bucket", 0.6 yd ahead of a trailer, in only when a man is within 4 yd). Leading every deep ball a stride further for a 95 deep-accuracy passer would read on the broadcast; it would also move the book's deep completion, so it needs the harness behind it.
 
 ## Still open
 
-STILLOPEN
+- **The crosser and the slant are caught beside him, not in front.** The ball comes from the side, so the closest point to his hands is by his shoulder. A receiver on a crosser reaches *across* for it; the reach clip does that, but the sim's hands point is along his run.
+- **The slant on the cue lost points in the sim harness for the player's tap (p6lead: 73% → 59% on 64 throws).** The ball aimed at his hands is 0.6 yd further along the slant, inside, and on two snaps of sixteen a defensive end at the line now gets a hand on it. The AI book's slant rose (47% → 50%) and the slant harness on time rose (62/66 → 67/68), so this looks like those snaps' geometry. It's worth a look at scale for the player's slant from the gun.
+- **Settle routes still sit.** The hitch, the curl and the spot stand under the ball for a beat on about a third of their throws (32%, 33% before). It's real football on a hitch, but a curl runner should work back to it more often.
+- **The passing identity's drop pair moved: Harrison 2.9%, Slayton 13.6% of open balls dropped** (2.8% and 8.7% in round 5). The pair passes, but the count of "open" balls rose (318 → 381 for Slayton): separation is now measured where the ball first came to him, not where it was caught. Slayton's 13.6% is above the NFL's worst; it needs a look at what drops them (the reach cost from his hands at 0.49 yd).
+- **The carry is decided in the render** (`choreo.ts carrySide`), from the sim's state. The sim doesn't know which arm the ball is in, so a strip doesn't care about it. The ball arm against the tackler's side would be the place to make it matter.
+- **The catch at the hands costs a little deep completion** (the corner 57% → 52% in the book). The ball reaches his hands a few ticks after it would have reached his body, so the trailing man is closer. Within the band; noted.
+- **The box-out** (round five's open item) is untouched.
+- **60 fps in the browser.** These recordings are 30 fps at 960×540; the catch frame and the give are one or two frames here.
+- **Gates vs Lewis** (identity 19/20) still waits on the owner.
