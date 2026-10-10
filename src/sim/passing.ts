@@ -1589,6 +1589,10 @@ export function comingIn(s: PlayState, a: Agent): boolean {
   // into his body is caught there, not after it's gone through him).
   const d0 = toHands(b.pos, a, 0);
   if (d0 < IN_HANDS * IN_HANDS) return false;
+  // A ball dropping in on him (a deep ball over his shoulder) is taken before it falls below his belt: the hands go and
+  // get it (passing round 7). Closing on his hands only by the little it's gaining on him, round six's deep corner flew
+  // on for the whole quarter second and was taken at his shins, 0.3 m up, under hands held at his face (the diag log).
+  if (v.z < 0 && p.z < DEFER_LOW) return false;
   const d1 = toHands(p, a, TICK);
   if (d1 >= d0 - 1e-6) return false;
   const { r, top } = reach(a);
@@ -1624,6 +1628,8 @@ const REACH_FAST = 4;
  * ball takes (the go's last yard into the hands is ~0.1 s, p6lead.ts).
  */
 const DEFER_MAX = 15 / 60;
+/** The catch waits for a falling ball no lower than this (yd, ~1 m: his belt); below it the hands go down and get it. Ours. */
+const DEFER_LOW = 1.1;
 /** Within this of the line from his chest to his hands (yd, on the ground) the ball is in his hands' reach now. Ours: about a ball's length. */
 const IN_HANDS = 0.25;
 /** Squared distance (yd², on the ground) from a ball to the line from his centre out to his hands, `dt` s on at his velocity. */

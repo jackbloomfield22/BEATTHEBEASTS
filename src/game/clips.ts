@@ -457,5 +457,5 @@ export const PASSING7: Clip[] = [
   // The AI's hitch thrown to a man sat down (round six: he stood under it for 0.47 s, tools/sim/p7settle.ts).
   { id: 'p7-hitch', title: 'The hitch, sat down: working back to it', seed: 2, play: 'doubles-smash', def: 'cover3', los: 30, user: false, script: () => NEUTRAL },
   // Smash against Cover 2: the corner over the squatting corner, outside the half safety, toward the pylon.
-  { id: 'p7-corner', title: 'The deep corner on the cue', seed: 5, play: 'doubles-smash', def: 'cover2', los: 30, script: userThrow({ icon: 1, at: 80 }) },
+  { id: 'p7-corner', title: 'The deep corner on the cue', seed: 4, play: 'doubles-smash', def: 'cover2', los: 30, script: userThrow({ icon: 1, at: 81 }) },
 ];
