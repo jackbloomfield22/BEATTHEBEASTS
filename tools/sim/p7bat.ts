@@ -75,7 +75,7 @@ for (const c of ALL.filter((c) => want.includes(c.id)))
         const ne = s.events.length;
         stepPlay(s, f);
         if (s.phase === 'air' && !rel) rel = { qx: s.ball.pos.x, qy: s.ball.pos.y, z: s.ball.pos.z, tx: s.ball.aim.x, ty: s.ball.aim.y, tz: s.ball.aim.z };
-        for (const e of s.events.slice(ne)) if (e.type === 'deflection' && e.data?.batted) batted = e.who[0]!;
+        for (const e of s.events.slice(ne)) if (e.type === 'deflection' && e.data?.batted) batted = e.who?.[0] ?? 0;
       }
       if (!rel) continue;
       n++;

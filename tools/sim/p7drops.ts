@@ -44,16 +44,18 @@ for (const name of NAMES) {
         // (Its own seed on every play and call: passidentity.ts's hands pair reuses 40 seeds across them, so its drops ride on ~40 dice.)
         const s = createPlay({ seed: SHARED ? 9000 + k * 17 : 20000 + pi * 5000 + ci * 1000 + k * 7, offense: off, defense: base.defense, play, def: defById(d), los: 30, toGo: 10, user: true });
         const icon = s.icons.findIndex((i) => s.agents[i]!.slot === 'X') + 1;
-        let dbg: { costs: [string, number][]; off: number; p: number } | null = null;
+        type Dbg = { costs: [string, number][]; off: number; p: number };
+        const got: { dbg: Dbg | null } = { dbg: null };
         runToWhistle(s, (st) => {
-          const g = (st as unknown as { dbg?: typeof dbg }).dbg;
-          if (g && !dbg) dbg = g;
+          const g = (st as unknown as { dbg?: Dbg }).dbg;
+          if (g && !got.dbg) got.dbg = g;
           if (st.phase === 'air') return input({ catchType: 'rac' });
           if (st.phase === 'carrier') return input({ move: { x: 1, y: 0 } });
           const t = since(st);
           return input({ snap: st.phase === 'presnap', throwHeld: t >= at && t < at + 3 ? icon : 0 });
         });
-        dbg ??= (s as unknown as { dbg?: typeof dbg }).dbg ?? null;
+        got.dbg ??= (s as unknown as { dbg?: Dbg }).dbg ?? null;
+        const dbg = got.dbg;
         const p = s.result?.pass;
         const x = s.agents.find((a) => a.slot === 'X')!;
         if (!p?.attempted || p.target !== x.i || p.sep === undefined || p.sep < 1.5) continue;
