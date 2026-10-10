@@ -220,7 +220,7 @@ Recorded on the frame-true clock at 30 fps, 960×540, on Low (`BTB_VIDEO=1 BTB_P
   - `p7-drag`: the X's drag on Mesh, Cover 3 seed 8;
   - `p7-hitch`: the AI's hitch on Smash to a man sat down, Cover 3 seed 2;
   - `p7-corner`: the slot's corner on Smash against Cover 2, seed 4.
-- **`round7/compare/`**: before on the left, after on the right. `<clip>.mp4` is broadcast, `<clip>-close.mp4` is close (crf 33).
+- **`round7/compare/`**: before on the left, after on the right. `<clip>.mp4` is broadcast (crf 31), `<clip>-close.mp4` is close (crf 33).
 - **`round7/stills/`**: before on top, after below, from a few frames before the catch to a few after:
   - `broadcast-<clip>-before-after.jpg`;
   - `close-<clip>-before-after.jpg`;
