@@ -95,6 +95,8 @@ export interface CatchGrip {
   l: THREE.Vector3;
   r: THREE.Vector3;
   w: number;
+  /** The hands have been put on the ball where the sim took it (passing round 7: catchSpot), once, on the first frame drawn after the catch. */
+  met?: boolean;
 }
 
 /** Upper body, for a throw on the run (the legs keep running). */
@@ -520,17 +522,21 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
     // clip's own secure and tuck over GIVE_T, instead of dropping to the
     // clip's pose the frame the sim calls it caught (round four's in-game
     // log: the hands 0.4 m off the ball one frame, on the belt the next).
-    if (!g || g.w <= 0 || ball.mode !== 'held' || ball.holder !== i) return;
+    if (!g || (g.w <= 0 && g.met !== false) || ball.mode !== 'held' || ball.holder !== i) return;
     // (Passing round 6) The catch frame (the last tick in the air drawn into the catch): the hands go onto
     // the ball where it's drawn on its flight, and hold there in his frame through the give.
-    if (drawn) {
+    // (Passing round 7: also when the frame drawn after the catch is already past the catch tick, as at 30 fps
+    // when the sim takes it on the first of the frame's two ticks: once, where the sim took it.)
+    const spot = drawn ?? (g.met ? null : catchSpot(b, s.agents[i]!, null));
+    if (spot) {
       _bd.set(worldX(ball.vel.y) - worldX(0), 0, worldZ(ball.vel.x) - worldZ(0));
       if (_bd.lengthSq() < 1e-6) _bd.set(0, 0, 1);
       _bd.normalize();
-      handsOn(b, catchSpot(b, s.agents[i]!, drawn), _bd, one);
+      handsOn(b, drawn ? catchSpot(b, s.agents[i]!, drawn) : spot, _bd, one);
       root.worldToLocal(g.l.copy(_hl));
       root.worldToLocal(g.r.copy(_hr));
       g.w = 1;
+      g.met = true;
     }
     const k = g.w * (1 - THREE.MathUtils.smoothstep(t, secure, secure + GIVE_T));
     if (k <= 0) return;
@@ -590,7 +596,9 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
  * Falls back to `drawn` (the interpolated ball) with no catch on record.
  */
 const _cs = new THREE.Vector3();
-export function catchSpot(b: Body, a: Agent, drawn: THREE.Vector3): THREE.Vector3 {
+export function catchSpot(b: Body, a: Agent, drawn: THREE.Vector3): THREE.Vector3;
+export function catchSpot(b: Body, a: Agent, drawn: THREE.Vector3 | null): THREE.Vector3 | null;
+export function catchSpot(b: Body, a: Agent, drawn: THREE.Vector3 | null): THREE.Vector3 | null {
   const rel = a.mem.catchRel as { x: number; y: number } | null | undefined;
   const z = a.mem.catchRelZ as number | undefined;
   if (!rel || typeof z !== 'number' || typeof a.mem.caughtAt !== 'number') return drawn;
@@ -1320,6 +1328,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
       g.style = style;
       g.pluck = pluck;
       g.w = 0;
+      g.met = false;
       b.grip = g;
       startCatch(b, clip, Math.max(0, lead - left));
     }
