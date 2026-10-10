@@ -16,6 +16,8 @@ const ALL: { id: string; play: string; icon: number; hot?: RouteName }[] = [
   { id: 'dig', play: 'singleback-drive', icon: 2 },
   { id: 'drag', play: 'doubles-mesh', icon: 1 },
   { id: 'corner', play: 'doubles-smash', icon: 1 },
+  { id: 'post', play: 'singleback-pa-post', icon: 1 },
+  { id: 'go', play: 'trips-four-verts', icon: 4 },
   { id: 'curl', play: 'doubles-curls', icon: 1 },
   { id: 'comeback', play: 'doubles-curls', icon: 2, hot: 'comeback' },
   { id: 'hitch', play: 'doubles-hitch-seam', icon: 1 },
