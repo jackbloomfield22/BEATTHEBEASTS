@@ -529,7 +529,8 @@ export function comeBackTo(rec: Agent, at: V2, settled: number, from: V2, los: n
   // (A sit that doesn't turn back, the stick or the spot, settles across the field: thrown as he gets there, it's caught as he sits. He works back only from sitting.)
   if (!sat && !comesBack(rec.route)) return at;
   const rr = Math.max(rec.fx.a('shortRoute'), rec.fx.a('routeRunning'));
-  const d = Math.min(COME_MAX * (0.6 + 0.4 * rr), COME_V * Math.max(0, settled - (sat ? COME_SET : 0)));
+  // (A sit that doesn't turn back, the stick or the spot, works back a step, not two: SIT_BACK of it.)
+  const d = Math.min(COME_MAX * (0.6 + 0.4 * rr) * (comesBack(rec.route) ? 1 : SIT_BACK), COME_V * Math.max(0, settled - (sat ? COME_SET : 0)));
   if (d <= 0) return at;
   const dx = from.x - at.x;
   const dy = from.y - at.y;
@@ -577,6 +578,14 @@ const COME_SET = 0.15;
  * back in.
  */
 const COME_MAX = 2;
+/**
+ * A sit that doesn't turn back to the line (the stick, the spot, the sit)
+ * works back this share of COME_MAX: he's settled in the window facing the
+ * QB, and takes a step to it, not the curl's two or three (passing round 7:
+ * at the whole of it the stick was caught coming at the QB at 4 yd/s and the
+ * tight ends' yards after the catch fell ~0.3 yd, tools/sim/identity.ts).
+ */
+const SIT_BACK = 0.5;
 
 /**
  * A late out (passing round 4): the ball's thrown to a man still running his
@@ -706,9 +715,10 @@ export function bucket(s: PlayState, qb: Agent, rec: Agent, spot: V2, rv: V2, ai
   // Away from him across the run (to the sideline side when he's straight behind or over the top).
   const ac = (Math.abs(dC) < BUCKET_SQUARE ? 1 : -Math.sign(dC)) * BUCKET_SIDE;
   // Ahead of a man trailing or level; over the top of him, no further (the back shoulder is the AI's answer there).
-  // (Passing round 7: the ball's already led to his hands, LEAD_HANDS out in front of him, so the bucket's lead is only what's past that.
-  // Round six stacked both: 1.2 yd ahead and 0.7 across of where he'd be, 0.8 yd from his hands, and the deep corner fell 57% → 52%.)
-  const al = dA < BUCKET_LEVEL ? Math.max(0, BUCKET_LEAD - LEAD_HANDS) : 0;
+  // (Passing round 7 looked at taking LEAD_HANDS off this, since round six leads every ball to his hands on top of it, 1.2 yd
+  // ahead of where he'll be on a vertical: the corner's 57% → 52% in the book was noise (tools/sim/p7cornerbook.ts: 59%, 62%,
+  // 61% on rounds 5, 6 and 7), and without it the seam was caught 9% less often and Gronk's yards after it fell 0.4 yd. Kept.)
+  const al = dA < BUCKET_LEVEL ? BUCKET_LEAD : 0;
   const k = kd * ka;
   return { x: (rv.x * al + px * ac) * k, y: (rv.y * al + py * ac) * k };
 }
