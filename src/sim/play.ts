@@ -603,27 +603,62 @@ function holdThrough(s: PlayState, w: NonNullable<PlayState['windup']>, inp: Inp
 }
 
 /**
- * A ball batted down at the line (M6.5 calibration: the sim had none; ~2% of
- * NFL attempts, PFF's batted passes). In the first BAT_T of its flight, a
- * defensive lineman whose hands the ball goes by (within BAT_R, under the
- * top of his reach) gets one chance to get a hand on it: BAT_P for a
- * 6'6" lineman, less for a shorter one. It pops up, live, and dies.
+ * A ball batted down at the line (M6.5 calibration: the sim had none; ~1.5–2%
+ * of NFL attempts, PFF's batted passes). In the first BAT_T of its flight, a
+ * defensive lineman the ball goes by (its path within BAT_R of him, under
+ * the top of his reach) gets one chance to get a hand on it, where it passes
+ * him closest. It pops up, live, and dies. His odds (passing round 7,
+ * docs/passing/PASSING7.md) are the throw's and his:
+ * - his size: BAT_P for a 6'6" lineman, half that for a 6'0" one;
+ * - the lane: all of it for a ball through his frame, none at his fingertips
+ *   (BAT_R). M6.5 to round 6 gave every ball inside BAT_R the full odds, so a
+ *   tenth of a yard decided it: round six led the slant 0.6 yd further along
+ *   his run (to his hands), its line moved ~0.1 yd toward the left end in his
+ *   get-off, and the player's slant on the cue was batted 12 times in 64
+ *   (tools/sim/p7bat.ts), up from 4;
+ * - its height: a ball under his hands raised standing (HANDS_UP of his
+ *   height) he only has to get them up to; above them he has to jump for it,
+ *   less often the nearer the top of his jump;
+ * - the read: he has to see it coming. The windup (the QB's release time)
+ *   and the ball's flight to him are his warning, and a lineman who reads
+ *   the quick throw (Play Recognition) gets his hands up sooner. A quick
+ *   trigger gives him less (BAT_SEE).
  */
 function batAtLine(s: PlayState): boolean {
   const b = s.ball;
   if (s.t - b.releaseT > BAT_T || b.target < 0) return false;
+  const qb = s.agents[b.thrower]!;
+  // The ball's path this tick (stepAir moves it after this check).
+  const ex = b.vel.x * TICK;
+  const ey = b.vel.y * TICK;
+  const e2 = Math.max(1e-9, ex * ex + ey * ey);
   for (const i of s.def) {
     const d = s.agents[i]!;
     if (d.down || (d.p.pos !== 'DE' && d.p.pos !== 'DT') || s.touched.includes(i)) continue;
-    const dh = Math.sqrt((b.pos.x - d.pos.x) * (b.pos.x - d.pos.x) + (b.pos.y - d.pos.y) * (b.pos.y - d.pos.y));
-    if (dh > BAT_R || b.pos.z > reach(d).top || b.pos.z < CATCH_Z - BAT_UNDER) continue;
+    // Where it passes him closest on this tick's path; still closing on him at the end of it, his chance is next tick.
+    const u = ((d.pos.x - b.pos.x) * ex + (d.pos.y - b.pos.y) * ey) / e2;
+    if (u >= 1) continue;
+    const k = Math.max(0, u);
+    const dh = Math.sqrt((b.pos.x + ex * k - d.pos.x) * (b.pos.x + ex * k - d.pos.x) + (b.pos.y + ey * k - d.pos.y) * (b.pos.y + ey * k - d.pos.y));
+    const z = b.pos.z + b.vel.z * TICK * k;
+    const { top } = reach(d);
+    if (dh > BAT_R || z > top || z < CATCH_Z - BAT_UNDER) continue;
     s.touched.push(i);
     const tall = Math.max(0, Math.min(1, (d.p.heightIn - 72) / 6));
+    const up = d.fx.height * HANDS_UP;
+    const high = z <= up ? 1 : Math.max(0, (top - z) / Math.max(1e-6, top - up));
+    const lane = Math.min(1, (BAT_R - dh) / (BAT_R - BAT_FULL));
+    const warned = releaseOf(qb) + (s.t - b.releaseT);
+    const see = Math.max(0, Math.min(1, (warned - BAT_SEE0) / BAT_SEE)) * (BAT_READ0 + (1 - BAT_READ0) * d.fx.a('playRec'));
     // Locked up with a blocker his hands are on the man in front of him: he
     // gets them up into the lane on BAT_ENGAGED of the throws he'd have
     // reached free, unless he's been driven back into the QB's lap.
-    const engaged = !!blockOf(s, i) && dist(d.pos, s.agents[b.thrower]!.pos) > LAP_R;
-    if (s.rng.catch() >= BAT_P * (0.5 + 0.5 * tall) * (engaged ? BAT_ENGAGED : 1)) continue;
+    const engaged = !!blockOf(s, i) && dist(d.pos, qb.pos) > LAP_R;
+    // A free rusher still on his way to the QB, running at him, has his arms in the rush (he's going for the sack); one stalled, or in the QB's lap, has them up.
+    const toQb = dist(d.pos, qb.pos);
+    const closing = toQb > LAP_R ? ((qb.pos.x - d.pos.x) * d.vel.x + (qb.pos.y - d.pos.y) * d.vel.y) / Math.max(1e-6, toQb) : 0;
+    const rushing = engaged ? 0 : Math.max(0, Math.min(1, (closing - BAT_RUSH0) / BAT_RUSH));
+    if (s.rng.catch() >= BAT_P * (0.5 + 0.5 * tall) * lane * high * see * (1 - BAT_RUSH_K * rushing) * (engaged ? BAT_ENGAGED : 1)) continue;
     b.vel = { x: b.vel.x * 0.1 + gauss(s.rng.bounce) * 1.5, y: b.vel.y * 0.1 + gauss(s.rng.bounce) * 1.5, z: 3 + 2 * s.rng.bounce() };
     b.target = -2;
     d.anim = 'rush';
@@ -632,19 +667,59 @@ function batAtLine(s: PlayState): boolean {
   }
   return false;
 }
-const BAT_T = 0.3;
+/**
+ * The line (s of flight): the ball's first BAT_T, by when a ball from a
+ * seven-yard set has passed a lineman at the line of scrimmage (~7 yd at
+ * ~20 yd/s). M6.5 to round 6 used 0.3 s and called it at the first tick the
+ * ball came within BAT_R; at its closest approach (round 7), the ends at the
+ * line on a gun throw were just past it.
+ */
+const BAT_T = 0.4;
 /** A ball this far (yd) under the chest height it's thrown to goes under a rusher's hands at the line (1.2 yd when it was thrown to 1.25; passing round 6 raised the throw to the chest, CATCH_Z, and the line it passes under with it). */
 const BAT_UNDER = 0.05;
-const BAT_R = 0.7;
-const BAT_P = 0.45;
+/** How far from him (yd, on the ground) the ball's path can pass and still be in his hands' reach: BAT_R at his fingertips, all of it inside BAT_FULL (his raised hands, about his shoulders' width either side). Ours. */
+const BAT_R = 0.85;
+const BAT_FULL = 0.35;
+/** A lineman's hands raised standing reach this many times his height (anthropometry: standing reach runs ~1.33 × stature; the combine's linemen 1.32–1.36). */
+const HANDS_UP = 1.33;
 /**
- * The share of throws an engaged rusher in the lane gets his hands up to:
- * set so the AI pass game has ~2% of its attempts batted at the line (the
- * NFL runs ~1.5–2%; tools/sim/batted.ts: 1.4% from free rushers and the
- * QB's lap alone, 5.8% with every engaged rusher batting like a free one,
- * 4.2% before the second slant pass, when clearLoft lofted over them).
+ * The bat's odds for a 6'6" lineman with the ball through his frame, under
+ * his raised hands, seen coming and not running at the QB: set with
+ * BAT_ENGAGED so the AI pass game has ~1.5–2% of its attempts batted at the
+ * line (tools/sim/batted.ts: 1.7%; the NFL runs ~1.5–2%). The flat 0.45
+ * inside BAT_R (M6.5 to round 6) had it at 3.4%.
  */
-const BAT_ENGAGED = 0.15;
+const BAT_P = 0.95;
+/**
+ * The read (s of warning: the QB's windup plus the ball's flight to him):
+ * none of it before BAT_SEE0, all of it BAT_SEE later. Ours: a rusher in his
+ * get-off needs about a third of a second to see the quick throw and get his
+ * hands up; Dan Marino's windup (0.27 s) and a ball at him 0.2 s later give
+ * him ~85% of it, Jameis Winston's (0.42 s) all of it.
+ */
+const BAT_SEE0 = 0.15;
+const BAT_SEE = 0.4;
+/**
+ * A free rusher closing on the QB faster than BAT_RUSH0 (yd/s) is going for
+ * the sack, his hands in his rush moves; by BAT_RUSH0 + BAT_RUSH he gets them
+ * into the lane only (1 − BAT_RUSH_K) as often. The coaching line is "if you
+ * can't get there, get your hands up": a man who can, doesn't. Ours: the
+ * round-six slant on the cue was batted by the left end in his get-off,
+ * running at the QB at ~5 yd/s, 12 times in 64 (tools/sim/p7bat.ts).
+ */
+const BAT_RUSH0 = 2;
+const BAT_RUSH = 3;
+const BAT_RUSH_K = 0.7;
+/** A lineman who doesn't read the throw at all (Play Recognition 0) gets this share of the read; all of it at 99. Ours. */
+const BAT_READ0 = 0.5;
+/**
+ * The share of throws an engaged rusher in the lane gets his hands up to (his
+ * hands are on the man in front of him; he gets them up as the QB sets to
+ * throw, when he can't get there). With BAT_P, the AI pass game's ~1.5–2%
+ * (tools/sim/batted.ts). Round six's 0.15 was set against the flat odds,
+ * where every engaged rusher within BAT_R counted the same.
+ */
+const BAT_ENGAGED = 0.5;
 
 /**
  * A defender over the top of the catch point: deeper than the receiver and

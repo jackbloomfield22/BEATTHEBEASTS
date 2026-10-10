@@ -439,3 +439,16 @@ export const PASSING6: Clip[] = [
   // The ball's arm: the X's slant on the left, caught with room and run 9 yd after it (tools/sim/p6_carryfind.ts): tucked, then moved to the arm away from the tackler.
   { id: 'p6-carry', title: 'The ball in the outside arm', seed: 12, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 30 }) },
 ];
+
+// Passing round 7 (docs/passing/PASSING7.md): the breaking routes caught out
+// in front (the slant, the crosser, the dig, the drag), the slant batted at
+// the line in round six, the settle routes coming back to the ball and the
+// deep corner, the player's tap on the cue (tools/sim/p7find.ts), from the
+// default broadcast camera and a close one on the catcher (FOLLOW7).
+export const PASSING7: Clip[] = [
+  { id: 'p7-slant', title: 'The slant on the cue', seed: 1, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 21 }) },
+  { id: 'p7-slant-bat', title: 'The slant past the end', seed: 15, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 21 }) },
+  { id: 'p7-cross', title: 'The crosser on the cue', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 120 }) },
+  { id: 'p7-dig', title: 'The dig on the cue', seed: 5, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 96 }) },
+  { id: 'p7-drag', title: 'The drag on the cue', seed: 8, play: 'doubles-mesh', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 33 }) },
+];

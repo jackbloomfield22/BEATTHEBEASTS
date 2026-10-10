@@ -697,6 +697,65 @@ const BUCKET_LEAD = 0.6;
 /** A defender less than this far ahead of him (yd) is trailing or level. */
 const BUCKET_LEVEL = 0.8;
 
+/**
+ * The throwing lane (passing round 7, docs/passing/PASSING7.md): a QB who
+ * sees a lineman's hands in the line of his throw doesn't throw it into
+ * them. He finds a lane: a slide, a lower arm slot, the ball out away from
+ * the man. Returns the move of the release point (yd, on the ground) across
+ * the throw, away from the defensive lineman nearest its line, enough to
+ * take the line out of his reach (BAT_LANE) where it passes him, up to
+ * LANE_MAX for a QB with all the pocket presence there is and none for one
+ * with none (Drew Brees, at six feet, almost never had one batted; a QB who
+ * stares down the throw has it knocked down). With men either side of it,
+ * the most room he can find between them. Read-only. Round six led the slant 0.6 yd further
+ * along the receiver's run, to his hands, and its line moved ~0.1 yd into
+ * the left end's get-off: the player's slant on the cue was batted 12 times
+ * in 64 (tools/sim/p7bat.ts).
+ */
+export function throwingLane(s: PlayState, qb: Agent, from: V3, to: V2): V2 {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const L = Math.sqrt(dx * dx + dy * dy);
+  const k = LANE_MAX * qb.fx.a('pocketPresence');
+  if (L < 3 || k <= 0) return { x: 0, y: 0 };
+  const ux = dx / L;
+  const uy = dy / L;
+  // The linemen at the line: how far along the throw each is (0..1) and how far across its line (yd, + on its left).
+  const men: { u: number; a: number }[] = [];
+  for (const i of s.def) {
+    const d = s.agents[i]!;
+    if (d.down || (d.p.pos !== 'DE' && d.p.pos !== 'DT')) continue;
+    // Where he'll be as it passes him: the throw's planned at the start of the windup, then the ball's flight to him (~LANE_V).
+    const look = releaseOf(qb) + dist(d.pos, from) / LANE_V;
+    const px = d.pos.x + d.vel.x * look - from.x;
+    const py = d.pos.y + d.vel.y * look - from.y;
+    const u = (px * ux + py * uy) / L;
+    if (u > 0 && u < LANE_U) men.push({ u, a: -px * uy + py * ux });
+  }
+  // Moving the release by m (across, + left) moves the line at him by m(1 − u): the move, of nine across his range, that leaves the most room to the nearest man.
+  const room = (m: number) => men.reduce((r, q) => Math.min(r, Math.abs(q.a - m * (1 - q.u))), Infinity);
+  if (room(0) >= BAT_LANE) return { x: 0, y: 0 };
+  let best = 0;
+  let bestRoom = room(0);
+  for (let j = -4; j <= 4; j++) {
+    const m = (k * j) / 4;
+    const r = Math.min(BAT_LANE, room(m));
+    if (r > bestRoom + 1e-9 || (Math.abs(r - bestRoom) < 1e-9 && Math.abs(m) < Math.abs(best))) {
+      best = m;
+      bestRoom = r;
+    }
+  }
+  return { x: -uy * best, y: ux * best };
+}
+/** The most a QB moves his release off a man in his lane (yd): a slide and an arm slot (over the top to three-quarters moves the hand ~0.3 m). Ours. */
+const LANE_MAX = 0.4;
+/** The ball's pace to the line (yd/s), for when it passes a rusher: a driven ball leaves at ~20–27 yd/s (driveTime). */
+const LANE_V = 22;
+/** A lineman within this share of the throw's length is at the line, in reach of it low enough to bat. */
+const LANE_U = 0.5;
+/** The line he wants clear of a lineman (yd): play.ts BAT_R, the reach of his hands. */
+const BAT_LANE = 0.85;
+
 /** A throw past this share of his range starts to come up short, by up to UNDER_MAX yd at the limit. Ours: a 75 arm's 45-yd post lands ~0.8 yd short, a 96 arm's not at all. */
 const UNDER_FROM = 0.6;
 const UNDER_MAX = 2;
@@ -741,6 +800,10 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   let ty = Math.max(-(FIELD_HALF_W - IN_BOUNDS), Math.min(FIELD_HALF_W - IN_BOUNDS, spot.y + rv.y * place + bk.y + hd.y * LEAD_HANDS));
   let tz = CATCH_Z + 0.55 * aim.y;
   const meant = { x: tx, y: ty };
+  // Around a lineman in his lane (passing round 7): the release moves off him.
+  const sh = throwingLane(s, qb, from, meant);
+  from.x += sh.x;
+  from.y += sh.y;
   const d = dist(from, { x: tx, y: ty });
   // Error cone (GDD §9.1): the accuracy for the throw's depth sets the base.
   const air = tx - s.setup.los;
