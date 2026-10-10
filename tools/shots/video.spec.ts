@@ -68,8 +68,6 @@ const FOLLOW7: Record<string, string> = {
   'p7-drag': 'X,4,5,1.8,40',
   'p7-corner': 'SLOT,6,-5,2.2,42',
   'p7-hitch': 'X,4,5,1.8,40',
-  'p7-curl': 'X,5,5,2,42',
-  'p7-contested': 'TE,4,-5,2,40',
 };
 const FOLLOW6: Record<string, string> = {
   'p6-go': 'X,6,5,2.2,42',

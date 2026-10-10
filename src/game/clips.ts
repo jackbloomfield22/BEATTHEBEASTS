@@ -451,4 +451,8 @@ export const PASSING7: Clip[] = [
   { id: 'p7-cross', title: 'The crosser on the cue', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 120 }) },
   { id: 'p7-dig', title: 'The dig on the cue', seed: 5, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 96 }) },
   { id: 'p7-drag', title: 'The drag on the cue', seed: 8, play: 'doubles-mesh', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 33 }) },
+  // The AI's hitch thrown to a man sat down (round six: he stood under it for 0.47 s, tools/sim/p7settle.ts).
+  { id: 'p7-hitch', title: 'The hitch, sat down: working back to it', seed: 2, play: 'doubles-smash', def: 'cover3', los: 30, user: false, script: () => NEUTRAL },
+  // Smash against Cover 2: the corner over the squatting corner, outside the half safety, toward the pylon.
+  { id: 'p7-corner', title: 'The deep corner on the cue', seed: 5, play: 'doubles-smash', def: 'cover2', los: 30, script: userThrow({ icon: 1, at: 80 }) },
 ];
