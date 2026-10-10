@@ -1323,7 +1323,9 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     // The ball's arm (passing round 6): crossing his chest under both hands while it switches.
     const arm = carrying && !b.reach ? carrySide(b, s, i, simT) : null;
     const crossing = !!arm && simT - arm.at < SWITCH_T;
-    anim.setHold(catching || b.reach ? null : pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' || crossing ? 'ovl_protect' : arm?.side === 'l' ? 'ovl_carry_l' : 'ovl_carry_r');
+    // (In a tackle both hands are on it too: one hold a frame, so the layer isn't re-made every frame at its first fade step. Passing round 6.)
+    const piled = carrying && !b.fallen && s.pile?.c === i;
+    anim.setHold(catching || b.reach ? null : pocket ? (throwing ? null : 'ovl_qb_hold') : a.move === 'protect' || crossing || piled ? 'ovl_protect' : arm?.side === 'l' ? 'ovl_carry_l' : 'ovl_carry_r');
     if (a.move === 'protect') latency.respond('protect');
   } else anim.setHold(null);
   // Down without a clip that lies him down: he falls, once (a dove-and-
@@ -1403,7 +1405,6 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     out.drive = 1;
     out.press = 1;
     out.traffic = 1;
-    anim.setHold('ovl_protect');
   }
   return out;
 }
