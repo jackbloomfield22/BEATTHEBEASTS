@@ -706,11 +706,10 @@ def mirrored_right_tuck(c: Clip, name: str, t0: float, t1: float, to_phase: floa
 
 
 def m65_clips() -> list[Clip]:
-    dv, tp = dive_left(), toe_tap_left()
+    # (The high point, over the shoulder and the toe tap are passing round 6's since: actions_p6.py. The M6.5 keys above stay for reference.)
+    dv = dive_left()
     return [
-        high_point(), body_down(),
-        over_shoulder("l"), over_shoulder("r"),
+        body_down(),
         dv, mirrored(dv, "catch_dive_r"),
-        tp, mirrored_right_tuck(tp, "catch_toe_tap_r", 12 / FPS, 20 / FPS, to_phase=0.0),
         one_hand("l"), one_hand("r"),
     ]

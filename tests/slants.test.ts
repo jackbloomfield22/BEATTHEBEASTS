@@ -16,9 +16,9 @@ const rosters = practiceRosters(snap);
 const N = 6;
 const LATE_2 = LATE.filter((s) => s.id === 'late-2.0' || s.id === 'late-2.5');
 
-function pool(r: ReturnType<typeof practiceRosters>, scripts: SlantScript[], man: boolean | null): SlantSample[] {
+function pool(r: ReturnType<typeof practiceRosters>, scripts: SlantScript[], man: boolean | null, n = N): SlantSample[] {
   const xs: SlantSample[] = [];
-  for (const sc of scripts) for (const def of DEF_CALLS.filter((d) => man === null || isMan(d) === man)) xs.push(...runCell(r, [CALLED, ...HOT], def, sc, N));
+  for (const sc of scripts) for (const def of DEF_CALLS.filter((d) => man === null || isMan(d) === man)) xs.push(...runCell(r, [CALLED, ...HOT], def, sc, n));
   return xs;
 }
 
@@ -57,7 +57,9 @@ describe('slants: the linebackers are themselves', () => {
     // against ~74%).
     const good = withLinebackers(rosters, snap, ['Ray Lewis', 'Luke Kuechly', 'Derrick Brooks']);
     const poor = withLinebackers(rosters, snap, ['Carl Banks', 'Bart Scott', 'Matt Millen']);
-    const cmp = (r: typeof rosters) => summarize(pool(r, [ON_TIME, LATE.find((s) => s.id === 'late-2.0')!], false)).cmp;
+    // (Twelve reps a cell since passing round 6: at six the pair read 52% against 55%, at scale, tools/sim/slants.ts --lbs at 40,
+    // 47% against 59%. The six-rep window had shrunk to sample noise once the catch moved to the receiver's hands.)
+    const cmp = (r: typeof rosters) => summarize(pool(r, [ON_TIME, LATE.find((s) => s.id === 'late-2.0')!], false, 12)).cmp;
     expect(cmp(good)).toBeLessThan(cmp(poor) - 0.03);
   });
 }, 180_000);
@@ -68,7 +70,8 @@ describe('slants: Cover 2 man is the quick game\'s problem', () => {
     // in the hip pocket, under the break), the halves over the top
     // (docs/m66/SLANTS.md, the third pass). At scale, the called Slants on
     // time: Cover 2 man ~53%, Cover 1 ~66% (they were 63% and 65%).
-    const at = (id: string) => summarize(runCell(rosters, [CALLED, ...HOT], defById(id), ON_TIME, 12));
+    // (24 reps since passing round 6: at 12 the pair read 46% against 50%; at scale, tools/sim/slants.ts, 60% against 67%.)
+    const at = (id: string) => summarize(runCell(rosters, [CALLED, ...HOT], defById(id), ON_TIME, 24));
     const two = at('cover2man');
     const one = at('cover1');
     expect(two.cmp).toBeLessThan(one.cmp - 0.06);

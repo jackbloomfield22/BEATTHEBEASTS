@@ -183,19 +183,22 @@ export const CLIPS: Clip[] = [
   // (Cover 2 seed 12 → Cover 1 seed 23, the slot's seam, for passing round 2, tools/sim/findclips.ts: caught in stride and 15 yd after the catch with the juke.)
   // (Seed 23 → 45 for passing round 3, tools/sim/findclips.ts: the key starts the arm and the other receivers run their routes through the throw; the slot's seam caught and 14 yd after it with the juke.)
   // (Cover 1 seed 45 → Cover 3 seed 25 for passing round 4, tools/sim/findclips.ts: the deep ball in the bucket; the slot's seam caught and 23 yd after it.)
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 25, play: 'trips-four-verts', def: 'cover3', los: 30, script: throwAndRun(1, 100, 'juke') },
+  // (Seed 25, icon 1 → seed 65, icon 2 for passing round 6, tools/sim/p6_refind.ts: the catch at his hands; the tight end's seam against Cover 3, caught and 15 yd after it.)
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 65, play: 'trips-four-verts', def: 'cover3', los: 30, script: throwAndRun(2, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // Stick against Cover 1: the short catch, a stiff arm sheds the first tackler a second later, down 15 yd on (11 after the catch).
   // A different play from the completion clip, so the broken tackle is the moment, not a second long run (2026-10-02; was Four Verticals seed 5).
-  { id: 'broken-tackle', title: 'Broken tackle', seed: 13, play: 'trips-stick', def: 'cover1', los: 30, script: throwAndRun(2, 84, 'stiffArm') },
+  // (Icon 2 → 3 for passing round 6, tools/sim/p6_feel.ts: the catch at his hands; the same snap to the fade side, a stiff arm sheds the tackler, 24 yd.)
+  { id: 'broken-tackle', title: 'Broken tackle', seed: 13, play: 'trips-stick', def: 'cover1', los: 30, script: throwAndRun(3, 84, 'stiffArm') },
   // M6.5 #11: inside zone steered by the arrows, a 102° plant-and-cut across and a 45° one back upfield, a burst, and a tackler closing (tools/sim/findcarry.ts: 11.8 yd).
   { id: 'cut-run', title: 'Cut and burst on a designed run', seed: 17, play: 'singleback-inside-zone', def: 'cover2', los: 30, script: runAndCut(1.5, 3.5) },
   // A catch-and-run touchdown (the touchdown celebrations' browser test plays it): Four Verticals against Cover 2, icon 1 caught and taken
   // 70 yd to the end zone (2026-10-08, after the passing pass's round two; completion-rac is a tackle by design, so it can't stand in).
   // (Seed 8 → 30 for passing round 3: the key starts the arm; caught at the 40 and taken 39 yd to the end zone.)
   // (Seed 30 → 78 for passing round 4: the deep ball in the bucket; caught at the 39 and taken 39 yd to the end zone.)
-  { id: 'touchdown', title: 'Catch-and-run touchdown', seed: 78, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(1, 100, 'juke') },
+  // (Seed 78 → 79 for passing round 6, tools/sim/p6_feel.ts: the catch at his hands.)
+  { id: 'touchdown', title: 'Catch-and-run touchdown', seed: 79, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(1, 100, 'juke') },
 ];
 
 // The ten broadcast concepts (M6.5): found by tools/sim/findconcepts.ts, the
@@ -263,7 +266,8 @@ export const IDENTITY: Clip[] = [
   // (Seed 67 Cover 1 → seed 42 Cover 2 man for the passing pass, docs/passing/PASSING.md: the same play and throw; Deion now picks it, Kam gives up 32 yd at 1.2 yd of separation.)
   // (Cover 2 man seed 42 → Cover 1 seed 4 for passing round 3, tools/sim/findidentity.ts --only=coverage: Deion picks it; Kam gives up 40 yd at 2.7 yd of separation.)
   // (Cover 1 seed 4 → Cover 2 man seed 37 for passing round 4, tools/sim/findidentity.ts --only=coverage: with the deep ball in the bucket the seed-4 ball got to the X, who lost it; now Deion breaks it up at the catch point, Kam gives up 39 yd.)
-  ...pair('coverage', 'Half the field', { seed: 37, play: 'trips-four-verts', def: 'cover2man', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
+  // (Cover 2 man seed 37 → Cover 1 seed 4 for passing round 6, tools/sim/findidentity.ts --only=coverage: with the catch at his hands the seed-37 ball no longer splits them; on Cover 1 seed 4 Deion picks it, Kam gives up 41 yd at 3.2 yd of separation.)
+  ...pair('coverage', 'Half the field', { seed: 4, play: 'trips-four-verts', def: 'cover1', los: 30, script: concept({ icon: 4, at: 90 }) }, { def: 'LCB', name: 'Deion Sanders', pos: 'CB' }, { def: 'LCB', name: 'Kam Chancellor', pos: 'S' }),
 ];
 
 // The passing game, end to end (docs/passing/PASSING.md): one clip per
@@ -340,7 +344,8 @@ export const PHYSICS: Clip[] = [
   // The slant against Cover 4 (Kam at strong safety): Ed Reed meets Jerry Rice square coming downhill, driven back, spotted at his forward progress.
   // (Seed 1 → 6 for passing round 2, tools/sim/findtackles.ts --only=tackle-driven-back: the same slant, caught for 11.8 and driven back.)
   // (Seed 6 → 39 for passing round 3, tools/sim/findtackles.ts --only=tackle-driven-back: the same slant, caught for 7.2 and driven back.)
-  { id: 'tackle-driven-back', title: 'Driven back: Jerry Rice met by Ed Reed', seed: 39, play: 'doubles-slants', def: 'cover4', los: 30, script: concept({ icon: 1, at: 30 }), swap: { def: 'SS', name: 'Kam Chancellor', pos: 'S' } },
+  // (Cover 4 seed 39 → the fire zone, seed 9, for passing round 6, tools/sim/findtackles.ts --only=tackle-driven-back: the same slant, caught for 9.3 and driven back.)
+  { id: 'tackle-driven-back', title: 'Driven back: Jerry Rice met by Ed Reed', seed: 9, play: 'doubles-slants', def: 'firezone', los: 30, script: concept({ icon: 1, at: 30 }), swap: { def: 'SS', name: 'Kam Chancellor', pos: 'S' } },
 ];
 
 /** The player's throw (passing round 3): a hot route at the line if asked, the key at `at` ticks after the snap (a tap, or held `hold` ticks for touch), no catch call, then upfield with the sprint in the open. */
@@ -405,8 +410,32 @@ export const PASSING5: Clip[] = [
   { id: 'p5-low', title: 'Hands low: the slant at the knees', seed: 5, play: 'doubles-slants', def: 'cover1', los: 30, user: false, script: () => NEUTRAL },
   { id: 'p5-scoop', title: 'Scoop: the hitch at the shoe tops', seed: 5, play: 'doubles-hitch-seam', def: 'firezone', los: 30, user: false, script: () => NEUTRAL },
   { id: 'p5-reach', title: 'Reach: the slant behind him', seed: 8, play: 'doubles-slants', def: 'cover3', los: 30, user: false, script: () => NEUTRAL },
-  { id: 'p5-contested', title: 'Through contact: Gronk', seed: 3, play: 'heavy-pa-te-leak', def: 'cover3', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'TE', name: 'Rob Gronkowski', pos: 'TE' } },
+  // (Re-found for passing round 6: with the catch at his hands the leak's ball meets Gronk a stride before Lott gets there; the Y-cross against Cover 1 has Lott on him at the catch: tools/sim/p5find.ts --style=contested.)
+  { id: 'p5-contested', title: 'Through contact: Gronk', seed: 3, play: 'trips-y-cross', def: 'cover1', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'TE', name: 'Rob Gronkowski', pos: 'TE' } },
   { id: 'p5-highpoint', title: 'High point: GO UP', seed: 1, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 60, aim: { x: 0, y: 1 }, call: 'aggressive' }) },
   { id: 'p5-shoulder', title: 'Over the shoulder: the go', seed: 4, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
   { id: 'p5-toetap', title: 'Toe tap: the quick out', seed: 12, play: 'doubles-quick-outs', def: 'cover2', los: 30, user: false, script: () => NEUTRAL },
+];
+
+// Passing round 6 (docs/passing/PASSING6.md): the player's own throws on the
+// cue (the tick the throw-timing cue says, found by tools/sim/p6find.ts) to
+// the go, the post, the corner, the crosser and the out, from the default
+// broadcast camera and a close one on the catcher (tools/shots/video.spec.ts
+// BTB_PASSING6, FOLLOW6): is the ball thrown to where he's going, does he run
+// under it in stride, and do the ball and his hands meet on the catch? The
+// weak arm's go (Chad Pennington: Throw Power 59, Deep Accuracy 75) is the
+// same throw from a QB who misses; the high point, over the shoulder and the
+// toe tap are round five's plays, for the re-keyed clips.
+export const PASSING6: Clip[] = [
+  { id: 'p6-go', title: 'The go on the cue: Montana to Rice', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 63 }) },
+  { id: 'p6-post', title: 'The post on the cue', seed: 2, play: 'singleback-pa-post', def: 'cover3', los: 30, script: concept({ icon: 1, at: 90 }) },
+  { id: 'p6-corner', title: 'The corner on the cue', seed: 3, play: 'doubles-smash', def: 'cover3', los: 30, script: concept({ icon: 1, at: 80 }) },
+  { id: 'p6-cross', title: 'The crosser on the cue', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: concept({ icon: 1, at: 120 }) },
+  { id: 'p6-out', title: 'The out on the cue (left sideline)', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 84, hot: 'out' }) },
+  { id: 'p6-weak-go', title: 'The go from a weak arm: Chad Pennington', seed: 5, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 59 }), swap: { off: 'QB', name: 'Chad Pennington', pos: 'QB' } },
+  { id: 'p6-shoulder', title: 'Over the shoulder: the go, touch', seed: 4, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 3, at: 90, hold: 16 }) },
+  { id: 'p6-highpoint', title: 'High point: GO UP', seed: 1, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 60, aim: { x: 0, y: 1 }, call: 'aggressive' }) },
+  { id: 'p6-toetap', title: 'Toe tap: the quick out', seed: 12, play: 'doubles-quick-outs', def: 'cover2', los: 30, user: false, script: () => NEUTRAL },
+  // The ball's arm: the X's slant on the left, caught with room and run 9 yd after it (tools/sim/p6_carryfind.ts): tucked, then moved to the arm away from the tackler.
+  { id: 'p6-carry', title: 'The ball in the outside arm', seed: 12, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 30 }) },
 ];

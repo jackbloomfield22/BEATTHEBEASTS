@@ -148,14 +148,9 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `sig_ol` | signature | 86 | 0.0 | 0.00 | 0.00 | 35.0 | — | pass |
 | `catch_hands_run` | overlay | 27 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_hands_run_low` | overlay | 27 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `catch_high_point` | transition | 49 | 0.0 | 0.36 | 0.00 | 20.1 | — | pass |
 | `catch_body_down` | transition | 39 | 0.0 | 0.01 | 0.00 | 22.0 | — | pass |
-| `catch_over_shoulder_l` | overlay | 21 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `catch_over_shoulder_r` | overlay | 21 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_dive_l` | transition | 30 | 0.0 | 0.00 | 0.00 | 22.5 | — | pass |
 | `catch_dive_r` | transition | 30 | 0.0 | 0.00 | 0.00 | 22.5 | — | pass |
-| `catch_toe_tap_l` | transition | 30 | 0.0 | 0.00 | 0.00 | 20.4 | — | pass |
-| `catch_toe_tap_r` | transition | 30 | 0.0 | 0.00 | 0.00 | 20.4 | — | pass |
 | `catch_one_hand_l` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_one_hand_r` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_body` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
@@ -165,6 +160,20 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `catch_reach_r` | overlay | 27 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_contested_l` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_contested_r` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_over_shoulder_l` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_over_shoulder_r` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_high_point` | transition | 49 | 0.0 | 0.33 | 0.00 | 20.5 | — | pass |
+| `catch_toe_tap_l` | transition | 30 | 0.0 | 0.00 | 0.00 | 20.4 | — | pass |
+| `catch_toe_tap_r` | transition | 30 | 0.0 | 0.00 | 0.00 | 20.4 | — | pass |
+| `carry_jog_l` | locomotion | 22 | 3.5 | 0.01 | 0.00 | 19.8 | — | pass |
+| `carry_run_l` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.2 | — | pass |
+| `carry_sprint_l` | locomotion | 14 | 8.5 | 0.00 | 0.00 | 24.7 | — | pass |
+| `carry_traffic_jog_l` | locomotion | 18 | 3.2 | 0.00 | 0.00 | 21.7 | — | pass |
+| `carry_traffic_run_l` | locomotion | 15 | 5.6 | 0.00 | 0.00 | 23.7 | — | pass |
+| `carry_drive_jog_l` | locomotion | 20 | 4.0 | 0.00 | 0.00 | 23.1 | — | pass |
+| `carry_drive_run_l` | locomotion | 16 | 6.2 | 0.00 | 0.00 | 23.1 | — | pass |
+| `carry_drive_sprint_l` | locomotion | 14 | 8.2 | 0.00 | 0.00 | 24.6 | — | pass |
+| `ovl_carry_l` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `carry_jog` | locomotion | 22 | 3.5 | 0.01 | 0.00 | 19.8 | — | pass |
 | `carry_run` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.2 | — | pass |
 | `carry_sprint` | locomotion | 14 | 8.5 | 0.00 | 0.00 | 24.7 | — | pass |
@@ -206,7 +215,7 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `catch_bobble` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_resecure` | overlay | 15 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 
-**199 of 199 clips pass.**
+**208 of 208 clips pass.**
 
 ## Joint limits (M7 celebrations)
 

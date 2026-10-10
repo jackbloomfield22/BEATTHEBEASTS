@@ -47,6 +47,8 @@ export interface AnimInput {
    * (the trunk pitched into the hole).
    */
   carry?: number;
+  /** The ball's arm while he carries (passing round 6): 0 the right, 1 the left (the left-arm carry families), eased like the carry. */
+  carryLeft?: number;
   traffic?: number;
   drive?: number;
   press?: number;
@@ -191,6 +193,7 @@ export class PlayerAnimator {
   private dipR: Overlay | null = null;
   /** The gait families' eased inputs (carry, traffic, drive) and the press. */
   private carryW = 0;
+  private leftW = 0;
   private trafficW = 0;
   private driveW = 0;
   private pressW = 0;
@@ -198,7 +201,7 @@ export class PlayerAnimator {
   private locos: GaitClip[] = [];
   private locoW: number[] = [];
   private locoPhase: number[] = [];
-  private famW = [1, 0, 0, 0];
+  private famW = [1, 0, 0, 0, 0, 0, 0];
   private samples: GaitSample[] = [];
   /** Root motion this update (m along the facing, body-scaled) and its rate (m/s). */
   rootMotion = 0;
@@ -252,6 +255,7 @@ export class PlayerAnimator {
     this.dipL = null;
     this.dipR = null;
     this.carryW = 0;
+    this.leftW = 0;
     this.trafficW = 0;
     this.driveW = 0;
     this.pressW = 0;
@@ -475,7 +479,8 @@ export class PlayerAnimator {
     this.trafficW += ((input.traffic ?? 0) - this.trafficW) * kf;
     this.driveW += ((input.drive ?? 0) - this.driveW) * kf;
     this.pressW += ((input.press ?? 0) - this.pressW) * kf;
-    const fam = familyWeights(this.carryW, this.trafficW, this.driveW, this.famW);
+    this.leftW += ((input.carryLeft ?? 0) - this.leftW) * kf;
+    const fam = familyWeights(this.carryW, this.trafficW, this.driveW, this.famW, this.leftW);
     const lw = this.locoW;
     lw.fill(0);
     let stride = 0;
