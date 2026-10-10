@@ -193,14 +193,14 @@ Recorded on the frame-true clock at 30 fps, 960×540, on Low (`BTB_VIDEO=1 BTB_P
   - `p6-carry`: the X's slant on the left, caught with room and run (the ball's arm).
   - `p6-cross`: before only.
   - after only: `p6-shoulder` (the Z's go, touch), `p6-highpoint` (GO UP), `p6-toetap` (the quick out at the sideline). Their before is round five's `round5/after/p5-shoulder`, `p5-highpoint` and `p5-toetap`: the same plays on the same tree. Its catch comes a few ticks earlier there, so the side-by-sides drift by a frame or two.
-- `round6/before-close/`, `round6/after-close/`: the close camera on the catcher (go, out, carry, and after only the shoulder, high point and toe tap; the weak go before only).
+- `round6/before-close/`, `round6/after-close/`: the close camera on the catcher (go, out, carry; after only the shoulder, high point and toe tap; the weak go before only).
 - `round6/compare/`: before on the left, after on the right. `<clip>.mp4` is broadcast, `<clip>-close.mp4` is close.
 - `round6/stills/`:
   - `broadcast-go-flight-before-after.jpg`: the go's flight from a second before the catch;
   - `close-go-before-after.jpg`, `broadcast-go-before-after.jpg`: the catch;
   - `close-toetap-zoom-before-after.jpg`, `close-highpoint-zoom-before-after.jpg`: the new clips at the catch, cropped;
   - `close-<clip>-before-after.jpg`, `broadcast-<clip>-before-after.jpg`: eight frames before the catch to seven after, before on top;
-  - `close-carry-after.jpg`: the switch to the outside arm.
+  - `close-carry-before-after.jpg`: the switch to the other arm after the catch (before: the right arm throughout; after: both hands on it at the chest at +16, then carried on the near side).
 
 ## Watched: an honest critique
 
