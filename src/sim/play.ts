@@ -39,7 +39,7 @@ import { feetStep, grab, holdKind, knockDown, pileStep, tickDowned } from './tac
 import { LOFT_CHARGE, TAP_MAX, type InputFrame } from './input';
 import { advance, arrive, remember, steer, timeTo } from './movement';
 import { aiMove, autoMove, carrierOptions, OPTIONS_EVERY, type MoveOption } from './moves';
-import { autoCatch, CATCH_Z, catchLook, COME_V, comesBack, findsBallAt, handsReach, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir } from './passing';
+import { autoCatch, CATCH_Z, catchLook, findsBallAt, handsReach, LAP_R, layer, planThrow, reach, release, releaseOf, resolveCatch, stepAir, comesBack, worksBack } from './passing';
 import { gauss } from './rand';
 import { has } from './traits';
 import { manOf, type PlayState } from './state';
@@ -685,9 +685,11 @@ const HANDS_UP = 1.33;
 /**
  * The bat's odds for a 6'6" lineman with the ball through his frame, under
  * his raised hands, seen coming and not running at the QB: set with
- * BAT_ENGAGED so the AI pass game has ~1.5–2% of its attempts batted at the
- * line (tools/sim/batted.ts: 1.7%; the NFL runs ~1.5–2%). The flat 0.45
- * inside BAT_R (M6.5 to round 6) had it at 3.4%.
+ * BAT_ENGAGED so the AI pass game has 1–2% of its attempts batted at the
+ * line (tools/sim/batted.ts: 1.2%; the NFL runs ~1–2%) and the player's
+ * on-time slants are tipped no more often than round six's (tools/sim/slants.ts
+ * at 120 reps: 7% tipped at the line or underneath, 6% before). The flat 0.45
+ * inside BAT_R (M6.5 to round 6) had the AI pass game at 3.4%.
  */
 const BAT_P = 0.95;
 /**
@@ -715,11 +717,11 @@ const BAT_READ0 = 0.5;
 /**
  * The share of throws an engaged rusher in the lane gets his hands up to (his
  * hands are on the man in front of him; he gets them up as the QB sets to
- * throw, when he can't get there). With BAT_P, the AI pass game's ~1.5–2%
+ * throw, when he can't get there). With BAT_P, the AI pass game's 1–2%
  * (tools/sim/batted.ts). Round six's 0.15 was set against the flat odds,
  * where every engaged rusher within BAT_R counted the same.
  */
-const BAT_ENGAGED = 0.5;
+const BAT_ENGAGED = 0.45;
 
 /**
  * A defender over the top of the catch point: deeper than the receiver and
@@ -1575,6 +1577,9 @@ function atHands(s: PlayState, who: number, out: ReturnType<typeof resolveCatch>
       a.busy = Math.max(a.busy, type === 'aggressive' ? 12 : type === 'possession' ? 8 : 4);
       if (s.pass) s.pass.complete = true;
       a.mem.caughtAt = s.t;
+      // Where the ball was against his body when he took it (passing round 7: the drawing puts his hands there on the catch frame, render/game/choreo.ts catchReach).
+      a.mem.catchRel = { x: b.pos.x - a.pos.x, y: b.pos.y - a.pos.y };
+      a.mem.catchRelZ = b.pos.z;
       const look = catchLook(s, a, b.pos);
       s.events.push({ t: s.t, type: 'catch', who: [who], at: { x: a.pos.x, y: a.pos.y }, data: { type, look, ...(bobbled ? { bobble: true } : {}) } });
       // SECURE in traffic: he cradles it and goes to the ground with it
@@ -1978,15 +1983,18 @@ function runToBall(s: PlayState, a: Agent): void {
   const d = dist(a.pos, to);
   const left = b.arrive - s.t;
   if (settle) {
-    // A settle route that turns back to the QB (a curl, a comeback, a
-    // hitch: passing.ts comeBackTo): the throw is led to where he'll meet it
-    // coming back down the line. He runs into his settle as the lead ran
-    // him, squares up to the QB until it's time to go, then drives at it
-    // and takes it on the move. Passing round 3: he braked to a stop on the
-    // ball's spot and caught it standing (M5's arrive), so a curl or
-    // comeback receiver stood still with the ball in the air. The rest (a
-    // flat, a spot, a checkdown) settle facing the QB and it comes to them.
-    if (!rt || !comesBack(rt)) {
+    // A settle route he works back from (a curl, a comeback, a hitch, and
+    // past WORK_DEEP the stick, the spot and the sit: passing.ts worksBack,
+    // comeBackTo): the throw is led to where he'll meet it coming back down
+    // the line. He runs into his settle as the lead ran him, shows his
+    // numbers to the QB, and works back to it from the release, taking it on
+    // the move. Passing round 3: he braked to a stop on the ball's spot and
+    // caught it standing (M5's arrive), so a curl or comeback receiver stood
+    // still with the ball in the air. The rest (a flat, a checkdown, an
+    // arrow) settle facing the QB at the line and it comes to them; a sit
+    // across the field (the stick, the spot) still on its way in settles on
+    // it, and works back only from sitting.
+    if (!rt || !worksBack(rt, s.setup.los) || (rt.idx < rt.pts.length && !comesBack(rt))) {
       steer(a, boundaryGovern(a, arrive(a, to, 1, 1), 0.25));
       return;
     }
@@ -1999,7 +2007,9 @@ function runToBall(s: PlayState, a: Agent): void {
       // pace that gets him there with it (he doesn't brake to a stop on the
       // spot first, then come back); well off it, straight to it.
       if (dist(to, rt.pts[rt.pts.length - 1]!) < COME_OFF && left > 0.1 && d > 0.25) {
-        steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * Math.min(a.fx.vmax, need), y: ((to.y - a.pos.y) / d) * Math.min(a.fx.vmax, need) }, 0.25), { face: faceQb });
+        // (Passing round 7: never slower than COME_WORK, through the spot if he's early.)
+        const sp = Math.min(a.fx.vmax, Math.max(need, COME_WORK));
+        steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp }, 0.25), { face: faceQb });
         return;
       }
       if (left > 0.1 && d > 0.25) {
@@ -2008,8 +2018,15 @@ function runToBall(s: PlayState, a: Agent): void {
       }
     }
     if (left > 0.1 && d > 0.25) {
-      if (need < COME_V * 0.9) steer(a, { x: 0, y: 0 }, { face: faceQb });
-      else steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * Math.min(a.fx.vmax, need), y: ((to.y - a.pos.y) / d) * Math.min(a.fx.vmax, need) }, 0.25), { face: faceQb });
+      // Sat down with it in the air (passing round 7): he works back to it
+      // from the release, at the pace that meets it, his numbers to the QB
+      // (he read the throw in the windup). Round three held him still until
+      // the pace he'd need reached COME_V, so on a ball thrown to a man
+      // already sat he stood for half its flight and then lunged at it.
+      // Never slower than COME_WORK: with ground to spare he comes on through
+      // the spot and takes it a step nearer the QB, a little higher.
+      const sp = Math.min(a.fx.vmax, Math.max(need, COME_WORK));
+      steer(a, boundaryGovern(a, { x: ((to.x - a.pos.x) / d) * sp, y: ((to.y - a.pos.y) / d) * sp }, 0.25), { face: faceQb });
       return;
     }
     // The ball's on him: through the catch the way he's coming (or square, if he's had nowhere to go).
@@ -2078,6 +2095,9 @@ const END_ROOM = 1;
 
 /** Under a short ball he brakes at this share of his cut deceleration (fx.cutAccel): a hard plant, short of the all-out cut he'd make to change direction. Ours: an agile receiver brakes later, a big one earlier. */
 const BRAKE_K = 0.7;
+
+/** The slowest (yd/s) a man working back to the ball comes (runToBall): short choppy steps, his numbers to the QB, faster than the 1.5 yd/s a man standing still drifts at. Ours. */
+const COME_WORK = 2;
 
 /** A ball thrown this far (yd) off a come-back man's settle point he goes to straight off, not through his settle first. Ours: about two strides. */
 const COME_OFF = 2;

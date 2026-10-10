@@ -385,9 +385,14 @@ const TIMING_QB_FULL = 20;
  * open men at 89%. Passing round 3: 0.43. The QB's accuracy now takes up to
  * 30% off a deep ball's (timingQb), and the other receivers no longer drag
  * their men to the catch point, so the 60-a-cell book went 66.5% → 67.4%;
- * 0.43 brings it back to 66.6% (8.1 yd an attempt).
+ * 0.43 brings it back to 66.6% (8.1 yd an attempt). Passing round 7: the
+ * book's batted balls came down from 3.4% of its attempts to the NFL's 1–2%
+ * (play.ts batAtLine) and its completion rose with them (67.3% → 68.7% at
+ * 30 a cell); 0.56 takes it back to ~67% (0.5: 68.1%). A weak lever: the
+ * ball's timing is a few tenths of a yard on a short throw, where most of the
+ * book's completions are.
  */
-const TIMING = 0.43;
+const TIMING = 0.56;
 /** The horizon (s) past which it grows only with the horizon, not faster: a deep ball's hang. */
 const TIMING_H = 2;
 /** A perfect route runner takes 60% of it off: where he is is mostly how he runs it. */
@@ -473,14 +478,14 @@ export function releaseOf(qb: Agent): number {
  * Where the ball meets him: the flight time iterated against where he'll be
  * (`hang` is the flight to a spot), and the way he'll be running there.
  */
-function leadFor(rec: Agent, hang: (at: V2) => number, from: V2): { spot: V2; rv: V2; T: number; speed: number; offScript: number; settled: number } {
+function leadFor(rec: Agent, hang: (at: V2) => number, from: V2, los: number): { spot: V2; rv: V2; T: number; speed: number; offScript: number; settled: number } {
   let T = 0.8;
   let run = leadRun(rec, T);
   let spot = run.pos;
   for (let k = 0; k < 4; k++) {
     T = hang(spot);
     run = leadRun(rec, T);
-    spot = comeBackTo(rec, run.pos, run.settled, from);
+    spot = comeBackTo(rec, run.pos, run.settled, from, los);
   }
   // Coming back to it on a settle route: the way he'll be moving at the catch is at the QB.
   if (spot !== run.pos) {
@@ -517,10 +522,12 @@ function handsDir(spot: V2, rv: V2, speed: number, from: V2, settled = 0): V2 {
  * player watched his curl and comeback runners stand still with the ball in
  * the air (the owner: "a comeback comes back to the ball").
  */
-export function comeBackTo(rec: Agent, at: V2, settled: number, from: V2): V2 {
-  if (settled <= 0 || !rec.route || !comesBack(rec.route)) return at;
+export function comeBackTo(rec: Agent, at: V2, settled: number, from: V2, los: number): V2 {
+  if (settled <= 0 || !rec.route || !worksBack(rec.route, los)) return at;
   // Sat down already, he takes a beat (COME_SET) to go; still on his way into the settle, he carries on through it.
   const sat = rec.route.idx >= rec.route.pts.length;
+  // (A sit that doesn't turn back, the stick or the spot, settles across the field: thrown as he gets there, it's caught as he sits. He works back only from sitting.)
+  if (!sat && !comesBack(rec.route)) return at;
   const rr = Math.max(rec.fx.a('shortRoute'), rec.fx.a('routeRunning'));
   const d = Math.min(COME_MAX * (0.6 + 0.4 * rr), COME_V * Math.max(0, settled - (sat ? COME_SET : 0)));
   if (d <= 0) return at;
@@ -540,12 +547,36 @@ export function comesBack(rt: { pts: V2[]; sit: boolean[] }): boolean {
   const n = rt.pts.length;
   return n >= 2 && rt.sit[n - 1] === true && rt.pts[n - 1]!.x < rt.pts[n - 2]!.x - 0.5;
 }
+/**
+ * A settle route he works back to the ball from (passing round 7): the ones
+ * that turn back to the line (comesBack), and any other that sits down past
+ * WORK_DEEP yd downfield, in a window between the zones (the stick, the
+ * spot, the sit): he sits, shows his numbers, and as it comes he works back
+ * down the line to it, so the man over the top can't drive on it. A flat, a
+ * checkdown or an arrow settles at the line facing the QB, and the ball
+ * comes to him there. Round six's settle routes stood under the ball on a
+ * third of the AI book's throws to them (tools/sim/p6stand.ts), the stick
+ * on every one (tools/sim/p7settle.ts).
+ */
+export function worksBack(rt: { pts: V2[]; sit: boolean[] }, los: number): boolean {
+  const n = rt.pts.length;
+  return comesBack(rt) || (n >= 1 && rt.sit[n - 1] === true && rt.pts[n - 1]!.x - los >= WORK_DEEP);
+}
+/** A sit route this deep (yd past the line) or more works back to the ball: the hitch and spot settle at 5–5.5, the flat at 4.5 and the checkdown at 3.5. Ours. */
+const WORK_DEEP = 5;
 /** The pace (yd/s) he comes back to the ball at: two hard steps, about half his speed. Ours, from the broadcast's curls and comebacks. */
 export const COME_V = 4;
 /** The beat (s) he's sat, square to the QB, before he comes back to it. Ours. */
 const COME_SET = 0.15;
-/** The most he comes back (yd), for a perfect route runner (60% of it for a 0): about two steps. Ours. */
-const COME_MAX = 1.5;
+/**
+ * The most he comes back (yd), for a perfect route runner (60% of it for a
+ * 0): two or three steps, a curl at 12 caught at 10. Ours. Round three's 1.5
+ * left him a yard and a half to cover in the ball's ~0.8 s, so he stood
+ * until the last 0.4 s and then drove at it; now he works back from the
+ * release (play.ts runToBall), and the ball's whole flight is his to come
+ * back in.
+ */
+const COME_MAX = 2;
 
 /**
  * A late out (passing round 4): the ball's thrown to a man still running his
@@ -675,7 +706,9 @@ export function bucket(s: PlayState, qb: Agent, rec: Agent, spot: V2, rv: V2, ai
   // Away from him across the run (to the sideline side when he's straight behind or over the top).
   const ac = (Math.abs(dC) < BUCKET_SQUARE ? 1 : -Math.sign(dC)) * BUCKET_SIDE;
   // Ahead of a man trailing or level; over the top of him, no further (the back shoulder is the AI's answer there).
-  const al = dA < BUCKET_LEVEL ? BUCKET_LEAD : 0;
+  // (Passing round 7: the ball's already led to his hands, LEAD_HANDS out in front of him, so the bucket's lead is only what's past that.
+  // Round six stacked both: 1.2 yd ahead and 0.7 across of where he'd be, 0.8 yd from his hands, and the deep corner fell 57% → 52%.)
+  const al = dA < BUCKET_LEVEL ? Math.max(0, BUCKET_LEAD - LEAD_HANDS) : 0;
   const k = kd * ka;
   return { x: (rv.x * al + px * ac) * k, y: (rv.y * al + py * ac) * k };
 }
@@ -788,7 +821,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   // (M5 to M6.6 led him for 0.05 s more than the ball flies, with no reason
   // given: the driven slant landed ~0.5 yd in front of him, and with the
   // cone on top a fifth of them out of his reach. On time is on him.)
-  const { spot, rv, speed: recSpeed, T: leadT, offScript, settled } = leadFor(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }), from);
+  const { spot, rv, speed: recSpeed, T: leadT, offScript, settled } = leadFor(rec, (at) => hang0({ x: at.x, y: at.y, z: CATCH_Z }), from, s.setup.los);
   // Placement input: lead / back shoulder along his path (the way he'll be running at the catch), high / low.
   const place = 1.6 * aim.x + HOLD_LEAD * Math.max(0, Math.min(1, loft));
   // The deep ball in the bucket (passing round 4): ahead of him and away from the man on him.
@@ -963,6 +996,7 @@ export function previewThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, 
       return Math.max(driveTime(dist(from, to), power) * (touch ? touchStretch(loft) : 1), armTime(dist(from, to), vmax));
     },
     from,
+    s.setup.los,
   );
   const { spot, rv } = run;
   const bk = bucket(s, qb, rec, spot, rv, aim);
@@ -1380,7 +1414,21 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
       }
     }
     if (u < p) return 'catch';
-    // A contested ball is mostly broken up; an open one that's missed is a drop (or off his fingertips).
+    // Whose ball it was (passing round 7): the share of misses the defender
+    // made (his hand in at the catch, his hit as it arrived) is his breakup;
+    // what's left is the receiver's own, a drop. Rounds 1-6 called every
+    // miss with the contest under 0.4 a drop, so a man closing from two
+    // yards counted against the receiver's hands: Marvin Harrison "dropped"
+    // 16% of his open slants against two-man, every one with a corner on
+    // his hip (tools/sim/p7drops.ts). The odds are the same; the stat and
+    // the look (knocked away, not off his hands) are the defender's.
+    const contact = costs.reduce((t, c) => t + (c[0] === 'contact' ? c[1] : 0), 0);
+    let own = clean + contact;
+    if (routine && has(a, 'glue-hands')) own = Math.max(own, 0.985);
+    if (a.fx.r('catching', -1) < 0) own -= 0.3;
+    own = Math.max(0.02, Math.min(0.985, own));
+    if (u < own && (contest > 0 || hit > 0)) return 'deflect';
+    // His own miss: in a crowd it's still mostly knocked away; open, it's a drop (or off his fingertips).
     return contest > 0.4 && rng() < 0.8 ? 'deflect' : off < 0.8 ? 'drop' : 'miss';
   }
   // A defender at the ball: he has to be playing it, and close to its path.

@@ -3,7 +3,8 @@
 // coverages, the man at X, a ball that reached him with no defender within
 // 1.5 yd), for a spread of Catching, and what made each ball hard (the
 // catch's biggest cost, resolveCatch's s.pass.hard).
-//   node tools/run-ts.mjs tools/sim/p7drops.ts [reps=8] [--names=A,B]
+//   node tools/run-ts.mjs tools/sim/p7drops.ts [reps=8] [--names=A,B] [--shared]
+// --shared: passidentity's own seeds (the same 40 on every play and call).
 import { readFileSync } from 'node:fs';
 import { createPlay, defById, input, PLAYS, practiceRosters, runToWhistle, type SnapshotLike } from '../../src/sim/index.ts';
 import { findStint, simPlayer } from '../../src/sim/roster.ts';
@@ -15,6 +16,7 @@ const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as
 const base = practiceRosters(snap);
 const REPS = Number(process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 8);
 const NAMES = (process.argv.find((a) => a.startsWith('--names='))?.slice(8) ?? 'Marvin Harrison,Jerry Rice,Roddy White,Diontae Johnson,Kelvin Benjamin,Darius Slayton').split(',');
+const SHARED = process.argv.includes('--shared');
 const COVERS = ['cover1', 'cover2', 'cover3', 'cover4', 'cover2man'];
 const PLAYSET: [string, number][] = [
   ['doubles-slants', 30],
@@ -35,11 +37,12 @@ for (const name of NAMES) {
   let offSum = 0;
   let pSum = 0;
   const costSum = new Map<string, number>();
-  for (const [id, at] of PLAYSET) {
+  for (const [pi, [id, at]] of PLAYSET.entries()) {
     const play = PLAYS.find((p) => p.id === id)!;
-    for (const d of COVERS)
+    for (const [ci, d] of COVERS.entries())
       for (let k = 1; k <= REPS * 5; k++) {
-        const s = createPlay({ seed: 9000 + k * 17, offense: off, defense: base.defense, play, def: defById(d), los: 30, toGo: 10, user: true });
+        // (Its own seed on every play and call: passidentity.ts's hands pair reuses 40 seeds across them, so its drops ride on ~40 dice.)
+        const s = createPlay({ seed: SHARED ? 9000 + k * 17 : 20000 + pi * 5000 + ci * 1000 + k * 7, offense: off, defense: base.defense, play, def: defById(d), los: 30, toGo: 10, user: true });
         const icon = s.icons.findIndex((i) => s.agents[i]!.slot === 'X') + 1;
         let dbg: { costs: [string, number][]; off: number; p: number } | null = null;
         runToWhistle(s, (st) => {
