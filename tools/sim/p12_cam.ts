@@ -49,9 +49,11 @@ for (const c of list) {
   let arrive = -1;
   let target = -1;
   let caught = -1;
+  let relQ: { x: number; y: number; face: number } | null = null;
   for (let k = 0; k < 1500 && !s.result; k++) {
     if (windup < 0 && s.windup) windup = s.t;
     if (release < 0 && s.ball.mode === 'air') {
+      relQ = { x: s.agents[s.qb]!.pos.x, y: s.agents[s.qb]!.pos.y, face: s.agents[s.qb]!.face };
       release = s.t;
       arrive = s.ball.arrive;
       target = s.ball.target;
@@ -102,6 +104,17 @@ for (const c of list) {
     qbIn = f.t - release;
   }
   const cat = at(caught >= 0 ? caught : arrive);
+  // (Round 12) The eye against the QB at the release, in his frame (m: ahead, to his left, up), for the clips' previews.
+  if (process.argv.includes('--rel')) {
+    const q = relQ!;
+    const YD = 0.9144;
+    const ex = 50 - rel.eye.z / YD;
+    const ey = -rel.eye.x / YD;
+    const dx = (ex - q.x) * YD;
+    const dy = (ey - q.y) * YD;
+    const f = [Math.cos(q.face), Math.sin(q.face)];
+    console.log(`  eye from the QB at the release: ${(dx * f[0]! + dy * f[1]!).toFixed(2)} m ahead, ${(-dx * f[1]! + dy * f[0]!).toFixed(2)} m to his left, ${rel.eye.y.toFixed(2)} m up; lens ${rel.fov.toFixed(1)}°; facing ${((q.face * 180) / Math.PI).toFixed(0)}°`);
+  }
   console.log(
     `${c.id}: windup ${windup >= 0 ? (release - windup).toFixed(2) : '-'} s before the release, flight ${(arrive - release).toFixed(2)} s | ` +
       `peak pan ${pk.pan.toFixed(0)}°/s (at ${pk.panT.toFixed(2)} s), zoom ${pk.zoom.toFixed(0)}°/s, dolly ${pk.dolly.toFixed(1)} m/s | ` +

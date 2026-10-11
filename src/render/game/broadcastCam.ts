@@ -102,13 +102,29 @@ const AIR_YAW = (15 * Math.PI) / 180;
  *   slant's 20° of yaw against 2° of tilt), so the QB at the bottom of the
  *   frame stays in it while the shot drifts toward the target;
  * - the lens and the eye's travel from the release (later on a longer ball,
- *   ZOOM_K s a second of flight past 0.7 s, at most ZOOM_MAX: the drive's
+ *   ZOOM_K s a second of flight past 0.7 s, at most ZOOM_MAX, less ZOOM_LEAD since round 12: the drive's
  *   finish seen before the zoom takes the QB out of the bottom of the frame) to
  *   ZOOM_SETTLE s before the catch, never quicker than ZOOM_MIN (a screen's
  *   half-second ball finishes it into the catch beat);
  * - the push on the passer through the windup (below).
  * Ours, measured frame by frame at 60 fps on tools/sim/p11_cam.ts (the same
  * code) and the broadcast recordings (docs/passing/PASSING11.md).
+ *
+ * Passing round 12 (docs/passing/PASSING12.md): the slant's zoom was the
+ * fastest part of the move (67°/s of lens: ~27° of it between the release and
+ * 0.18 s before a 0.71-s ball), and it couldn't start earlier, since zooming
+ * about a look far downfield pushed the QB, drawn in the bottom fifth of the
+ * frame (his feet at 495 of 540 px), out of the bottom by 0.25 s. Now:
+ * - the push on the passer tilts the shot down onto him through the windup
+ *   (PUSH_LOOK_DOWN: ~4°), so he's in the middle third as he lets it go and
+ *   the zoom can go on longer before he leaves it; the tilt comes back up
+ *   with the zoom;
+ * - the lens starts ZOOM_LEAD s before the release and settles ZOOM_SETTLE
+ *   s before the catch, on a flatter ramp (ZOOM_RAMP);
+ * - on a quick throw the eye goes most of the way to the catch framing
+ *   (EYE_SHARE_MIN), so the lens has less to close for the same catch: more
+ *   of the move is dolly (the slant's ~10 → ~17 m/s), less is lens.
+ * Measured in Node (tools/sim/p12_cam.ts) and from the 60-fps recordings.
  */
 /** The move begins at most this long (s) before the planned release (a key pressed in the drop waits for the plant). */
 const ANTIC_MAX = 0.45;
@@ -117,9 +133,13 @@ const LOOK_SETTLE = 0.1;
 const LOOK_RAMP = 0.25;
 const ZOOM_K = 0.3;
 const ZOOM_MAX = 0.2;
-const ZOOM_SETTLE = 0.18;
+/** (Round 12) The lens starts this long (s) before the release: the QB is framed higher by then (PUSH_LOOK_DOWN). */
+const ZOOM_LEAD = 0.15;
+/** (Round 12: 0.18 → 0.08) The lens settles this long (s) before the catch: the slant's zoom gets ~0.1 s more. */
+const ZOOM_SETTLE = 0.08;
 const ZOOM_MIN = 0.4;
-const ZOOM_RAMP = 0.3;
+/** (Round 12: 0.3 → 0.25) The zoom's ramp: its top speed 1.33× its mean, not 1.43×. */
+const ZOOM_RAMP = 0.25;
 /**
  * The push on the passer (passing round 11): through the windup the eye comes
  * in PUSH_IN m along its line and down PUSH_DOWN m, and the lens closes by
@@ -132,6 +152,15 @@ const ZOOM_RAMP = 0.3;
  */
 const PUSH_IN = 2;
 const PUSH_DOWN = 3;
+/**
+ * (Passing round 12) Through the windup the look drops this far (m) below its height, a tilt of ~4° down onto the
+ * passer at the pocket's distance (~25 m): he's drawn with his feet ~430 px down a 540-px frame at the release instead
+ * of ~495, so the zoom that follows the ball can begin before he's through his finish and leave him in the frame longer
+ * (the slant to 0.32 s after the release, against 0.25). It comes back up with the zoom. Ours: 3 m kept the QB to 0.27 s
+ * and the slant's zoom over 45°/s; 4 m costs the pan ~0 (the slant's peak 30 → 29°/s, the tilt down is done before the
+ * pan's top speed).
+ */
+const PUSH_LOOK_DOWN = 4;
 const PUSH_LENS = 0.1;
 const PUSH_HOLD = 0.1;
 const PUSH_OUT = 0.3;
@@ -143,7 +172,8 @@ const PUSH_OUT = 0.3;
  * on the passer, so it never cranes back up). Ours: a slant's dolly peaked at
  * ~30 m/s at the full share.
  */
-const EYE_SHARE_MIN = 0.35;
+/** (Round 12: 0.35 → 0.8) The slant's lens then closes ~24° instead of ~27°, its peak dolly ~17 m/s (a full share: ~24). */
+const EYE_SHARE_MIN = 0.8;
 const EYE_FROM = 0.6;
 const EYE_SPAN = 1.2;
 /** The look's lead toward the ball: this share of the way from the spot back to the ball as it leaves his hand, none at the catch (round 9's 0.5; round 11's pan already starts from the pocket). */
@@ -524,7 +554,7 @@ export class BroadcastCam {
     // The pan: from the windup to just before the catch.
     const m = ramp(clamp((s.t - t0) / Math.max(0.3, rel + F - LOOK_SETTLE - t0)), LOOK_RAMP);
     // The lens and the eye: from the release (a beat later on a longer ball) to a little earlier before the catch.
-    const z0 = rel + Math.min(ZOOM_MAX, ZOOM_K * Math.max(0, F - 0.7));
+    const z0 = rel - ZOOM_LEAD + Math.min(ZOOM_MAX, ZOOM_K * Math.max(0, F - 0.7));
     const z1 = Math.max(z0 + ZOOM_MIN, rel + F - ZOOM_SETTLE);
     const mz = ramp(clamp((s.t - z0) / (z1 - z0)), ZOOM_RAMP);
     const mx = (a: number, z: number) => a + (z - a) * m;
@@ -551,5 +581,7 @@ export class BroadcastCam {
     pose.ex += (gx / gl) * PUSH_IN * wEye;
     pose.ey += (gy / gl) * PUSH_IN * wEye;
     pose.eh -= PUSH_DOWN * wEye;
+    // (Round 12) And the tilt down onto him, back up with the zoom.
+    pose.lh -= PUSH_LOOK_DOWN * wIn * (1 - mz);
   }
 }
