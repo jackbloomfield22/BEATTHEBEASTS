@@ -64,7 +64,17 @@ Branch `wip/passing11`, from `8e57e46` (the tip of `claude/m66-polish`, rounds 1
 
 From the recordings' per-frame log (`cam.py`). The QB's height is head to feet at 960×540; "in frame" is his head, hand and feet.
 
-CAMTABLE
+| | Slant (0.70 s) | Out (1.20 s) | Dig (0.78 s) | Go (1.32 s) | RB screen (0.45 s) | Fade (1.52 s) |
+|---|---|---|---|---|---|---|
+| The move starts | at the release → at the windup (0.28 s before) | release → windup (0.30) | release → windup (0.30) | release → windup (0.28) | release → windup (0.30) | release → 0.45 s before (the key held 0.5 s) |
+| Moved by the release (° of look) | 0.1 → 3.1 | 0.2 → 3.6 | 0.2 → 3.3 | 0.3 → 3.4 | 0.1 → 2.6 | 0.3 → 4.3 |
+| **Peak pan (°/s)** | **52 → 31** | **53 → 38** | 33 → 22 | 29 → 22 | 46 → 38 | 25 → 23 |
+| Peak zoom (° of lens/s) | 87 → 67 | 59 → 55 | 80 → 70 | 54 → 51 | 70 → 55 | 50 → 44 |
+| Peak dolly (m/s) | 10.1 → 10.2 | 18.1 → 15.9 | 11.7 → 10.0 | 23.4 → 20.6 | 4.5 → 10.0 | 26.1 → 22.4 |
+| **QB at the release (px, head to feet)** | **61 → 78** | **59 → 74** | 57 → 72 | 61 → 73 | 64 → 79 | 65 → 80 |
+| QB in the frame to (s after the release) | 0.28 → 0.25 | 0.42 → 0.42 | 0.28 → 0.28 | 0.40 → 0.45 | 0.42 → 0.82 | 0.52 → 0.50 |
+| Receiver at the catch (px, head to ground) | 102 → 102 | 108 → 108 | 104 → 105 | 107 → 108 | 70 → 82 | 122 → 124 |
+| Lens at the catch (°) | 20.2 → 21.2 | 19.2 → 19.4 | 18.2 → 18.9 | 19.9 → 19.8 | 31.6 → 31.1 | 22.4 → 21.9 |
 
 The same in Node (`p11_cam.ts`, the game's code stepped at 60 fps; the QB from the ground to 1.95 m, the receiver likewise), every recorded pass:
 
@@ -113,8 +123,8 @@ The same in Node (`p11_cam.ts`, the game's code stepped at 60 fps; the QB from t
 | Screens (`screens.ts`): RB screen a call | 83–100% | 83–100% |
 | ...bubble a call | 80–100% | 75–100% (Cover 2 man 80 → 75%: the press corner arriving at the catch) |
 | Clip gates (`build_anims.py`) | 215 / 215 | 215 / 215 |
-| `npm run check` | passes | CHECK |
-| `e2e/practice.spec.ts` (port 5543) | passes | E2E |
+| `npm run check` | passes | passes (79 files, 758 tests; `tests/broadcast-cam.test.ts` new) |
+| `e2e/practice.spec.ts` (port 5543) | passes | passes, 7 / 7 |
 
 - **The determinism golden doesn't move** (920 cases, every hash the same: re-generated with `BTB_UPDATE_GOLDEN=1` and diffed; no re-pin).
 - **The coordinator's film** regenerated with its tool (`tools/sim/p11_film.ts`, a copy of `film.ts`): 7 lines of `src/sim/film.ts` moved.
@@ -123,14 +133,40 @@ The same in Node (`p11_cam.ts`, the game's code stepped at 60 fps; the QB from t
 ## The videos
 
 `docs/passing/round11/` (960×540 on Low, frame-true, crf 28):
-- **`before/`, `after/`**: `p9-slant-60`, `p9-out-60`, `p9-dig-60`, `p9-go-60`, `p9-screen-60`, `p10-fade-60` (the broadcast camera at 60 fps, from the windup to 1.8 s after the ball); `after/p9-contested` (Gronkowski on Lott from the broadcast camera, 30 fps; its before is `round10/after/p9-contested.mp4`) and `after/p9-contested-close-30` (the close camera behind him; before: `round10/after/p9-contested-close-30.mp4`).
+- **`before/`, `after/`**: `p9-slant-60`, `p9-out-60`, `p9-dig-60`, `p9-go-60`, `p9-screen-60`, `p10-fade-60` (the broadcast camera at 60 fps, from the windup to 1.8 s after the ball); `after/p9-contested` (Gronkowski on Lott from the broadcast camera, 30 fps; its before is `round10/after/p9-contested.mp4`) and `after/p9-contested-close` (the close camera behind him, the whole play; before: `round10/after/p9-contested-close-30.mp4`, from the windup).
 - **`compare/`**: before on the left, after on the right.
-- **`stills/`**: STILLS
+- **`stills/`** (before on top, after below):
+  - `broadcast-slant-60fps-camera.jpg`, `broadcast-out-60fps-camera.jpg`: the whole frame from the windup to the catch;
+  - `broadcast-qb-release-before-after.jpg`: the QB from the broadcast camera (a fixed crop, 2× at 960×540) through the release and finish on the slant (the flick), the go (the drive) and the fade (touch);
+  - `broadcast-box-before-after.jpg`, `broadcast-box-zoom-before-after.jpg`: Gronkowski on Lott from the broadcast camera, 0.5 s before the catch to just after it, and the post-up enlarged (0.43 to 0.17 s before the ball);
+  - `close-box-before-after.jpg`: the same from the close camera behind them.
 
 ## Watched: an honest critique
 
-CRITIQUE
+I read the 60-fps recordings frame by frame next to their per-frame logs, the strips from the windup to the catch, crops of the QB through the release and finish, and crops of the contested pair, before against after.
+
+- **The camera on a quick throw is no longer a whip-pan.** On the slant the shot starts to move with the windup (3° by the release, against none), and the pan runs at ~25–31°/s for most of a second instead of 0 → 52 → 0 in 0.45 s; the lens closes at up to 67°/s (87). Frame by frame it reads as the operator reading the QB and going with the throw, and the catch is framed as tight as before (the receiver 102 px tall at the catch on both; lens 21.2° against 20.2°). The out (53 → 38°/s), the dig (33 → 22), the go (29 → 22) and the screen (46 → 38) all come down; the fade was already slow (25 → 23). The screen's pan is still near 40°/s: the back is in the flat, 30° off the camera's line, and the ball is in the air 0.45 s; its catch is framed a little larger than before (82 px against 70).
+- **But the move is now a different shot, and the owner should judge it.** The push on the passer brings the eye down 3 m through the windup and the air move takes it the rest of the way to the long lens's 4.8 m on every throw: from the release on, the view is flatter and lower than round 10's on a quick throw, with more of the far stands in the top of the frame through the flight (`stills/broadcast-out-60fps-camera.jpg`). I think it reads as a broadcast's tight follow, not a game camera, but it is a visible change of angle on every pass.
+- **The zoom is still the fastest part of the slant's move** (67°/s of lens for ~0.3 s). It can't start much earlier: zooming in about the catch pushes the QB out of the bottom of the frame, and the brief wants his release and finish seen. The pan was the complaint and it's under the line; the zoom is ~25% slower than it was.
+- **The QB at the release is ~1.25× the size** (61 → 78 px head to feet on the slant, 59 → 74 on the out, 61 → 73 on the go, 65 → 80 on the fade), and in the frame as long as before (to 0.25 s after the release on the slant, 0.45 on the go, 0.5 on the fade). In the crops (`stills/broadcast-qb-release-before-after.jpg`) the fade's touch arm out toward the target and the go's chest over the front knee are clearer than round 10's; the slant's flick is a little clearer. He is still a ~75-px figure at 960×540 (150 at 1080p): the finish reads as body language, not mechanics. A real "QB cam" moment (a cut to him) is the remaining step, and it costs the shot of the routes.
+- **The box-out's bar shows, as an elbow.** From the broadcast camera (`stills/broadcast-box-zoom-before-after.jpg`), from ~0.25 s before the ball Gronkowski's near arm is up with the elbow out over Lott's shoulder line, the forearm toward his chest; before, it was between the two bodies and never seen. It reads as "he's fighting him off with his arm up" more than a forearm planted on the numbers, and Lott, pushed back by the contact drawing, sits a little off the arm rather than under it. From the close camera behind Lott it's mostly hidden by Lott's back, as before.
+- **The book moved a little, for a real reason.** A defender arriving as the receiver secures the ball now hits him with it not yet his: completion 66.1 → 65.8%, open caught 84.9 → 84.7%, breakups 10.5 → 10.7% of attempts; every identity margin within a point of where it was. The bigger finding is in `p11_open.ts`: an open ball that gets to the receiver is caught 95% of the time, the NFL's rate on catchable balls; the harness's open catch rate is ~5 points above the NFL's because more of the AI's throws to open men are catchable than the NFL's are. That's the QB's accuracy to an open man, not the receiver's hands, and I didn't change it.
+- **The arm slot reads as reacting to the rush**: drawn on 14% of the AI's throws (57%), 5% of clean pockets (52%) and 41% of pressured ones. A clean pocket throws from his own slot.
+
+Would the owner, playing from the broadcast camera, now feel the passing is real on the QB's end, the ball and the WR's end?
+- **The QB's end: closer.** The camera reacts to him (it moves when he does), he is a quarter larger as he throws, and the release and finish are in the shot. The finish is still small at broadcast distance.
+- **The ball and the camera: yes on the slant, the dig and the deep balls**; the slant no longer snaps to the spot. The screen is still quick.
+- **The WR's end: the catch is framed as tight as before; the box-out's arm is now visible**, a raised elbow on the man rather than a hidden forearm.
+
+These are 960×540 recordings on Low.
 
 ## Still open
 
-OPEN
+- **The camera's new angle** (lower and flatter through the flight on every throw, from the push on the passer and the eye going all the way to the long lens) wants the owner's eye at 60 fps: if it reads as too low, `PUSH_DOWN` and the eye's height share are the knobs; with less push the QB gets smaller again.
+- **The slant's zoom** peaks at 67°/s of lens (87). Slower would mean starting it before the finish (the QB leaves the frame earlier) or framing the quick game's catch wider.
+- **The RB screen's pan** is still ~38°/s (a 0.45-s ball to a back 30° off the camera's line).
+- **The QB's finish** is ~75 px tall at 960×540: body language, not mechanics. A cut to a "QB cam" at the release is the next step if the owner wants it.
+- **The bar arm** reads as a raised elbow over the man's shoulder; the forearm planted on his chest is still between the bodies, and the boxed man's displacement (`contact.ts`) moves him off the arm a little.
+- **The book**: 65.8% and 84.7% open caught. The receiver's side is now at the NFL's rates; the remaining gap is the share of throws to open men that are catchable (the AI's accuracy), which this round didn't touch.
+- **The screen against Cover 2 man**: the bubble's completion went 80 → 75% (the press corner arriving at the catch now breaks a few up).
+- **Gates vs Lewis** (identity) still waits on the owner.
