@@ -264,6 +264,14 @@ const SETTLE_K = 0.2;
 const SETTLE_MIN = 0.22;
 const SETTLE_MAX = 0.4;
 /**
+ * The shortest the move is (s). On the RB screen (0.47 s in the air) settling
+ * 0.22 s early left a quarter of a second for the move, a pan at 62°/s and a
+ * zoom at 109°/s of lens, faster than round nine's step; the slant's move
+ * (0.49 s) is the longest a quick throw needs, so a shorter flight carries
+ * its move on into the catch beat. Ours.
+ */
+const MOVE_MIN = 0.45;
+/**
  * How far the eye itself moves toward the air framing's (the rest is the pan
  * and the zoom): EYE_SHARE_MIN of the way on a quick throw, all of it on a
  * ball (EYE_FROM + EYE_SPAN) s in the air or more. Ours: a slant's dolly
@@ -436,8 +444,9 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   if (from) {
     const F = flight.total;
     const beat = Math.min(BEAT_MAX, Math.max(0, BEAT_K * (F - BEAT_FROM)));
-    const end = F - Math.min(SETTLE_MAX, Math.max(SETTLE_MIN, SETTLE_K * F));
-    const m = smooth(Math.min(1, Math.max(0, (s.t - flight.t0 - beat) / Math.max(0.2, end - beat))));
+    // (Never a move shorter than MOVE_MIN: a screen's half-second ball finishes the move into the catch beat instead.)
+    const end = Math.max(beat + MOVE_MIN, F - Math.min(SETTLE_MAX, Math.max(SETTLE_MIN, SETTLE_K * F)));
+    const m = smooth(Math.min(1, Math.max(0, (s.t - flight.t0 - beat) / (end - beat))));
     const mx = (a: number, z: number) => a + (z - a) * m;
     // The eye goes only part of the way on a quick throw: the shot pans and zooms from about where it is, as a
     // broadcast camera does (a 0.7-s slant's full dolly was ~30 m/s at its peak, the perspective swinging under the zoom).
