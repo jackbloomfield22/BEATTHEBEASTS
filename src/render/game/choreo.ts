@@ -71,6 +71,8 @@ export interface Body {
   box: number;
   /** Passing round 6: the arm the ball is carried in (carrySide), or null before he has it. */
   carry?: CarryArm | null;
+  /** Passing round 10: the post-up drawn (0..1, boxPost): how far his back is turned into the man and how hard the bar has displaced him. */
+  post?: { turn: number; shove: number };
   /** Passing round 9: the forward reach's depth (reachDepth: 0 the chest catch's arms, 1 all of catch_reach_out) and the sim time it was last eased. */
   reachK?: { k: number; t: number };
 }
@@ -252,6 +254,50 @@ export function boxShare(r: Agent, d: Agent): number {
 }
 /** How far a unit of the box-out moves the lean share. Ours: Gronkowski on a safety (~0.7) takes ~0.75 of it. */
 const BOX_LEAN = 0.35;
+
+/**
+ * The post-up as it's drawn (passing round 10). Round nine's critique: from
+ * the broadcast camera the box-out was two bodies jammed together, the bar
+ * arm hidden by his own back, Gronk's arms up at his chest from 0.4 s out;
+ * nothing read as a post-up. A post-up reads at distance by three things a
+ * broadcast shows: the receiver turns his back into the man a beat before the
+ * ball (his shoulders square away from him, the near shoulder and hip into
+ * his chest), the bar arm out from his body into the man, and the man knocked
+ * off his line by it before both go up. So, from the box clip's own time:
+ * - the turn: his body turned so the man is behind his near shoulder
+ *   (BOX_BEHIND, his back half into him), in over BOX_TURN_IN from the post
+ *   (the clip's bar key, 0.58 s before the ball), held through the catch,
+ *   out after the tuck;
+ * - the shove: from the fight key (0.12 s before the ball) back to the
+ *   bar's first contact, the man is displaced by it (contact.ts: drawn up to
+ *   BOX_SHOVE m off his spot, rocked back), and both bodies react to it.
+ * The sim's own body positions are untouched (render only: the sim already
+ * has the box-out in the contest, the bodies' push and the tackle,
+ * sim/bodies.ts boxOut). Returns 0..1 for each.
+ */
+function boxPost(b: Body): { turn: number; shove: number } | null {
+  const c = b.catchClip;
+  if (!c || !POSTED.has(c)) return null;
+  const t = catchTime(b);
+  const sec = eventAt(b, c, 'secure');
+  const tuck = eventAt(b, c, 'tuck');
+  if (t === null || sec === null || tuck === null) return null;
+  const post = sec - POST_LEAD;
+  const turn = THREE.MathUtils.smoothstep(t, post, post + BOX_TURN_IN) * (1 - THREE.MathUtils.smoothstep(t, tuck, tuck + 0.3));
+  const shove = THREE.MathUtils.smoothstep(t, post + 0.08, sec - 0.1) * (1 - THREE.MathUtils.smoothstep(t, sec + 0.15, sec + 0.5));
+  return { turn, shove };
+}
+/** The box clip's post (its bar key) this long before its secure frame (s: actions_p8.py box_out, ts − 0.58). */
+const POST_LEAD = 0.58;
+/**
+ * Where he puts the man (rad off his facing, on the box clip's side: 125°, behind his near shoulder, his back half
+ * into him), the most he turns to get him there (60°), and how fast (s). Ours, from the broadcast picture of a tight
+ * end posting up a safety. (The clip's bar arm is keyed out to that side and a little back: actions_p8.py box_out.)
+ */
+const BOX_BEHIND = (125 * Math.PI) / 180;
+const BOX_TURN = (60 * Math.PI) / 180;
+const wrapAngle = (x: number) => Math.atan2(Math.sin(x), Math.cos(x));
+const BOX_TURN_IN = 0.25;
 
 function lyingClip(b: Body, name: string, t0 = 0): void {
   b.animator.play(name, { now: true, t0 });
@@ -462,7 +508,9 @@ function throwSlot(b: Body, s: PlayState, qb: Agent, simT: number, running: bool
   }
   const base = sl.base;
   const tr = anim.transition;
-  if (!base || !anim.lib.meta[`${base}_side`] || (tr?.name !== base && anim.overlayAction?.name !== base)) {
+  const fin = `${base}_fin_`;
+  const on = (n: string | undefined) => n === base || !!n?.startsWith(fin);
+  if (!base || !anim.lib.meta[`${base}_side`] || (!on(tr?.name) && !on(anim.overlayAction?.name))) {
     sl.base = null;
     sl.w = 0;
     anim.setSlot(null, null, 0);
@@ -483,7 +531,9 @@ function throwSlot(b: Body, s: PlayState, qb: Agent, simT: number, running: bool
     }
     lane = sl.lane ?? 0;
   }
-  const target = SLOT_K * Math.max(-1, Math.min(1, lane / LANE_MAX - (running && has(qb, 'off-platform') ? SLING : 0)));
+  // (Passing round 10: from the release the throw's finish is its own, by the throw: the slot lets go of it.)
+  const released = !(w && b.throwAt === w.from);
+  const target = released ? 0 : SLOT_K * Math.max(-1, Math.min(1, lane / LANE_MAX - (running && has(qb, 'off-platform') ? SLING : 0)));
   sl.w += (target - sl.w) * (1 - Math.exp(-dt * SLOT_RATE));
   anim.setSlot(base, `${base}_${sl.w < 0 ? 'side' : 'over'}`, Math.abs(sl.w));
 }
@@ -515,6 +565,42 @@ export function throwClip(b: Body, s: PlayState, qb: Agent, running: boolean): s
   if (rel >= LONG_RELEASE && has('qb_throw_long')) return 'qb_throw_long';
   return 'qb_throw';
 }
+/**
+ * How the throw finishes (passing round 10; tools/blender/lib/actions_p10.py),
+ * from the throw as it leaves his hand: touch for a ball the sim says he put
+ * air on (its kind: the player's hold, or lofted over a man underneath)
+ * short of DEEP_AIR air yards; the quick game's flick for a driven ball in the
+ * air under QUICK_HANG; everything else, the driven intermediate ball and the
+ * deep ball (layered or not), the full drive. A man hit as he throws never
+ * finishes (null: his own throw's short follow-through), and the fade-away
+ * has no finishes.
+ */
+export function throwFinish(s: PlayState, qb: Agent): 'flick' | 'drive' | 'touch' | null {
+  const b = s.ball;
+  if (b.thrower !== qb.i || b.mode !== 'air') return null;
+  for (let k = s.events.length - 1; k >= 0; k--) {
+    const e = s.events[k]!;
+    if (e.type !== 'throw' || e.who?.[0] !== qb.i) continue;
+    if (e.data?.hit) return null;
+    break;
+  }
+  const air = s.pass?.airYards ?? 0;
+  if (b.kind === 'touch' && air < DEEP_AIR) return 'touch';
+  return b.arrive - b.releaseT < QUICK_HANG ? 'flick' : 'drive';
+}
+/**
+ * The finish's lines (tools/sim/p10_clips.ts prints each recorded throw's).
+ * QUICK_HANG (s): the quick game's driven balls hang 0.5–0.75 s (the slant
+ * 0.71, the RB screen 0.47), the first intermediate ones 0.8 and more (the
+ * dig 0.81, the curl 0.90). DEEP_AIR (yd): the AI's deep ball is layered
+ * (touch) from 24 air yards (sim/passing.ts layer), and a ball that deep is
+ * thrown with the whole body whatever its arc; the fade (19 air yards, held)
+ * and a ball lofted over a man underneath stay touch. Ours.
+ */
+const QUICK_HANG = 0.78;
+const DEEP_AIR = 25;
+/** A QB moving faster than this (m/s) after the release runs out of his finish. Ours: a drift settling is slower. */
+const FINISH_RUN = 2;
 /** A rusher this close (the sim's pressure, 0..1: a free man within ~2.4 yd) puts him on his back foot. Ours. */
 const FADE_PRESSURE = 0.6;
 /** Held past his release (the player choosing the touch), the arm waits this far (s of clip) short of the release frame: cocked, the ball behind the ear. Ours: a frame at 30 fps. */
@@ -1341,6 +1427,8 @@ export interface Drive {
   dip: number;
   /** The ball in his left arm (passing round 6: the left-arm carry families), 0..1. */
   carryLeft?: number;
+  /** Passing round 10: turned off his heading by this much (rad, sim angle, + left): the post-up's back into the man. */
+  turn?: number;
 }
 
 const _look = new THREE.Vector3();
@@ -1410,12 +1498,18 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // The key's release answered (passing round 3: the arm starts on the press, so the release shows as the throw going, no longer held).
   if (i === s.qb && w && !w.held) latency.respond('throwRelease');
   if (i === s.qb && !w && b.throwClip) {
-    // Out of his hand: the follow-through at the clip's own pace.
+    // Out of his hand: the follow-through at the clip's own pace. Passing round 10: the finish by the throw (throwFinish),
+    // the same clip as his own throw up to its release frame, carried on from there (the flick, the drive, touch).
     const clip = b.throwClip;
     b.throwClip = null;
-    if (tr && tr.name === clip) anim.retime(clip, { rate: 1 });
-    else anim.retimeOverlay(clip, 1);
+    const fin = throwFinish(s, a);
+    const name = fin ? `${clip}_fin_${fin}` : clip;
+    const now = fin && anim.continueAs(clip, name, THROW_MASK) ? name : clip;
+    if (tr && tr.name === clip) anim.retime(now, { rate: 1 });
+    else anim.retimeOverlay(now, 1);
   }
+  // A QB who moves off before his finish is through runs out of it (the finish is keyed standing).
+  if (i === s.qb && !w && tr && !tr.done && tr.name.includes('_fin_') && sp * YARD >= FINISH_RUN) anim.release();
   if (i === s.qb) throwSlot(b, s, a, simT, sp * YARD >= 1.6);
   // The handoff (the QB places it, the back's pocket takes it) and the
   // play-action fake, timed to the sim's mesh: overlays, the legs are the sim's.
@@ -1607,6 +1701,16 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     out.drive = 1;
     out.press = 1;
     out.traffic = 1;
+  }
+  // The post-up (passing round 10, boxPost): his back turned into the man (box_l: the man on his left, so he turns right), and the shove.
+  const post = boxPost(b);
+  b.post = post ?? undefined;
+  if (post && post.turn > 0 && b.contest) {
+    // He turns so the man is behind his near shoulder (BOX_BEHIND off his facing, on the clip's side), by as much as BOX_TURN.
+    const d = s.agents[b.contest.with]!;
+    const bearing = wrapAngle(Math.atan2(d.pos.y - a.pos.y, d.pos.x - a.pos.x) - a.face);
+    const want = (b.catchClip === 'catch_box_l' ? 1 : -1) * BOX_BEHIND;
+    out.turn = Math.max(-BOX_TURN, Math.min(BOX_TURN, wrapAngle(bearing - want))) * post.turn;
   }
   return out;
 }

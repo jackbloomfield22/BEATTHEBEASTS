@@ -806,8 +806,9 @@ def action_clips() -> list[Clip]:
     from .actions_m65_carrier import carrier_clips
     from .actions_m65_contact import contact_clips
     from .actions_m7_cel import cel_clips
-    from .actions_pass import pass_clips
+    from .actions_pass import pass_clips, qb_throw_long, qb_throw_quick
     from .actions_drop import drop_clips
+    from .actions_p10 import p10_clips
 
     jl = juke_left()
     return [
@@ -822,6 +823,8 @@ def action_clips() -> list[Clip]:
         *contact_clips(),
         *cel_clips(),
         *pass_clips(),
+        # Passing round 10: each throw's finish by the throw (the flick, the drive, touch), from its release frame on.
+        *p10_clips([qb_throw(), qb_throw_quick(), qb_throw_long()]),
     ]
 
 
