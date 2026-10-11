@@ -285,7 +285,11 @@ function boxPost(b: Body): { turn: number; shove: number } | null {
   if (t === null || sec === null || tuck === null) return null;
   const post = sec - POST_LEAD;
   const turn = THREE.MathUtils.smoothstep(t, post, post + BOX_TURN_IN) * (1 - THREE.MathUtils.smoothstep(t, tuck, tuck + 0.3));
-  const shove = THREE.MathUtils.smoothstep(t, post + 0.08, sec - 0.1) * (1 - THREE.MathUtils.smoothstep(t, sec + 0.15, sec + 0.5));
+  // (Passing round 12: the shove lands with the bar, over BOX_SHOVE_IN from just after the post, where round ten's built
+  // up over the whole post to 0.1 s before the ball. Measured in the game's per-frame log from the broadcast camera, the
+  // man stayed behind the receiver's near shoulder 0.36-0.4 m off him for the post's first 0.25 s, the two bodies one
+  // shape on screen and the bar between them unseen; held off from the bar's contact, the gap it opens is the post-up.)
+  const shove = THREE.MathUtils.smoothstep(t, post + 0.05, post + 0.05 + BOX_SHOVE_IN) * (1 - THREE.MathUtils.smoothstep(t, sec + 0.15, sec + 0.5));
   return { turn, shove };
 }
 /** The box clip's post (its bar key) this long before its secure frame (s: actions_p8.py box_out, ts − 0.58). */
@@ -299,6 +303,8 @@ const BOX_BEHIND = (125 * Math.PI) / 180;
 const BOX_TURN = (60 * Math.PI) / 180;
 const wrapAngle = (x: number) => Math.atan2(Math.sin(x), Math.cos(x));
 const BOX_TURN_IN = 0.25;
+/** (Passing round 12) The shove comes in over this long (s) from the bar's contact: a hard bar knocks him off in a beat. Ours. */
+const BOX_SHOVE_IN = 0.22;
 
 function lyingClip(b: Body, name: string, t0 = 0): void {
   b.animator.play(name, { now: true, t0 });

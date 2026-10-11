@@ -134,8 +134,8 @@ def over_shoulder_low(side: str) -> Clip:
 # the two bodies, planted on the man's near shoulder and upper arm (~1.35 m for a defensive back): the elbow out wide at
 # his own shoulder height, the forearm folding back onto the man, so the arm crosses the gap the shove opens (0.3-0.4 m:
 # ~10-15 px at broadcast distance) in profile. Ours, from the broadcast picture of a tight end walling a safety off.
-BAR_HAND, BAR_POLE = (0.52, 0.22, 1.36), (1.0, -0.10, 1.40)
-FIGHT_HAND, FIGHT_POLE = (0.58, 0.26, 1.34), (1.05, -0.10, 1.38)
+BAR_HAND, BAR_POLE = (0.52, 0.22, 1.26), (1.0, -0.10, 1.34)
+FIGHT_HAND, FIGHT_POLE = (0.58, 0.26, 1.24), (1.05, -0.10, 1.32)
 
 
 def box_out(side: str) -> Clip:
