@@ -11,6 +11,7 @@ import { errorAt20, maxRange, maxThrowSpeed, releaseTime } from './effects';
 import { stepRoute } from './ai';
 import { steer } from './movement';
 import { blockOf } from './blocks';
+import { boxOut } from './bodies';
 import { gauss } from './rand';
 import { cos, exp, sin } from '@/engine/math/detmath';
 import type { PlayState } from './state';
@@ -74,6 +75,61 @@ export function handsAt(a: Agent, dt = 0): V2 {
   const h = headingOf(a);
   const k = handsReach(a);
   return { x: a.pos.x + a.vel.x * dt + h.x * k, y: a.pos.y + a.vel.y * dt + h.y * k };
+}
+
+/**
+ * How far out in front of his centre (yd, along his run) his drawn hands can
+ * take a ball at height `z` (yd) (passing round 8, docs/passing/PASSING8.md):
+ * the forward-reach catch's hands (render catch_reach_out: the trunk folded
+ * forward over the run so the shoulders go after the hands, the arms long;
+ * tools/blender/measure_reach.py puts the finger roots 1.00 m ahead of a
+ * 1.88-m man's centre at chest height, his shoulders 0.34 m ahead and 1.32 m
+ * up; REACH_OUT) and, above his shoulders, an arm's
+ * length round them (REACH_ARM), raised by his jump for a ball over his head. Scaled by his height (the drawn body is the 1.88-m rig scaled).
+ * Rounds 6-7 took the ball anywhere within his reach (0.85 yd) of his hands
+ * point, up to 1.15 m ahead of him on a slant led a stride: the drawn arms
+ * stopped ~0.3 m short and the ball covered the rest on the next frame.
+ * Below his belt the trunk folds lower with the hands (the low basket, the
+ * scoop), so a low ball keeps the chest-height reach; a ball he has to lay
+ * out for (DIVE_Z) is the dive's, which reaches further.
+ */
+export function reachFwd(a: Agent, z: number): number {
+  const k = (a.fx.height * YD_M) / RIG_H;
+  const zs = (z * YD_M) / k;
+  // A ball over his head he goes up for: his shoulders rise with his jump (reach's top over his standing reach).
+  const jump = Math.max(0, ((reach(a).top - a.fx.height * STAND_REACH) * YD_M) / k);
+  const up = Math.max(0, zs - REACH_SHOULDER_Z - jump);
+  const along = up >= REACH_ARM ? REACH_SHOULDER_FWD : REACH_SHOULDER_FWD + Math.sqrt(REACH_ARM * REACH_ARM - up * up);
+  return (Math.min(REACH_OUT, along) * k) / YD_M;
+}
+/** Metres in a yard. */
+const YD_M = 0.9144;
+/** The rig's height (m: tools/blender/lib/skeleton.py HEIGHT). */
+const RIG_H = 1.88;
+/**
+ * The forward-reach catch at chest height: the ball this far (m) ahead of his
+ * centre. measure_reach.py catch_reach_out: the finger roots at 1.00 m, the
+ * fingertips at 1.09; the drawing pitches him ~8 degrees further into the
+ * lunge (choreo.ts LUNGE, ~0.05 m more), and a ball at the end of his reach
+ * is in his fingers, ~0.1 m out from their roots: a fingertip catch.
+ */
+const REACH_OUT = 1.15;
+/** ...with the shoulders this far ahead (m: 0.34 in the clip, a little more in the lunge) and this high (m) (measure_reach.py). */
+const REACH_SHOULDER_FWD = 0.36;
+const REACH_SHOULDER_Z = 1.32;
+/** Shoulder to a ball in his fingers (m: skeleton.py, upper arm 0.32, forearm 0.28, wrist to the finger roots ~0.095, and the fingers ~0.1). */
+const REACH_ARM = 0.795;
+/** His standing reach as a share of his height (reach().top less the jump: the combine's standing reach, ~1.28 × stature). */
+const STAND_REACH = 1.28;
+/** A ball this low (yd) he lays out for (catchLook's dive): the forward reach is the dive's. */
+const DIVE_Z = 0.8;
+
+/** Is the ball at `p` out of his drawn reach ahead of him (passing round 8: reachFwd)? Read-only. */
+function beyondReach(a: Agent, p: { x: number; y: number; z: number }, dt = 0): boolean {
+  if (p.z < DIVE_Z) return false;
+  const h = headingOf(a);
+  const along = (p.x - (a.pos.x + a.vel.x * dt)) * h.x + (p.y - (a.pos.y + a.vel.y * dt)) * h.y;
+  return along > reachFwd(a, p.z);
 }
 
 /** Release height above the QB's feet, yd (the ball leaves over the helmet). */
@@ -430,6 +486,8 @@ export interface ThrowPlan {
   rpm: number;
   /** He was hit as he let it go: the arm never finished (HIT_HANG, HIT_CONE). */
   hit: boolean;
+  /** The release moved off a lineman in his lane (passing round 7's throwingLane), yd across the throw, + to his left (passing round 8: the drawn arm slot, render/game/choreo.ts throwSlot). */
+  lane: number;
 }
 
 /** A throw's error, by source: the cone's 1σ (yd) and what scaled it; the mechanics miss; the error applied. */
@@ -790,8 +848,27 @@ export function throwingLane(s: PlayState, qb: Agent, from: V3, to: V2): V2 {
   }
   return { x: -uy * best, y: ux * best };
 }
+/** A release move (throwingLane) as yd across the throw from `from` to `to`, + to the thrower's left. */
+function laneAcross(from: V2, to: V2, sh: V2): number {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const L = Math.sqrt(dx * dx + dy * dy);
+  return L < 1e-6 ? 0 : (-dy * sh.x + dx * sh.y) / L;
+}
+
+/**
+ * The lane he'd find for the throw he's winding up to `rec` (passing round 8,
+ * for the drawn arm slot during the windup: the throw's own is planned at the
+ * release): throwingLane on the throw as it would go now (previewThrow).
+ * Yd across the throw, + to his left. Read-only.
+ */
+export function laneAhead(s: PlayState, qb: Agent, rec: Agent, loft: number, aim: V2): number {
+  const from: V3 = { x: qb.pos.x + qb.vel.x * 0.1, y: qb.pos.y + qb.vel.y * 0.1, z: RELEASE_Z * (qb.fx.height / 2.08) };
+  const to = previewThrow(s, qb, rec, loft, aim);
+  return laneAcross(from, to, throwingLane(s, qb, from, to));
+}
 /** The most a QB moves his release off a man in his lane (yd): a slide and an arm slot (over the top to three-quarters moves the hand ~0.3 m). Ours. */
-const LANE_MAX = 0.4;
+export const LANE_MAX = 0.4;
 /** The ball's pace to the line (yd/s), for when it passes a rusher: a driven ball leaves at ~20–27 yd/s (driveTime). */
 const LANE_V = 22;
 /** A lineman within this share of the throw's length is at the line, in reach of it low enough to bat. */
@@ -845,6 +922,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const meant = { x: tx, y: ty };
   // Around a lineman in his lane (passing round 7): the release moves off him.
   const sh = throwingLane(s, qb, from, meant);
+  const lane = laneAcross(from, meant, sh);
   from.x += sh.x;
   from.y += sh.y;
   const d = dist(from, { x: tx, y: ty });
@@ -945,7 +1023,7 @@ export function planThrow(s: PlayState, qb: Agent, rec: Agent, loft: number, aim
   const kind = touch || Tf > hang(to) * 1.01 ? 'touch' : 'driven';
   const err: ThrowError = { acc, base, distance: coneScale(d), moving: fMoving, pressure: fPressure, platform: fPlatform, chem: fChem, place: aim.x, sigma, timing: tSigma, pMiss, miss: missed ? (sail ? 'sail' : 'short') : null, dx: ex, dy: ey, off: Math.sqrt(ex * ex + ey * ey) };
   // (Air yards to his body, where the spot's marked: the lead to his hands out in front of him isn't yardage. Passing round 6.)
-  return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air - hd.x * LEAD_HANDS), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err, spiral: spiralOf(accN, fPressure, offPlatform, moving, missed, hit), rpm: rpmOf(power), hit };
+  return { from, to, v0, T: Tf, kind, distance: d, airYards: Math.max(0, air - hd.x * LEAD_HANDS), miss: Math.sqrt(ex * ex + ey * ey + ez * ez), meant, missed, err, spiral: spiralOf(accN, fPressure, offPlatform, moving, missed, hit), rpm: rpmOf(power), hit, lane };
 }
 
 /**
@@ -1055,7 +1133,7 @@ export function release(s: PlayState, qb: Agent, rec: Agent, plan: ThrowPlan): v
   s.phase = 'air';
   rec.mem.catchLeg = catchLeg(rec, plan.meant);
   s.pass = { attempted: true, complete: false, intercepted: false, airYards: Math.round(plan.airYards * 10) / 10, target: rec.i };
-  s.events.push({ t: s.t, type: 'throw', who: [qb.i, rec.i], at: { x: plan.to.x, y: plan.to.y }, data: { kind: plan.kind, air: Math.round(plan.airYards), ...(plan.missed ? { missed: true } : {}), ...(plan.hit ? { hit: true } : {}), spiral: plan.spiral, rpm: plan.rpm, ...throwErrData(plan) } });
+  s.events.push({ t: s.t, type: 'throw', who: [qb.i, rec.i], at: { x: plan.to.x, y: plan.to.y }, data: { kind: plan.kind, air: Math.round(plan.airYards), ...(plan.missed ? { missed: true } : {}), ...(plan.hit ? { hit: true } : {}), spiral: plan.spiral, rpm: plan.rpm, ...(plan.lane ? { lane: Math.round(plan.lane * 100) / 100 } : {}), ...throwErrData(plan) } });
 }
 
 /**
@@ -1210,6 +1288,9 @@ export function autoCatch(s: PlayState): CatchType {
  */
 const BOX_MASS = 0.4;
 const BOX_STR = 0.25;
+/** The box-out: a defender within this of the receiver (yd: on his body, the hand fight's range) can be walled off the ball, his share of the contest down by up to BOX_SHIELD of it (boxOut 1). Ours: a big tight end on a safety (~0.7) takes a quarter of his hands off the ball. */
+const BOX_R = 1.3;
+const BOX_SHIELD = 0.35;
 /** A defender within this of the catch point (yd) makes it a contested ball for the one-button catch. */
 const AUTO_CONTEST = 2;
 /** Within this of the sideline (yd) the one-button catch secures it for the toe tap. */
@@ -1286,6 +1367,16 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
       w *= o.mem.onBall ? 1 : 0.35;
       // Trailing: each yard farther from the ball than the receiver takes most of it away.
       w *= Math.max(0.25, 1 - Math.max(0, k - mine - 0.3) / 1.2);
+      // The box-out (passing round 8): a receiver between the man and the ball (nearer it, the man on his body)
+      // walls him off it with his hip and shoulder and bars his arm: the hand fight keeps his hands off the ball.
+      const bx = k > mine && dist(o.pos, a.pos) < BOX_R ? boxOut(a, o) : 0;
+      w *= 1 - BOX_SHIELD * bx;
+      // ...and the other way: a defender between him and the ball walls the receiver off it (Kam Chancellor on a slot receiver).
+      if (k < mine && dist(o.pos, a.pos) < BOX_R) w = Math.min(1, w * (1 + BOX_SHIELD * boxOut(o, a)));
+      if (bx > ((a.mem.boxK as number | undefined) ?? 0)) {
+        a.mem.boxK = bx;
+        a.mem.boxedBy = o.i;
+      }
       if (w > contest) {
         contest = w;
         by = o;
@@ -1325,6 +1416,7 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
         hitBy = o;
       }
     }
+    const stretch = stretchOf(a, b.pos);
     const costs: [CatchHard, number][] = [
       // A hit as the ball arrives (Catch in Traffic holds on through it; a
       // Missile's hit dislodges it 15% more often, Sure Hands never lets a hit
@@ -1339,6 +1431,9 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
       // 0.6 of the cost at the reaches where it's a ~40% catch); a Body
       // Catcher 10% less often away from his frame.
       ['reach', Math.max(0, off - 0.45) * 0.5 * (1.1 - 0.5 * spect) * (has(a, 'highlight-reel') ? 0.6 : 1) + (off > 0.45 && has(a, 'body-catcher') ? 0.1 : 0)],
+      // Led out in front of him (passing round 8): past his own hands toward the end of what they reach on the run
+      // (reachFwd), arms locked out, it's taken in the fingers with nothing to give with (STRETCH_K).
+      ['stretch', STRETCH_K * stretch * stretch * (1.1 - hands)],
       // On him before he's had his eyes on it long enough to get his hands
       // right (findsBallAt: sure hands find it sooner): the ball that's in
       // on him coming out of his break. A good-hands man has ~LOOK_T on a
@@ -1476,6 +1571,28 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
 }
 
 /**
+ * How far out toward the end of his reach a ball is (0..1, passing round 8):
+ * 0 at his own hands (handsReach: where the QB leads him), 1 at the most his
+ * drawn hands get out in front of him on the run (reachFwd). Read-only.
+ */
+export function stretchOf(a: Agent, p: { x: number; y: number; z: number }): number {
+  const h = headingOf(a);
+  const along = (p.x - a.pos.x) * h.x + (p.y - a.pos.y) * h.y;
+  const near = handsReach(a);
+  const far = reachFwd(a, p.z);
+  return far > near + 1e-6 ? Math.max(0, Math.min(1, (along - near) / (far - near))) : 0;
+}
+/**
+ * A ball taken at the end of his reach (stretchOf 1) costs this (× 1.1 −
+ * Catching, by the square of the stretch): ~4.5 points for sure hands
+ * (Catching 95), ~15 for poor ones (60), nothing at his own hands. Ours,
+ * from the broadcast: the fingertip catch on a ball led a stride long is
+ * the one a sure-handed man makes and a poor one bobbles; PFF's drop rates
+ * are highest on the throws a receiver has to extend for.
+ */
+const STRETCH_K = 0.3;
+
+/**
  * The bobble's band below the catch line (resolveCatch): BOB_BASE × (1.2 −
  * Catching), plus BOB_SPEED per yd/s past BOB_FAST (a bullet), plus BOB_HIT
  * for a hit as it arrives. About 1.5% of balls to a sure-handed man in the
@@ -1554,6 +1671,8 @@ export function stepAir(s: PlayState): number {
       const ex = b.pos.x - h.x;
       const ey = b.pos.y - h.y;
       dh = Math.min(dh + r - bodyReach(a, r), Math.sqrt(ex * ex + ey * ey));
+      // ...but no further out in front of him than his drawn hands get (passing round 8): he's running onto it, so it comes to them.
+      if (beyondReach(a, b.pos)) continue;
     }
     // Defenders only play the ball once they've read it (mem.onBall).
     if (a.side === 'def' && !a.mem.onBall && dh > 0.55) continue;
@@ -1612,7 +1731,7 @@ export function comingIn(s: PlayState, a: Agent): boolean {
   const hx = p.x - h.x;
   const hy = p.y - h.y;
   const br = bodyReach(a, r);
-  return p.z >= 0.15 && p.z <= top && (hx * hx + hy * hy < r * r || cx * cx + cy * cy < br * br);
+  return p.z >= 0.15 && p.z <= top && !beyondReach(a, p, TICK) && (hx * hx + hy * hy < r * r || cx * cx + cy * cy < br * br);
 }
 /**
  * The man it's thrown to reaches round his hands out in front of him (his
@@ -1685,6 +1804,7 @@ export function catchAhead(s: PlayState, a: Agent, horizon = 1.2): { dt: number;
     const ey = p.y - g.pos.y;
     const br = bodyReach(a, r);
     if (dx * dx + dy * dy >= r * r && ex * ex + ey * ey >= br * br) continue;
+    if (beyondReach(g, p)) continue;
     if (comingIn(look, g)) continue;
     return { dt: k * TICK, pos: { x: p.x, y: p.y, z: p.z } };
   }

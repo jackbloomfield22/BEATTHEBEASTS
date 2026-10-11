@@ -184,7 +184,8 @@ export const CLIPS: Clip[] = [
   // (Seed 23 → 45 for passing round 3, tools/sim/findclips.ts: the key starts the arm and the other receivers run their routes through the throw; the slot's seam caught and 14 yd after it with the juke.)
   // (Cover 1 seed 45 → Cover 3 seed 25 for passing round 4, tools/sim/findclips.ts: the deep ball in the bucket; the slot's seam caught and 23 yd after it.)
   // (Seed 25, icon 1 → seed 65, icon 2 for passing round 6, tools/sim/p6_refind.ts: the catch at his hands; the tight end's seam against Cover 3, caught and 15 yd after it.)
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 65, play: 'trips-four-verts', def: 'cover3', los: 30, script: throwAndRun(2, 100, 'juke') },
+  // (Seed 65 → 19 for passing round 8, tools/sim/p8_refind.ts: the reach to what his drawn hands get; the tight end's seam against Cover 3, caught and 31 yd after it.)
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 19, play: 'trips-four-verts', def: 'cover3', los: 30, script: throwAndRun(2, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // Stick against Cover 1: the short catch, a stiff arm sheds the first tackler a second later, down 15 yd on (11 after the catch).
@@ -198,7 +199,8 @@ export const CLIPS: Clip[] = [
   // (Seed 8 → 30 for passing round 3: the key starts the arm; caught at the 40 and taken 39 yd to the end zone.)
   // (Seed 30 → 78 for passing round 4: the deep ball in the bucket; caught at the 39 and taken 39 yd to the end zone.)
   // (Seed 78 → 79 for passing round 6, tools/sim/p6_feel.ts: the catch at his hands.)
-  { id: 'touchdown', title: 'Catch-and-run touchdown', seed: 79, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(1, 100, 'juke') },
+  // (Seed 79 → 52 for passing round 8, tools/sim/p8_feel.ts: the reach to what his drawn hands get, on 79 the ball was led past them.)
+  { id: 'touchdown', title: 'Catch-and-run touchdown', seed: 52, play: 'trips-four-verts', def: 'cover2', los: 30, script: throwAndRun(1, 100, 'juke') },
 ];
 
 // The ten broadcast concepts (M6.5): found by tools/sim/findconcepts.ts, the
@@ -457,4 +459,17 @@ export const PASSING7: Clip[] = [
   { id: 'p7-hitch', title: 'The hitch, sat down: working back to it', seed: 2, play: 'doubles-smash', def: 'cover3', los: 30, user: false, script: () => NEUTRAL },
   // Smash against Cover 2: the corner over the squatting corner, outside the half safety, toward the pylon.
   { id: 'p7-corner', title: 'The deep corner on the cue', seed: 4, play: 'doubles-smash', def: 'cover2', los: 30, script: userThrow({ icon: 1, at: 81 }) },
+];
+
+// Passing round 8 (docs/passing/PASSING8.md): the catch out at the end of his
+// reach (the slant led a stride), the deep ball taken low over the shoulder,
+// the QB throwing around a lineman in his lane (the arm slot), and Gronk
+// boxing out on a contested ball (tools/sim/p8_clips.ts), from the default
+// broadcast camera and a close one (FOLLOW8: on the catcher, or the QB).
+export const PASSING8: Clip[] = [
+  { id: 'p8-reach', title: 'The slant led a stride: reached for', seed: 1, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 21 }) },
+  { id: 'p8-low-shoulder', title: 'The deep corner taken low over the shoulder', seed: 5, play: 'doubles-smash', def: 'cover2', los: 30, script: userThrow({ icon: 1, at: 81 }) },
+  { id: 'p8-lane', title: 'The slant thrown over the end', seed: 15, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 21 }) },
+  { id: 'p8-lane-side', title: 'The corner thrown round the rusher, side-arm', seed: 4, play: 'doubles-smash', def: 'cover3', los: 30, user: false, script: () => NEUTRAL },
+  { id: 'p8-box', title: 'The box-out: Gronk on Lott', seed: 3, play: 'trips-y-cross', def: 'cover1', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'TE', name: 'Rob Gronkowski', pos: 'TE' } },
 ];

@@ -7,7 +7,7 @@
 // ragdoll only shows the fall.
 
 import { cos, exp, sin } from '@/engine/math/detmath';
-import { DOWN_R, reachDir } from './bodies';
+import { boxOut, DOWN_R, reachDir } from './bodies';
 import { heldTogether } from './tackle';
 import { blockOf } from './blocks';
 import type { PlayState } from './state';
@@ -53,6 +53,9 @@ const HURDLER_JUMP = 0.93;
 const STIFF_K = 2.0;
 const TRUCK_K = 2.8;
 const TRUCK0 = 1.2;
+/** The boxed-out man's tackle in the first BOX_AFTER s after the catch: its logit down BOX_TACKLE_K a unit of the box-out (an arm from behind him, not a wrap). Ours: Gronkowski's ~0.7 on a safety takes a 90% tackle to ~82%. */
+const BOX_AFTER = 0.6;
+const BOX_TACKLE_K = 1.0;
 /** A QB behind the line is easier to bring down than a back (logit): the sack. */
 const QB_BACK_EDGE = 0.8;
 const logistic = (x: number): number => 1 / (1 + exp(-x));
@@ -92,7 +95,12 @@ export function separate(s: PlayState): void {
       const min = reachDir(a, CF[i]!, SF[i]!, ux, uy) + reachDir(b, CF[j]!, SF[j]!, -ux, -uy);
       if (d >= min) continue;
       const push = (min - d) * 0.5;
-      const wa = b.fx.mass / (a.fx.mass + b.fx.mass);
+      let wa = b.fx.mass / (a.fx.mass + b.fx.mass);
+      // The box-out (passing round 8): the man the ball's coming to holds his ground on the defender on his body in
+      // the last of its flight (he's posted up), and the defender gives the ground: by how well he boxes him out.
+      const box = boxing(s, a, b);
+      if (box > 0) wa *= 1 - BOX_HOLD * box;
+      else if (box < 0) wa = 1 - (1 - wa) * (1 + BOX_HOLD * box);
       const wb = 1 - wa;
       a.pos.x -= ux * push * wa * 2;
       a.pos.y -= uy * push * wa * 2;
@@ -123,6 +131,23 @@ export function separate(s: PlayState): void {
 }
 const CF: number[] = [];
 const SF: number[] = [];
+
+/**
+ * The box-out between two bodies in contact (passing round 8): + when `a` is
+ * the man the ball is coming to and `b` a defender on him in the last BOX_T
+ * of its flight (how well he boxes him out: bodies.ts boxOut), − the other
+ * way round, 0 otherwise.
+ */
+function boxing(s: PlayState, a: Agent, b: Agent): number {
+  const ball = s.ball;
+  if (ball.mode !== 'air' || ball.target < 0 || ball.arrive - s.t > BOX_T || a.side === b.side) return 0;
+  if (ball.target === a.i && a.side === 'off') return boxOut(a, b);
+  if (ball.target === b.i && b.side === 'off') return -boxOut(b, a);
+  return 0;
+}
+/** He posts up for this long (s) before the ball gets there; his share of the bodies' push is cut by up to BOX_HOLD of it (boxOut 1). Ours: the box-out is the last half second, as the ball comes down. */
+const BOX_T = 0.5;
+const BOX_HOLD = 0.7;
 
 export type TackleOutcome = 'tackle' | 'bigHit' | 'broken' | 'missed';
 
@@ -206,6 +231,9 @@ export function tackleOdds(s: PlayState, d: Agent, c: Agent, mv: Move | null): {
   if (mv === 'hurdle') x += HURDLE_FAIL;
   else if (low && (mv === 'stiffArm' || mv === 'truck' || mv === 'spin')) x += LOW_POWER;
   if (headOn < -0.3 && !qbBack) x -= 0.4; // arm tackles from behind get broken more (not on a QB still behind the line)
+  // The man he boxed out at the catch (passing round 8): on his back with an arm, not squared up (passing.ts resolveCatch, bodies.ts boxOut).
+  const caughtAt = c.mem.caughtAt as number | undefined;
+  if (caughtAt !== undefined && c.mem.boxedBy === d.i && s.t - caughtAt < BOX_AFTER) x -= BOX_TACKLE_K * ((c.mem.boxK as number | undefined) ?? 0);
   // The traits, as the catalog words them: a factor on the chance he gets
   // away (the miss), so "20% more often" is 1.2.
   const first = ((c.mem.tries as number | undefined) ?? 0) === 0;

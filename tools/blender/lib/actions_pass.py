@@ -45,13 +45,17 @@ from .transitions import Plant, Steps
 ARMS = arm_mask("l") + arm_mask("r")
 
 
-def _throw(name: str, T: float, S: float, keys_t: tuple[float, float, float, float], load_r, cock_r, rel_r, fol_r, *, twist=(-30, -32, 8, 24), flex=(0, 10, 16, 26), lean=0.0, feet=None, glove=(0.20, -0.52, 1.46)) -> Clip:
+def _throw(name: str, T: float, S: float, keys_t: tuple[float, float, float, float], load_r, cock_r, rel_r, fol_r, *, twist=(-30, -32, 8, 24), flex=(0, 10, 16, 26), lean=0.0, feet=None, glove=(0.20, -0.52, 1.46), elbows=((-0.9, 0.0, 1.55), (-0.7, -0.2, 1.35)), bend=0.0) -> Clip:
     """A throw from the set: load, cock, release, follow-through, into a
     stand. `S` is how far the stride carries the body forward (negative:
     back, the fade); `keys_t` the load, cock, release and follow-through
     times (s); the hand targets are the throwing (right) hand's; `twist` and
     `flex` the pelvis at each key; `lean` the spine's extra flexion (deg,
-    negative leans back); `feet` the plants (side, lift, land)."""
+    negative leans back); `feet` the plants (side, lift, land); `elbows`
+    the throwing elbow's targets at the cock and the release; `bend` the
+    spine's side bend through the cock, release and follow-through (deg,
+    passing round 8's arm slots, actions_p8.py: + tips the throwing
+    shoulder down, the side-arm slot; − the glove side, over the top)."""
     tl, tc, tr, tf = keys_t
     qset = copy.deepcopy(STANCES["qb_set"])
     idle = copy.deepcopy(IDLE)
@@ -74,17 +78,17 @@ def _throw(name: str, T: float, S: float, keys_t: tuple[float, float, float, flo
     load.pelvis.update({"twist": twist[0], "up": -0.10, "flex": flex[0]})
     load.joints.update(sp(3, 0, -8))
     load.gaze = (3.0, 0.0, 0.8)
-    cock = shift(with_upper(qset, {"r": cock_r, "l": glove}, {**grip_r, **hands_of(SPREAD, "l"), "hand_r": (-45, 0, 30)}, {"r": (-0.9, 0.0, 1.55), "l": (0.6, 0.0, 1.2)}), 0.0, -fwd(tc))
+    cock = shift(with_upper(qset, {"r": cock_r, "l": glove}, {**grip_r, **hands_of(SPREAD, "l"), "hand_r": (-45, 0, 30)}, {"r": elbows[0], "l": (0.6, 0.0, 1.2)}), 0.0, -fwd(tc))
     cock.pelvis.update({"twist": twist[1], "up": -0.12, "flex": flex[1]})
-    cock.joints.update(sp(0, 4, -10))
+    cock.joints.update(sp(0, 4 + 0.6 * bend, -10))
     cock.gaze = (3.0, 0.0, 0.9)
-    rel = shift(with_upper(qset, {"r": rel_r, "l": (0.26, -0.10, 1.12)}, {**spread_r, **hands_of(RELAXED, "l"), "hand_r": (10, 0, 0)}, {"r": (-0.7, -0.2, 1.35), "l": (0.7, 0.3, 1.0)}), 0.0, -fwd(tr))
+    rel = shift(with_upper(qset, {"r": rel_r, "l": (0.26, -0.10, 1.12)}, {**spread_r, **hands_of(RELAXED, "l"), "hand_r": (10, 0, 0)}, {"r": elbows[1], "l": (0.7, 0.3, 1.0)}), 0.0, -fwd(tr))
     rel.pelvis.update({"twist": twist[2], "up": -0.11, "flex": flex[2]})
-    rel.joints.update(sp(6, -2, 6))
+    rel.joints.update(sp(6, -2 + bend, 6))
     rel.gaze = (4.0, 0.0, 0.9)
     fol = shift(with_upper(qset, {"r": fol_r, "l": (0.28, 0.02, 1.06)}, {**hands_of(RELAXED, "r"), **hands_of(RELAXED, "l")}, {"r": (-0.3, -0.5, 1.2), "l": (0.7, 0.4, 1.0)}), 0.0, -fwd(tf))
     fol.pelvis.update({"twist": twist[3], "up": -0.12, "flex": flex[3]})
-    fol.joints.update(sp(10, -2, 10))
+    fol.joints.update(sp(10, -2 + 0.5 * bend, 10))
     fol.gaze = (6.0, 0.0, 0.9)
     stand = copy.deepcopy(end)
     keys = [(0.0, qset), (tl, load), (tc, cock), (tr, rel), (tf, fol), (T, stand)]
