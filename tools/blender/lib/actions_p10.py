@@ -48,7 +48,7 @@ import copy
 import math
 from dataclasses import replace
 
-from .actions import IDLE, RELAXED, STANCES, Clip, hands_of, keyed, shift, with_upper
+from .actions import IDLE, RELAXED, STANCES, Clip, hands_of, keyed, lifted, shift, with_upper
 from .gait import FPS, smoothstep
 from .transitions import Plant, Steps
 
@@ -58,7 +58,7 @@ from .transitions import Plant, Steps
 # when the back foot goes past it, how long the finish holds, and how long the whole recovery to a stand is.
 # (Passing round 12: `kick`, the back foot's flight between its lift and its landing: when it's up (s after the
 # release), how long it stays up, how high (m) and how far its heel is turned up (deg), and how far forward of where it
-# was (m); `glove_pole`, the glove arm's elbow pole.)
+# was (m); `glove_pole`, the glove arm's elbow pole. Passing round 13: `up12`, round twelve's pelvis drop at each key.)
 #
 # Passing round 12 (docs/passing/PASSING12.md). From the broadcast camera the QB is ~75-100 px tall at the release,
 # seen from behind and above (the eye ~4-9 m behind him, 2-8 m to one side, 7 m up), and round ten's finishes were
@@ -73,32 +73,49 @@ from .transitions import Plant, Steps
 # round; the glove elbow back past his hip; the back heel up behind him (heel 70-80 deg, the ball of the foot
 # 0.12-0.20 m up) for a beat before it comes down; the flick held 0.1 s longer. Measured from the broadcast eyes
 # (qbfin.py, scratch; PASSING12.md has the numbers before and after).
+#
+# Passing round 13 (docs/passing/PASSING13.md): the depth. Round twelve gave the quick finish its legs (choreo.ts
+# FINISH_PLANTED), and its crouch showed: every finish dropped the hips to 0.12-0.13 m under the rig's rest, the front
+# knee bent ~64 deg through the flick and the drive and ~63 through touch (the bones' hip-knee-ankle angle; the rig's rest
+# leg reads 8, its idle 23), the hips 11 cm under his standing height and the chest 38 deg over the front knee on a
+# five-yard slant: a sit. A quick-game QB stays tall through the ball (the front knee ~20-35 deg at the release, the
+# owner's brief; 29-46 through a full throw, Labbe et al. 2025, IJSPT 20(8); the pitcher's lead knee ~35 +/- 12 at the
+# release and extending through it, Fleisig, ASMI), so the release now comes from taller throws (actions.py THROW_UP:
+# 25-34 deg) and the finishes keep it: the flick's hips 0.03 m under the rest (the front knee ~33-34 deg, the hips
+# ~1.5 cm under his standing height) and its chest less far over (pelvis flex 25 -> 18, spine 12 -> 10: ~28 deg of trunk
+# lean, from 38); touch 0.03-0.035 (~37); the drive, the whole body through a longer throw, 0.04-0.065 (the front knee
+# ~45 at its deepest, as the weight goes over it). The hands and elbow poles ride up with the hips (`up12`: round
+# twelve's drop at each key), so the arm finishes where round twelve put it on the body: the hand outside the front hip
+# or knee, clear of him from behind; the back heel's kick is unchanged (`kick`).
 FINISHES = {
     "flick": dict(
         keys=[
-            (0.05, (0.04, -0.60, 1.44), (0.30, -0.10, 1.08), (-0.5, -0.4, 1.30), (16, 18, -0.12), (8, -2, 9), (5.0, 0.0, 0.9)),
-            (0.13, (0.28, -0.50, 1.00), (0.34, 0.06, 1.02), (-0.6, -0.4, 1.15), (31, 25, -0.13), (12, -2, 14), (6.0, 0.0, 0.9)),
+            (0.05, (0.04, -0.60, 1.44), (0.30, -0.10, 1.08), (-0.5, -0.4, 1.30), (16, 14, -0.03), (8, -2, 9), (5.0, 0.0, 0.9)),
+            (0.13, (0.28, -0.50, 1.00), (0.34, 0.06, 1.02), (-0.6, -0.4, 1.15), (31, 18, -0.03), (10, -2, 14), (6.0, 0.0, 0.9)),
         ],
+        up12=(-0.12, -0.13),
         hold=0.36, back=(0.02, 0.34, 0.0), gather=None, T=0.66,
         kick=(0.10, 0.14, 0.12, 75.0, 0.10), glove_pole=(0.8, 0.5, 1.0),
     ),
     "drive": dict(
         keys=[
-            (0.07, (0.06, -0.62, 1.40), (0.32, -0.12, 1.06), (-0.7, -0.3, 1.30), (20, 22, -0.12), (10, -2, 9), (5.0, 0.0, 0.9)),
-            (0.22, (0.32, -0.52, 0.82), (0.36, 0.08, 1.00), (-0.7, -0.3, 1.15), (39, 30, -0.13), (16, -3, 11), (3.0, 0.0, 0.9)),
-            (0.46, (0.30, -0.50, 0.86), (0.35, 0.07, 1.02), (-0.7, -0.3, 1.15), (37, 27, -0.12), (14, -3, 10), (2.0, 0.0, 0.9)),
+            (0.07, (0.06, -0.62, 1.40), (0.32, -0.12, 1.06), (-0.7, -0.3, 1.30), (20, 22, -0.04), (10, -2, 9), (5.0, 0.0, 0.9)),
+            (0.22, (0.32, -0.52, 0.82), (0.36, 0.08, 1.00), (-0.7, -0.3, 1.15), (39, 28, -0.065), (16, -3, 11), (3.0, 0.0, 0.9)),
+            (0.46, (0.30, -0.50, 0.86), (0.35, 0.07, 1.02), (-0.7, -0.3, 1.15), (37, 25, -0.06), (14, -3, 10), (2.0, 0.0, 0.9)),
         ],
+        up12=(-0.12, -0.13, -0.12),
         hold=0.46, back=(0.04, 0.36, 0.25), gather=(0.58, 0.76), T=1.02,
         kick=(0.12, 0.10, 0.20, 80.0, 0.30), glove_pole=(0.8, 0.5, 1.0),
     ),
     "touch": dict(
         keys=[
-            (0.08, (-0.04, -0.66, 1.64), (0.28, -0.10, 1.12), (-0.6, -0.4, 1.45), (14, 16, -0.12), (6, -2, 8), (0.0, 0.0, 0.9)),
-            (0.22, (0.05, -0.62, 1.40), (0.28, -0.04, 1.10), (-0.5, -0.5, 1.35), (24, 18, -0.12), (7, -2, 10), (-6.0, 0.0, 0.9)),
-            (0.42, (0.06, -0.60, 1.36), (0.28, -0.03, 1.08), (-0.5, -0.5, 1.30), (24, 17, -0.12), (6, -2, 10), (-8.0, 0.0, 0.9)),
+            (0.08, (-0.04, -0.66, 1.64), (0.28, -0.10, 1.12), (-0.6, -0.4, 1.45), (14, 16, -0.03), (6, -2, 8), (0.0, 0.0, 0.9)),
+            (0.22, (0.05, -0.62, 1.40), (0.28, -0.04, 1.10), (-0.5, -0.5, 1.35), (24, 18, -0.035), (7, -2, 10), (-6.0, 0.0, 0.9)),
+            (0.42, (0.06, -0.60, 1.36), (0.28, -0.03, 1.08), (-0.5, -0.5, 1.30), (24, 17, -0.035), (6, -2, 10), (-8.0, 0.0, 0.9)),
         ],
         # (Touch keeps round ten's glove arm: pulled back and out, it flared both elbows at once from behind, a "W" that
         # read as a pose, not a throw; the touch finish is the throwing arm up toward the target.)
+        up12=(-0.12, -0.12, -0.12),
         hold=0.42, back=(0.10, 0.40, 0.0), gather=None, T=0.86,
         kick=(0.16, 0.12, 0.10, 65.0, 0.12),
     ),
@@ -138,14 +155,18 @@ def finish(base: Clip, kind: str) -> Clip:
     qset = copy.deepcopy(STANCES["qb_set"])
     sp = lambda f, a, tw: {"spine_02": (f, a, tw), "spine_03": (f * 0.85, a, tw), "spine_04": (f * 0.5, 0, tw * 0.75)}  # noqa: E731
 
-    def key(t_after: float, hr, hl, er, pel, spine, gaze):
-        p = shift(with_upper(qset, {"r": hr, "l": hl}, {**hands_of(RELAXED, "r"), **hands_of(RELAXED, "l")}, {"r": er, "l": d.get("glove_pole", (0.7, 0.3, 1.0))}), 0.0, -fwd(tr + t_after))
+    def key(t_after: float, hr, hl, er, pel, spine, gaze, up12):
+        # (Passing round 13) The hands and the elbow poles ride up with the hips from where round twelve had them (`up12`,
+        # its pelvis drop at this key), so the arm finishes where it did on the body: outside the front hip or knee.
+        dz = pel[2] - up12
+        gp = d.get("glove_pole", (0.7, 0.3, 1.0))
+        p = shift(with_upper(qset, {"r": lifted(hr, dz), "l": lifted(hl, dz)}, {**hands_of(RELAXED, "r"), **hands_of(RELAXED, "l")}, {"r": lifted(er, dz), "l": lifted(gp, dz)}), 0.0, -fwd(tr + t_after))
         p.pelvis.update({"twist": pel[0], "flex": pel[1], "up": pel[2]})
         p.joints.update(sp(*spine))
         p.gaze = gaze
         return p
 
-    fin_keys = [(tr + k[0], key(*k)) for k in d["keys"]]
+    fin_keys = [(tr + k[0], key(*k, u12)) for k, u12 in zip(d["keys"], d["up12"])]
     hold_t = tr + d["hold"]
     last = fin_keys[-1][1]
     if fin_keys[-1][0] < hold_t:

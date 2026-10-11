@@ -223,13 +223,16 @@ def throw_slot(base: str, slot: str) -> Clip:
     timing (the runtime plays it over the throw at the time the throw is at,
     weighted by how far the sim moved his release off a lineman: choreo.ts
     throwSlot)."""
-    from .actions_pass import _throw
+    from .actions_pass import FADE_UP, _throw
 
     b, d = THROWS[base], SLOTS[slot]
     add = lambda v, dv: tuple(round(x + y, 3) for x, y in zip(v, dv))  # noqa: E731
     c = _throw(
         f"{base}_{slot}", b["T"], b["S"], b["keys_t"], b["load_r"], add(b["cock_r"], d["cock"]), add(b["rel_r"], d["rel"]), add(b["fol_r"], d["fol"]),
         twist=b["twist"], flex=b["flex"], lean=b.get("lean", 0.0), feet=b["feet"], elbows=d["elbows"], bend=d["bend"],
+        # (Passing round 13) The throw's own hips (actions.py THROW_UP; the fade-away keeps round four's), so the slot's arm is
+        # solved against the body it's laid over.
+        up=FADE_UP if base == "qb_throw_fade" else None,
     )
     # In place, the feet held where the throw starts: an overlay drives only the upper body (the throw's own legs step).
     feet0 = c.pose(0).feet

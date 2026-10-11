@@ -107,7 +107,10 @@ const FOLLOW9: Record<string, string> = {
 // BTB_PASSING12=1: passing round 12 (docs/passing/PASSING12.md): the same, into docs/passing/round12/<BTB_PASSING_TAG>; the
 // per-frame log (BTB_DIAG) also has the QB's arms, legs and trunk (the finish's silhouette) and the contested pair's
 // (the bar's visibility), each bone's head in world m.
-const PASSING12 = !!process.env.BTB_PASSING12;
+// BTB_PASSING13=1: passing round 13 (docs/passing/PASSING13.md): round twelve's recordings and log, into
+// docs/passing/round13/<BTB_PASSING_TAG>.
+const PASSING13 = !!process.env.BTB_PASSING13;
+const PASSING12 = !!process.env.BTB_PASSING12 || PASSING13;
 const PASSING11 = !!process.env.BTB_PASSING11 || PASSING12;
 const PASSING10 = !!process.env.BTB_PASSING10 || PASSING11;
 const WINDOW = !!process.env.BTB_WINDOW;
@@ -151,7 +154,7 @@ const FOLLOW: Record<string, string> = {
   'p2-arm-a': 'QB,22,36,8,50,22',
   'p2-arm-b': 'QB,22,36,8,50,22',
 };
-const OUT = PASSING12 ? `docs/passing/round12/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING11 ? `docs/passing/round11/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
+const OUT = PASSING13 ? `docs/passing/round13/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING12 ? `docs/passing/round12/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING11 ? `docs/passing/round11/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
 const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY || PASSING || PASSING2 || PHYSICS ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
