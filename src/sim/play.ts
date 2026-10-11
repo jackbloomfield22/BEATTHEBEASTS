@@ -1591,10 +1591,13 @@ function atHands(s: PlayState, who: number, out: ReturnType<typeof resolveCatch>
       // tuck ~0.07 s, secure ~0.13 s, high point ~0.2 s from the catch
       // clips); going up for it costs a little of his run as he lands.
       const type = s.catchType ?? 'rac';
-      const keep = type === 'aggressive' ? 0.9 : 1;
+      // (Passing round 9) Run After Catch is the catch in stride: a receiver rated for it takes the ball without
+      // breaking stride and is upfield at once; one who isn't gathers it, loses a step and then turns (racGather).
+      const gather = type === 'rac' ? racGather(a) : 0;
+      const keep = type === 'aggressive' ? 0.9 : 1 - RAC_DIP * gather;
       a.vel.x *= keep;
       a.vel.y *= keep;
-      a.busy = Math.max(a.busy, type === 'aggressive' ? 12 : type === 'possession' ? 8 : 4);
+      a.busy = Math.max(a.busy, type === 'aggressive' ? 12 : type === 'possession' ? 8 : 4 + Math.round(RAC_TUCK * gather));
       if (s.pass) s.pass.complete = true;
       a.mem.caughtAt = s.t;
       // Where the ball was against his body when he took it (passing round 7: the drawing puts his hands there on the catch frame, render/game/choreo.ts catchReach).
@@ -1670,6 +1673,33 @@ b.vel = { x: b.vel.x * 0.2 + gauss(s.rng.bounce) * 0.6, y: b.vel.y * 0.2 + gauss
     s.events.push({ t: s.t, type: 'bobble', who: [who], at: { x: a.pos.x, y: a.pos.y } });
   }
 }
+/**
+ * How much a receiver gathers the ball on a catch-and-run instead of taking
+ * it in stride (passing round 9), 0..1, from his Run After Catch (the
+ * rating's own line: "yards after the catch"): none at RAC_STRIDE and up
+ * (the top tenth of receivers, 87+: Tyreek Hill's 97), all of it at
+ * RAC_STRIDE − RAC_SPAN (the bottom tenth, 59). A back or a lineman (no
+ * rating) takes it as he does now. Before, every receiver kept his full
+ * speed through a catch-and-run whatever his rating, so Hill and Wes Welker
+ * (70) came out of the same slant at the same pace.
+ */
+export function racGather(a: Agent): number {
+  const rac = a.p.attrs.rac;
+  if (rac === undefined) return 0;
+  return Math.max(0, Math.min(1, (RAC_STRIDE - rac) / RAC_SPAN));
+}
+/** RAC at and above which a receiver catches in stride, and the span below it to a full gather. Ours, on the rating's spread over 980 WR stints (p10 59, median 72, p90 87). */
+const RAC_STRIDE = 90;
+const RAC_SPAN = 30;
+/**
+ * A full gather's cost at the catch: this share of his speed (a step's worth
+ * at a slant's 8 yd/s, ~1 yd/s) and this many ticks more before he can make a
+ * move or burst (0.1 s: securing it before he turns). Ours, from film: the
+ * possession receiver's "catch, tuck, turn" against the YAC receiver's catch
+ * on the move.
+ */
+const RAC_DIP = 0.15;
+const RAC_TUCK = 8;
 /** A bobble pops up off his hands at about this (yd/s): a foot or two over them, ~0.4 s up and down (ours, from the broadcast's juggles). */
 const BOBBLE_VZ = 2.2;
 /** A man on him as it comes back down takes this share off the re-catch (a hand in to knock it out). Ours. */

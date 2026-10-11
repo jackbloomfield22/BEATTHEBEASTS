@@ -203,6 +203,13 @@ export class PlayerAnimator {
    * over its upper body at the throw's own time, by a weight the caller sets.
    */
   private slot: { base: string; o: Overlay; w: number } | null = null;
+  /**
+   * A one-shot's depth (passing round 9): another clip keyed on the same beat
+   * (the chest catch under the forward reach) laid over the one-shot `base`
+   * over base's own mask, at base's time plus `shift` (their secure frames
+   * aligned), by a weight the caller sets.
+   */
+  private mix: { base: string; o: Overlay; w: number; shift: number } | null = null;
   /** The dip before contact, one held overlay per side, weighted by the input (between the hold and the action). */
   private dipL: Overlay | null = null;
   private dipR: Overlay | null = null;
@@ -270,6 +277,7 @@ export class PlayerAnimator {
     this.holdLayer = null;
     this.actionLayer = null;
     this.slot = null;
+    this.mix = null;
     this.dipL = null;
     this.dipR = null;
     this.carryW = 0;
@@ -366,6 +374,28 @@ export class PlayerAnimator {
       this.slot = o ? { base, o, w } : null;
     }
     if (this.slot) this.slot.w = Math.min(1, w);
+  }
+
+  /**
+   * The one-shot `base`'s depth (passing round 9: render/game/choreo.ts
+   * reachDepth): `name` laid over it at weight `w` (0..1), sampled at base's
+   * time plus `shift` (s), over base's mask, faded with it. A forward reach
+   * for a ball 0.8 m out is mostly the chest catch, one at 1.15 m all reach.
+   * Null clears it.
+   */
+  setMix(base: string | null, name: string | null, w: number, shift = 0): void {
+    if (!base || !name) {
+      this.mix = null;
+      return;
+    }
+    if (!this.mix || this.mix.o.name !== name || this.mix.base !== base) {
+      const o = this.overlay(name, { mask: this.lib.meta[base]?.mask });
+      this.mix = o ? { base, o, w, shift } : null;
+    }
+    if (this.mix) {
+      this.mix.w = Math.max(0, Math.min(1, w));
+      this.mix.shift = shift;
+    }
   }
 
   /** Let the one-shot overlay go (it fades out): a full-body clip takes the arms over. */
@@ -616,6 +646,13 @@ export class PlayerAnimator {
     this.dipL = this.stepWeighted(this.dipL, 'ovl_dip_l', dip > 0 ? Math.min(1, dip) : 0, dt);
     this.dipR = this.stepWeighted(this.dipR, 'ovl_dip_r', dip < 0 ? Math.min(1, -dip) : 0, dt);
     this.actionLayer = this.stepOverlay(this.actionLayer, dt);
+    const mx = this.mix;
+    const al0 = this.actionLayer;
+    if (mx && al0 && al0.name === mx.base && mx.w > 0) {
+      // At the one-shot's own time (its secure frame on the partner's), faded with it.
+      mx.o.t = Math.max(0, al0.t + mx.shift);
+      this.applyOverlay(mx.o, mx.w * al0.w);
+    }
     const sl = this.slot;
     if (sl) {
       // At the throw's own time, faded with it: the transition's weight, or the throw-on-the-run overlay's.
