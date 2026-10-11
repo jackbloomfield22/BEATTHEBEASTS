@@ -250,6 +250,23 @@ function diagFrame(n: number) {
     const pw = (b as unknown as { contest: { with: number } | null }).contest?.with;
     const pd = pw !== undefined ? w.__btbBodies?.[pw] : undefined;
     if (pd) Object.assign(out, { pw, psk: sk(pd) });
+    else {
+      // (Passing round 13) Before the render pairs them (choreo.ts contests), the nearest defender's figure, for the bar's
+      // visibility from the box clip's own bar key on (`pnear`: not paired yet).
+      const st = s as unknown as { agents: { pos: { x: number; y: number }; side: string }[] };
+      const me = st.agents[i]!;
+      let best = -1;
+      let bd = 3;
+      st.agents.forEach((o, j) => {
+        const dd = Math.hypot(o.pos.x - me.pos.x, o.pos.y - me.pos.y);
+        if (o.side !== me.side && dd < bd) {
+          bd = dd;
+          best = j;
+        }
+      });
+      const nd = best >= 0 ? w.__btbBodies?.[best] : undefined;
+      if (nd) Object.assign(out, { pw: best, pnear: true, psk: sk(nd) });
+    }
     Object.assign(out, { trunk: r2((a as unknown as { trunkReach?: number }).trunkReach ?? 0), clip: b.catchClip, trans: a.transition && [a.transition.name, r2(a.transition.t)], ovl: a.overlayAction && [a.overlayAction.name, r2(a.overlayAction.t)], act: a.actionLayer && [a.actionLayer.name, r2(a.actionLayer.w)], hold: a.holdLayer && [a.holdLayer.name, r2(a.holdLayer.w)], root: [r2(b.player.root.position.x), r2(b.player.root.position.z), r2(b.player.root.rotation.y)], fl: p('fingers_01_l'), fr: p('fingers_01_r'), chest: p('spine_04'), head: p('head') });
   }
   return out;

@@ -66,6 +66,8 @@ export interface Body {
   armSlot?: { base: string | null; w: number; t: number; lane: number | null };
   /** M6.5 #12: the man he's contesting a catch with (body index) until this sim time, or null. */
   contest: { with: number; until: number } | null;
+  /** Passing round 13: a defender paired early (a posted-up receiver's man) waits to start his contest clip until this sim time. */
+  contestAt?: { clip: string; at: number } | null;
   /** Passing round 5: the catch being drawn (its style, his pluck) and where his hands met the ball, or null. */
   grip: CatchGrip | null;
   /** Passing round 5: his share of a contested pair's lean (contact.ts): 0.5 even, more for the man who boxes the other out. */
@@ -143,6 +145,7 @@ export function resetBody(b: Body): void {
   b.headT = -1;
   b.cutAt = -9;
   b.contest = null;
+  b.contestAt = null;
   b.grip = null;
   b.box = 0.5;
   b.carry = null;
@@ -211,7 +214,12 @@ export function contests(bodies: Body[], s: PlayState, simT: number, out: [numbe
   if (ball.mode === 'air' && i >= 0 && s.agents[i]!.side === 'off') {
     const b = bodies[i];
     const left = ball.arrive - simT;
-    if (b && !b.contest && left <= CONTEST_LOOKAHEAD && left > 0) {
+    // (Passing round 13) A receiver posting up (catch_box) is paired with his man from the box clip's start, not
+    // CONTEST_LOOKAHEAD out: the post's turn and shove (boxPost) need the man, and the clip's bar is up POST_LEAD before
+    // the ball. Paired only at 0.45 s, the receiver turned and the man was shoved in a jump 0.13 s after the bar went up,
+    // the two bodies one shape on screen with the bar between them for the first beat (PASSING13.md).
+    const posted = !!b?.catchClip && POSTED.has(b.catchClip);
+    if (b && !b.contest && (left <= CONTEST_LOOKAHEAD || posted) && left > 0) {
       const c = contestFor(s, i);
       const d = c ? bodies[c.d] : undefined;
       if (c && d && !d.fallen && !d.contest) {
@@ -223,8 +231,19 @@ export function contests(bodies: Body[], s: PlayState, simT: number, out: [numbe
         d.box = 1 - b.box;
         const clip = c.side > 0 ? 'def_contest_l' : 'def_contest_r';
         const lead = eventAt(d, clip, 'contact');
-        if (lead !== null) d.animator.playOverlay(clip, { t0: Math.max(0, lead - left) });
+        // (Passing round 13: paired early, his own contest clip still starts its lead before the ball.)
+        if (lead !== null && lead >= left) d.animator.playOverlay(clip, { t0: Math.max(0, lead - left) });
+        else if (lead !== null) d.contestAt = { clip, at: ball.arrive - lead };
       }
+    }
+  }
+  for (const d of bodies) {
+    const w = d?.contestAt;
+    if (!d || !w) continue;
+    if (!d.contest || d.fallen) d.contestAt = null;
+    else if (simT >= w.at) {
+      d.animator.playOverlay(w.clip, { t0: simT - w.at });
+      d.contestAt = null;
     }
   }
   for (let k = 0; k < bodies.length; k++) {
@@ -267,7 +286,7 @@ const BOX_LEAN = 0.35;
  * off his line by it before both go up. So, from the box clip's own time:
  * - the turn: his body turned so the man is behind his near shoulder
  *   (BOX_BEHIND, his back half into him), in over BOX_TURN_IN from the post
- *   (the clip's bar key, 0.58 s before the ball), held through the catch,
+ *   (the clip's bar key, 0.75 s before the ball since passing round 13), held through the catch,
  *   out after the tuck;
  * - the shove: from the fight key (0.12 s before the ball) back to the
  *   bar's first contact, the man is displaced by it (contact.ts: drawn up to
@@ -292,8 +311,8 @@ function boxPost(b: Body): { turn: number; shove: number } | null {
   const shove = THREE.MathUtils.smoothstep(t, post + 0.05, post + 0.05 + BOX_SHOVE_IN) * (1 - THREE.MathUtils.smoothstep(t, sec + 0.15, sec + 0.5));
   return { turn, shove };
 }
-/** The box clip's post (its bar key) this long before its secure frame (s: actions_p8.py box_out, ts − 0.58). */
-const POST_LEAD = 0.58;
+/** The box clip's post (its bar key) this long before its secure frame (s: actions_p8.py box_out BAR_LEAD; 0.58 to passing round 12). */
+const POST_LEAD = 0.75;
 /**
  * Where he puts the man (rad off his facing, on the box clip's side: 125°, behind his near shoulder, his back half
  * into him), the most he turns to get him there (60°), and how fast (s). Ours, from the broadcast picture of a tight

@@ -177,14 +177,14 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `catch_reach_out` | overlay | 27 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_over_shoulder_low_l` | overlay | 26 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_over_shoulder_low_r` | overlay | 26 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `catch_box_l` | overlay | 39 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `catch_box_r` | overlay | 39 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `qb_throw_side` | overlay | 24 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
-| `qb_throw_over` | overlay | 24 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
+| `catch_box_l` | overlay | 44 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_box_r` | overlay | 44 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `qb_throw_side` | overlay | 24 | 0.0 | 0.00 | 0.00 | 32.8 | — | pass |
+| `qb_throw_over` | overlay | 24 | 0.0 | 0.00 | 0.00 | 32.8 | — | pass |
 | `qb_throw_quick_side` | overlay | 21 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
 | `qb_throw_quick_over` | overlay | 21 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
-| `qb_throw_long_side` | overlay | 30 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
-| `qb_throw_long_over` | overlay | 30 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
+| `qb_throw_long_side` | overlay | 30 | 0.0 | 0.00 | 0.00 | 32.7 | — | pass |
+| `qb_throw_long_over` | overlay | 30 | 0.0 | 0.00 | 0.00 | 32.7 | — | pass |
 | `qb_throw_fade_side` | overlay | 23 | 0.0 | 0.00 | 0.00 | 33.4 | — | pass |
 | `qb_throw_fade_over` | overlay | 23 | 0.0 | 0.00 | 0.00 | 33.4 | — | pass |
 | `carry_jog` | locomotion | 22 | 3.5 | 0.01 | 0.00 | 19.8 | — | pass |
@@ -218,8 +218,8 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `qb_throw_quick_fin_flick` | transition | 28 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `qb_throw_quick_fin_drive` | transition | 39 | 0.0 | 0.04 | 0.00 | 23.8 | — | pass |
 | `qb_throw_quick_fin_touch` | transition | 34 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `qb_throw_long_fin_flick` | transition | 34 | 0.0 | 0.00 | 0.00 | 23.3 | — | pass |
+| `qb_throw_long_fin_flick` | transition | 34 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `qb_throw_long_fin_drive` | transition | 45 | 0.0 | 0.04 | 0.00 | 23.8 | — | pass |
-| `qb_throw_long_fin_touch` | transition | 40 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `qb_throw_long_fin_touch` | transition | 40 | 0.0 | 0.43 | 0.00 | 23.8 | — | pass |
 
 **215 of 215 clips pass.**
