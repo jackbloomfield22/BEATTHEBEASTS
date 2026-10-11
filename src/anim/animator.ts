@@ -139,6 +139,15 @@ const LOOK_PARTS_WIDE: readonly (readonly [string, number])[] = [
 const LOOK_WIDE = 2.2;
 const LOOK_DOWN_WIDE = 1.05;
 
+/** The trunk's fold toward the hands' targets (reachTrunk), shared down the spine. Ours: most in the thorax, as a reach is. */
+const TRUNK_REACH: readonly (readonly [string, number])[] = [
+  ['spine_01', 0.2],
+  ['spine_02', 0.3],
+  ['spine_03', 0.3],
+  ['spine_04', 0.2],
+];
+/** The arms count as reaching this share of their length (the elbow never quite locks). */
+const REACH_SLACK = 0.97;
 const OVERLAY_IN = 0.13;
 const OVERLAY_OUT = 0.16;
 /** The carrier's family weights ease in over ~0.2 s (a burst or traffic reads within a stride, not in a frame). */
@@ -213,6 +222,8 @@ export class PlayerAnimator {
   rootMotion = 0;
   rootSpeed = 0;
   footLock = true;
+  /** The trunk's last fold toward the hands (rad, reachTrunk): for the per-frame catch log. */
+  trunkReach = 0;
   /** The chest (spine_04) in the world after the clips and the run's lean, before any contact lean (M6.5 #12). */
   readonly trunk = new THREE.Vector3();
   /** Last frame's foot-lock correction per foot (m): how much slide the lock removed. */
@@ -659,7 +670,8 @@ export class PlayerAnimator {
    * basket). Called by the catch (render/game/choreo.ts catchReach) after
    * update(), so it layers on the catch clip's own reach.
    */
-  reachHands(l: THREE.Vector3 | null, wl: number, r: THREE.Vector3 | null, wr: number): void {
+  reachHands(l: THREE.Vector3 | null, wl: number, r: THREE.Vector3 | null, wr: number, trunk = 0): void {
+    if (trunk > 0) this.reachTrunk(l, wl, r, wr, trunk);
     const right = _w.set(-1, 0, 0).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
     for (const [side, target, w] of [['l', l, wl] as const, ['r', r, wr] as const]) {
       if (!target || w <= 0) continue;
@@ -681,6 +693,68 @@ export class PlayerAnimator {
       const pq = hand.parent!.getWorldQuaternion(new THREE.Quaternion());
       hand.quaternion.copy(pq.invert().multiply(handWorld));
       hand.updateMatrixWorld(true);
+    }
+  }
+
+  /**
+   * The chest goes after the hands (passing round 8): when the hands' targets
+   * are out past what the arms reach from the shoulders as the clip has them,
+   * the trunk folds toward them from the lower spine (spine_01 to spine_04,
+   * a share each) by as much as it takes, up to `maxAng` (rad), by the
+   * hands' weight. A receiver reaching for a ball led a stride long extends
+   * his whole upper body into it; the catch clips put the trunk where a
+   * keyed catch has it, and this finishes the reach to the ball the sim
+   * caught (render/game/choreo.ts catchReach). Before the arms' IK.
+   */
+  private reachTrunk(l: THREE.Vector3 | null, wl: number, r: THREE.Vector3 | null, wr: number, maxAng: number): void {
+    this.trunkReach = 0;
+    const n = (l && wl > 0 ? 1 : 0) + (r && wr > 0 ? 1 : 0);
+    if (n === 0) return;
+    const T = new THREE.Vector3();
+    if (l && wl > 0) T.add(l);
+    if (r && wr > 0) T.add(r);
+    T.multiplyScalar(1 / n);
+    const w = Math.min(1, Math.max(l ? wl : 0, r ? wr : 0));
+    // The shoulders and the arm's length to the finger roots, as posed now.
+    const S = new THREE.Vector3();
+    let arm = 0;
+    for (const side of ['l', 'r'] as const) {
+      const u = this.bone(`upperarm_${side}`).getWorldPosition(new THREE.Vector3());
+      const f = this.bone(`forearm_${side}`).getWorldPosition(new THREE.Vector3());
+      const h = this.bone(`hand_${side}`).getWorldPosition(new THREE.Vector3());
+      const g = this.bone(`fingers_01_${side}`).getWorldPosition(new THREE.Vector3());
+      S.addScaledVector(u, 0.5);
+      arm += 0.5 * (u.distanceTo(f) + f.distanceTo(h) + h.distanceTo(g));
+    }
+    const reach = REACH_SLACK * arm;
+    if (S.distanceTo(T) <= reach) return;
+    const P = this.bone('spine_01').getWorldPosition(new THREE.Vector3());
+    const axis = new THREE.Vector3().subVectors(S, P).cross(new THREE.Vector3().subVectors(T, P));
+    if (axis.lengthSq() < 1e-8) return;
+    axis.normalize();
+    // The fold that brings the shoulders within reach of the targets (about spine_01, bisected), at most maxAng.
+    const at = (ang: number) => new THREE.Vector3().subVectors(S, P).applyAxisAngle(axis, ang).add(P).distanceTo(T);
+    let ang = maxAng;
+    if (at(maxAng) < reach) {
+      let lo = 0;
+      let hi = maxAng;
+      for (let k = 0; k < 12; k++) {
+        const mid = 0.5 * (lo + hi);
+        if (at(mid) > reach) lo = mid;
+        else hi = mid;
+      }
+      ang = hi;
+    }
+    ang *= w;
+    this.trunkReach = ang;
+    const q = new THREE.Quaternion();
+    for (const [name, share] of TRUNK_REACH) {
+      const bone = this.bone(name);
+      q.setFromAxisAngle(axis, ang * share);
+      const wq = bone.getWorldQuaternion(new THREE.Quaternion());
+      const pq = bone.parent!.getWorldQuaternion(new THREE.Quaternion());
+      bone.quaternion.copy(pq.invert().multiply(q).multiply(wq));
+      bone.updateMatrixWorld(true);
     }
   }
 

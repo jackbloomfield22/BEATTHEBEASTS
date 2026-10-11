@@ -46,8 +46,9 @@ def main() -> None:
             f = mid("fingers_01_l", "fingers_01_r")
             tip = mid("fingers_03_l", "fingers_03_r", True)
             sh = mid("upperarm_l", "upperarm_r")
+            ch = W @ rig.pose.bones["spine_04"].head
             # The rig faces -Y: ahead is -y.
-            print(f"{name:26s} {label:7s} finger roots ahead {-f.y:5.2f} up {f.z:4.2f} | fingertips ahead {-tip.y:5.2f} up {tip.z:4.2f} | shoulders ahead {-sh.y:5.2f} up {sh.z:4.2f}")
+            print(f"{name:26s} {label:7s} finger roots ahead {-f.y:5.2f} up {f.z:4.2f} | fingertips ahead {-tip.y:5.2f} up {tip.z:4.2f} | shoulders ahead {-sh.y:5.2f} up {sh.z:4.2f} | chest ahead {-ch.y:5.2f} up {ch.z:4.2f}")
 
 
 if __name__ == "__main__":

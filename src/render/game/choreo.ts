@@ -585,11 +585,13 @@ const HOLD_EARLY = 0.1;
 /** The run-speed catches whose hands go to the ball (the full-body ones are keyed to their own reach). */
 // (Passing round 6: and the high point and the toe tap, full-body clips keyed to a fixed reach: on the recorded toe tap the ball came in 0.4 m from where the clip held the hands.)
 const REACH_CLIPS = new Set(['catch_hands_run', 'catch_reach_out', 'catch_hands_run_low', 'catch_hands_high', 'catch_scoop', 'catch_reach_l', 'catch_reach_r', 'catch_contested_l', 'catch_contested_r', 'catch_box_l', 'catch_box_r', 'catch_over_shoulder_l', 'catch_over_shoulder_r', 'catch_over_shoulder_low_l', 'catch_over_shoulder_low_r', 'catch_one_hand_l', 'catch_one_hand_r', 'catch_high_point', 'catch_toe_tap_l', 'catch_toe_tap_r']);
+/** The most the trunk folds further toward a ball out past the clip's arms (rad, ~25°: animator.ts reachTrunk). Ours: with catch_reach_out's own ~50° that's a receiver laid out over his front foot, not falling. */
+const TRUNK_MAX = 0.44;
 /** The hands come to the ball over this long (s of clip) before the secure frame: the late hands. */
 const REACH_IN = 0.2;
-/** How far the hands can go for it (m from between the shoulders) at full weight, and past which they don't chase it. Ours: a long arm's reach. */
-const REACH_NEAR = 0.75;
-const REACH_FAR = 1.15;
+/** How far the hands can go for it (m from between the shoulders, where they'll be at the catch) at full weight, and past which they don't chase it. Ours: a long arm's reach, and (passing round 8) the trunk's fold after it (TRUNK_MAX: the forward reach's ball 1.15 m out in front of his centre is ~0.85 m from his shoulders as they run). */
+const REACH_NEAR = 0.95;
+const REACH_FAR = 1.35;
 /** His eyes stay on the ball into his hands this long past the secure frame (s): "look it into the tuck". Ours: the clips bring it to the sternum ~0.15 s after the secure. */
 const EYES_IN = 0.15;
 /** Gravity in yd/s² (sim/ball.ts G in m/s², over a yard). */
@@ -648,7 +650,7 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
     if (k <= 0) return;
     root.localToWorld(_hl.copy(g.l));
     root.localToWorld(_hr.copy(g.r));
-    b.animator.reachHands(one === 'r' ? null : _hl, k, one === 'l' ? null : _hr, k);
+    b.animator.reachHands(one === 'r' ? null : _hl, k, one === 'l' ? null : _hr, k, TRUNK_MAX);
     return;
   }
   let w = THREE.MathUtils.smoothstep(t, secure - REACH_IN, secure - 0.02);
@@ -668,6 +670,12 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
   sl.getWorldPosition(_sh);
   sr.getWorldPosition(_hl);
   _sh.add(_hl).multiplyScalar(0.5);
+  // (Passing round 8) Where his shoulders will be when the ball gets there: he's still running onto it. Round seven measured
+  // from where they are now, so a ball led a stride out in front, 0.15 s away, was 2 m off and the hands never went for it.
+  const a = s.agents[i]!;
+  const lead = ahead ? ahead.dt : dt;
+  _sh.x += (worldX(a.vel.y) - worldX(0)) * lead;
+  _sh.z += (worldZ(a.vel.x) - worldZ(0)) * lead;
   w *= 1 - THREE.MathUtils.smoothstep(_sh.distanceTo(_bp), REACH_NEAR, REACH_FAR);
   if (w <= 0) {
     if (g) g.w = 0;
@@ -688,7 +696,7 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
     root.worldToLocal(g.r.copy(_hr));
     g.w = w;
   }
-  b.animator.reachHands(one === 'r' ? null : _hl, w, one === 'l' ? null : _hr, w);
+  b.animator.reachHands(one === 'r' ? null : _hl, w, one === 'l' ? null : _hr, w, TRUNK_MAX);
 }
 /**
  * Where the ball is drawn on the catch frame (passing round 7): where it was
