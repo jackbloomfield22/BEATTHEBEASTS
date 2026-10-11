@@ -43,7 +43,7 @@ import { ballWorldVel, createBallFlight, heldAt, placeFlight, resetFlight } from
 import { createFieldMarks } from './fieldMarks';
 import { hudTime, placeCue } from './cueRing';
 import { frameEvents } from './frameEvents';
-import { ballInHands, catchMagnet, catchReach, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
+import { ballInHands, catchMagnet, catchReach, catchSpot, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
 import { Officials } from './officials';
 import { celebrate } from './celebrate';
 import { celebration } from '@/game/celebration';
@@ -683,6 +683,8 @@ export function GameScene() {
     // (choreo.ts catchReach), so it's in them. From the next frame it's held in the hands as they give.
     if (held && !inSnap && bodies && b0.mode === 'air' && catchIn.air && b1.holder !== r.state.qb && ballInHands(bodies[b1.holder]!, r.state, ball)) {
       ball.position.set(worldX(b0.y + (b1.y - b0.y) * a), worldY(b0.z + (b1.z - b0.z) * a), worldZ(b0.x + (b1.x - b0.x) * a));
+      // (Passing round 7) Where the sim took it against his body, from where his body's drawn: in his hands, out in front (choreo.ts catchSpot).
+      ball.position.copy(catchSpot(bodies[b1.holder]!, r.state.agents[b1.holder]!, ball.position));
       ball.quaternion.copy(catchIn.quat);
       ball.scale.setScalar(catchIn.scale);
       catchIn.pos.copy(ball.position);

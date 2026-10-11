@@ -589,8 +589,11 @@ describe('sim: M5.5 feedback round (items 3–7)', () => {
       // Led to where he'll be at full speed: the ball meets him on the run.
       // (Passing round 3: a deep ball a stride short he tracks at full stride
       // and throttles down for late, so an underthrown one is taken at the
-      // pace that meets it, ~70%+ of his top speed; never a stop to wait.)
-      expect(before).toBeGreaterThan(0.7);
+      // pace that meets it, ~70%+ of his top speed; never a stop to wait.
+      // Passing round 7: with the timing calibration, TIMING 0.56, a ball ~2 yd
+      // short of him on these taps he brakes late for and takes at ~65%:
+      // tools/sim/p7stride.ts, seed 317.)
+      expect(before).toBeGreaterThan(0.6);
     }
     expect(seen).toBeGreaterThan(0);
   });

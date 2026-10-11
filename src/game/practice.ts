@@ -761,7 +761,7 @@ if (import.meta.env.DEV) {
     __btbInput: Input,
     __btbClips: async () => {
       const m = await import('./clips');
-      return [...m.CLIPS, ...m.CONCEPTS, ...m.IDENTITY, ...m.PASSING, ...m.PHYSICS, ...m.PASSING2, ...m.PASSING3, ...m.PASSING4, ...m.PASSING5, ...m.PASSING6];
+      return [...m.CLIPS, ...m.CONCEPTS, ...m.IDENTITY, ...m.PASSING, ...m.PHYSICS, ...m.PASSING2, ...m.PASSING3, ...m.PASSING4, ...m.PASSING5, ...m.PASSING6, ...m.PASSING7];
     },
     // The browser half of the determinism check (e2e/practice.spec.ts).
     __btbSimHashes: async () => (await import('./determinism')).simHashes(await loadPracticeRosters()),
