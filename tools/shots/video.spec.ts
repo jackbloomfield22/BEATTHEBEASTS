@@ -104,7 +104,11 @@ const FOLLOW9: Record<string, string> = {
 // not kept, so a 60-fps recording (BTB_VIDEO_FPS=60) of the throw and the camera's move costs half the frames.
 // BTB_PASSING11=1: passing round 11 (docs/passing/PASSING11.md): round ten's recordings (the same clips, cameras and window),
 // into docs/passing/round11/<BTB_PASSING_TAG>.
-const PASSING11 = !!process.env.BTB_PASSING11;
+// BTB_PASSING12=1: passing round 12 (docs/passing/PASSING12.md): the same, into docs/passing/round12/<BTB_PASSING_TAG>; the
+// per-frame log (BTB_DIAG) also has the QB's arms, legs and trunk (the finish's silhouette) and the contested pair's
+// (the bar's visibility), each bone's head in world m.
+const PASSING12 = !!process.env.BTB_PASSING12;
+const PASSING11 = !!process.env.BTB_PASSING11 || PASSING12;
 const PASSING10 = !!process.env.BTB_PASSING10 || PASSING11;
 const WINDOW = !!process.env.BTB_WINDOW;
 const FOLLOW10: Record<string, string> = {
@@ -147,7 +151,7 @@ const FOLLOW: Record<string, string> = {
   'p2-arm-a': 'QB,22,36,8,50,22',
   'p2-arm-b': 'QB,22,36,8,50,22',
 };
-const OUT = PASSING11 ? `docs/passing/round11/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
+const OUT = PASSING12 ? `docs/passing/round12/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING11 ? `docs/passing/round11/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
 const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY || PASSING || PASSING2 || PHYSICS ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
@@ -202,6 +206,8 @@ function diagFrame(n: number) {
   const s = w.__btbPractice.runner.state;
   const i = s.ball.target >= 0 ? s.ball.target : s.carrier;
   const r2 = (v: number) => Math.round(v * 100) / 100;
+  // (Passing round 12) The bones logged for a figure (each bone's head: the joint it turns at).
+  const SK = ['pelvis', 'spine_04', 'neck_01', 'head', 'upperarm_l', 'forearm_l', 'hand_l', 'upperarm_r', 'forearm_r', 'hand_r', 'thigh_l', 'calf_l', 'foot_l', 'thigh_r', 'calf_r', 'foot_r'];
   const out: Record<string, unknown> = { n, t: r2(s.t), phase: s.phase, mode: s.ball.mode, i, arrive: r2(s.ball.arrive), simBall: [r2(s.ball.pos.x), r2(s.ball.pos.y), r2(s.ball.pos.z)] };
   const ball = w.__btbBall?.position;
   if (ball) out.ball = [r2(ball.x), r2(ball.y), r2(ball.z)];
@@ -223,6 +229,8 @@ function diagFrame(n: number) {
       return [r2(v.x), r2(v.y), r2(v.z)];
     };
     out.qb = { hr: qp('hand_r'), fl: qp('foot_l'), fr: qp('foot_r'), pelvis: qp('pelvis'), head: qp('head'), clip: q.animator.transition && [q.animator.transition.name, r2(q.animator.transition.t)], ovl: q.animator.overlayAction && [q.animator.overlayAction.name, r2(q.animator.overlayAction.t)] };
+    // (Passing round 12) The whole figure, for the finish's silhouette from the camera.
+    (out.qb as Record<string, unknown>).sk = Object.fromEntries(SK.map((n) => [n, qp(n)]));
   }
   const b = i >= 0 ? w.__btbBodies?.[i] : undefined;
   if (b) {
@@ -233,6 +241,12 @@ function diagFrame(n: number) {
       return [r2(v.x), r2(v.y), r2(v.z)];
     };
     const a = b.animator;
+    // (Passing round 12) The catcher's and his contest partner's figures, for the box-out bar's visibility.
+    const sk = (body: B) => Object.fromEntries(SK.map((n) => { const bone = body.player.bones.get(n); if (!bone) return [n, null]; const v = bone.getWorldPosition(body.player.root.position.clone()); return [n, [r2(v.x), r2(v.y), r2(v.z)]]; }));
+    out.rsk = sk(b);
+    const pw = (b as unknown as { contest: { with: number } | null }).contest?.with;
+    const pd = pw !== undefined ? w.__btbBodies?.[pw] : undefined;
+    if (pd) Object.assign(out, { pw, psk: sk(pd) });
     Object.assign(out, { trunk: r2((a as unknown as { trunkReach?: number }).trunkReach ?? 0), clip: b.catchClip, trans: a.transition && [a.transition.name, r2(a.transition.t)], ovl: a.overlayAction && [a.overlayAction.name, r2(a.overlayAction.t)], act: a.actionLayer && [a.actionLayer.name, r2(a.actionLayer.w)], hold: a.holdLayer && [a.holdLayer.name, r2(a.holdLayer.w)], root: [r2(b.player.root.position.x), r2(b.player.root.position.z), r2(b.player.root.rotation.y)], fl: p('fingers_01_l'), fr: p('fingers_01_r'), chest: p('spine_04'), head: p('head') });
   }
   return out;
