@@ -473,3 +473,22 @@ export const PASSING8: Clip[] = [
   { id: 'p8-lane-side', title: 'The corner thrown round the rusher, side-arm', seed: 4, play: 'doubles-smash', def: 'cover3', los: 30, user: false, script: () => NEUTRAL },
   { id: 'p8-box', title: 'The box-out: Gronk on Lott', seed: 3, play: 'trips-y-cross', def: 'cover1', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'TE', name: 'Rob Gronkowski', pos: 'TE' } },
 ];
+
+// Passing round 9 (docs/passing/PASSING9.md): the passing game as the owner
+// sees it, from the default broadcast camera at play speed. Ten passes the
+// way a player throws them (the tap on the cue; the curl, screen and the
+// contested ball as the concepts and round eight play them): the quick slant,
+// the out, the dig, the curl, the go, the post, the corner, the crosser, the
+// screen and Gronk's contested ball (tools/sim/p9_clips.ts).
+export const PASSING9: Clip[] = [
+  { id: 'p9-slant', title: 'The quick slant on the cue', seed: 1, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 21 }) },
+  { id: 'p9-out', title: 'The out on the cue', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 84, hot: 'out' }) },
+  { id: 'p9-dig', title: 'The dig on the cue', seed: 5, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 96 }) },
+  { id: 'p9-curl', title: 'The curl against man', seed: 5, play: 'doubles-curls', def: 'cover1', los: 30, script: concept({ icon: 1, at: 60, call: 'possession' }) },
+  { id: 'p9-go', title: 'The go on the cue', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 63 }) },
+  { id: 'p9-post', title: 'The post on the cue', seed: 11, play: 'singleback-pa-post', def: 'cover3', los: 30, script: concept({ icon: 1, at: 93 }) },
+  { id: 'p9-corner', title: 'The corner on the cue', seed: 4, play: 'doubles-smash', def: 'cover3', los: 30, script: concept({ icon: 1, at: 81 }) },
+  { id: 'p9-cross', title: 'The crosser on the cue', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 120 }) },
+  { id: 'p9-screen', title: 'The RB screen', seed: 19, play: 'doubles-rb-screen', def: 'cover3', los: 30, script: concept({ icon: 1, at: 104 }) },
+  { id: 'p9-contested', title: 'The contested ball: Gronk on Lott', seed: 3, play: 'trips-y-cross', def: 'cover1', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'TE', name: 'Rob Gronkowski', pos: 'TE' } },
+];
