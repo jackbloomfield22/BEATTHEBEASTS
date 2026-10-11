@@ -326,14 +326,15 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   const lead = 0.5 * (1 - e);
   const lx = cx + (ball.x - cx) * lead;
   const ly = cy + (ball.y - cy) * lead;
-  // Back off along the line: wide at release, 10.5 yd off the catch at
-  // arrival (round two: the push-in ends ~17% wider than M5.5's 9 yd, 3.4 up,
-  // so the receiver and the nearest defenders are all in frame).
-  const back = 20 - 9.5 * e;
+  // Back off along the line: wide at release, 13 yd off the catch and 4.8 m up at arrival (passing round 9: the long
+  // lens. Round two's 10.5 yd and 3.9 m put the eye among the underneath defenders, so with the zoom framing the catch a
+  // linebacker between the camera and the ball filled a corner of the frame; from further back and higher, on a
+  // tighter lens, the catch is framed as large with the perspective flatter, as a broadcast's long lens has it).
+  const back = 20 - 7 * e;
   const pose: Pose = {
     ex: lx - ux * back,
     ey: ly - uy * back,
-    eh: 8 - 4.1 * e,
+    eh: 8 - 3.2 * e,
     lx,
     ly,
     // Low enough that the catch sits just above center, clear of the catch-call panel.
