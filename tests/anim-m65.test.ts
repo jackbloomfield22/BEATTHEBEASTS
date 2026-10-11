@@ -55,8 +55,9 @@ describe('the catch clip for a look', () => {
   const state = (aim: { x: number; y: number; z: number }, ballPos = { x: 10, y: 0 }): PlayState =>
     ({
       t: 0,
-      agents: [{ pos: { x: 30, y: 0 }, vel: { x: 6, y: 0 }, face: 0 }],
-      ball: { arrive: 1, aim, pos: { ...ballPos, z: 3 } },
+      // (Passing round 8: the clip reads where the sim will take the ball, catchAhead; this ball never gets to him, so it's the aim.)
+      agents: [{ pos: { x: 30, y: 0 }, vel: { x: 6, y: 0 }, face: 0, fx: { height: 74 / 36, a: () => 0.8 }, p: { traits: [] }, mem: {} }],
+      ball: { arrive: 1, aim, pos: { ...ballPos, z: 3 }, vel: { x: 0, y: 0, z: 0 } },
     }) as unknown as PlayState;
 
   it('the call picks the family', () => {

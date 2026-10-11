@@ -144,12 +144,14 @@ export function profile(side: Side, slot: OffSlot | DefSlot, name: string, pos: 
     const yac: number[] = [];
     const sep: number[] = [];
     const plays = slot === 'TE' ? ['ace-te-seam', 'trips-y-cross', 'heavy-pa-te-leak', 'trips-stick'] : ['doubles-slants', 'doubles-quick-outs', 'doubles-curls', 'singleback-pa-post'];
-    // (Three times the reps: a contested ball is one throw in four or five, and at one rep set a pair's catch rate in traffic was ±7 points of noise.
+    // (Six times the reps at X: a contested ball is one throw in four or five, and at one rep set a pair's catch rate in traffic was ±7 points of noise;
+    // passing round 8: at three times Tyreek Hill's edge over Wes Welker after the catch read 0.80–0.98 with every change to the passing dice, on its
+    // 0.8 line, and at nine times (tools/sim/p8_yac.ts) it's 1.05: the yards after the catch ride on a few long runs a man.
     // A tight end twelve times: half his catches come in a crowd and go down
     // within a yard and a half, so his yards after the catch move on a few
     // broken tackles. At three times six reps Gronk's edge over Tony Gonzalez
     // read 0.73 yd, 0.84 at fourteen and 0.99 at twenty-four, ±0.2 of noise.)
-    for (const id of plays) for (const def of covers) for (let k = 0; k < REPS * (slot === 'TE' ? 12 : 3); k++) for (const at of [45, 70, 95]) {
+    for (const id of plays) for (const def of covers) for (let k = 0; k < REPS * (slot === 'TE' ? 12 : 6); k++) for (const at of [45, 70, 95]) {
       const play = PLAYS.find((p) => p.id === id);
       if (!play) continue;
       const s = mk(play, def, k, true);

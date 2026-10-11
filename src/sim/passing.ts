@@ -85,7 +85,7 @@ export function handsAt(a: Agent, dt = 0): V2 {
  * tools/blender/measure_reach.py puts the finger roots 1.00 m ahead of a
  * 1.88-m man's centre at chest height, his shoulders 0.34 m ahead and 1.32 m
  * up; REACH_OUT) and, above his shoulders, an arm's
- * length round them (REACH_ARM). Scaled by his height (the drawn body is the 1.88-m rig scaled).
+ * length round them (REACH_ARM), raised by his jump for a ball over his head. Scaled by his height (the drawn body is the 1.88-m rig scaled).
  * Rounds 6-7 took the ball anywhere within his reach (0.85 yd) of his hands
  * point, up to 1.15 m ahead of him on a slant led a stride: the drawn arms
  * stopped ~0.3 m short and the ball covered the rest on the next frame.
@@ -96,7 +96,9 @@ export function handsAt(a: Agent, dt = 0): V2 {
 export function reachFwd(a: Agent, z: number): number {
   const k = (a.fx.height * YD_M) / RIG_H;
   const zs = (z * YD_M) / k;
-  const up = Math.max(0, zs - REACH_SHOULDER_Z);
+  // A ball over his head he goes up for: his shoulders rise with his jump (reach's top over his standing reach).
+  const jump = Math.max(0, ((reach(a).top - a.fx.height * STAND_REACH) * YD_M) / k);
+  const up = Math.max(0, zs - REACH_SHOULDER_Z - jump);
   const along = up >= REACH_ARM ? REACH_SHOULDER_FWD : REACH_SHOULDER_FWD + Math.sqrt(REACH_ARM * REACH_ARM - up * up);
   return (Math.min(REACH_OUT, along) * k) / YD_M;
 }
@@ -117,6 +119,8 @@ const REACH_SHOULDER_FWD = 0.36;
 const REACH_SHOULDER_Z = 1.32;
 /** Shoulder to a ball in his fingers (m: skeleton.py, upper arm 0.32, forearm 0.28, wrist to the finger roots ~0.095, and the fingers ~0.1). */
 const REACH_ARM = 0.795;
+/** His standing reach as a share of his height (reach().top less the jump: the combine's standing reach, ~1.28 × stature). */
+const STAND_REACH = 1.28;
 /** A ball this low (yd) he lays out for (catchLook's dive): the forward reach is the dive's. */
 const DIVE_Z = 0.8;
 
@@ -1367,6 +1371,8 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
       // walls him off it with his hip and shoulder and bars his arm: the hand fight keeps his hands off the ball.
       const bx = k > mine && dist(o.pos, a.pos) < BOX_R ? boxOut(a, o) : 0;
       w *= 1 - BOX_SHIELD * bx;
+      // ...and the other way: a defender between him and the ball walls the receiver off it (Kam Chancellor on a slot receiver).
+      if (k < mine && dist(o.pos, a.pos) < BOX_R) w = Math.min(1, w * (1 + BOX_SHIELD * boxOut(o, a)));
       if (bx > ((a.mem.boxK as number | undefined) ?? 0)) {
         a.mem.boxK = bx;
         a.mem.boxedBy = o.i;
@@ -1424,6 +1430,9 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
       // 0.6 of the cost at the reaches where it's a ~40% catch); a Body
       // Catcher 10% less often away from his frame.
       ['reach', Math.max(0, off - 0.45) * 0.5 * (1.1 - 0.5 * spect) * (has(a, 'highlight-reel') ? 0.6 : 1) + (off > 0.45 && has(a, 'body-catcher') ? 0.1 : 0)],
+      // Led out in front of him (passing round 8): past his own hands toward the end of what they reach on the run
+      // (reachFwd), arms locked out, it's taken in the fingers with nothing to give with (STRETCH_K).
+      ['stretch', STRETCH_K * stretchOf(a, b.pos) ** 2 * (1.1 - hands)],
       // On him before he's had his eyes on it long enough to get his hands
       // right (findsBallAt: sure hands find it sooner): the ball that's in
       // on him coming out of his break. A good-hands man has ~LOOK_T on a
@@ -1559,6 +1568,28 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
   if (u < pInt + pBreak) return 'deflect';
   return 'miss';
 }
+
+/**
+ * How far out toward the end of his reach a ball is (0..1, passing round 8):
+ * 0 at his own hands (handsReach: where the QB leads him), 1 at the most his
+ * drawn hands get out in front of him on the run (reachFwd). Read-only.
+ */
+export function stretchOf(a: Agent, p: { x: number; y: number; z: number }): number {
+  const h = headingOf(a);
+  const along = (p.x - a.pos.x) * h.x + (p.y - a.pos.y) * h.y;
+  const near = handsReach(a);
+  const far = reachFwd(a, p.z);
+  return far > near + 1e-6 ? Math.max(0, Math.min(1, (along - near) / (far - near))) : 0;
+}
+/**
+ * A ball taken at the end of his reach (stretchOf 1) costs this (× 1.1 −
+ * Catching, by the square of the stretch): ~4.5 points for sure hands
+ * (Catching 95), ~15 for poor ones (60), nothing at his own hands. Ours,
+ * from the broadcast: the fingertip catch on a ball led a stride long is
+ * the one a sure-handed man makes and a poor one bobbles; PFF's drop rates
+ * are highest on the throws a receiver has to extend for.
+ */
+const STRETCH_K = 0.3;
 
 /**
  * The bobble's band below the catch line (resolveCatch): BOB_BASE × (1.2 −
