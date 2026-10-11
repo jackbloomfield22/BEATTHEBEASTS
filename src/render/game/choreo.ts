@@ -285,6 +285,8 @@ const LATE_HANDS = 0.2;
 const CATCH_LOOKAHEAD = 0.9;
 /** Below this (yd, ~0.9 m: the belt) a hands catch is taken with the pinkies together. */
 const LOW_HANDS = 1.0;
+/** Over the shoulder, a ball taken below this (yd, ~1.1 m: just above the belt) drops into the low basket (catch_over_shoulder_low: the hands at 0.84 m, the high basket's at 1.69 m; tools/blender/measure_reach.py). Ours: between them, nearer the low one, where a hand catch turns its pinkies together (LOW_HANDS). */
+const LOW_SHOULDER = 1.2;
 /** GO UP leaps only for a ball arriving at least this high (yd, ~1.6 m: the shoulders). */
 const LEAP_MIN = 1.75;
 /** The drawn ball bends into the hands only when they're this close to its flight (m); farther, a pull would read as a warp. */
@@ -306,8 +308,13 @@ export function catchClip(s: PlayState, i: number, style: CatchStyle): string {
   const T = Math.max(0, ball.arrive - s.t);
   const aimLeft = leftOf(ball.aim.x - (a.pos.x + a.vel.x * T), ball.aim.y - (a.pos.y + a.vel.y * T));
   switch (style) {
-    case 'hands':
-      return ball.aim.z < LOW_HANDS ? 'catch_hands_run_low' : 'catch_hands_run';
+    case 'hands': {
+      // (Passing round 8) Chosen from where the sim will take it (catchAhead), not the aim: a ball led a stride
+      // ahead is taken out at the end of his reach, the whole upper body extended into it (catch_reach_out).
+      const at = catchPoint(s, a);
+      if (at.z < LOW_HANDS) return 'catch_hands_run_low';
+      return at.ahead > REACH_OUT_FROM && at.z < HIGH_OUT ? 'catch_reach_out' : 'catch_hands_run';
+    }
     case 'handsHigh':
       return 'catch_hands_high';
     case 'handsLow':
@@ -328,9 +335,14 @@ export function catchClip(s: PlayState, i: number, style: CatchStyle): string {
       // GO UP on a ball he can't jump for (it arrives below his shoulders):
       // leaping over it would read wrong, so he attacks it with his hands.
       return ball.aim.z >= LEAP_MIN ? 'catch_high_point' : ball.aim.z < LOW_HANDS ? 'catch_hands_run_low' : 'catch_hands_run';
-    case 'overShoulder':
-      // Over the shoulder on the side the ball is dropping in from.
-      return leftOf(ball.pos.x - a.pos.x, ball.pos.y - a.pos.y) ? 'catch_over_shoulder_l' : 'catch_over_shoulder_r';
+    case 'overShoulder': {
+      // Over the shoulder on the side the ball is dropping in from. (Passing round 8) A ball the sim will take below
+      // his belt (catchAhead, not the aim: round seven's falling deep ball is taken where it gets to him) drops into
+      // the low basket at his hip, pinkies together; higher, the hands go up in front of the face mask.
+      const left = leftOf(ball.pos.x - a.pos.x, ball.pos.y - a.pos.y);
+      if (catchPoint(s, a).z < LOW_SHOULDER) return left ? 'catch_over_shoulder_low_l' : 'catch_over_shoulder_low_r';
+      return left ? 'catch_over_shoulder_l' : 'catch_over_shoulder_r';
+    }
     case 'dive':
       return aimLeft ? 'catch_dive_l' : 'catch_dive_r';
     case 'toeTap':
@@ -340,6 +352,26 @@ export function catchClip(s: PlayState, i: number, style: CatchStyle): string {
       return aimLeft ? 'catch_one_hand_l' : 'catch_one_hand_r';
   }
 }
+
+/**
+ * Where the sim will take the ball against him (passing round 8): out in
+ * front of where he'll be (m, along his run) and its height (yd), from the
+ * tick it gets to his hands (sim/passing.ts catchAhead), or the throw's aim
+ * when it never does.
+ */
+export function catchPoint(s: PlayState, a: Agent): { ahead: number; z: number } {
+  const c = catchAhead(s, a);
+  const dt = c ? c.dt : Math.max(0, s.ball.arrive - s.t);
+  const p = c ? c.pos : s.ball.aim;
+  const sp = Math.hypot(a.vel.x, a.vel.y);
+  const hx = sp > 1 ? a.vel.x / sp : Math.cos(a.face);
+  const hy = sp > 1 ? a.vel.y / sp : Math.sin(a.face);
+  return { ahead: ((p.x - (a.pos.x + a.vel.x * dt)) * hx + (p.y - (a.pos.y + a.vel.y * dt)) * hy) * YARD, z: p.z };
+}
+/** A chest-high ball taken further than this (m) ahead of his centre is the forward reach: the chest catch's straight arms put the finger roots 0.67 m ahead (tools/blender/measure_reach.py), the reach out 0.96. Ours: between them. */
+const REACH_OUT_FROM = 0.78;
+/** ...below this (yd, ~1.6 m: the shoulders); higher, the hands go up over the face mask instead. */
+const HIGH_OUT = 1.75;
 
 /** Seconds (drawn time) until the sim calls the catch for him: the tick the ball gets to his hands (sim/passing.ts catchAhead), or its arrival at its aim when it never does. */
 function simCatchIn(s: PlayState, a: Agent, simT: number): number {
@@ -478,7 +510,7 @@ const HOLD_EARLY = 0.1;
 
 /** The run-speed catches whose hands go to the ball (the full-body ones are keyed to their own reach). */
 // (Passing round 6: and the high point and the toe tap, full-body clips keyed to a fixed reach: on the recorded toe tap the ball came in 0.4 m from where the clip held the hands.)
-const REACH_CLIPS = new Set(['catch_hands_run', 'catch_hands_run_low', 'catch_hands_high', 'catch_scoop', 'catch_reach_l', 'catch_reach_r', 'catch_contested_l', 'catch_contested_r', 'catch_over_shoulder_l', 'catch_over_shoulder_r', 'catch_one_hand_l', 'catch_one_hand_r', 'catch_high_point', 'catch_toe_tap_l', 'catch_toe_tap_r']);
+const REACH_CLIPS = new Set(['catch_hands_run', 'catch_reach_out', 'catch_hands_run_low', 'catch_hands_high', 'catch_scoop', 'catch_reach_l', 'catch_reach_r', 'catch_contested_l', 'catch_contested_r', 'catch_over_shoulder_l', 'catch_over_shoulder_r', 'catch_over_shoulder_low_l', 'catch_over_shoulder_low_r', 'catch_one_hand_l', 'catch_one_hand_r', 'catch_high_point', 'catch_toe_tap_l', 'catch_toe_tap_r']);
 /** The hands come to the ball over this long (s of clip) before the secure frame: the late hands. */
 const REACH_IN = 0.2;
 /** How far the hands can go for it (m from between the shoulders) at full weight, and past which they don't chase it. Ours: a long arm's reach. */
@@ -989,7 +1021,9 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
           const want0 = keep ? a.catchClip! : clipOr(a, catchClip(s, who[0]!, LOOK_STYLE[look]));
           // (Passing round 6) The same catch on the other side (over the other shoulder, the other sideline) is the one already drawn: the ball is in
           // his hands out in front of him now, so the side read off it at the catch can differ from the one read as it came; restarting it was a pop.
-          const want = drawing && a.catchClip!.replace(/_[lr]$/, '') === want0.replace(/_[lr]$/, '') ? a.catchClip! : want0;
+          // (Passing round 8: and over the shoulder high or low is the one already drawn, chosen from where the sim would take it.)
+          const family = (c: string) => c.replace(/_[lr]$/, '').replace(/_low$/, '');
+          const want = drawing && family(a.catchClip!) === family(want0) ? a.catchClip! : want0;
           const committed = drawing && CATCH_FULL.has(a.catchClip!);
           if (a.catchClip !== want && !committed) startCatch(a, want, eventAt(a, want, 'secure') ?? SECURE);
         } else if (!a.catchClip) a.animator.playOverlay('ovl_catch', { t0: SECURE });

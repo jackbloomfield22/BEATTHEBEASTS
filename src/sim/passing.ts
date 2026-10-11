@@ -76,6 +76,52 @@ export function handsAt(a: Agent, dt = 0): V2 {
   return { x: a.pos.x + a.vel.x * dt + h.x * k, y: a.pos.y + a.vel.y * dt + h.y * k };
 }
 
+/**
+ * How far out in front of his centre (yd, along his run) his drawn hands can
+ * take a ball at height `z` (yd) (passing round 8, docs/passing/PASSING8.md):
+ * the forward-reach catch's hands (render catch_reach_out: the trunk folded
+ * forward over the run so the shoulders go after the hands, the arms long;
+ * tools/blender/measure_reach.py puts the finger roots, where the ball is
+ * held, 0.96 m ahead of a 1.88-m man's centre at chest height, his
+ * shoulders 0.30 m ahead and 1.36 m up) and, above his shoulders, an arm's
+ * length (shoulder to finger roots, skeleton.py: 0.32 + 0.28 + 0.095 m)
+ * round them. Scaled by his height (the drawn body is the 1.88-m rig scaled).
+ * Rounds 6-7 took the ball anywhere within his reach (0.85 yd) of his hands
+ * point, up to 1.15 m ahead of him on a slant led a stride: the drawn arms
+ * stopped ~0.3 m short and the ball covered the rest on the next frame.
+ * Below his belt the trunk folds lower with the hands (the low basket, the
+ * scoop), so a low ball keeps the chest-height reach; a ball he has to lay
+ * out for (DIVE_Z) is the dive's, which reaches further.
+ */
+export function reachFwd(a: Agent, z: number): number {
+  const k = (a.fx.height * YD_M) / RIG_H;
+  const zs = (z * YD_M) / k;
+  const up = Math.max(0, zs - REACH_SHOULDER_Z);
+  const along = up >= REACH_ARM ? REACH_SHOULDER_FWD : REACH_SHOULDER_FWD + Math.sqrt(REACH_ARM * REACH_ARM - up * up);
+  return (Math.min(REACH_OUT, along) * k) / YD_M;
+}
+/** Metres in a yard. */
+const YD_M = 0.9144;
+/** The rig's height (m: tools/blender/lib/skeleton.py HEIGHT). */
+const RIG_H = 1.88;
+/** The forward-reach catch at chest height: the finger roots this far (m) ahead of his centre (measure_reach.py catch_reach_out). */
+const REACH_OUT = 0.96;
+/** ...with the shoulders this far ahead (m) and this high (m) (measure_reach.py). */
+const REACH_SHOULDER_FWD = 0.3;
+const REACH_SHOULDER_Z = 1.36;
+/** Shoulder to finger roots (m: skeleton.py, upper arm 0.32, forearm 0.28, wrist to the finger roots ~0.095). */
+const REACH_ARM = 0.695;
+/** A ball this low (yd) he lays out for (catchLook's dive): the forward reach is the dive's. */
+const DIVE_Z = 0.8;
+
+/** Is the ball at `p` out of his drawn reach ahead of him (passing round 8: reachFwd)? Read-only. */
+function beyondReach(a: Agent, p: { x: number; y: number; z: number }, dt = 0): boolean {
+  if (p.z < DIVE_Z) return false;
+  const h = headingOf(a);
+  const along = (p.x - (a.pos.x + a.vel.x * dt)) * h.x + (p.y - (a.pos.y + a.vel.y * dt)) * h.y;
+  return along > reachFwd(a, p.z);
+}
+
 /** Release height above the QB's feet, yd (the ball leaves over the helmet). */
 const RELEASE_Z = 2.15;
 /** yd/s per mph. */
@@ -1554,6 +1600,8 @@ export function stepAir(s: PlayState): number {
       const ex = b.pos.x - h.x;
       const ey = b.pos.y - h.y;
       dh = Math.min(dh + r - bodyReach(a, r), Math.sqrt(ex * ex + ey * ey));
+      // ...but no further out in front of him than his drawn hands get (passing round 8): he's running onto it, so it comes to them.
+      if (beyondReach(a, b.pos)) continue;
     }
     // Defenders only play the ball once they've read it (mem.onBall).
     if (a.side === 'def' && !a.mem.onBall && dh > 0.55) continue;
@@ -1612,7 +1660,7 @@ export function comingIn(s: PlayState, a: Agent): boolean {
   const hx = p.x - h.x;
   const hy = p.y - h.y;
   const br = bodyReach(a, r);
-  return p.z >= 0.15 && p.z <= top && (hx * hx + hy * hy < r * r || cx * cx + cy * cy < br * br);
+  return p.z >= 0.15 && p.z <= top && !beyondReach(a, p, TICK) && (hx * hx + hy * hy < r * r || cx * cx + cy * cy < br * br);
 }
 /**
  * The man it's thrown to reaches round his hands out in front of him (his
@@ -1685,6 +1733,7 @@ export function catchAhead(s: PlayState, a: Agent, horizon = 1.2): { dt: number;
     const ey = p.y - g.pos.y;
     const br = bodyReach(a, r);
     if (dx * dx + dy * dy >= r * r && ex * ex + ey * ey >= br * br) continue;
+    if (beyondReach(g, p)) continue;
     if (comingIn(look, g)) continue;
     return { dt: k * TICK, pos: { x: p.x, y: p.y, z: p.z } };
   }
