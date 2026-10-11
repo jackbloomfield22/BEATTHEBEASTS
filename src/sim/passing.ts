@@ -1305,6 +1305,13 @@ export function reach(a: Agent): { r: number; top: number } {
   return { r: 0.75 + a.fx.height * 0.05, top: a.fx.height * 1.28 + jump + tall };
 }
 
+/**
+ * How long the catch takes to secure after the ball gets to his hands (s): the catch clips' secure and high-point
+ * frames come 0.13–0.2 s after the catch (play.ts atHands), the NFL's "control" before the tuck. A defender who gets
+ * to him inside it hits him with the ball not yet his. Ours, from the clips.
+ */
+const SECURE_T = 0.2;
+
 /** The biggest single catch cost. */
 const worstOf = (costs: readonly [CatchHard, number][]): number => costs.reduce((m, c) => Math.max(m, c[1]), 0);
 
@@ -1408,9 +1415,14 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
     for (const o of s.agents) {
       if (o.side === a.side || o.down) continue;
       const k = dist(o.pos, a.pos);
-      if (k > 1.1) continue;
       const closing = ((o.vel.x - a.vel.x) * (a.pos.x - o.pos.x) + (o.vel.y - a.vel.y) * (a.pos.y - o.pos.y)) / Math.max(1e-6, k);
-      const h = Math.min(1, (1.1 - k) / 0.6) * (closing > 2 ? 1 : 0.4);
+      // (Passing round 11) Where he'll be as the ball is secured, not only as it touches the hands: a man closing on him
+      // hits him while he's still bringing it in (the safety arriving with the ball). Round ten's hit counted only a man
+      // already within 1.1 yd, so an open ball with a defender a stride and a half away and closing at full speed was
+      // caught as often as one with nobody near (tools/sim/p11_open.ts: 94% against 95%).
+      const ke = k - Math.max(0, closing) * SECURE_T;
+      if (ke > 1.1) continue;
+      const h = Math.min(1, (1.1 - Math.max(0, ke)) / 0.6) * (closing > 2 ? 1 : 0.4);
       if (h > hit) {
         hit = h;
         hitBy = o;
