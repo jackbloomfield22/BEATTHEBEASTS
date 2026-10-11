@@ -356,8 +356,11 @@ def qb_drop(steps_n: int) -> Clip:
 # a quick slant from the gun or three steps). Measured on the rig (scratch knees.py, PASSING13.md): the stride lands on
 # a ~54 deg front knee, 25-34 at the release (the M4 throw, the quick and the long), the hips ~1.5 cm under his
 # standing height (round four: 59 and 9 cm); the hips rise ~4 cm from the stride to the release over 0.13 s.
+# (The base throw's own follow-through, seen only when he's hit as he throws and has no finish, goes back down to
+# -0.08: on the long stride the back foot is still planted 0.15 s past the release, and higher hips over-reached it,
+# the foot sliding 1.7 cm.)
 THROW_UP_R4 = (-0.10, -0.12, -0.11, -0.12)
-THROW_UP = (-0.085, -0.06, -0.035, -0.05)
+THROW_UP = (-0.085, -0.06, -0.035, -0.08)
 
 
 def throw_rise(k: int, up=None) -> float:
