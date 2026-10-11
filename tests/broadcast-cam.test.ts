@@ -10,6 +10,8 @@ import { worldX, worldZ } from '@/game/coords';
 // Passing round 11 (docs/passing/PASSING11.md): the broadcast camera on a pass, stepped at 60 fps as a recording steps
 // it (tools/sim/p11_cam.ts is the same measure, every recorded throw): the move starts with the windup, the slant's pan
 // peaks under 35°/s (round ten's ~53), the QB is in the frame as he lets it go, and the catch is framed as tight.
+// Passing round 12 (docs/passing/PASSING12.md): the slant's zoom under 45°/s of lens (round eleven's 67), the QB in the
+// frame longer after the release (0.32 s, round eleven's 0.25) and the receiver at least as large at the catch.
 const snap = JSON.parse(readFileSync('data/ratings/ratings.v1.json', 'utf8')) as SnapshotLike;
 const rosters = practiceRosters(snap);
 const W = 960;
@@ -37,6 +39,10 @@ function measure(id: string) {
   let movedAtRelease = 0;
   let dir0: THREE.Vector3 | null = null;
   const pans: number[] = [];
+  const zooms: number[] = [];
+  let fov0: number | null = null;
+  let qbIn = -1;
+  let qbOut = false;
   let qbAtRelease = { h: 0, in: false };
   let recAtCatch = 0;
   for (let k = 0; k < 900 && !s.result; k++) {
@@ -55,6 +61,12 @@ function measure(id: string) {
     const dir = cam.getWorldDirection(new THREE.Vector3());
     if (windup >= 0 && !dir0) dir0 = dir.clone();
     if (prev && windup >= 0) pans.push((dir.angleTo(prev) * 180) / Math.PI / (1 / 60));
+    if (fov0 !== null && windup >= 0) zooms.push(Math.abs(p[6]! - fov0) * 60);
+    fov0 = p[6]!;
+    if (release >= 0 && !qbOut) {
+      if (drawn(cur.agents[s.qb]!.x, cur.agents[s.qb]!.y).in) qbIn = s.t - release;
+      else qbOut = true;
+    }
     prev = dir;
     if (release < 0 && s.ball.mode === 'air') {
       release = s.t;
@@ -69,8 +81,8 @@ function measure(id: string) {
     stepPlay(s, c.script(s));
     capture(s, cur);
   }
-  const m3 = pans.map((_, i) => (pans[Math.max(0, i - 1)]! + pans[i]! + pans[Math.min(pans.length - 1, i + 1)]!) / 3);
-  return { windup, release, peakPan: Math.max(...m3), qbAtRelease, recAtCatch, movedAtRelease };
+  const m3 = (xs: number[]) => xs.map((_, i) => (xs[Math.max(0, i - 1)]! + xs[i]! + xs[Math.min(xs.length - 1, i + 1)]!) / 3);
+  return { windup, release, peakPan: Math.max(...m3(pans)), peakZoom: Math.max(...m3(zooms)), qbAtRelease, qbIn, recAtCatch, movedAtRelease };
 }
 
 describe('the broadcast camera on a pass (passing round 11)', () => {
@@ -81,15 +93,21 @@ describe('the broadcast camera on a pass (passing round 11)', () => {
     // Moving by the release (round ten held still until the ball was out).
     expect(m.movedAtRelease).toBeGreaterThan(0.5);
     expect(m.peakPan).toBeLessThan(35);
+    // (Round 12) The lens: 44°/s on this measure (round eleven's 67).
+    expect(m.peakZoom).toBeLessThan(45.5);
     expect(m.qbAtRelease.in).toBe(true);
-    // The push on the passer: ~1.3x round ten's 77 px.
+    // The push on the passer: ~1.2x round ten's 77 px (94 px).
     expect(m.qbAtRelease.h).toBeGreaterThan(90);
-    // As large at the catch as rounds nine and ten (137 px on this measure).
-    expect(m.recAtCatch).toBeGreaterThan(130);
+    // (Round 12) In the frame through the flick's finish: to 0.32 s after the release (round eleven's 0.25).
+    expect(m.qbIn).toBeGreaterThan(0.3);
+    // At least as large at the catch as round eleven (140 px on this measure; 148 now).
+    expect(m.recAtCatch).toBeGreaterThan(140);
   });
   it("the out: the pan under round ten's (52°/s)", () => {
     const m = measure('p9-out');
     expect(m.peakPan).toBeLessThan(42);
+    expect(m.peakZoom).toBeLessThan(45.5);
+    expect(m.qbIn).toBeGreaterThan(0.4);
     expect(m.qbAtRelease.in).toBe(true);
     expect(m.recAtCatch).toBeGreaterThan(125);
   });

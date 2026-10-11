@@ -285,7 +285,11 @@ function boxPost(b: Body): { turn: number; shove: number } | null {
   if (t === null || sec === null || tuck === null) return null;
   const post = sec - POST_LEAD;
   const turn = THREE.MathUtils.smoothstep(t, post, post + BOX_TURN_IN) * (1 - THREE.MathUtils.smoothstep(t, tuck, tuck + 0.3));
-  const shove = THREE.MathUtils.smoothstep(t, post + 0.08, sec - 0.1) * (1 - THREE.MathUtils.smoothstep(t, sec + 0.15, sec + 0.5));
+  // (Passing round 12: the shove lands with the bar, over BOX_SHOVE_IN from just after the post, where round ten's built
+  // up over the whole post to 0.1 s before the ball. Measured in the game's per-frame log from the broadcast camera, the
+  // man stayed behind the receiver's near shoulder 0.36-0.4 m off him for the post's first 0.25 s, the two bodies one
+  // shape on screen and the bar between them unseen; held off from the bar's contact, the gap it opens is the post-up.)
+  const shove = THREE.MathUtils.smoothstep(t, post + 0.05, post + 0.05 + BOX_SHOVE_IN) * (1 - THREE.MathUtils.smoothstep(t, sec + 0.15, sec + 0.5));
   return { turn, shove };
 }
 /** The box clip's post (its bar key) this long before its secure frame (s: actions_p8.py box_out, ts − 0.58). */
@@ -299,6 +303,8 @@ const BOX_BEHIND = (125 * Math.PI) / 180;
 const BOX_TURN = (60 * Math.PI) / 180;
 const wrapAngle = (x: number) => Math.atan2(Math.sin(x), Math.cos(x));
 const BOX_TURN_IN = 0.25;
+/** (Passing round 12) The shove comes in over this long (s) from the bar's contact: a hard bar knocks him off in a beat. Ours. */
+const BOX_SHOVE_IN = 0.22;
 
 function lyingClip(b: Body, name: string, t0 = 0): void {
   b.animator.play(name, { now: true, t0 });
@@ -606,6 +612,8 @@ const QUICK_HANG = 0.78;
 const DEEP_AIR = 25;
 /** A QB moving faster than this (m/s) after the release runs out of his finish. Ours: a drift settling is slower. */
 const FINISH_RUN = 2;
+/** (Passing round 12) Slower than this (m/s) as the ball leaves a throw on the move, he's planted: the finish takes his legs too. Ours: a set QB's drift is under ~0.5. */
+const FINISH_PLANTED = 0.8;
 /** A rusher this close (the sim's pressure, 0..1: a free man within ~2.4 yd) puts him on his back foot. Ours. */
 const FADE_PRESSURE = 0.6;
 /** Held past his release (the player choosing the touch), the arm waits this far (s of clip) short of the release frame: cocked, the ball behind the ear. Ours: a frame at 30 fps. */
@@ -1511,7 +1519,16 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     const name = fin ? `${clip}_fin_${fin}` : clip;
     const now = fin && anim.continueAs(clip, name, THROW_MASK) ? name : clip;
     if (tr && tr.name === clip) anim.retime(now, { rate: 1 });
-    else anim.retimeOverlay(now, 1);
+    else {
+      anim.retimeOverlay(now, 1);
+      // (Passing round 12) A throw begun on the move (the quick game's throw from the gun, wound up in the drop) is an
+      // upper-body overlay, and its legs were the drop's: planted by the release, he stood still through the finish, the
+      // back foot never coming through. Planted as it leaves his hand, the finish takes the legs too, from the release
+      // frame (the drop's last stance and the throw's are within ~0.1 m a foot: tools/blender, the back foot lifting at
+      // once), under the overlay that keeps the arms where they are.
+      const o = anim.overlayAction;
+      if (fin && now === name && o && o.name === name && sp * YARD < FINISH_PLANTED && anim.lib.meta[name]?.kind === 'transition') anim.play(name, { now: true, t0: o.t });
+    }
   }
   // A QB who moves off before his finish is through runs out of it (the finish is keyed standing).
   if (i === s.qb && !w && tr && !tr.done && tr.name.includes('_fin_') && sp * YARD >= FINISH_RUN) anim.release();

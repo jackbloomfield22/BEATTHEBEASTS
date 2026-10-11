@@ -124,6 +124,20 @@ def over_shoulder_low(side: str) -> Clip:
     return Clip(f"catch_over_shoulder_low_{side}", "overlay", T, lambda t: keyed(keys, t), mask=MASK, events=events(ts, tt))
 
 
+# The bar arm's hand and elbow pole in the post and the fight keys (m: x his left, y behind +, z up; authored with the man
+# on his left). Passing round 12 (docs/passing/PASSING12.md): round eleven's bar (the hand 1.50 m up and 0.14 m behind,
+# the elbow pole 1.80 m up) was measured from the broadcast camera in the game's own per-frame log: the man ends the post
+# behind the receiver's near shoulder (132-153 deg off his facing, 0.4-0.7 m off once the bar has shoved him), and the
+# hand, 1.57 m up and level with the receiver's hip line, was over the top of the man's shoulder with the elbow raised
+# 1.68 m up: from behind and above it read as a raised arm, the forearm on him hidden by his near shoulder and the
+# receiver's own back on 12 of the post-up's 23 frames. A forearm bar reads from behind as a level arm in the gap between
+# the two bodies, planted on the man's near shoulder and upper arm (~1.35 m for a defensive back): the elbow out wide at
+# his own shoulder height, the forearm folding back onto the man, so the arm crosses the gap the shove opens (0.3-0.4 m:
+# ~10-15 px at broadcast distance) in profile. Ours, from the broadcast picture of a tight end walling a safety off.
+BAR_HAND, BAR_POLE = (0.52, 0.22, 1.26), (1.0, -0.10, 1.34)
+FIGHT_HAND, FIGHT_POLE = (0.58, 0.26, 1.24), (1.05, -0.10, 1.32)
+
+
 def box_out(side: str) -> Clip:
     """The box-out on a contested ball, the defender on his left (authored on
     the left; overlay over the run, so the legs keep driving). Posted up
@@ -168,9 +182,10 @@ def box_out(side: str) -> Clip:
     # was never seen. Now the elbow is up above his own shoulder line and the forearm comes down over the top of the man's
     # pad and into his upper chest (~1.5 m: the arm-over a receiver uses to keep a defender's arm from the high point), so
     # from behind and above the arm shows over the man's shoulder.)
-    bar = posted(run_upper({"l": (0.52, 0.14, 1.50), "r": (-0.10, -0.40, 1.42)}, {**GRIP, **SPREAD, "hand_l": (-20, 0, 40), "hand_r": (-30, 0, 0)}, {"l": (0.64, 0.42, 1.80), "r": (-0.45, 0.05, 1.05)}, (0, 0, 0)), 1.0)
+    # (Passing round 12: it showed as a raised elbow over him; now level, on his near shoulder: BAR_HAND above.)
+    bar = posted(run_upper({"l": BAR_HAND, "r": (-0.10, -0.40, 1.42)}, {**GRIP, **SPREAD, "hand_l": (-20, 0, 40), "hand_r": (-30, 0, 0)}, {"l": BAR_POLE, "r": (-0.45, 0.05, 1.05)}, (0, 0, 0)), 1.0)
     # The fight: the bar driven a hand further into him as the ball comes (the hip and shoulder still on him).
-    fight = posted(run_upper({"l": (0.58, 0.18, 1.47), "r": (-0.08, -0.40, 1.46)}, {**GRIP, **SPREAD, "hand_l": (-25, 0, 45), "hand_r": (-30, 0, 0)}, {"l": (0.68, 0.46, 1.82), "r": (-0.45, 0.05, 1.08)}, (1, 1, 0)), 1.15)
+    fight = posted(run_upper({"l": FIGHT_HAND, "r": (-0.08, -0.40, 1.46)}, {**GRIP, **SPREAD, "hand_l": (-25, 0, 45), "hand_r": (-30, 0, 0)}, {"l": FIGHT_POLE, "r": (-0.45, 0.05, 1.08)}, (1, 1, 0)), 1.15)
     # Late hands: both up together over the face mask on the bar's side, the chest still on him.
     reach = posted(run_upper({"l": (0.10, -0.40, 1.98), "r": (-0.02, -0.42, 1.96)}, {**SPREAD, "hand_l": (-55, 0, 0), "hand_r": (-55, 0, 0)}, {"l": (0.55, -0.05, 1.50), "r": (-0.50, -0.05, 1.48)}, (-6, -5, -4)), 0.85)
     snatch = posted(run_upper({"l": (0.08, -0.36, 1.86), "r": (-0.02, -0.38, 1.84)}, {**GRIP, "hand_l": (-45, 0, 0), "hand_r": (-45, 0, 0)}, {"l": (0.45, 0.0, 1.40), "r": (-0.42, 0.0, 1.38)}, (-3, -3, -2)), 0.85)
