@@ -377,6 +377,33 @@ export class PlayerAnimator {
   }
 
   /**
+   * Carry the throw playing now on as another clip that is the same pose for
+   * pose up to where it is (passing round 10: a throw's finish, keyed from its
+   * release frame on: tools/blender/lib/actions_p10.py). The transition (or
+   * the throw-on-the-run overlay, over `mask`) keeps its time, rate and
+   * weight, so the swap never shows. False when `base` isn't playing or
+   * `name` isn't in the library.
+   */
+  continueAs(base: string, name: string, mask?: string[]): boolean {
+    const m = this.lib.meta[name];
+    if (!m) return false;
+    const tr = this.trans;
+    if (tr && !tr.done && tr.name === base && m.kind === 'transition') {
+      tr.name = name;
+      return true;
+    }
+    const o = this.actionLayer;
+    if (o && !o.out && o.name === base) {
+      const n = this.overlay(name, { rate: o.rate, t0: o.t, mask });
+      if (!n) return false;
+      n.w = o.w;
+      this.actionLayer = n;
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * The one-shot `base`'s depth (passing round 9: render/game/choreo.ts
    * reachDepth): `name` laid over it at weight `w` (0..1), sampled at base's
    * time plus `shift` (s), over base's mask, faded with it. A forward reach
@@ -658,7 +685,9 @@ export class PlayerAnimator {
       // At the throw's own time, faded with it: the transition's weight, or the throw-on-the-run overlay's.
       const tr2 = this.trans;
       const al = this.actionLayer;
-      const at = tr2 && tr2.name === sl.base ? { t: tr2.t, w: tr2.w } : al && al.name === sl.base ? { t: al.t, w: al.w } : null;
+      // (A throw carried on into its finish, continueAs, is still the slot's throw: passing round 10.)
+      const fin = sl.base + '_fin_';
+      const at = tr2 && (tr2.name === sl.base || tr2.name.startsWith(fin)) ? { t: tr2.t, w: tr2.w } : al && (al.name === sl.base || al.name.startsWith(fin)) ? { t: al.t, w: al.w } : null;
       if (at) {
         sl.o.t = at.t;
         this.applyOverlay(sl.o, sl.w * at.w);

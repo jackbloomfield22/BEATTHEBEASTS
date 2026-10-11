@@ -437,7 +437,7 @@ export function GameScene() {
       const sp = Math.hypot(tmp.vx, tmp.vy);
       const along = tmp.vx * Math.cos(face) + tmp.vy * Math.sin(face);
       const d = drive(b, i, s, simT, sp > 0.05 ? along : 0, sp);
-      const heading = d.faceVelocity ? Math.atan2(tmp.vy, tmp.vx) : face;
+      const heading = (d.faceVelocity ? Math.atan2(tmp.vy, tmp.vx) : face) + (d.turn ?? 0);
       // The drawn facing turns toward the sim's: eased, and no faster than a
       // quick pivot (a back turning out of his pedal turns his hips, he
       // doesn't flip in a frame). The sim's facing already turns smoothly;
@@ -498,6 +498,8 @@ export function GameScene() {
       cb.scale = b.player.shape.scale;
       cb.free = !b.fallen && !b.lie && !b.ragdoll.active && !s.agents[i]!.down;
       cb.box = b.box;
+      // (Passing round 10) A receiver posting up: how hard his bar is moving the man off his spot (choreo.ts boxPost).
+      cb.shove = b.post?.shove ?? 0;
     });
     contactBodies.length = bodies.length;
     contact.update(contactBodies, contactPairs, animDt);
