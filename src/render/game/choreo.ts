@@ -95,6 +95,8 @@ export interface CatchGrip {
   l: THREE.Vector3;
   r: THREE.Vector3;
   w: number;
+  /** The hands have been put on the ball where the sim took it (passing round 7: catchSpot), once, on the first frame drawn after the catch. */
+  met?: boolean;
 }
 
 /** Upper body, for a throw on the run (the legs keep running). */
@@ -520,17 +522,21 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
     // clip's own secure and tuck over GIVE_T, instead of dropping to the
     // clip's pose the frame the sim calls it caught (round four's in-game
     // log: the hands 0.4 m off the ball one frame, on the belt the next).
-    if (!g || g.w <= 0 || ball.mode !== 'held' || ball.holder !== i) return;
+    if (!g || (g.w <= 0 && g.met !== false) || ball.mode !== 'held' || ball.holder !== i) return;
     // (Passing round 6) The catch frame (the last tick in the air drawn into the catch): the hands go onto
     // the ball where it's drawn on its flight, and hold there in his frame through the give.
-    if (drawn) {
+    // (Passing round 7: also when the frame drawn after the catch is already past the catch tick, as at 30 fps
+    // when the sim takes it on the first of the frame's two ticks: once, where the sim took it.)
+    const spot = drawn ?? (g.met ? null : catchSpot(b, s.agents[i]!, null));
+    if (spot) {
       _bd.set(worldX(ball.vel.y) - worldX(0), 0, worldZ(ball.vel.x) - worldZ(0));
       if (_bd.lengthSq() < 1e-6) _bd.set(0, 0, 1);
       _bd.normalize();
-      handsOn(b, drawn, _bd, one);
+      handsOn(b, drawn ? catchSpot(b, s.agents[i]!, drawn) : spot, _bd, one);
       root.worldToLocal(g.l.copy(_hl));
       root.worldToLocal(g.r.copy(_hr));
       g.w = 1;
+      g.met = true;
     }
     const k = g.w * (1 - THREE.MathUtils.smoothstep(t, secure, secure + GIVE_T));
     if (k <= 0) return;
@@ -561,9 +567,10 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
     if (g) g.w = 0;
     return;
   }
-  // (Passing round 6) Over the last tenth of a second before the secure frame the hands track the ball
-  // where it's drawn now, so on the catch frame they're on it, not on a prediction of it.
-  if (drawn) _bp.lerp(drawn, THREE.MathUtils.smoothstep(t, secure - 0.1, secure));
+  // (Passing round 6 tracked the ball where it was drawn over the last tenth of a second. Passing round 7: on a
+  // crosser or a slant the ball comes in from his side, ~13 yd/s across him, so a tenth of a second out it's a yard
+  // to his side and the hands went out there after it: the catch was drawn beside him. They stay on the sim's
+  // catch, out in front, and the catch frame puts the ball there: catchSpot.)
   // Either side of it across its line, a little behind it (the hands meet it, the ball comes into them).
   _bd.set(worldX(ball.vel.y) - worldX(0), 0, worldZ(ball.vel.x) - worldZ(0));
   if (_bd.lengthSq() < 1e-6) _bd.set(0, 0, 1);
@@ -577,6 +584,28 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
   }
   b.animator.reachHands(one === 'r' ? null : _hl, w, one === 'l' ? null : _hr, w);
 }
+/**
+ * Where the ball is drawn on the catch frame (passing round 7): where it was
+ * against his body on the tick the sim took it (sim/play.ts atHands,
+ * mem.catchRel), from where his body is drawn. The frame drawn across the
+ * catch tick is interpolated between the last tick in the air and the catch
+ * (at 30 fps it's the tick before), and on a ball coming in from his side
+ * that's 0.2 m further out to the side than where it's caught: round six drew
+ * the crosser caught 0.6 m beside him and 0.2 m in front, where the sim took
+ * it 0.5 m in front and 0.2 m to the side (tools/sim/p7_ahead.ts, the diag log).
+ * Falls back to `drawn` (the interpolated ball) with no catch on record.
+ */
+const _cs = new THREE.Vector3();
+export function catchSpot(b: Body, a: Agent, drawn: THREE.Vector3): THREE.Vector3;
+export function catchSpot(b: Body, a: Agent, drawn: THREE.Vector3 | null): THREE.Vector3 | null;
+export function catchSpot(b: Body, a: Agent, drawn: THREE.Vector3 | null): THREE.Vector3 | null {
+  const rel = a.mem.catchRel as { x: number; y: number } | null | undefined;
+  const z = a.mem.catchRelZ as number | undefined;
+  if (!rel || typeof z !== 'number' || typeof a.mem.caughtAt !== 'number') return drawn;
+  const root = b.player.root.position;
+  return _cs.set(root.x + worldX(rel.y), worldY(z), root.z + worldZ(rel.x) - worldZ(0));
+}
+
 /** The hand targets (_hl, _hr, world) on a ball at `at` flying along `dir` (horizontal, unit): either side of it across its line, a little behind it; one hand on it for a one-hander. */
 function handsOn(b: Body, at: THREE.Vector3, dir: THREE.Vector3, one: 'l' | 'r' | null): void {
   const bones = b.player.bones;
@@ -1299,6 +1328,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
       g.style = style;
       g.pluck = pluck;
       g.w = 0;
+      g.met = false;
       b.grip = g;
       startCatch(b, clip, Math.max(0, lead - left));
     }

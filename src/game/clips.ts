@@ -257,7 +257,8 @@ export const IDENTITY: Clip[] = [
   ...pair('elusive', 'Make a man miss', { seed: 10, play: 'iform-power', def: 'cover2', los: 30, user: false, script: () => NEUTRAL }, { off: 'RB', name: 'Barry Sanders', pos: 'RB' }, { off: 'RB', name: 'Jerome Bettis', pos: 'RB' }),
   // Accuracy: the curl against Cover 3, thrown the same beat. Montana's is 0.2 yd off and caught for 10; Namath's is 1.9 off and falls incomplete (seed 16 → 60 for the second slant pass, the same play, call and throw).
   // (Cover 3 seed 60 → Cover 2 seed 16 for passing round 3, tools/sim/findidentity.ts --only=accuracy: the curl comes back to the ball now; Montana's is 0.4 yd off for 12.7, Namath's 1.7 off and incomplete.)
-  ...pair('accuracy', 'On the hands', { seed: 16, play: 'doubles-curls', def: 'cover2', los: 30, script: concept({ icon: 1, at: 60 }) }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }, { off: 'QB', name: 'Joe Namath', pos: 'QB' }),
+  // (Passing round 7, tools/sim/findidentity.ts: Cover 2 seed 16 → Cover 4 seed 14, the same curl: Montana 0.53 yd off it and caught for 13, Namath 2.0 off and incomplete.)
+  ...pair('accuracy', 'On the hands', { seed: 14, play: 'doubles-curls', def: 'cover4', los: 30, script: concept({ icon: 1, at: 60 }) }, { off: 'QB', name: 'Joe Montana', pos: 'QB' }, { off: 'QB', name: 'Joe Namath', pos: 'QB' }),
   // The rush: the QB holds it against Cover 1 (seed 19 → 5 for the tackle physics, the snap where White's sack is the strip the result-card test reads). White gets off the tackle and strips him; Aaron Smith never gets off his block.
   // (Seed 5 → 52 for passing round 2, tools/sim/findidentity.ts --only=rush and the result card: White sheds at 2.0 s and strips him; Smith never gets off.)
   ...pair('rush', 'Through the tackle', { seed: 52, play: 'doubles-dagger', def: 'cover1', los: 30, script: holdIt }, { def: 'LE', name: 'Reggie White', pos: 'DE' }, { def: 'LE', name: 'Aaron Smith', pos: 'DE' }),
@@ -428,8 +429,9 @@ export const PASSING5: Clip[] = [
 // toe tap are round five's plays, for the re-keyed clips.
 export const PASSING6: Clip[] = [
   { id: 'p6-go', title: 'The go on the cue: Montana to Rice', seed: 3, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 63 }) },
-  { id: 'p6-post', title: 'The post on the cue', seed: 2, play: 'singleback-pa-post', def: 'cover3', los: 30, script: concept({ icon: 1, at: 90 }) },
-  { id: 'p6-corner', title: 'The corner on the cue', seed: 3, play: 'doubles-smash', def: 'cover3', los: 30, script: concept({ icon: 1, at: 80 }) },
+  { id: 'p6-post', title: 'The post on the cue', seed: 11, play: 'singleback-pa-post', def: 'cover3', los: 30, script: concept({ icon: 1, at: 93 }) },
+  // (Passing round 7, tools/sim/p7find.ts: the post seed 2 → 11 and the corner seed 3 → 4, both caught on the cue on this sim.)
+  { id: 'p6-corner', title: 'The corner on the cue', seed: 4, play: 'doubles-smash', def: 'cover3', los: 30, script: concept({ icon: 1, at: 81 }) },
   { id: 'p6-cross', title: 'The crosser on the cue', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: concept({ icon: 1, at: 120 }) },
   { id: 'p6-out', title: 'The out on the cue (left sideline)', seed: 3, play: 'doubles-curls', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 84, hot: 'out' }) },
   { id: 'p6-weak-go', title: 'The go from a weak arm: Chad Pennington', seed: 5, play: 'trips-four-verts', def: 'cover3', los: 30, script: concept({ icon: 4, at: 59 }), swap: { off: 'QB', name: 'Chad Pennington', pos: 'QB' } },
@@ -438,4 +440,21 @@ export const PASSING6: Clip[] = [
   { id: 'p6-toetap', title: 'Toe tap: the quick out', seed: 12, play: 'doubles-quick-outs', def: 'cover2', los: 30, user: false, script: () => NEUTRAL },
   // The ball's arm: the X's slant on the left, caught with room and run 9 yd after it (tools/sim/p6_carryfind.ts): tucked, then moved to the arm away from the tackler.
   { id: 'p6-carry', title: 'The ball in the outside arm', seed: 12, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 30 }) },
+];
+
+// Passing round 7 (docs/passing/PASSING7.md): the breaking routes caught out
+// in front (the slant, the crosser, the dig, the drag), the slant batted at
+// the line in round six, the settle routes coming back to the ball and the
+// deep corner, the player's tap on the cue (tools/sim/p7find.ts), from the
+// default broadcast camera and a close one on the catcher (FOLLOW7).
+export const PASSING7: Clip[] = [
+  { id: 'p7-slant', title: 'The slant on the cue', seed: 1, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 21 }) },
+  { id: 'p7-slant-bat', title: 'The slant past the end', seed: 15, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 21 }) },
+  { id: 'p7-cross', title: 'The crosser on the cue', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 120 }) },
+  { id: 'p7-dig', title: 'The dig on the cue', seed: 5, play: 'singleback-drive', def: 'cover3', los: 30, script: userThrow({ icon: 2, at: 96 }) },
+  { id: 'p7-drag', title: 'The drag on the cue', seed: 8, play: 'doubles-mesh', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 33 }) },
+  // The AI's hitch thrown to a man sat down (round six: he stood under it for 0.47 s, tools/sim/p7settle.ts).
+  { id: 'p7-hitch', title: 'The hitch, sat down: working back to it', seed: 2, play: 'doubles-smash', def: 'cover3', los: 30, user: false, script: () => NEUTRAL },
+  // Smash against Cover 2: the corner over the squatting corner, outside the half safety, toward the pylon.
+  { id: 'p7-corner', title: 'The deep corner on the cue', seed: 4, play: 'doubles-smash', def: 'cover2', los: 30, script: userThrow({ icon: 1, at: 81 }) },
 ];
