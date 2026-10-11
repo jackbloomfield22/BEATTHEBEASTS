@@ -7,94 +7,21 @@ import { urlFlags } from '@/app/platform';
 import { Input } from '@/input/InputManager';
 import { practice, usePractice } from '@/game/practice';
 import { view } from '@/game/view';
-import { fieldDir, worldX, worldY, worldZ } from '@/game/coords';
+import { fieldDir } from '@/game/coords';
 import { frameEvents } from './frameEvents';
-import { catchAhead } from '@/sim/passing';
-import { boxOut } from '@/sim/bodies';
+import { BroadcastCam, PLAY_W, poseToWorld, Spring, type Pose } from './broadcastCam';
 
 // The play cameras (GDD §11.1, TECH_PLAN §8), driven from the sim snapshot
 // through critically damped springs so every cut is a glide:
-//   Broadcast: behind the offense, high enough to see both wideouts; once
-//   the pass is out it rides behind the ball and pushes in on the catch
-//   point, then settles behind the carrier with look-ahead, and on a
-//   breakaway eases out to a higher, wider three-quarter angle.
+//   Broadcast: broadcastCam.ts.
 //   All-22: high above the backfield, the whole field of play in view.
 //   Field level: tight, behind the ball.
 // Hits add a shake scaled by their force (Reduce Camera Shake scales it down).
 
 type Mode = 'broadcast' | 'all22' | 'field';
 
-interface Pose {
-  /** Field frame: x downfield, y left, h height (m). */
-  ex: number;
-  ey: number;
-  eh: number;
-  lx: number;
-  ly: number;
-  lh: number;
-  fov: number;
-}
-
-/** Spring toward a target: critically damped, frequency w (rad/s). */
-class Spring {
-  v = 0;
-  constructor(public x: number) {}
-  step(to: number, w: number, dt: number): number {
-    // Semi-implicit critically damped spring (x'' = w²(to − x) − 2w x').
-    const a = w * w * (to - this.x) - 2 * w * this.v;
-    this.v += a * dt;
-    this.x += this.v * dt;
-    return this.x;
-  }
-}
-
-/**
- * The breakaway blend (M6.6, Playtest 2: "stay a bit wider on a breakaway
- * and ease the swing so it doesn't distract"). Before, a long run cut to a
- * sideline pose 24 yd off him the frame he crossed 18 yd at 6.5 yd/s: a 90°
- * swing that swung back the moment he slowed for a cut or the whistle blew,
- * and changed sides if he crossed the middle. Now `k` eases 0 → 1 over
- * about a second once he's clear (and back only when he's caught up to
- * the pursuit's pace, never at the whistle), the side is chosen once, and
- * the breakaway angle is 40° off his run rather than square to it.
- */
-const breakaway = { k: 0, side: 1, play: -1, on: false };
-/** Enter past the line by this much at this pace; leave below LEAVE_SPEED (yd, yd/s). */
-const BREAK_PAST = 15;
-const BREAK_SPEED = 6.3;
-const LEAVE_SPEED = 4.6;
-/** Seconds to ease in and out (the blend runs through a smoothstep, so the swing starts and ends at rest). */
-const BREAK_IN = 1.1;
-const BREAK_OUT = 0.9;
-
-/** Advance the breakaway blend by dt (the frame's step); a screenshot jumps straight to where it's heading. */
-function stepBreakaway(dt: number, snap: boolean): void {
-  const r = practice.runner;
-  if (!r) return;
-  const s = r.state;
-  const cur = r.cur;
-  if (breakaway.play !== practice.playId) {
-    breakaway.play = practice.playId;
-    breakaway.k = 0;
-    breakaway.on = false;
-  }
-  const c = cur.carrier >= 0 ? cur.agents[cur.carrier]! : null;
-  const mine = !!c && s.agents[cur.carrier]!.side === 'off';
-  if (c && mine && cur.phase === 'carrier') {
-    const sp = Math.hypot(c.vx, c.vy);
-    const past = c.x - s.setup.los;
-    if (!breakaway.on && past > BREAK_PAST && sp > BREAK_SPEED) {
-      breakaway.on = true;
-      // The camera goes to the side he's farther from, and stays there.
-      breakaway.side = c.y >= 0 ? -1 : 1;
-    } else if (breakaway.on && sp < LEAVE_SPEED) breakaway.on = false;
-  } else if (cur.phase !== 'dead') breakaway.on = false;
-  const to = breakaway.on ? 1 : 0;
-  if (snap) breakaway.k = to;
-  else breakaway.k = to > breakaway.k ? Math.min(1, breakaway.k + dt / BREAK_IN) : Math.max(0, breakaway.k - dt / BREAK_OUT);
-}
-
-const smooth = (k: number) => k * k * (3 - 2 * k);
+/** The broadcast camera's framing and its frame-to-frame state (broadcastCam.ts: the same code tools/sim/p11_cam.ts measures). */
+const broadcast = new BroadcastCam();
 
 function targetPose(mode: Mode): Pose | null {
   // A field goal or PAT: from behind and above the kicker, the protection and
@@ -138,337 +65,8 @@ function targetPose(mode: Mode): Pose | null {
     const f = cur.phase === 'presnap' ? { x: los, y: by } : focus;
     return { ex: f.x - 7.5, ey: f.y * 0.9, eh: 1.75, lx: f.x + 12, ly: f.y, lh: 1.1, fov: 56 };
   }
-  // Broadcast.
-  const base: Pose = { ex: los - 17, ey: by * 0.5, eh: 8.5, lx: los + 8, ly: by * 0.7, lh: 0, fov: 52 };
-  if (cur.phase === 'presnap' || cur.phase === 'snap' || cur.phase === 'dropback' || cur.phase === 'pocket') {
-    // Ease back with the drop and drift with a QB who leaves the pocket.
-    base.ex += Math.min(0, qb.x - (los - 5)) * 0.6;
-    base.ey += (qb.y - by) * 0.5;
-    base.ly += (qb.y - by) * 0.3;
-    pocket.pose = { ...base };
-    return base;
-  }
-  // A dead ball after a throw holds on the catch point; after a sack (no
-  // throw, no carrier) it holds on the ball where he went down.
-  const thrown = s.ball.thrower >= 0 && s.ball.arrive > s.snapT;
-  if (cur.phase === 'air' || (cur.phase === 'dead' && !c && thrown)) {
-    return airPose(s, cur);
-  }
-  if (cur.phase === 'dead' && !c) {
-    return { ex: ball.x - 13, ey: ball.y * 0.75, eh: 6.8, lx: ball.x + 2, ly: ball.y, lh: 0.6, fov: 52 };
-  }
-  if (c) {
-    // Follow the carrier with look-ahead; he runs toward his own attack direction.
-    const dir = s.agents[cur.carrier]!.side === 'off' ? 1 : -1;
-    const lx = c.x + c.vx * 0.55;
-    const ly = c.y + c.vy * 0.45;
-    // Normal plays: behind him, 11 yd back and 6 up (M6.6: pushed in from
-    // 13 and 6.8, Playtest 2 "it can push in a little closer on normal plays").
-    const near: Pose = { ex: c.x - dir * 11, ey: c.y * 0.75, eh: 6, lx, ly, lh: 0.6, fov: 50 };
-    // The catch beat (passing round 5): for a moment after the ball is
-    // caught the air camera's framing holds on him (carried along with him),
-    // tight on the hands and the tuck, then eases out to the run. Before,
-    // the carrier pose took over the frame the sim called the catch.
-    const beat = catchBeat(s, cur.carrier, c, near);
-    if (beat) return beat;
-    const k = dir > 0 ? smooth(breakaway.k) : 0;
-    if (k <= 0) return near;
-    // The breakaway: high and wide at three-quarters, 40° off his run from
-    // the side he's farther from, 25 yd from him (the old sideline pose was
-    // 24 at 40° fov; this is 46°, so the pursuit and the open field ahead
-    // stay in frame), looking further ahead of him.
-    const side = breakaway.side;
-    const wide: Pose = { ex: c.x - 19, ey: c.y + side * 16, eh: 11, lx: c.x + c.vx * 0.9 + 3, ly: c.y + c.vy * 0.6, lh: 0.4, fov: 46 };
-    return {
-      ex: near.ex + (wide.ex - near.ex) * k,
-      ey: near.ey + (wide.ey - near.ey) * k,
-      eh: near.eh + (wide.eh - near.eh) * k,
-      lx: near.lx + (wide.lx - near.lx) * k,
-      ly: near.ly + (wide.ly - near.ly) * k,
-      lh: near.lh + (wide.lh - near.lh) * k,
-      fov: near.fov + (wide.fov - near.fov) * k,
-    };
-  }
-  return base;
+  return broadcast.pose(s, cur);
 }
-
-/** The air camera's last framing (the catch beat holds it for a moment after the catch) and the catch it's holding on. */
-const lastAir: { pose: Pose | null; arrive: number; at: { x: number; y: number } } = { pose: null, arrive: -1, at: { x: 0, y: 0 } };
-/**
- * The catch beat: how long (s) the air camera's framing holds on the catcher
- * after the catch before it has eased out to the carrier follow, and when
- * the ease starts. Ours, sized so the hands, the give and the tuck (~0.33 s
- * in the clips) are framed tight at broadcast distance without the run
- * after the catch leaving the frame; the game clock never slows.
- */
-const BEAT_T = 0.45;
-const BEAT_HOLD = 0.12;
-
-/** The framing on a just-caught ball: the air camera's last pose, carried with the catcher, blending out to `near`; null when there's no beat. */
-function catchBeat(s: NonNullable<typeof practice.runner>['state'], who: number, c: { x: number; y: number }, near: Pose): Pose | null {
-  const air = lastAir.pose;
-  if (!air || lastAir.arrive !== s.ball.arrive || s.ball.target !== who) return null;
-  const caught = s.agents[who]!.mem.caughtAt;
-  if (typeof caught !== 'number' || s.agents[who]!.side !== 'off') return null;
-  const since = s.t - caught;
-  if (since < 0 || since >= BEAT_T) return null;
-  const k = smooth(Math.min(1, Math.max(0, (since - BEAT_HOLD) / (BEAT_T - BEAT_HOLD))));
-  // The held framing rides with him: translated by how far he's run since the ball got to him.
-  const dx = c.x - lastAir.at.x;
-  const dy = c.y - lastAir.at.y;
-  const hold: Pose = { ex: air.ex + dx, ey: air.ey + dy, eh: air.eh, lx: air.lx + dx, ly: air.ly + dy, lh: air.lh, fov: air.fov };
-  const mix = (a: number, b: number) => a + (b - a) * k;
-  return { ex: mix(hold.ex, near.ex), ey: mix(hold.ey, near.ey), eh: mix(hold.eh, near.eh), lx: mix(hold.lx, near.lx), ly: mix(hold.ly, near.ly), lh: mix(hold.lh, near.lh), fov: mix(hold.fov, near.fov) };
-}
-
-/** The most the air camera's line turns off straight downfield (rad: 15°). Ours. */
-const AIR_YAW = (15 * Math.PI) / 180;
-
-/** The throw being followed: where and when it left, the flight time it was given, and the pocket's framing as it left. */
-const flight = { arrive: -1, x0: 0, y0: 0, total: 1, t0: 0, from: null as Pose | null };
-/** The pocket's framing, last frame (the air camera leaves from it: passing round 10). */
-const pocket: { pose: Pose | null } = { pose: null };
-
-/**
- * The release beat and the move with the ball (passing round 10). Round
- * nine's air framing was a step: the frame the ball left, the camera's
- * target jumped from the pocket to halfway to the catch, and a quarter-second
- * spring (stiffened up to 1.5× on a quick throw) snapped after it, so a
- * slant's shot left the pocket at full speed in its first tenth of a second
- * (peak pan ~3 × the eased move's; the QB's release and finish went out of the
- * frame as they happened) and reached the catch a third of a second later: a
- * whip-pan, not a camera going with the ball. Now the target itself moves:
- * from the pocket framing as the ball left to the catch framing, on a
- * smoothstep in time that starts after a beat (the release and the finish
- * seen where they happen, as a broadcast holds the QB as he lets it go) and
- * eases in, so the move gathers pace with the ball, then eases out onto the
- * spot a little before the ball gets there (SETTLE), with the receiver
- * framed as large as round nine had him.
- * - the beat: s held on the pocket after the release, by the flight time:
- *   none on a quick throw (the ease-in is the beat: on a 0.7-s slant the
- *   shot has moved 8% of the way 0.08 s after the release, so the flick and
- *   its finish are seen), BEAT_K × (flight − BEAT_FROM) on a longer one, at
- *   most BEAT_MAX (0.25 s on a ball two seconds in the air: the drive's
- *   finish, 0.22 s, seen whole before the shot goes with the ball);
- * - the settle: the move is done this long before the ball arrives
- *   (SETTLE_K of the flight, SETTLE_MIN to SETTLE_MAX s), less the rig's own
- *   lag, so the catch is framed still and as tight as round nine framed it.
- * Ours, judged frame by frame at 60 fps (docs/passing/PASSING10.md: round
- * nine's slant panned at up to 52°/s from the release frame on; this one
- * starts from rest and peaks lower).
- */
-const BEAT_K = 0.25;
-const BEAT_FROM = 0.9;
-const BEAT_MAX = 0.25;
-const SETTLE_K = 0.2;
-const SETTLE_MIN = 0.22;
-const SETTLE_MAX = 0.4;
-/**
- * The shortest the move is (s). On the RB screen (0.47 s in the air) settling
- * 0.22 s early left a quarter of a second for the move, a pan at 62°/s and a
- * zoom at 109°/s of lens, faster than round nine's step; the slant's move
- * (0.49 s) is the longest a quick throw needs, so a shorter flight carries
- * its move on into the catch beat. Ours.
- */
-const MOVE_MIN = 0.45;
-/**
- * How far the eye itself moves toward the air framing's (the rest is the pan
- * and the zoom): EYE_SHARE_MIN of the way on a quick throw, all of it on a
- * ball (EYE_FROM + EYE_SPAN) s in the air or more. Ours: a slant's dolly
- * peaked at ~30 m/s at the full share.
- */
-const EYE_SHARE_MIN = 0.35;
-const EYE_FROM = 0.6;
-const EYE_SPAN = 1.2;
-/** The air rig's springs (rad/s: eye, look, lens): stiff, since the target itself is eased now (lag ~0.1–0.2 s). */
-const AIR_W = [10, 10, 10, 16, 16, 16, 14];
-
-/** The camera as drawn last frame (world m) and its aspect: the air framing fits its zoom to where the eye really is (the dolly lags the pose). */
-const camNow = { ok: false, eye: new THREE.Vector3(), aspect: 16 / 9 };
-
-/**
- * The air framing's zoom (passing round 9). From the broadcast camera the
- * quick throws were never framed: on the slant (0.7 s in the air) the look
- * and the dolly were still swinging off the pocket when the ball got there,
- * so the catch was drawn in the left third of the frame, ~70 px tall at
- * 960×540, with the line's pile filling the near corner, and the ball (a
- * brown speck) and the receiver only met on screen on the catch frame. Now
- * the lens leads the landing spot from the release and zooms to keep the
- * ball, the man and the spot where they'll meet in the frame together, as a
- * broadcast operator does on a pass (pan to the receiver, the ball flies into
- * the shot), tightening as the ball comes in:
- * - FIT_MARGIN: the points sit inside the frame by this share (ours: a
- *   tenth either side, so the ball isn't on the edge);
- * - AIR_FOV_MAX: no wider than the pre-snap shot's lens (52°);
- * - CATCH_FRAME: never tighter than this much field height (m) at the
- *   catch point, so the receiver is about a quarter of the frame (~1.9 m of
- *   7.5) on a quick throw; a deep ball (two seconds in the air and more) no
- *   tighter than CATCH_FRAME_DEEP, a fifth, so the race with the man on him
- *   and the safety coming over read as they do on a broadcast;
- * - the defender nearest the spot as the ball gets there (within
- *   NEAR_DEF yd) is held in the frame too: the catch is a contest.
- */
-const FIT_MARGIN = 1.22;
-const AIR_FOV_MAX = 52;
-const CATCH_FRAME = 7.5;
-const CATCH_FRAME_DEEP = 10;
-const NEAR_DEF = 4;
-/** The box-out drawn as a post-up (choreo.ts BOX_CLIP). */
-const POSTED_BOX = 0.4;
-const _f = new THREE.Vector3();
-const _r = new THREE.Vector3();
-const _u = new THREE.Vector3();
-const _d = new THREE.Vector3();
-const _UP = new THREE.Vector3(0, 1, 0);
-const _look = new THREE.Vector3();
-const _spot = new THREE.Vector3();
-const _pts: THREE.Vector3[] = Array.from({ length: 8 }, () => new THREE.Vector3());
-
-/** The vertical fov (deg) from `eye` looking at `look` that holds every point (world) inside FIT_MARGIN of the frame. */
-function fitFov(eye: THREE.Vector3, look: THREE.Vector3, pts: THREE.Vector3[], n: number, aspect: number): number {
-  _f.subVectors(look, eye).normalize();
-  _r.crossVectors(_f, _UP).normalize();
-  _u.crossVectors(_r, _f);
-  let tv = 0;
-  for (let k = 0; k < n; k++) {
-    _d.subVectors(pts[k]!, eye);
-    const z = _d.dot(_f);
-    if (z < 1) continue;
-    tv = Math.max(tv, Math.abs(_d.dot(_u)) / z, Math.abs(_d.dot(_r)) / z / aspect);
-  }
-  return (2 * Math.atan(tv * FIT_MARGIN) * 180) / Math.PI;
-}
-
-/**
- * The pass: from the moment it's out, the camera rides behind the ball on
- * its line to the receiver and pushes in so the catch point fills the frame
- * as it arrives (then the carrier follow takes over). The line is biased
- * downfield so a screen or a throw to the flat never swings the camera
- * round to face the offense.
- */
-function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullable<typeof practice.runner>['cur']): Pose {
-  const ball = cur.ball;
-  const b = s.ball;
-  if (b.arrive !== flight.arrive) {
-    flight.arrive = b.arrive;
-    flight.x0 = ball.x;
-    flight.y0 = ball.y;
-    flight.total = Math.max(0.3, b.arrive - s.t);
-    flight.t0 = s.t;
-    flight.from = pocket.pose ? { ...pocket.pose } : null;
-  }
-  const ax = b.aim.x;
-  const ay = b.aim.y;
-  // Progress through the flight, eased out: the camera moves off with the
-  // ball the moment it's thrown and settles as the ball arrives.
-  const p = Math.min(1, Math.max(0, 1 - (b.arrive - s.t) / flight.total));
-  const e = 1 - (1 - p) * (1 - p);
-  // The camera's line: the throw's direction, leaning downfield, and never
-  // swung more than AIR_YAW off straight down the field (passing round 4:
-  // on an out to the boundary it swung ~35° toward the catch in a second,
-  // so the player lost the frame he judged the lead in; the broadcast's
-  // high camera pans with the ball, it doesn't wheel round).
-  const dx = ax - flight.x0;
-  const dy = ay - flight.y0;
-  const ux0 = Math.max(0, dx) + 0.35 * Math.hypot(dx, dy) + 1e-3;
-  const yaw = Math.max(-AIR_YAW, Math.min(AIR_YAW, Math.atan2(dy * 0.8, ux0)));
-  const ux = Math.cos(yaw);
-  const uy = Math.sin(yaw);
-  // Where the ball and the man will meet (passing round 9): the sim's own catch (the tick it gets to his hands,
-  // sim/passing.ts catchAhead), else between the aim and where he'll be at the arrival (he's often a stride short).
-  const tr = b.target >= 0 ? s.agents[b.target] : undefined;
-  const r = b.target >= 0 ? cur.agents[b.target] : undefined;
-  const meet = tr && b.mode === 'air' ? catchAhead(s, tr) : null;
-  const T = Math.max(0, b.arrive - s.t);
-  const cx = meet ? meet.pos.x : r ? (ax + r.x + r.vx * T) / 2 : ax;
-  const cy = meet ? meet.pos.y : r ? (ay + r.y + r.vy * T) / 2 : ay;
-  // Look: the landing spot, led from the release (passing round 9: round two's look started 70% of the way back at
-  // the ball and came to the catch only as it arrived, so a quick throw was never framed); halfway between the ball
-  // and the spot as it leaves his hand, on the spot as it gets there.
-  const lead = 0.5 * (1 - e);
-  const lx = cx + (ball.x - cx) * lead;
-  const ly = cy + (ball.y - cy) * lead;
-  // Back off along the line: wide at release, 13 yd off the catch and 4.8 m up at arrival (passing round 9: the long
-  // lens. Round two's 10.5 yd and 3.9 m put the eye among the underneath defenders, so with the zoom framing the catch a
-  // linebacker between the camera and the ball filled a corner of the frame; from further back and higher, on a
-  // tighter lens, the catch is framed as large with the perspective flatter, as a broadcast's long lens has it).
-  const back = 20 - 7 * e;
-  const pose: Pose = {
-    ex: lx - ux * back,
-    ey: ly - uy * back,
-    eh: 8 - 3.2 * e,
-    lx,
-    ly,
-    // Low enough that the catch sits just above center (the catch-call panel is in the bottom-right corner since passing round 10).
-    lh: 0.4 + 0.2 * e,
-    fov: 50 - 12 * e,
-  };
-  if (camNow.ok) {
-    // The zoom (passing round 9): the ball, the man, the spot and the nearest defender to it held in the frame from
-    // where the eye really is, no tighter than CATCH_FRAME at the spot.
-    let n = 0;
-    _pts[n++]!.set(worldX(ball.y), worldY(ball.z), worldZ(ball.x));
-    _pts[n++]!.set(worldX(cy), 0, worldZ(cx));
-    _pts[n++]!.set(worldX(cy), 2.1, worldZ(cx));
-    if (r) {
-      _pts[n++]!.set(worldX(r.y), 0, worldZ(r.x));
-      _pts[n++]!.set(worldX(r.y), 2.1, worldZ(r.x));
-    }
-    let nd = -1;
-    let bd = NEAR_DEF;
-    for (const j of s.def) {
-      const o = cur.agents[j];
-      if (!o || o.down) continue;
-      const k = Math.hypot(o.x + o.vx * T - cx, o.y + o.vy * T - cy);
-      if (k < bd) {
-        bd = k;
-        nd = j;
-      }
-    }
-    if (nd >= 0) {
-      const o = cur.agents[nd]!;
-      _pts[n++]!.set(worldX(o.y), 0, worldZ(o.x));
-      _pts[n++]!.set(worldX(o.y), 2.1, worldZ(o.x));
-    }
-    const fit = fitFov(camNow.eye, _look.set(worldX(ly), pose.lh, worldZ(lx)), _pts, n, camNow.aspect);
-    const toSpot = camNow.eye.distanceTo(_spot.set(worldX(cy), 1, worldZ(cx)));
-    // (Passing round 10) A man posting up the defender on him (the box-out, sim/bodies.ts boxOut, drawn as catch_box when
-    // it's 0.4 or more: choreo.ts BOX_CLIP) is framed as tight as a quick throw whatever the depth: the post-up is the play.
-    const posted = nd >= 0 && tr !== undefined && boxOut(tr, s.agents[nd]!) >= POSTED_BOX;
-    const frameH = posted ? CATCH_FRAME : CATCH_FRAME + (CATCH_FRAME_DEEP - CATCH_FRAME) * Math.min(1, Math.max(0, flight.total - 1));
-    const tight = (2 * Math.atan(frameH / 2 / Math.max(1, toSpot)) * 180) / Math.PI;
-    pose.fov = Math.min(AIR_FOV_MAX, Math.max(fit, tight));
-  }
-  // The release beat and the move (passing round 10): from the pocket's framing to this one, eased in time.
-  const from = flight.from;
-  if (from) {
-    const F = flight.total;
-    const beat = Math.min(BEAT_MAX, Math.max(0, BEAT_K * (F - BEAT_FROM)));
-    // (Never a move shorter than MOVE_MIN: a screen's half-second ball finishes the move into the catch beat instead.)
-    const end = Math.max(beat + MOVE_MIN, F - Math.min(SETTLE_MAX, Math.max(SETTLE_MIN, SETTLE_K * F)));
-    const m = smooth(Math.min(1, Math.max(0, (s.t - flight.t0 - beat) / (end - beat))));
-    const mx = (a: number, z: number) => a + (z - a) * m;
-    // The eye goes only part of the way on a quick throw: the shot pans and zooms from about where it is, as a
-    // broadcast camera does (a 0.7-s slant's full dolly was ~30 m/s at its peak, the perspective swinging under the zoom).
-    const me = m * Math.min(1, Math.max(EYE_SHARE_MIN, (F - EYE_FROM) / EYE_SPAN));
-    const mxe = (a: number, z: number) => a + (z - a) * me;
-    pose.ex = mxe(from.ex, pose.ex);
-    pose.ey = mxe(from.ey, pose.ey);
-    pose.eh = mxe(from.eh, pose.eh);
-    pose.lx = mx(from.lx, pose.lx);
-    pose.ly = mx(from.ly, pose.ly);
-    pose.lh = mx(from.lh, pose.lh);
-    pose.fov = mx(from.fov, pose.fov);
-  }
-  // Kept for the catch beat (with where the receiver is), while the ball is in the air.
-  if (cur.phase === 'air') {
-    lastAir.pose = pose;
-    lastAir.arrive = b.arrive;
-    if (r) lastAir.at = { x: r.x, y: r.y };
-  }
-  return pose;
-}
-
 
 /** Game time the video camera last stepped to. */
 const videoClock = { t: 0 };
@@ -500,11 +98,12 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
       videoClock.t = now;
       if (!springs.current) step = 0;
     }
-    stepBreakaway(step, urlFlags.shot !== null && !urlFlags.video);
+    const pr = practice.runner;
+    if (pr) broadcast.stepBreakaway(pr.state, pr.cur, practice.playId, step, urlFlags.shot !== null && !urlFlags.video);
     const goal = targetPose(modeSetting);
     if (!goal) return;
     // World-space target: eye and look.
-    const t = [worldX(goal.ey), goal.eh, worldZ(goal.ex), worldX(goal.ly), goal.lh, worldZ(goal.lx), goal.fov];
+    const t = poseToWorld(goal);
     if (!springs.current && urlFlags.video) {
       // A recorded clip opens on the broadcast shot (in play, the glide in from the menu happens during the play call).
       springs.current = t.map((v) => new Spring(v));
@@ -522,17 +121,14 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     // Eye slower than the look: the lens leads, the dolly follows.
     // In the air the whole rig tightens up so it keeps pace with the ball.
     const rr = practice.runner;
-    const caughtAt = rr && rr.cur.phase === 'carrier' && rr.cur.carrier >= 0 ? rr.state.agents[rr.cur.carrier]!.mem.caughtAt : undefined;
-    const beating = !!rr && typeof caughtAt === 'number' && rr.state.t - caughtAt < BEAT_T;
-    const air = (rr?.cur.phase === 'air' || beating) && modeSetting === 'broadcast';
     // (?follow rides its man close: a stiff rig, or a man on the move leaves the frame.)
     // (Passing round 10) In the air the target is eased in time (airPose: the release beat and the move), so the
     // rig is stiff enough to follow it closely (round nine's AIR_QUICK stiffened a spring chasing a step instead).
-    const w = urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : air && rr?.cur.phase === 'air' ? AIR_W : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
+    const w = urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : rr && modeSetting === 'broadcast' ? broadcast.weights(rr.state, rr.cur) : PLAY_W;
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));
-    camNow.eye.set(v[0]!, v[1]!, v[2]!);
-    camNow.aspect = camera.aspect;
-    camNow.ok = true;
+    broadcast.camNow.eye.set(v[0]!, v[1]!, v[2]!);
+    broadcast.camNow.aspect = camera.aspect;
+    broadcast.camNow.ok = true;
     // Shake: hits kick it, it rings down in ~0.3 s.
     for (const e of frameEvents) {
       if (e.type === 'hit' || e.type === 'sack') {
