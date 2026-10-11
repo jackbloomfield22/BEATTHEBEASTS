@@ -201,8 +201,7 @@ On the cue (thrown on the break) none of them stood, before or after. `p6stand.t
 - **The determinism golden:** 551 of 920 cases moved, every one a pass play (the bat's dice at its closest approach, the lane, the timing, the settle routes, the breakups, the falling deep ball).
 - **The coordinator's film** (`src/sim/film.ts`, with its own tool).
 - **The feel clips:**
-  - completion-rac: Cover 3 seed 65 → 12 (the tight end's seam, 15 yd after the catch);
-  - broken-tackle (13) and the touchdown clip (79, which the M7 celebrations' browser test plays) still hold;
+  - completion-rac (Cover 3 seed 65, the tight end's seam, 27 yd after the catch), broken-tackle (13) and the touchdown clip (79, which the M7 celebrations' browser test plays) still hold;
   - round six's cue clips: p6-post seed 2 → 11, p6-corner 3 → 4;
   - the accuracy identity pair: Cover 2 seed 16 → Cover 4 seed 14, the same curl (Montana 0.53 yd off and caught for 13, Namath 2.0 off and incomplete).
 - **The e2e seeds** (`tools/sim/e2eseeds.ts`): the full play on 4, the stick tackle on 2 and the touchdown on 22 all still hold.

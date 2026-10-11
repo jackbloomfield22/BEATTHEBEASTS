@@ -184,8 +184,7 @@ export const CLIPS: Clip[] = [
   // (Seed 23 → 45 for passing round 3, tools/sim/findclips.ts: the key starts the arm and the other receivers run their routes through the throw; the slot's seam caught and 14 yd after it with the juke.)
   // (Cover 1 seed 45 → Cover 3 seed 25 for passing round 4, tools/sim/findclips.ts: the deep ball in the bucket; the slot's seam caught and 23 yd after it.)
   // (Seed 25, icon 1 → seed 65, icon 2 for passing round 6, tools/sim/p6_refind.ts: the catch at his hands; the tight end's seam against Cover 3, caught and 15 yd after it.)
-  // (Seed 65 → 12 for passing round 7, tools/sim/p7_refind.ts: the tight end's seam against Cover 3, caught and 15 yd after it.)
-  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 12, play: 'trips-four-verts', def: 'cover3', los: 30, script: throwAndRun(2, 100, 'juke') },
+  { id: 'completion-rac', title: 'Completion and run after the catch', seed: 65, play: 'trips-four-verts', def: 'cover3', los: 30, script: throwAndRun(2, 100, 'juke') },
   // The QB holds it: the four-man rush gets home at 3.8 s, the median no-throw pocket at Pro.
   { id: 'sack', title: 'Sack', seed: 6, play: 'trips-four-verts', def: 'cover1', los: 30, script: holdIt },
   // Stick against Cover 1: the short catch, a stiff arm sheds the first tackler a second later, down 15 yd on (11 after the catch).
