@@ -106,7 +106,8 @@ def finish(base: Clip, kind: str) -> Clip:
         u = min(1.0, (t - tr) / span)
         # Cubic Hermite from (s_rel, v_rel·span) to (s_end, 0): the stride's pace carried through the release.
         h00, h10, h01 = 2 * u**3 - 3 * u**2 + 1, u**3 - 2 * u**2 + u, -2 * u**3 + 3 * u**2
-        return h00 * s_rel + h10 * v_rel * span + h01 * s_end
+        # (The start tangent capped at 3x the distance left: monotone, so the body never travels back.)
+        return h00 * s_rel + h10 * min(v_rel * span, 3 * max(0.0, s_end - s_rel)) + h01 * s_end
 
     def travel(t: float):
         return (0.0, -fwd(t))

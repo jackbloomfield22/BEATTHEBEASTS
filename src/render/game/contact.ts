@@ -87,7 +87,21 @@ export interface ContactBody extends Trunk {
   free: boolean;
   /** His share (0..1) of a contested pair's lean into each other (passing round 5, choreo.ts boxShare): 0.5 even, more for the man boxing the other out. */
   box?: number;
+  /** Passing round 10: a receiver posting up, 0..1 (choreo.ts boxPost): how hard his bar is displacing the man he's contesting with. */
+  shove?: number;
 }
+
+/**
+ * The post-up's displacement (passing round 10): the man a receiver bars off
+ * is drawn up to BOX_SHOVE m further off him (beyond the push-apart's
+ * PUSH_MAX) and rocked back up to BOX_ROCK rad, the receiver leaning on into
+ * the space he's made; both bodies react to the contact. Ours: a hand's width
+ * of ground and a visible stagger at broadcast distance (a man ~60–120 px
+ * tall: 0.35 m is ~10–20 px), sized on the broadcast picture of a tight end
+ * walling off a safety.
+ */
+export const BOX_SHOVE = 0.35;
+export const BOX_ROCK = 0.2;
 
 export interface ContactTarget {
   /** Render offset (m, world x and z). */
@@ -160,6 +174,28 @@ export function contactTargets(bodies: readonly ContactBody[], contested: readon
     if (l > LEAN_MAX) {
       o.lx *= LEAN_MAX / l;
       o.lz *= LEAN_MAX / l;
+    }
+  }
+  // The post-up's shove (after the caps: it's the contact, not an overlap correction).
+  for (const [i, j] of contested) {
+    for (const [r, d] of [[i, j], [j, i]] as const) {
+      const a = bodies[r];
+      const b = bodies[d];
+      const k = a?.shove ?? 0;
+      if (!a || !b || k <= 0 || !b.free) continue;
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd < 1e-6 || dd > 2.5) continue;
+      const ux = dx / dd;
+      const uz = dz / dd;
+      out[d]!.ox += ux * BOX_SHOVE * k;
+      out[d]!.oz += uz * BOX_SHOVE * k;
+      // He's rocked back (his lean away from the receiver), the receiver driving on into him.
+      out[d]!.lx = ux * BOX_ROCK * k;
+      out[d]!.lz = uz * BOX_ROCK * k;
+      out[r]!.lx = ux * LEAN_MAX * Math.max(0.6, k);
+      out[r]!.lz = uz * LEAN_MAX * Math.max(0.6, k);
     }
   }
 }

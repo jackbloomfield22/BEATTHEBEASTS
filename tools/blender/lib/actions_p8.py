@@ -159,9 +159,12 @@ def box_out(side: str) -> Clip:
 
     # The bar: the left forearm across his chest out to the left, at the numbers, the elbow up and out (the bar reads by its elbow);
     # the right hand up at the chest, ready.
-    bar = posted(run_upper({"l": (0.40, -0.30, 1.30), "r": (-0.10, -0.40, 1.42)}, {**GRIP, **SPREAD, "hand_l": (-10, 0, 40), "hand_r": (-30, 0, 0)}, {"l": (0.50, -0.04, 1.26), "r": (-0.45, 0.05, 1.05)}, (0, 0, 0)), 1.0)
+    # (Passing round 10: the bar out from his body, the forearm clear of his chest and the hand at the man's numbers, out to
+    # his side and a little behind him, where the man is once he's turned his back into him (choreo.ts boxPost turns him
+    # 50 degrees); round nine's bar was across his own chest, hidden by his back from either camera.)
+    bar = posted(run_upper({"l": (0.46, -0.20, 1.26), "r": (-0.10, -0.40, 1.42)}, {**GRIP, **SPREAD, "hand_l": (-10, 0, 40), "hand_r": (-30, 0, 0)}, {"l": (0.70, 0.10, 1.50), "r": (-0.45, 0.05, 1.05)}, (0, 0, 0)), 1.0)
     # The fight: the bar driven a hand further into him as the ball comes (the hip and shoulder still on him).
-    fight = posted(run_upper({"l": (0.46, -0.28, 1.31), "r": (-0.08, -0.40, 1.46)}, {**GRIP, **SPREAD, "hand_l": (-10, 0, 45), "hand_r": (-30, 0, 0)}, {"l": (0.54, -0.02, 1.27), "r": (-0.45, 0.05, 1.08)}, (1, 1, 0)), 1.1)
+    fight = posted(run_upper({"l": (0.52, -0.16, 1.28), "r": (-0.08, -0.40, 1.46)}, {**GRIP, **SPREAD, "hand_l": (-10, 0, 45), "hand_r": (-30, 0, 0)}, {"l": (0.74, 0.12, 1.52), "r": (-0.45, 0.05, 1.08)}, (1, 1, 0)), 1.15)
     # Late hands: both up together over the face mask on the bar's side, the chest still on him.
     reach = posted(run_upper({"l": (0.10, -0.40, 1.98), "r": (-0.02, -0.42, 1.96)}, {**SPREAD, "hand_l": (-55, 0, 0), "hand_r": (-55, 0, 0)}, {"l": (0.55, -0.05, 1.50), "r": (-0.50, -0.05, 1.48)}, (-6, -5, -4)), 0.85)
     snatch = posted(run_upper({"l": (0.08, -0.36, 1.86), "r": (-0.02, -0.38, 1.84)}, {**GRIP, "hand_l": (-45, 0, 0), "hand_r": (-45, 0, 0)}, {"l": (0.45, 0.0, 1.40), "r": (-0.42, 0.0, 1.38)}, (-3, -3, -2)), 0.85)

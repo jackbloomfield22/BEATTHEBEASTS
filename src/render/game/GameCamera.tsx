@@ -243,18 +243,27 @@ const pocket: { pose: Pose | null } = { pose: null };
  * eases in, so the move gathers pace with the ball, then eases out onto the
  * spot a little before the ball gets there (SETTLE), with the receiver
  * framed as large as round nine had him.
- * - BEAT: s held on the pocket after the release, by the flight time: 0.06 s
- *   on a 0.7-s slant (its finish is 0.13 s, mostly seen in the ease-in),
- *   up to 0.25 s on a deep ball (the drive's finish, 0.22 s, seen whole);
- * - SETTLE: the move is done this share of the flight before the ball
- *   arrives (at least 0.08 s, at most 0.3), so the catch is framed still.
- * Ours, judged frame by frame at 60 fps (docs/passing/PASSING10.md).
+ * - the beat: s held on the pocket after the release, by the flight time:
+ *   none on a quick throw (the ease-in is the beat: on a 0.7-s slant the
+ *   shot has moved 8% of the way 0.08 s after the release, so the flick and
+ *   its finish are seen), BEAT_K × (flight − BEAT_FROM) on a longer one, at
+ *   most BEAT_MAX (0.25 s on a ball two seconds in the air: the drive's
+ *   finish, 0.22 s, seen whole before the shot goes with the ball);
+ * - the settle: the move is done this long before the ball arrives
+ *   (SETTLE_K of the flight, SETTLE_MIN to SETTLE_MAX s), less the rig's own
+ *   lag, so the catch is framed still and as tight as round nine framed it.
+ * Ours, judged frame by frame at 60 fps (docs/passing/PASSING10.md: round
+ * nine's slant panned at up to 52°/s from the release frame on; this one
+ * starts from rest and peaks lower).
  */
-const BEAT_MIN = 0.06;
+const BEAT_K = 0.25;
+const BEAT_FROM = 0.9;
 const BEAT_MAX = 0.25;
-const SETTLE = 0.15;
-/** The air rig's springs (rad/s: eye, look, lens): stiff, since the target itself is eased now; ~0.15–0.3 s of lag. */
-const AIR_W = [6, 6, 6, 12, 12, 12, 8];
+const SETTLE_K = 0.2;
+const SETTLE_MIN = 0.22;
+const SETTLE_MAX = 0.4;
+/** The air rig's springs (rad/s: eye, look, lens): stiff, since the target itself is eased now (lag ~0.1–0.2 s). */
+const AIR_W = [10, 10, 10, 16, 16, 16, 14];
 
 /** The camera as drawn last frame (world m) and its aspect: the air framing fits its zoom to where the eye really is (the dolly lags the pose). */
 const camNow = { ok: false, eye: new THREE.Vector3(), aspect: 16 / 9 };
@@ -411,8 +420,8 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   const from = flight.from;
   if (from) {
     const F = flight.total;
-    const beat = Math.min(BEAT_MAX, Math.max(BEAT_MIN, 0.25 * (F - 0.5)));
-    const end = F - Math.min(0.3, Math.max(0.08, SETTLE * F));
+    const beat = Math.min(BEAT_MAX, Math.max(0, BEAT_K * (F - BEAT_FROM)));
+    const end = F - Math.min(SETTLE_MAX, Math.max(SETTLE_MIN, SETTLE_K * F));
     const m = smooth(Math.min(1, Math.max(0, (s.t - flight.t0 - beat) / Math.max(0.2, end - beat))));
     const mx = (a: number, z: number) => a + (z - a) * m;
     pose.ex = mx(from.ex, pose.ex);

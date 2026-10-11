@@ -71,6 +71,8 @@ export interface Body {
   box: number;
   /** Passing round 6: the arm the ball is carried in (carrySide), or null before he has it. */
   carry?: CarryArm | null;
+  /** Passing round 10: the post-up drawn (0..1, boxPost): how far his back is turned into the man and how hard the bar has displaced him. */
+  post?: { turn: number; shove: number };
   /** Passing round 9: the forward reach's depth (reachDepth: 0 the chest catch's arms, 1 all of catch_reach_out) and the sim time it was last eased. */
   reachK?: { k: number; t: number };
 }
@@ -252,6 +254,43 @@ export function boxShare(r: Agent, d: Agent): number {
 }
 /** How far a unit of the box-out moves the lean share. Ours: Gronkowski on a safety (~0.7) takes ~0.75 of it. */
 const BOX_LEAN = 0.35;
+
+/**
+ * The post-up as it's drawn (passing round 10). Round nine's critique: from
+ * the broadcast camera the box-out was two bodies jammed together, the bar
+ * arm hidden by his own back, Gronk's arms up at his chest from 0.4 s out;
+ * nothing read as a post-up. A post-up reads at distance by three things a
+ * broadcast shows: the receiver turns his back into the man a beat before the
+ * ball (his shoulders square away from him, the near shoulder and hip into
+ * his chest), the bar arm out from his body into the man, and the man knocked
+ * off his line by it before both go up. So, from the box clip's own time:
+ * - the turn: his body turned BOX_TURN away from the man (his near shoulder
+ *   and back into him), in over BOX_TURN_IN from the post (the clip's bar key,
+ *   0.58 s before the ball), held through the catch, out after the tuck;
+ * - the shove: from the fight key (0.12 s before the ball) back to the
+ *   bar's first contact, the man is displaced by it (contact.ts: drawn up to
+ *   BOX_SHOVE m off his spot, rocked back), and both bodies react to it.
+ * The sim's own body positions are untouched (render only: the sim already
+ * has the box-out in the contest, the bodies' push and the tackle,
+ * sim/bodies.ts boxOut). Returns 0..1 for each.
+ */
+function boxPost(b: Body): { turn: number; shove: number } | null {
+  const c = b.catchClip;
+  if (!c || !POSTED.has(c)) return null;
+  const t = catchTime(b);
+  const sec = eventAt(b, c, 'secure');
+  const tuck = eventAt(b, c, 'tuck');
+  if (t === null || sec === null || tuck === null) return null;
+  const post = sec - POST_LEAD;
+  const turn = THREE.MathUtils.smoothstep(t, post, post + BOX_TURN_IN) * (1 - THREE.MathUtils.smoothstep(t, tuck, tuck + 0.3));
+  const shove = THREE.MathUtils.smoothstep(t, post + 0.08, sec - 0.1) * (1 - THREE.MathUtils.smoothstep(t, sec + 0.15, sec + 0.5));
+  return { turn, shove };
+}
+/** The box clip's post (its bar key) this long before its secure frame (s: actions_p8.py box_out, ts − 0.58). */
+const POST_LEAD = 0.58;
+/** How far he turns his back into the man (rad, 50°: the defender behind his near shoulder) and how fast (s). Ours, from the broadcast picture of a tight end posting up a safety. */
+const BOX_TURN = (50 * Math.PI) / 180;
+const BOX_TURN_IN = 0.25;
 
 function lyingClip(b: Body, name: string, t0 = 0): void {
   b.animator.play(name, { now: true, t0 });
@@ -1382,6 +1421,8 @@ export interface Drive {
   dip: number;
   /** The ball in his left arm (passing round 6: the left-arm carry families), 0..1. */
   carryLeft?: number;
+  /** Passing round 10: turned off his heading by this much (rad, sim angle, + left): the post-up's back into the man. */
+  turn?: number;
 }
 
 const _look = new THREE.Vector3();
@@ -1655,6 +1696,10 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     out.press = 1;
     out.traffic = 1;
   }
+  // The post-up (passing round 10, boxPost): his back turned into the man (box_l: the man on his left, so he turns right), and the shove.
+  const post = boxPost(b);
+  b.post = post ?? undefined;
+  if (post && post.turn > 0) out.turn = (b.catchClip === 'catch_box_l' ? -1 : 1) * BOX_TURN * post.turn;
   return out;
 }
 
