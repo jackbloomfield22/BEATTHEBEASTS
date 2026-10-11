@@ -244,11 +244,17 @@ const camNow = { ok: false, eye: new THREE.Vector3(), aspect: 16 / 9 };
  * - AIR_FOV_MAX: no wider than the pre-snap shot's lens (52°);
  * - CATCH_FRAME: never tighter than this much field height (m) at the
  *   catch point, so the receiver is about a quarter of the frame (~1.9 m of
- *   7.5) and the nearest defender stays in it.
+ *   7.5) on a quick throw; a deep ball (two seconds in the air and more) no
+ *   tighter than CATCH_FRAME_DEEP, a fifth, so the race with the man on him
+ *   and the safety coming over read as they do on a broadcast;
+ * - the defender nearest the spot as the ball gets there (within
+ *   NEAR_DEF yd) is held in the frame too: the catch is a contest.
  */
 const FIT_MARGIN = 1.22;
 const AIR_FOV_MAX = 52;
 const CATCH_FRAME = 7.5;
+const CATCH_FRAME_DEEP = 10;
+const NEAR_DEF = 4;
 const _f = new THREE.Vector3();
 const _r = new THREE.Vector3();
 const _u = new THREE.Vector3();
@@ -256,7 +262,7 @@ const _d = new THREE.Vector3();
 const _UP = new THREE.Vector3(0, 1, 0);
 const _look = new THREE.Vector3();
 const _spot = new THREE.Vector3();
-const _pts: THREE.Vector3[] = Array.from({ length: 6 }, () => new THREE.Vector3());
+const _pts: THREE.Vector3[] = Array.from({ length: 8 }, () => new THREE.Vector3());
 
 /** The vertical fov (deg) from `eye` looking at `look` that holds every point (world) inside FIT_MARGIN of the frame. */
 function fitFov(eye: THREE.Vector3, look: THREE.Vector3, pts: THREE.Vector3[], n: number, aspect: number): number {
@@ -345,9 +351,26 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
       _pts[n++]!.set(worldX(r.y), 0, worldZ(r.x));
       _pts[n++]!.set(worldX(r.y), 2.1, worldZ(r.x));
     }
+    let nd = -1;
+    let bd = NEAR_DEF;
+    for (const j of s.def) {
+      const o = cur.agents[j];
+      if (!o || o.down) continue;
+      const k = Math.hypot(o.x + o.vx * T - cx, o.y + o.vy * T - cy);
+      if (k < bd) {
+        bd = k;
+        nd = j;
+      }
+    }
+    if (nd >= 0) {
+      const o = cur.agents[nd]!;
+      _pts[n++]!.set(worldX(o.y), 0, worldZ(o.x));
+      _pts[n++]!.set(worldX(o.y), 2.1, worldZ(o.x));
+    }
     const fit = fitFov(camNow.eye, _look.set(worldX(ly), pose.lh, worldZ(lx)), _pts, n, camNow.aspect);
     const toSpot = camNow.eye.distanceTo(_spot.set(worldX(cy), 1, worldZ(cx)));
-    const tight = (2 * Math.atan(CATCH_FRAME / 2 / Math.max(1, toSpot)) * 180) / Math.PI;
+    const frameH = CATCH_FRAME + (CATCH_FRAME_DEEP - CATCH_FRAME) * Math.min(1, Math.max(0, flight.total - 1));
+    const tight = (2 * Math.atan(frameH / 2 / Math.max(1, toSpot)) * 180) / Math.PI;
     pose.fov = Math.min(AIR_FOV_MAX, Math.max(fit, tight));
   }
   // Kept for the catch beat (with where the receiver is), while the ball is in the air.

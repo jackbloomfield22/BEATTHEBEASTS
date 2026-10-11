@@ -491,4 +491,8 @@ export const PASSING9: Clip[] = [
   { id: 'p9-cross', title: 'The crosser on the cue', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 120 }) },
   { id: 'p9-screen', title: 'The RB screen', seed: 19, play: 'doubles-rb-screen', def: 'cover3', los: 30, script: concept({ icon: 1, at: 104 }) },
   { id: 'p9-contested', title: 'The contested ball: Gronk on Lott', seed: 3, play: 'trips-y-cross', def: 'cover1', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'TE', name: 'Rob Gronkowski', pos: 'TE' } },
+  // The run after the catch, the same quick out with Tyreek Hill and with Wes Welker at X (tools/sim/p9_racfind.ts: Cover 3 seed 4, the throw at 50 ticks (late-ish, a player's ball once the out's open),
+  // both caught clean, no broken tackle: Hill 14.1 yd after the catch, Welker 9.3), recorded side by side.
+  { id: 'p9-rac-a', title: 'The quick out and the run after it: Tyreek Hill', seed: 4, play: 'doubles-quick-outs', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 50 }), swap: { off: 'X', name: 'Tyreek Hill', pos: 'WR' } },
+  { id: 'p9-rac-b', title: 'The quick out and the run after it: Wes Welker', seed: 4, play: 'doubles-quick-outs', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 50 }), swap: { off: 'X', name: 'Wes Welker', pos: 'WR' } },
 ];

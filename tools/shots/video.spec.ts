@@ -93,6 +93,8 @@ const FOLLOW9: Record<string, string> = {
   'p9-cross': 'TE,5,-5,2,42',
   'p9-screen': 'RB,4,5,1.8,40',
   'p9-contested': 'TE,-2,-6,1.9,42',
+  'p9-rac-a': 'X,-6,6,2.4,46',
+  'p9-rac-b': 'X,-6,6,2.4,46',
 };
 const FOLLOW6: Record<string, string> = {
   'p6-go': 'X,6,5,2.2,42',
@@ -312,7 +314,7 @@ for (const id of IDS) {
     if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
     await record(page, { id, title: id });
     // The second of a pair: the two side by side, held on the last frame of the shorter one.
-    if ((IDENTITY || PASSING || PASSING2) && id.endsWith('-b')) {
+    if ((IDENTITY || PASSING || PASSING2 || PASSING9) && id.endsWith('-b')) {
       const pair = id.slice(0, -2);
       execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-i', `${OUT}/${pair}-a.mp4`, '-i', `${OUT}/${pair}-b.mp4`, '-filter_complex', '[0:v]tpad=stop=-1:stop_mode=clone[a];[1:v]tpad=stop=-1:stop_mode=clone[b];[a][b]hstack=inputs=2:shortest=0[v];[v]trim=duration=12[o]', '-map', '[o]', '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${OUT}/${pair}.mp4`]);
     }
