@@ -79,14 +79,23 @@ From the recordings' per-frame log (`diag.py`). The QB is drawn from the helmet 
 
 | | Slant (flick) | Out (drive) | Dig (drive) | Go (drive) | RB screen (flick, to his right) | Fade (touch) |
 |---|---|---|---|---|---|---|
-| **Throwing hand clear of the trunk** | **5/16 → 20/20** | 22/26 → 29/29 | 14/18 → 19/19 | 25/28 → 29/29 | 11/31 → 5/31 | 31/31 → FADE_HAND |
-| ...its mean clearance (px) | +3.2 → +14.4 | +6.7 → +16.4 | +6.1 → +13.4 | +8.2 → +16.5 | −1.3 → −11.0 | +16.5 → FADE_GAP |
-| **Back heel up** | **0/16 → 14/20** | 0/26 → 15/29 | 0/18 → 16/19 | 0/28 → 15/29 | 0/31 → 16/31 | 0/31 → FADE_HEEL |
-| Back foot clear of the front leg | 16/16 → 18/20 | 14/26 → 19/29 | 13/18 → 19/19 | 13/28 → 18/29 | 1/31 → 0/31 | 31/31 → FADE_FOOT |
+| **Throwing hand clear of the trunk** | **5/16 → 20/20** | 22/26 → 29/29 | 14/18 → 19/19 | 25/28 → 29/29 | 11/31 → 5/31 | 31/31 → 30/31 |
+| ...its mean clearance (px) | +3.2 → +14.4 | +6.7 → +16.4 | +6.1 → +13.4 | +8.2 → +16.5 | −1.3 → −11.0 | +16.5 → +12.7 |
+| **Back heel up** | **0/16 → 14/20** | 0/26 → 15/29 | 0/18 → 16/19 | 0/28 → 15/29 | 0/31 → 16/31 | 0/31 → 13/31 |
+| Back foot clear of the front leg | 16/16 → 18/20 | 14/26 → 19/29 | 13/18 → 19/19 | 13/28 → 18/29 | 1/31 → 0/31 | 31/31 → 1/31 |
 
 ### The bar (the contested ball, Gronkowski on Lott)
 
-BAR_TABLE
+From the recordings' per-frame log (`diag.py`): the post-up is the box clip's bar key to the hands' snap (0.58 to 0.03 s before the secure; 23 frames at 60 fps). "Seen" is the share of the bar forearm, elbow to fist, that neither body hides from the eye.
+
+| | Round 11 | First cut (the hand at 1.36 m, round ten's shove) | Final (1.26 m, the shove with the bar) |
+|---|---|---|---|
+| **Frames with the forearm at least half seen** | **11 / 23** | 12 / 23 | **19 / 23** |
+| Mean share of the forearm seen | 0.55 | 0.48 | 0.74 |
+| Where the hand is when it's seen | over the man's shoulder, 1.57 m up, the elbow 1.68 m (a raised arm) | at the man's face mask | on his near shoulder and upper chest, the arm level across the gap |
+| The man off the receiver through the post's first 0.25 s | 0.36–0.40 m (one shape on screen) | the same | knocked off from the bar's contact |
+
+The geometry, from the same log: the man ends behind the receiver's near (right) shoulder, 132–153° off his facing, and the camera is behind his other shoulder (127–144°), so the line between the two is across the screen (within ~15° of square to the camera's line, `tools/sim/p12_box.ts`): the bar can be seen in profile when it's level and the gap is open, and not when it goes up and over.
 
 ### The same camera in Node (`p12_cam.ts`, every recorded pass; before → after)
 
@@ -111,8 +120,8 @@ Nothing in `src/sim` or `src/engine` changed, so the sim is the same to the bit;
 | Passing identity (`passidentity.ts`) | 9 / 9 | 9 / 9 |
 | Trait audit (`traitaudit.ts`) | 127 / 127, 25 / 25 | 127 / 127, 25 / 25 |
 | Clip gates (`build_anims.py`) | 215 / 215 | 215 / 215 |
-| `npm run check` | passes | CHECK_RESULT |
-| `e2e/practice.spec.ts` | passes | E2E_RESULT |
+| `npm run check` | passes | passes (79 files, 758 tests) |
+| `e2e/practice.spec.ts` | passes | passes, 7 / 7 (port 5563) |
 
 - **The determinism golden doesn't move** (nothing in the sim changed; `tests/` has it and it passes unchanged; no re-pin).
 - `tests/broadcast-cam.test.ts`: the slant's zoom under 45.5°/s on its measure (44), the QB in the frame past 0.3 s after the release (0.32), the receiver over 140 px at the catch (148), the pan under 35°/s; the out's zoom under 45.5°/s and the QB in the frame past 0.4 s.
@@ -129,8 +138,32 @@ Nothing in `src/sim` or `src/engine` changed, so the sim is the same to the bit;
 
 ## Watched: an honest critique
 
-CRITIQUE
+I read the 60-fps recordings frame by frame against their per-frame logs, crops on the QB through the release and finish, crops on the contested pair through the post-up, and the whole frame from the windup to the catch, before against after.
+
+- **The QB's finish now reads as a throw's finish from the broadcast camera on a throw to his left (the slant, the out, the dig, the go).** In the crops (`stills/broadcast-qb-finish-before-after.jpg`) the throwing arm comes through long and down across him, the hand out past his front hip or knee where it was tucked against his belt, and the back heel flips up behind him for a beat before the back foot comes down: the throwing hand is clear of his body on every frame of the finish (the slant 5/16 → 20/20 frames, by 14 px against 3), the heel up on 14–16 frames of the first half-second where it never was. On the slant this is the biggest change of the round: round 11's QB stood frozen on the drop's stance with the arm folded into his belly; now he finishes like a quarterback. At 960×540 the QB is still ~80–90 px tall, so these are gestures of a few dozen pixels: they read as "arm through, heel up" at a glance, not as coaching-tape mechanics.
+- **The slant's finish is a deep one.** With the legs now the throw's own, the flick's crouch (the hips 13 cm down, the chest over the front knee, as round ten keyed it) shows for the first time, and on a quick slant from the gun it's more bend than a real quick-game flick has. Worth the owner's eye at 60 fps; the knob is the flick's pelvis drop and flex.
+- **On a throw to his right the hand is still behind him.** The RB screen (and any throw to the right: the camera is then behind his throwing shoulder) can't show a hand finishing across to the opposite hip: his body is between the camera and it (5/31 frames clear, as before, −11 px). What reads there is the throwing elbow coming through, the glove elbow back and the heel kick (16/31 frames). I didn't cheat the arm out to the throwing side: that's not a finish a QB has.
+- **Touch (the fade) is round ten's finish plus the heel.** The arm reaching up to the target was already clear of him (30–31/31 frames); I tried pulling the glove elbow back on it too and it made a "W" of both arms from behind, so it's as it was. The back foot now leaves the ground (13/31 frames) instead of stepping flat.
+- **The camera's zoom is no longer the fastest part of the move.** The slant's lens peaks at 44°/s (67), the dig 42 (70), the out 42 (55), the go 37 (51), the fade 34 (44), the screen 51 (55); the pans are where they were or lower (the slant 30, the out 30, the screen 37). The QB is in the frame longer on every throw but the screen (the slant to 0.32 s after the release from 0.25, so the flick's held finish is seen to its end; the out 0.47, the fade 0.57), and every receiver is as large at the catch (the fade 141 → 140 px) or larger (the slant 108 → 114). What it costs, and what the owner should judge:
+  - **the shot tilts down onto the QB through the windup** (~4°) and back up with the ball: on screen, the stands leave the top of the frame as he winds up and the shot rises with the throw. I think it reads as an operator going to the passer and then with the ball; it is a visible down-and-up on every pass;
+  - **more of the move is a dolly**: the eye travels in on the catch at up to 17–23 m/s (the slant's from 10). The perspective changes under the zoom on a quick throw where round 11 held the eye nearly still;
+  - **the QB is ~5% smaller as he lets it go** (the slant 90 → 86 px): he's higher in the frame, a little further from the eye;
+  - **the lens settles 0.08 s before the catch** (0.18), so a quick catch is framed as it arrives, not just before.
+- **The box-out's bar is now a bar on the man, most of the post-up.** In the crops (`stills/broadcast-box-before-after.jpg`), from ~0.36 s before the ball Gronkowski's near arm goes out level onto Lott's near shoulder and upper chest across a gap the shove has just opened, and Lott is held off it until both go up: the forearm is seen on 19 of the post's 23 frames (11), where round 11's showed only as a raised elbow over the man. It is a dark forearm against Lott's dark jersey at ~110 px for the pair, so it reads as "arm on him, holding him off" more than as a crisp forearm shiver; its first 0.1 s (the bar landing, the bodies still together) is still hidden.
+
+Would the owner, playing from the broadcast camera, now feel the passing is real on the QB's end, the ball and the WR's end?
+- **The QB's end: yes on the quick and intermediate throws to his left**: he throws through the ball, the arm comes across and the back heel comes up, and the camera keeps him in the shot through it. Throws to his right still show the finish only by its elbows and heel.
+- **The ball and the camera: the move is calmer** (no part of it over ~45°/s on any of the recorded quick throws but the screen's lens at 51), at the price of a tilt and more dolly.
+- **The WR's end: the post-up's bar shows on the man.**
+
+These are 960×540 recordings on Low.
 
 ## Still open
 
-STILL_OPEN
+- **The new camera's tilt and dolly** (the push tilting down onto the passer, the eye travelling in on a quick throw at up to 17 m/s) want the owner's eye at 60 fps: `PUSH_LOOK_DOWN` and `EYE_SHARE_MIN` are the knobs; less of either brings the slant's zoom back over 45°/s.
+- **The slant's flick is a deep crouch** now that its legs play: the owner should judge it against a real quick-game release (the flick's pelvis drop and flex in `actions_p10.py FINISHES`).
+- **A finish to the QB's right** (the screen, a throw to the right side) can't show the hand across him from a camera behind his throwing shoulder; only the elbows and the heel read.
+- **The QB is still ~80–90 px tall at the release** (960×540): the finish reads as gestures. A cut to a QB camera at the release remains the next step if the owner wants mechanics at broadcast speed.
+- **The RB screen's QB** leaves the frame 0.04 s sooner after the catch than before (0.78 against 0.82 s; he's in it through his whole finish), and its zoom is 51°/s.
+- **The bar's first beat** (as it lands, before the shove opens the gap) is still hidden between the bodies, and the dark forearm on a dark jersey is low in contrast at broadcast distance.
+- **Gates vs Lewis** (identity) still waits on the owner.
