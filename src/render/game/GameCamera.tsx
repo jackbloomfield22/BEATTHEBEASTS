@@ -10,6 +10,7 @@ import { view } from '@/game/view';
 import { fieldDir, worldX, worldY, worldZ } from '@/game/coords';
 import { frameEvents } from './frameEvents';
 import { catchAhead } from '@/sim/passing';
+import { boxOut } from '@/sim/bodies';
 
 // The play cameras (GDD §11.1, TECH_PLAN §8), driven from the sim snapshot
 // through critically damped springs so every cut is a glide:
@@ -262,6 +263,15 @@ const BEAT_MAX = 0.25;
 const SETTLE_K = 0.2;
 const SETTLE_MIN = 0.22;
 const SETTLE_MAX = 0.4;
+/**
+ * How far the eye itself moves toward the air framing's (the rest is the pan
+ * and the zoom): EYE_SHARE_MIN of the way on a quick throw, all of it on a
+ * ball (EYE_FROM + EYE_SPAN) s in the air or more. Ours: a slant's dolly
+ * peaked at ~30 m/s at the full share.
+ */
+const EYE_SHARE_MIN = 0.35;
+const EYE_FROM = 0.6;
+const EYE_SPAN = 1.2;
 /** The air rig's springs (rad/s: eye, look, lens): stiff, since the target itself is eased now (lag ~0.1–0.2 s). */
 const AIR_W = [10, 10, 10, 16, 16, 16, 14];
 
@@ -295,6 +305,8 @@ const AIR_FOV_MAX = 52;
 const CATCH_FRAME = 7.5;
 const CATCH_FRAME_DEEP = 10;
 const NEAR_DEF = 4;
+/** The box-out drawn as a post-up (choreo.ts BOX_CLIP). */
+const POSTED_BOX = 0.4;
 const _f = new THREE.Vector3();
 const _r = new THREE.Vector3();
 const _u = new THREE.Vector3();
@@ -412,7 +424,10 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
     }
     const fit = fitFov(camNow.eye, _look.set(worldX(ly), pose.lh, worldZ(lx)), _pts, n, camNow.aspect);
     const toSpot = camNow.eye.distanceTo(_spot.set(worldX(cy), 1, worldZ(cx)));
-    const frameH = CATCH_FRAME + (CATCH_FRAME_DEEP - CATCH_FRAME) * Math.min(1, Math.max(0, flight.total - 1));
+    // (Passing round 10) A man posting up the defender on him (the box-out, sim/bodies.ts boxOut, drawn as catch_box when
+    // it's 0.4 or more: choreo.ts BOX_CLIP) is framed as tight as a quick throw whatever the depth: the post-up is the play.
+    const posted = nd >= 0 && tr !== undefined && boxOut(tr, s.agents[nd]!) >= POSTED_BOX;
+    const frameH = posted ? CATCH_FRAME : CATCH_FRAME + (CATCH_FRAME_DEEP - CATCH_FRAME) * Math.min(1, Math.max(0, flight.total - 1));
     const tight = (2 * Math.atan(frameH / 2 / Math.max(1, toSpot)) * 180) / Math.PI;
     pose.fov = Math.min(AIR_FOV_MAX, Math.max(fit, tight));
   }
@@ -424,9 +439,13 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
     const end = F - Math.min(SETTLE_MAX, Math.max(SETTLE_MIN, SETTLE_K * F));
     const m = smooth(Math.min(1, Math.max(0, (s.t - flight.t0 - beat) / Math.max(0.2, end - beat))));
     const mx = (a: number, z: number) => a + (z - a) * m;
-    pose.ex = mx(from.ex, pose.ex);
-    pose.ey = mx(from.ey, pose.ey);
-    pose.eh = mx(from.eh, pose.eh);
+    // The eye goes only part of the way on a quick throw: the shot pans and zooms from about where it is, as a
+    // broadcast camera does (a 0.7-s slant's full dolly was ~30 m/s at its peak, the perspective swinging under the zoom).
+    const me = m * Math.min(1, Math.max(EYE_SHARE_MIN, (F - EYE_FROM) / EYE_SPAN));
+    const mxe = (a: number, z: number) => a + (z - a) * me;
+    pose.ex = mxe(from.ex, pose.ex);
+    pose.ey = mxe(from.ey, pose.ey);
+    pose.eh = mxe(from.eh, pose.eh);
     pose.lx = mx(from.lx, pose.lx);
     pose.ly = mx(from.ly, pose.ly);
     pose.lh = mx(from.lh, pose.lh);

@@ -219,7 +219,7 @@ function diagFrame(n: number) {
       const v = bone.getWorldPosition(q.player.root.position.clone());
       return [r2(v.x), r2(v.y), r2(v.z)];
     };
-    out.qb = { hr: qp('hand_r'), fl: qp('foot_l'), fr: qp('foot_r'), pelvis: qp('pelvis'), head: qp('head'), clip: q.animator.transition && [q.animator.transition.name, r2(q.animator.transition.t)] };
+    out.qb = { hr: qp('hand_r'), fl: qp('foot_l'), fr: qp('foot_r'), pelvis: qp('pelvis'), head: qp('head'), clip: q.animator.transition && [q.animator.transition.name, r2(q.animator.transition.t)], ovl: q.animator.overlayAction && [q.animator.overlayAction.name, r2(q.animator.overlayAction.t)] };
   }
   const b = i >= 0 ? w.__btbBodies?.[i] : undefined;
   if (b) {

@@ -264,9 +264,10 @@ const BOX_LEAN = 0.35;
  * ball (his shoulders square away from him, the near shoulder and hip into
  * his chest), the bar arm out from his body into the man, and the man knocked
  * off his line by it before both go up. So, from the box clip's own time:
- * - the turn: his body turned BOX_TURN away from the man (his near shoulder
- *   and back into him), in over BOX_TURN_IN from the post (the clip's bar key,
- *   0.58 s before the ball), held through the catch, out after the tuck;
+ * - the turn: his body turned so the man is behind his near shoulder
+ *   (BOX_BEHIND, his back half into him), in over BOX_TURN_IN from the post
+ *   (the clip's bar key, 0.58 s before the ball), held through the catch,
+ *   out after the tuck;
  * - the shove: from the fight key (0.12 s before the ball) back to the
  *   bar's first contact, the man is displaced by it (contact.ts: drawn up to
  *   BOX_SHOVE m off his spot, rocked back), and both bodies react to it.
@@ -288,8 +289,14 @@ function boxPost(b: Body): { turn: number; shove: number } | null {
 }
 /** The box clip's post (its bar key) this long before its secure frame (s: actions_p8.py box_out, ts − 0.58). */
 const POST_LEAD = 0.58;
-/** How far he turns his back into the man (rad, 50°: the defender behind his near shoulder) and how fast (s). Ours, from the broadcast picture of a tight end posting up a safety. */
-const BOX_TURN = (50 * Math.PI) / 180;
+/**
+ * Where he puts the man (rad off his facing, on the box clip's side: 125°, behind his near shoulder, his back half
+ * into him), the most he turns to get him there (60°), and how fast (s). Ours, from the broadcast picture of a tight
+ * end posting up a safety. (The clip's bar arm is keyed out to that side and a little back: actions_p8.py box_out.)
+ */
+const BOX_BEHIND = (125 * Math.PI) / 180;
+const BOX_TURN = (60 * Math.PI) / 180;
+const wrapAngle = (x: number) => Math.atan2(Math.sin(x), Math.cos(x));
 const BOX_TURN_IN = 0.25;
 
 function lyingClip(b: Body, name: string, t0 = 0): void {
@@ -1699,7 +1706,13 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // The post-up (passing round 10, boxPost): his back turned into the man (box_l: the man on his left, so he turns right), and the shove.
   const post = boxPost(b);
   b.post = post ?? undefined;
-  if (post && post.turn > 0) out.turn = (b.catchClip === 'catch_box_l' ? -1 : 1) * BOX_TURN * post.turn;
+  if (post && post.turn > 0 && b.contest) {
+    // He turns so the man is behind his near shoulder (BOX_BEHIND off his facing, on the clip's side), by as much as BOX_TURN.
+    const d = s.agents[b.contest.with]!;
+    const bearing = wrapAngle(Math.atan2(d.pos.y - a.pos.y, d.pos.x - a.pos.x) - a.face);
+    const want = (b.catchClip === 'catch_box_l' ? 1 : -1) * BOX_BEHIND;
+    out.turn = Math.max(-BOX_TURN, Math.min(BOX_TURN, wrapAngle(bearing - want))) * post.turn;
+  }
   return out;
 }
 
