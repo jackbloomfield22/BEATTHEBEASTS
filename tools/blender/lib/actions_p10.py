@@ -56,29 +56,49 @@ from .transitions import Plant, Steps
 # the pelvis's twist and flex and drop, the spine's flex / side bend / twist, the gaze), when the back foot
 # lifts and lands and how far past the front foot it lands (m), the front foot's gather step (lift, land, m)
 # when the back foot goes past it, how long the finish holds, and how long the whole recovery to a stand is.
+# (Passing round 12: `kick`, the back foot's flight between its lift and its landing: when it's up (s after the
+# release), how long it stays up, how high (m) and how far its heel is turned up (deg), and how far forward of where it
+# was (m); `glove_pole`, the glove arm's elbow pole.)
+#
+# Passing round 12 (docs/passing/PASSING12.md). From the broadcast camera the QB is ~75-100 px tall at the release,
+# seen from behind and above (the eye ~4-9 m behind him, 2-8 m to one side, 7 m up), and round ten's finishes were
+# keyed for the side view: the flick's hand finished at his own front hip (0.10 m to his left), inside his silhouette
+# from behind, and from behind and to his right (a throw to the right) the drive's too; the back foot came up 7 cm and
+# landed beside the front one, so from above the legs read as one shape. A finish reads at that distance by its
+# silhouette: the throwing arm long and its hand clear of the body, the glove elbow pulled back out of it, the back
+# heel kicked up behind him as the hip drives through. Re-keyed within what a QB really does (from quarterback
+# coaching: "thumb to the opposite pocket", the hand finishing outside the front thigh; "pull the front elbow back
+# to the hip"; the back heel flips up as the back hip comes through, the quick game's "flamingo"): the flick's hand
+# outside the front hip, the drive's outside the front knee, both a little longer in the arm; the hips 4-6 deg more
+# round; the glove elbow back past his hip; the back heel up behind him (heel 70-80 deg, the ball of the foot
+# 0.12-0.20 m up) for a beat before it comes down; the flick held 0.1 s longer. Measured from the broadcast eyes
+# (qbfin.py, scratch; PASSING12.md has the numbers before and after).
 FINISHES = {
     "flick": dict(
         keys=[
-            (0.05, (0.00, -0.58, 1.48), (0.28, -0.12, 1.10), (-0.5, -0.4, 1.30), (14, 18, -0.12), (8, -2, 8), (5.0, 0.0, 0.9)),
-            (0.13, (0.10, -0.44, 1.10), (0.28, -0.02, 1.06), (-0.7, -0.3, 1.15), (26, 24, -0.13), (11, -2, 11), (6.0, 0.0, 0.9)),
+            (0.05, (0.04, -0.60, 1.44), (0.30, -0.10, 1.08), (-0.5, -0.4, 1.30), (16, 18, -0.12), (8, -2, 9), (5.0, 0.0, 0.9)),
+            (0.13, (0.28, -0.50, 1.00), (0.34, 0.06, 1.02), (-0.6, -0.4, 1.15), (31, 25, -0.13), (12, -2, 14), (6.0, 0.0, 0.9)),
         ],
-        hold=0.26, back=(0.02, 0.20, 0.0), gather=None, T=0.56,
+        hold=0.36, back=(0.02, 0.34, 0.0), gather=None, T=0.66,
+        kick=(0.10, 0.14, 0.12, 75.0, 0.10), glove_pole=(0.8, 0.5, 1.0),
     ),
     "drive": dict(
         keys=[
-            (0.07, (0.02, -0.62, 1.42), (0.30, -0.14, 1.08), (-0.7, -0.3, 1.30), (18, 22, -0.12), (10, -2, 8), (5.0, 0.0, 0.9)),
-            (0.22, (0.14, -0.46, 0.86), (0.30, 0.04, 1.02), (-0.7, -0.2, 1.15), (34, 30, -0.13), (16, -3, 8), (3.0, 0.0, 0.9)),
-            (0.46, (0.13, -0.44, 0.90), (0.30, 0.03, 1.04), (-0.7, -0.2, 1.15), (32, 27, -0.12), (14, -3, 7), (2.0, 0.0, 0.9)),
+            (0.07, (0.06, -0.62, 1.40), (0.32, -0.12, 1.06), (-0.7, -0.3, 1.30), (20, 22, -0.12), (10, -2, 9), (5.0, 0.0, 0.9)),
+            (0.22, (0.32, -0.52, 0.82), (0.36, 0.08, 1.00), (-0.7, -0.3, 1.15), (39, 30, -0.13), (16, -3, 11), (3.0, 0.0, 0.9)),
+            (0.46, (0.30, -0.50, 0.86), (0.35, 0.07, 1.02), (-0.7, -0.3, 1.15), (37, 27, -0.12), (14, -3, 10), (2.0, 0.0, 0.9)),
         ],
-        hold=0.46, back=(0.04, 0.30, 0.25), gather=(0.54, 0.72), T=0.98,
+        hold=0.46, back=(0.04, 0.36, 0.25), gather=(0.58, 0.76), T=1.02,
+        kick=(0.12, 0.10, 0.20, 80.0, 0.30), glove_pole=(0.8, 0.5, 1.0),
     ),
     "touch": dict(
         keys=[
-            (0.08, (-0.04, -0.66, 1.64), (0.28, -0.10, 1.12), (-0.6, -0.4, 1.45), (14, 16, -0.12), (6, -2, 8), (0.0, 0.0, 0.9)),
-            (0.22, (0.05, -0.62, 1.40), (0.28, -0.04, 1.10), (-0.5, -0.5, 1.35), (22, 18, -0.12), (7, -2, 9), (-6.0, 0.0, 0.9)),
-            (0.42, (0.06, -0.60, 1.36), (0.28, -0.03, 1.08), (-0.5, -0.5, 1.30), (22, 17, -0.12), (6, -2, 9), (-8.0, 0.0, 0.9)),
+            (0.08, (-0.04, -0.66, 1.64), (0.30, -0.06, 1.10), (-0.6, -0.4, 1.45), (14, 16, -0.12), (6, -2, 8), (0.0, 0.0, 0.9)),
+            (0.22, (0.05, -0.62, 1.40), (0.32, 0.02, 1.06), (-0.5, -0.5, 1.35), (24, 18, -0.12), (7, -2, 10), (-6.0, 0.0, 0.9)),
+            (0.42, (0.06, -0.60, 1.36), (0.32, 0.03, 1.06), (-0.5, -0.5, 1.30), (24, 17, -0.12), (6, -2, 10), (-8.0, 0.0, 0.9)),
         ],
-        hold=0.42, back=(0.10, 0.36, 0.0), gather=None, T=0.86,
+        hold=0.42, back=(0.10, 0.40, 0.0), gather=None, T=0.86,
+        kick=(0.16, 0.12, 0.10, 65.0, 0.12), glove_pole=(0.8, 0.5, 1.0),
     ),
 }
 
@@ -117,7 +137,7 @@ def finish(base: Clip, kind: str) -> Clip:
     sp = lambda f, a, tw: {"spine_02": (f, a, tw), "spine_03": (f * 0.85, a, tw), "spine_04": (f * 0.5, 0, tw * 0.75)}  # noqa: E731
 
     def key(t_after: float, hr, hl, er, pel, spine, gaze):
-        p = shift(with_upper(qset, {"r": hr, "l": hl}, {**hands_of(RELAXED, "r"), **hands_of(RELAXED, "l")}, {"r": er, "l": (0.7, 0.3, 1.0)}), 0.0, -fwd(tr + t_after))
+        p = shift(with_upper(qset, {"r": hr, "l": hl}, {**hands_of(RELAXED, "r"), **hands_of(RELAXED, "l")}, {"r": er, "l": d.get("glove_pole", (0.7, 0.3, 1.0))}), 0.0, -fwd(tr + t_after))
         p.pelvis.update({"twist": pel[0], "flex": pel[1], "up": pel[2]})
         p.joints.update(sp(*spine))
         p.gaze = gaze
@@ -138,6 +158,13 @@ def finish(base: Clip, kind: str) -> Clip:
     # The back foot comes up off its toe (the base throws have it rolled up ~35-40 deg by the release) and lands where the
     # stand has it: `past` m beyond the front foot for the drive, about level for the flick and the touch.
     plants = [Plant("r", tr, tr + lift_r, r0), Plant("r", tr + land_r, math.inf, copy.deepcopy(stand.feet["r"]))]
+    if d.get("kick"):
+        # (Passing round 12) The back heel kicked up behind him as the hip drives through: the foot held up in the air
+        # (not a plant), its heel turned up, part of the way to where it lands, then down onto its plant.
+        k_up, k_hold, k_lift, k_heel, k_fwd = d["kick"]
+        land_f = stand.feet["r"]
+        air = replace(copy.deepcopy(r0), heel=k_heel, lift=k_lift, x=r0.x + (land_f.x - r0.x) * 0.3, y=r0.y - k_fwd)
+        plants.append(Plant("r", tr + k_up, tr + k_up + k_hold, air, contact=False))
     if d["gather"]:
         g0, g1 = d["gather"]
         # The gather: the front foot comes up level with the back one, at the stand's width.

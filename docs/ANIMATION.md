@@ -212,14 +212,14 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `catch_drop` | overlay | 28 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_bobble` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_resecure` | overlay | 15 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `qb_throw_fin_flick` | transition | 28 | 0.0 | 0.00 | 0.00 | 23.7 | — | pass |
-| `qb_throw_fin_drive` | transition | 40 | 0.0 | 0.35 | 0.00 | 23.8 | — | pass |
+| `qb_throw_fin_flick` | transition | 31 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `qb_throw_fin_drive` | transition | 42 | 0.0 | 0.04 | 0.00 | 23.8 | — | pass |
 | `qb_throw_fin_touch` | transition | 37 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `qb_throw_quick_fin_flick` | transition | 25 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `qb_throw_quick_fin_drive` | transition | 37 | 0.0 | 0.35 | 0.00 | 23.8 | — | pass |
+| `qb_throw_quick_fin_flick` | transition | 28 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `qb_throw_quick_fin_drive` | transition | 39 | 0.0 | 0.04 | 0.00 | 23.8 | — | pass |
 | `qb_throw_quick_fin_touch` | transition | 34 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `qb_throw_long_fin_flick` | transition | 31 | 0.0 | 0.00 | 0.00 | 23.7 | — | pass |
-| `qb_throw_long_fin_drive` | transition | 43 | 0.0 | 0.35 | 0.00 | 23.8 | — | pass |
-| `qb_throw_long_fin_touch` | transition | 40 | 0.0 | 0.00 | 0.00 | 23.7 | — | pass |
+| `qb_throw_long_fin_flick` | transition | 34 | 0.0 | 0.00 | 0.00 | 23.3 | — | pass |
+| `qb_throw_long_fin_drive` | transition | 45 | 0.0 | 0.04 | 0.00 | 23.8 | — | pass |
+| `qb_throw_long_fin_touch` | transition | 40 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 
 **215 of 215 clips pass.**

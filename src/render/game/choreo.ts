@@ -606,6 +606,8 @@ const QUICK_HANG = 0.78;
 const DEEP_AIR = 25;
 /** A QB moving faster than this (m/s) after the release runs out of his finish. Ours: a drift settling is slower. */
 const FINISH_RUN = 2;
+/** (Passing round 12) Slower than this (m/s) as the ball leaves a throw on the move, he's planted: the finish takes his legs too. Ours: a set QB's drift is under ~0.5. */
+const FINISH_PLANTED = 0.8;
 /** A rusher this close (the sim's pressure, 0..1: a free man within ~2.4 yd) puts him on his back foot. Ours. */
 const FADE_PRESSURE = 0.6;
 /** Held past his release (the player choosing the touch), the arm waits this far (s of clip) short of the release frame: cocked, the ball behind the ear. Ours: a frame at 30 fps. */
@@ -1511,7 +1513,16 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     const name = fin ? `${clip}_fin_${fin}` : clip;
     const now = fin && anim.continueAs(clip, name, THROW_MASK) ? name : clip;
     if (tr && tr.name === clip) anim.retime(now, { rate: 1 });
-    else anim.retimeOverlay(now, 1);
+    else {
+      anim.retimeOverlay(now, 1);
+      // (Passing round 12) A throw begun on the move (the quick game's throw from the gun, wound up in the drop) is an
+      // upper-body overlay, and its legs were the drop's: planted by the release, he stood still through the finish, the
+      // back foot never coming through. Planted as it leaves his hand, the finish takes the legs too, from the release
+      // frame (the drop's last stance and the throw's are within ~0.1 m a foot: tools/blender, the back foot lifting at
+      // once), under the overlay that keeps the arms where they are.
+      const o = anim.overlayAction;
+      if (fin && now === name && o && o.name === name && sp * YARD < FINISH_PLANTED && anim.lib.meta[name]?.kind === 'transition') anim.play(name, { now: true, t0: o.t });
+    }
   }
   // A QB who moves off before his finish is through runs out of it (the finish is keyed standing).
   if (i === s.qb && !w && tr && !tr.done && tr.name.includes('_fin_') && sp * YARD >= FINISH_RUN) anim.release();

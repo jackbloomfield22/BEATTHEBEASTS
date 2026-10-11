@@ -49,6 +49,15 @@ for (const c of PASSING9.filter((x: Clip) => ids.includes(x.id))) {
         // The man's bearing off the receiver's facing (sim frame), and the clip.
         const bearing = deg(wrap(Math.atan2(d.pos.y - a.pos.y, d.pos.x - a.pos.x) - a.face));
         const clip = catchClip(s, a.i, 'contested');
+        // The eye and the man in the receiver's frame (m: ahead, to his left, up), and the man's facing off his.
+        const YD = 0.9144;
+        const f = [Math.cos(a.face), Math.sin(a.face)] as const;
+        const inFrame = (x: number, y: number) => [((x - a.pos.x) * f[0] + (y - a.pos.y) * f[1]) * YD, (-(x - a.pos.x) * f[1] + (y - a.pos.y) * f[0]) * YD];
+        const ex = 50 - cz / YD;
+        const ey = -cx / YD;
+        const [ea, el] = inFrame(ex, ey);
+        const [ma, ml] = inFrame(d.pos.x, d.pos.y);
+        if (process.argv.includes('--frame')) console.log(`  eye ${ea!.toFixed(2)},${el!.toFixed(2)},${p[1]!.toFixed(2)} man ${ma!.toFixed(2)},${ml!.toFixed(2)} man facing ${deg(wrap(d.face - a.face)).toFixed(0)}° speed ${Math.hypot(a.vel.x, a.vel.y).toFixed(1)} yd/s`);
         console.log(`${c.id} T-${T.toFixed(2)} s: man at ${rel.toFixed(0)}° off the camera's line (${rel > 0 ? 'right' : 'left'} of him on screen), ${Math.hypot(d.pos.x - a.pos.x, d.pos.y - a.pos.y).toFixed(2)} yd, ${bearing.toFixed(0)}° off his facing; clip ${clip}; eye ${(p[1]!).toFixed(1)} m up, ${Math.hypot(rx - cx, rz - cz).toFixed(1)} m back`);
       }
     }
