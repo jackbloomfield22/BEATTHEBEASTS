@@ -127,18 +127,29 @@ def over_shoulder_low(side: str) -> Clip:
 def box_out(side: str) -> Clip:
     """The box-out on a contested ball, the defender on his left (authored on
     the left; overlay over the run, so the legs keep driving). Posted up
-    through the ball's last half second: the trunk leans and turns into the
-    man (the left hip and shoulder into him), the left forearm a bar across
-    his chest at the numbers, the right hand up ready; then late, both hands go
-    up together over the bar arm's side to take it at its highest point above
-    the face mask (secure), the chest staying on the man; snatched and
-    chinned at once, both forearms over it, the shoulder still into him; the
-    tuck late, as the contested catch's."""
-    T = 1.05
-    ts, tt = 14 / FPS, 26 / FPS
+    through the ball's last two-thirds of a second: the trunk leans and turns
+    into the man (the left hip and shoulder into him), the left forearm a bar
+    across his chest at the numbers, the elbow up and out, the right hand up
+    ready; held until the ball is nearly there, then late, both hands go up
+    together over the bar arm's side to take it at its highest point above the
+    face mask (secure), the chest staying on the man; snatched and chinned at
+    once, both forearms over it, the shoulder still into him; the tuck late,
+    as the contested catch's.
+
+    Passing round 9 (docs/passing/PASSING9.md): round eight's post-up was
+    0.47 s long with the bar giving way 0.17 s before the ball and the
+    runtime's hands taking the arms from 0.2 s out, so from the broadcast
+    camera there was no post-up to see. The post is now 0.67 s (ts), the lean
+    into the man roughly doubled (~25 degrees of side bend, ~25 of turn: a
+    shoulder visibly into him at broadcast distance), and the bar held until
+    0.12 s before the ball, the hands' snap up to the high point taking the
+    last 0.1 s (a receiver's late hands: the arms fight until the ball is on
+    him)."""
+    T = 1.3
+    ts, tt = 20 / FPS, 32 / FPS
     m = sided(side)
     # Into the man on the left: the trunk leans and turns toward him (flex, lean, twist added per bone).
-    post = {"spine_02": (2, 6, 6), "spine_03": (2, 8, 8), "spine_04": (1, 6, 6)}
+    post = {"spine_02": (2, 8, 7), "spine_03": (2, 10, 10), "spine_04": (1, 7, 8)}
 
     def posted(p: Pose, k: float) -> Pose:
         for b, (fl, ab, tw) in post.items():
@@ -146,14 +157,17 @@ def box_out(side: str) -> Clip:
             p.joints[b] = (f0[0] + fl * k, f0[1] + ab * k, f0[2] + tw * k)
         return p
 
-    # The bar: the left forearm across his chest out to the left, at the numbers; the right hand up at the chest, ready.
-    bar = posted(run_upper({"l": (0.42, -0.26, 1.28), "r": (-0.10, -0.40, 1.42)}, {**GRIP, **SPREAD, "hand_l": (-10, 0, 40), "hand_r": (-30, 0, 0)}, {"l": (0.40, -0.05, 1.18), "r": (-0.45, 0.05, 1.05)}, (0, 0, 0)), 1.0)
+    # The bar: the left forearm across his chest out to the left, at the numbers, the elbow up and out (the bar reads by its elbow);
+    # the right hand up at the chest, ready.
+    bar = posted(run_upper({"l": (0.40, -0.30, 1.30), "r": (-0.10, -0.40, 1.42)}, {**GRIP, **SPREAD, "hand_l": (-10, 0, 40), "hand_r": (-30, 0, 0)}, {"l": (0.50, -0.04, 1.26), "r": (-0.45, 0.05, 1.05)}, (0, 0, 0)), 1.0)
+    # The fight: the bar driven a hand further into him as the ball comes (the hip and shoulder still on him).
+    fight = posted(run_upper({"l": (0.46, -0.28, 1.31), "r": (-0.08, -0.40, 1.46)}, {**GRIP, **SPREAD, "hand_l": (-10, 0, 45), "hand_r": (-30, 0, 0)}, {"l": (0.54, -0.02, 1.27), "r": (-0.45, 0.05, 1.08)}, (1, 1, 0)), 1.1)
     # Late hands: both up together over the face mask on the bar's side, the chest still on him.
-    reach = posted(run_upper({"l": (0.10, -0.40, 1.98), "r": (-0.02, -0.42, 1.96)}, {**SPREAD, "hand_l": (-55, 0, 0), "hand_r": (-55, 0, 0)}, {"l": (0.55, -0.05, 1.50), "r": (-0.50, -0.05, 1.48)}, (-6, -5, -4)), 0.8)
-    snatch = posted(run_upper({"l": (0.08, -0.36, 1.86), "r": (-0.02, -0.38, 1.84)}, {**GRIP, "hand_l": (-45, 0, 0), "hand_r": (-45, 0, 0)}, {"l": (0.45, 0.0, 1.40), "r": (-0.42, 0.0, 1.38)}, (-3, -3, -2)), 0.8)
+    reach = posted(run_upper({"l": (0.10, -0.40, 1.98), "r": (-0.02, -0.42, 1.96)}, {**SPREAD, "hand_l": (-55, 0, 0), "hand_r": (-55, 0, 0)}, {"l": (0.55, -0.05, 1.50), "r": (-0.50, -0.05, 1.48)}, (-6, -5, -4)), 0.85)
+    snatch = posted(run_upper({"l": (0.08, -0.36, 1.86), "r": (-0.02, -0.38, 1.84)}, {**GRIP, "hand_l": (-45, 0, 0), "hand_r": (-45, 0, 0)}, {"l": (0.45, 0.0, 1.40), "r": (-0.42, 0.0, 1.38)}, (-3, -3, -2)), 0.85)
     # Chinned: the ball under the face mask, both forearms over it, the left shoulder still into him.
     chin = posted(run_upper({"l": (0.07, -0.24 - FWD, 1.42), "r": (-0.06, -0.23 - FWD, 1.44)}, {**GRIP, "hand_l": (25, 0, -30), "hand_r": (-5, 0, 30)}, {"l": (0.30, 0.15, 1.05), "r": (-0.30, 0.15, 1.05)}, (6, 5, 4)), 1.0)
-    keys = [(0.0, carriage()), (ts - 0.42, m(bar)), (ts - 0.17, m(bar)), (ts - 0.05, m(reach)), (ts, m(reach)), (ts + 0.04, m(snatch)), (ts + 0.13, m(chin)), (tt - 0.08, m(chin)), (tt + 0.04, tuck()), (T, tuck())]
+    keys = [(0.0, carriage()), (ts - 0.58, m(bar)), (ts - 0.3, m(bar)), (ts - 0.12, m(fight)), (ts - 0.03, m(reach)), (ts, m(reach)), (ts + 0.04, m(snatch)), (ts + 0.13, m(chin)), (tt - 0.08, m(chin)), (tt + 0.04, tuck()), (T, tuck())]
     return Clip(f"catch_box_{side}", "overlay", T, lambda t: keyed(keys, t), mask=MASK, events=events(ts, tt))
 
 
