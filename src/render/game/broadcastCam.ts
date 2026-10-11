@@ -172,8 +172,15 @@ const PUSH_OUT = 0.3;
  * on the passer, so it never cranes back up). Ours: a slant's dolly peaked at
  * ~30 m/s at the full share.
  */
-/** (Round 12: 0.35 → 0.8) The slant's lens then closes ~24° instead of ~27°, its peak dolly ~17 m/s (a full share: ~24). */
+/**
+ * (Round 12: 0.35 → 0.8 from a flight of EYE_SHARE_F1 s) The slant's lens then closes ~24° instead of ~27°, its peak
+ * dolly ~17 m/s (a full share: ~24). A ball in the air under EYE_SHARE_F0 s (the RB screen's 0.47) keeps round ten's
+ * 0.35: its catch is beside the QB, and the eye going in on it took him out of the frame just after the catch.
+ */
 const EYE_SHARE_MIN = 0.8;
+const EYE_SHARE_SCREEN = 0.35;
+const EYE_SHARE_F0 = 0.5;
+const EYE_SHARE_F1 = 0.62;
 const EYE_FROM = 0.6;
 const EYE_SPAN = 1.2;
 /** The look's lead toward the ball: this share of the way from the spot back to the ball as it leaves his hand, none at the catch (round 9's 0.5; round 11's pan already starts from the pocket). */
@@ -561,7 +568,8 @@ export class BroadcastCam {
     const mzx = (a: number, z: number) => a + (z - a) * mz;
     // The eye goes only part of the way on a quick throw: the shot pans and zooms from about where it is, as a
     // broadcast camera does (a 0.7-s slant's full dolly was ~30 m/s at its peak, the perspective swinging under the zoom).
-    const me = mz * Math.min(1, Math.max(EYE_SHARE_MIN, (F - EYE_FROM) / EYE_SPAN));
+    const quick = EYE_SHARE_SCREEN + (EYE_SHARE_MIN - EYE_SHARE_SCREEN) * clamp((F - EYE_SHARE_F0) / (EYE_SHARE_F1 - EYE_SHARE_F0));
+    const me = mz * Math.min(1, Math.max(quick, (F - EYE_FROM) / EYE_SPAN));
     const mxe = (a: number, z: number) => a + (z - a) * me;
     pose.ex = mxe(from.ex, pose.ex);
     pose.ey = mxe(from.ey, pose.ey);
