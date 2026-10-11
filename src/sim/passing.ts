@@ -1416,6 +1416,7 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
         hitBy = o;
       }
     }
+    const stretch = stretchOf(a, b.pos);
     const costs: [CatchHard, number][] = [
       // A hit as the ball arrives (Catch in Traffic holds on through it; a
       // Missile's hit dislodges it 15% more often, Sure Hands never lets a hit
@@ -1432,7 +1433,7 @@ export function resolveCatch(s: PlayState, a: Agent): 'catch' | 'bobble' | 'drop
       ['reach', Math.max(0, off - 0.45) * 0.5 * (1.1 - 0.5 * spect) * (has(a, 'highlight-reel') ? 0.6 : 1) + (off > 0.45 && has(a, 'body-catcher') ? 0.1 : 0)],
       // Led out in front of him (passing round 8): past his own hands toward the end of what they reach on the run
       // (reachFwd), arms locked out, it's taken in the fingers with nothing to give with (STRETCH_K).
-      ['stretch', STRETCH_K * stretchOf(a, b.pos) ** 2 * (1.1 - hands)],
+      ['stretch', STRETCH_K * stretch * stretch * (1.1 - hands)],
       // On him before he's had his eyes on it long enough to get his hands
       // right (findsBallAt: sure hands find it sooner): the ball that's in
       // on him coming out of his break. A good-hands man has ~LOOK_T on a

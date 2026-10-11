@@ -72,16 +72,23 @@ describe('M5 action clips', () => {
   });
   it('overlays drive only the upper body (their masks never touch the legs or the pelvis)', () => {
     const overlays = Object.entries(clips).filter(([, m]) => m.kind === 'overlay');
-    expect(overlays.map(([n]) => n).sort()).toEqual([
+    expect(overlays.map(([n]) => n).sort()).toEqual(
+      [
       'catch_bobble', 'catch_body', 'catch_contested_l', 'catch_contested_r', 'catch_drop', 'catch_hands_high', 'catch_hands_run', 'catch_hands_run_low', 'catch_one_hand_l', 'catch_one_hand_r', 'catch_over_shoulder_l', 'catch_over_shoulder_r',
       'catch_reach_l', 'catch_reach_r', 'catch_resecure', 'catch_scoop',
+      // Passing round 8: the forward reach, the low basket over the shoulder, the box-out, and the throws' arm slots.
+      'catch_box_l', 'catch_box_r', 'catch_over_shoulder_low_l', 'catch_over_shoulder_low_r', 'catch_reach_out',
+      ...['qb_throw', 'qb_throw_fade', 'qb_throw_long', 'qb_throw_quick'].flatMap((t) => [`${t}_over`, `${t}_side`]),
       'def_contest_l', 'def_contest_r',
       'ovl_carry_l', 'ovl_carry_r', 'ovl_catch', 'ovl_catch_high', 'ovl_dip_l', 'ovl_dip_r', 'ovl_getoff', 'ovl_handoff_l', 'ovl_handoff_r', 'ovl_pa_fake_l', 'ovl_pa_fake_r',
       'ovl_protect', 'ovl_pump', 'ovl_qb_hold', 'ovl_stiff_arm', 'ovl_take_l', 'ovl_take_r', 'ovl_truck', 'ovl_tuck',
-    ]);
+      ].sort(),
+    );
     for (const [n, m] of overlays) {
       expect(m.mask!.length, n).toBeGreaterThan(5);
-      for (const b of m.mask!) expect(/^(pelvis|root|thigh|calf|foot|toe|spine_01)/.test(b), `${n}: ${b}`).toBe(false);
+      // (Passing round 8: the forward reach folds from the lower spine too, the man extending his whole trunk into the ball; the pelvis and legs stay the run's.)
+      const lower = n === 'catch_reach_out' ? /^(pelvis|root|thigh|calf|foot|toe)/ : /^(pelvis|root|thigh|calf|foot|toe|spine_01)/;
+      for (const b of m.mask!) expect(lower.test(b), `${n}: ${b}`).toBe(false);
     }
   });
 });

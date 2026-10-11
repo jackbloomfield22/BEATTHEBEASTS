@@ -15,9 +15,8 @@ const err: number[] = [];
 for (const def of (defs.join(':') || 'cover3').split(',')) for (let seed = 1; seed <= 16; seed++) {
   const s = createPlay({ seed, offense: base.offense, defense: base.defense, play: playById(playId!), def: defById(def), los: 30, toGo: 10, user: true });
   let press = -1;
-  let done = false;
   let thr: { meant: { x: number; y: number }; aim: { x: number; y: number }; arrive: number } | null = null;
-  for (let k = 0; k < 1200 && !s.result && !done; k++) {
+  for (let k = 0; k < 1200 && !s.result; k++) {
     const a = s.agents[s.icons[icon - 1]!]!;
     if (!thr && s.phase === 'air' && s.ball.target === a.i) thr = { meant: { ...s.ball.meant }, aim: { ...s.ball.aim }, arrive: s.ball.arrive };
     if (thr && s.t >= thr.arrive - 1e-9) {
@@ -26,7 +25,6 @@ for (const def of (defs.join(':') || 'cover3').split(',')) for (let seed = 1; se
       const h = handsAt(a);
       rows.push((thr.meant.x - h.x) * ux + (thr.meant.y - h.y) * uy);
       err.push((thr.aim.x - thr.meant.x) * ux + (thr.aim.y - thr.meant.y) * uy);
-      done = true;
       break;
     }
     let f;
