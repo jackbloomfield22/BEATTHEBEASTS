@@ -69,7 +69,12 @@
 .prompt-row span { display: flex; align-items: center; gap: .4rem; }
 .prompt-row.catch { font-size: 1rem; color: var(--ink); }
 /* The catch call: up the moment the ball is thrown; the called catch lights and the others fade. Low on the screen (it sat at 58%, across the flight from the QB to his receivers on the broadcast camera, and hid the ball in the air: docs/passing/PASSING.md). */
-.catch-call { position: absolute; top: 79%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .6rem; text-shadow: 0 .1rem .8rem rgba(0,0,0,.9); animation: catch-in .12s ease-out; }
+/* Passing round 10: it sat at 79%, centred, which on the broadcast camera is right over the QB (his release and finish drawn
+   72–85% down the frame, centred), and it came up on the release frame itself. Now it's in the bottom-right corner, clear of
+   the pocket and of the catch (framed just above centre), and comes in a beat after the ball is out (the release is seen
+   clean first: docs/passing/PASSING10.md). */
+.catch-call { position: absolute; right: 3rem; bottom: 2.6rem; display: flex; flex-direction: column; align-items: flex-end; gap: .6rem; text-shadow: 0 .1rem .8rem rgba(0,0,0,.9); animation: catch-call-in .16s ease-out .12s both; }
+@keyframes catch-call-in { from { opacity: 0; transform: translateY(.6rem); } to { opacity: 1; transform: translateY(0); } }
 .catch-head { font-size: 1rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-2); }
 .catch-opts { display: flex; gap: 1.2rem; }
 .catch-opt { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: .6rem; align-items: center; min-width: 15rem; padding: .9rem 1.2rem; border: 2px solid var(--line); border-radius: .5rem; background: var(--panel); transition: transform .1s ease-out, opacity .15s, border-color .1s, background .1s; }

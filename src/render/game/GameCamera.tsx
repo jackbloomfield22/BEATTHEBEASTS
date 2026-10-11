@@ -144,6 +144,7 @@ function targetPose(mode: Mode): Pose | null {
     base.ex += Math.min(0, qb.x - (los - 5)) * 0.6;
     base.ey += (qb.y - by) * 0.5;
     base.ly += (qb.y - by) * 0.3;
+    pocket.pose = { ...base };
     return base;
   }
   // A dead ball after a throw holds on the catch point; after a sack (no
@@ -222,8 +223,38 @@ function catchBeat(s: NonNullable<typeof practice.runner>['state'], who: number,
 /** The most the air camera's line turns off straight downfield (rad: 15°). Ours. */
 const AIR_YAW = (15 * Math.PI) / 180;
 
-/** The throw being followed: where and when it left, and the flight time it was given. */
-const flight = { arrive: -1, x0: 0, y0: 0, total: 1 };
+/** The throw being followed: where and when it left, the flight time it was given, and the pocket's framing as it left. */
+const flight = { arrive: -1, x0: 0, y0: 0, total: 1, t0: 0, from: null as Pose | null };
+/** The pocket's framing, last frame (the air camera leaves from it: passing round 10). */
+const pocket: { pose: Pose | null } = { pose: null };
+
+/**
+ * The release beat and the move with the ball (passing round 10). Round
+ * nine's air framing was a step: the frame the ball left, the camera's
+ * target jumped from the pocket to halfway to the catch, and a quarter-second
+ * spring (stiffened up to 1.5× on a quick throw) snapped after it, so a
+ * slant's shot left the pocket at full speed in its first tenth of a second
+ * (peak pan ~3 × the eased move's; the QB's release and finish went out of the
+ * frame as they happened) and reached the catch a third of a second later: a
+ * whip-pan, not a camera going with the ball. Now the target itself moves:
+ * from the pocket framing as the ball left to the catch framing, on a
+ * smoothstep in time that starts after a beat (the release and the finish
+ * seen where they happen, as a broadcast holds the QB as he lets it go) and
+ * eases in, so the move gathers pace with the ball, then eases out onto the
+ * spot a little before the ball gets there (SETTLE), with the receiver
+ * framed as large as round nine had him.
+ * - BEAT: s held on the pocket after the release, by the flight time: 0.06 s
+ *   on a 0.7-s slant (its finish is 0.13 s, mostly seen in the ease-in),
+ *   up to 0.25 s on a deep ball (the drive's finish, 0.22 s, seen whole);
+ * - SETTLE: the move is done this share of the flight before the ball
+ *   arrives (at least 0.08 s, at most 0.3), so the catch is framed still.
+ * Ours, judged frame by frame at 60 fps (docs/passing/PASSING10.md).
+ */
+const BEAT_MIN = 0.06;
+const BEAT_MAX = 0.25;
+const SETTLE = 0.15;
+/** The air rig's springs (rad/s: eye, look, lens): stiff, since the target itself is eased now; ~0.15–0.3 s of lag. */
+const AIR_W = [6, 6, 6, 12, 12, 12, 8];
 
 /** The camera as drawn last frame (world m) and its aspect: the air framing fits its zoom to where the eye really is (the dolly lags the pose). */
 const camNow = { ok: false, eye: new THREE.Vector3(), aspect: 16 / 9 };
@@ -294,6 +325,8 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
     flight.x0 = ball.x;
     flight.y0 = ball.y;
     flight.total = Math.max(0.3, b.arrive - s.t);
+    flight.t0 = s.t;
+    flight.from = pocket.pose ? { ...pocket.pose } : null;
   }
   const ax = b.aim.x;
   const ay = b.aim.y;
@@ -337,7 +370,7 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
     eh: 8 - 3.2 * e,
     lx,
     ly,
-    // Low enough that the catch sits just above center, clear of the catch-call panel.
+    // Low enough that the catch sits just above center (the catch-call panel is in the bottom-right corner since passing round 10).
     lh: 0.4 + 0.2 * e,
     fov: 50 - 12 * e,
   };
@@ -374,6 +407,22 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
     const tight = (2 * Math.atan(frameH / 2 / Math.max(1, toSpot)) * 180) / Math.PI;
     pose.fov = Math.min(AIR_FOV_MAX, Math.max(fit, tight));
   }
+  // The release beat and the move (passing round 10): from the pocket's framing to this one, eased in time.
+  const from = flight.from;
+  if (from) {
+    const F = flight.total;
+    const beat = Math.min(BEAT_MAX, Math.max(BEAT_MIN, 0.25 * (F - 0.5)));
+    const end = F - Math.min(0.3, Math.max(0.08, SETTLE * F));
+    const m = smooth(Math.min(1, Math.max(0, (s.t - flight.t0 - beat) / Math.max(0.2, end - beat))));
+    const mx = (a: number, z: number) => a + (z - a) * m;
+    pose.ex = mx(from.ex, pose.ex);
+    pose.ey = mx(from.ey, pose.ey);
+    pose.eh = mx(from.eh, pose.eh);
+    pose.lx = mx(from.lx, pose.lx);
+    pose.ly = mx(from.ly, pose.ly);
+    pose.lh = mx(from.lh, pose.lh);
+    pose.fov = mx(from.fov, pose.fov);
+  }
   // Kept for the catch beat (with where the receiver is), while the ball is in the air.
   if (cur.phase === 'air') {
     lastAir.pose = pose;
@@ -383,8 +432,6 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   return pose;
 }
 
-/** The most a quick throw stiffens the air rig (× its springs' frequency). Ours: a 0.7-s slant at ~1.4×, settled on the spot as the ball gets there. */
-const AIR_QUICK = 1.5;
 
 /** Game time the video camera last stepped to. */
 const videoClock = { t: 0 };
@@ -442,11 +489,9 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     const beating = !!rr && typeof caughtAt === 'number' && rr.state.t - caughtAt < BEAT_T;
     const air = (rr?.cur.phase === 'air' || beating) && modeSetting === 'broadcast';
     // (?follow rides its man close: a stiff rig, or a man on the move leaves the frame.)
-    // (Passing round 9) A quick throw tightens it further: a slant's 0.7 s in the air is over before the
-    // rig settles at its usual pace (the eye's time constant ~0.24 s), so the stiffness goes with the flight's
-    // shortness, up to AIR_QUICK times for a ball in the air under a second.
-    const quick = air && rr?.cur.phase === 'air' ? Math.min(AIR_QUICK, Math.max(1, 1 / flight.total)) : 1;
-    const w = urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5].map((x) => x * quick) : [2.6, 2.6, 2.6, 4, 4, 4, 3];
+    // (Passing round 10) In the air the target is eased in time (airPose: the release beat and the move), so the
+    // rig is stiff enough to follow it closely (round nine's AIR_QUICK stiffened a spring chasing a step instead).
+    const w = urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : air && rr?.cur.phase === 'air' ? AIR_W : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));
     camNow.eye.set(v[0]!, v[1]!, v[2]!);
     camNow.aspect = camera.aspect;

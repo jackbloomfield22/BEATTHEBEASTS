@@ -462,7 +462,9 @@ function throwSlot(b: Body, s: PlayState, qb: Agent, simT: number, running: bool
   }
   const base = sl.base;
   const tr = anim.transition;
-  if (!base || !anim.lib.meta[`${base}_side`] || (tr?.name !== base && anim.overlayAction?.name !== base)) {
+  const fin = `${base}_fin_`;
+  const on = (n: string | undefined) => n === base || !!n?.startsWith(fin);
+  if (!base || !anim.lib.meta[`${base}_side`] || (!on(tr?.name) && !on(anim.overlayAction?.name))) {
     sl.base = null;
     sl.w = 0;
     anim.setSlot(null, null, 0);
@@ -483,7 +485,9 @@ function throwSlot(b: Body, s: PlayState, qb: Agent, simT: number, running: bool
     }
     lane = sl.lane ?? 0;
   }
-  const target = SLOT_K * Math.max(-1, Math.min(1, lane / LANE_MAX - (running && has(qb, 'off-platform') ? SLING : 0)));
+  // (Passing round 10: from the release the throw's finish is its own, by the throw: the slot lets go of it.)
+  const released = !(w && b.throwAt === w.from);
+  const target = released ? 0 : SLOT_K * Math.max(-1, Math.min(1, lane / LANE_MAX - (running && has(qb, 'off-platform') ? SLING : 0)));
   sl.w += (target - sl.w) * (1 - Math.exp(-dt * SLOT_RATE));
   anim.setSlot(base, `${base}_${sl.w < 0 ? 'side' : 'over'}`, Math.abs(sl.w));
 }
@@ -515,6 +519,43 @@ export function throwClip(b: Body, s: PlayState, qb: Agent, running: boolean): s
   if (rel >= LONG_RELEASE && has('qb_throw_long')) return 'qb_throw_long';
   return 'qb_throw';
 }
+/**
+ * How the throw finishes (passing round 10; tools/blender/lib/actions_p10.py),
+ * from the ball as it leaves his hand: a driven ball under QUICK_THROW yd is
+ * the quick game's flick; a lofted one (leaving above TOUCH_ANGLE) short of
+ * DEEP_THROW is touch (the fade, a ball dropped in over a man); everything
+ * else, the driven intermediate ball and the deep ball (layered or not), is
+ * the full drive. A man hit as he throws never finishes (null: his own
+ * throw's short follow-through), and the fade-away has no finishes.
+ */
+export function throwFinish(s: PlayState, qb: Agent): 'flick' | 'drive' | 'touch' | null {
+  const b = s.ball;
+  if (b.thrower !== qb.i || b.mode !== 'air') return null;
+  for (let k = s.events.length - 1; k >= 0; k--) {
+    const e = s.events[k]!;
+    if (e.type !== 'throw' || e.who?.[0] !== qb.i) continue;
+    if (e.data?.hit) return null;
+    break;
+  }
+  const d = Math.hypot(b.aim.x - b.pos.x, b.aim.y - b.pos.y);
+  if (d >= DEEP_THROW) return 'drive';
+  if (Math.atan2(b.vel.z, Math.hypot(b.vel.x, b.vel.y)) > TOUCH_ANGLE) return 'touch';
+  return d < QUICK_THROW ? 'flick' : 'drive';
+}
+/**
+ * The finish's lines. QUICK_THROW (yd to the catch point): the quick game's
+ * throws (a slant, hitch or quick out from the gun is ~6–11 yd of air).
+ * TOUCH_ANGLE (rad, 22°): a driven 20-yd ball leaves at ~13°, the player's
+ * half-second hold on the fade at ~34° (tools/sim/p10_clips.ts: 19 yd in
+ * 1.55 s), so 22° is clearly air put on it. DEEP_THROW: past it the throw is
+ * a full drive whatever its arc (the AI's layered deep ball leaves at ~30°).
+ * Ours.
+ */
+const QUICK_THROW = 12;
+const TOUCH_ANGLE = (22 * Math.PI) / 180;
+const DEEP_THROW = 28;
+/** A QB moving faster than this (m/s) after the release runs out of his finish. Ours: a drift settling is slower. */
+const FINISH_RUN = 2;
 /** A rusher this close (the sim's pressure, 0..1: a free man within ~2.4 yd) puts him on his back foot. Ours. */
 const FADE_PRESSURE = 0.6;
 /** Held past his release (the player choosing the touch), the arm waits this far (s of clip) short of the release frame: cocked, the ball behind the ear. Ours: a frame at 30 fps. */
@@ -1410,12 +1451,18 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // The key's release answered (passing round 3: the arm starts on the press, so the release shows as the throw going, no longer held).
   if (i === s.qb && w && !w.held) latency.respond('throwRelease');
   if (i === s.qb && !w && b.throwClip) {
-    // Out of his hand: the follow-through at the clip's own pace.
+    // Out of his hand: the follow-through at the clip's own pace. Passing round 10: the finish by the throw (throwFinish),
+    // the same clip as his own throw up to its release frame, carried on from there (the flick, the drive, touch).
     const clip = b.throwClip;
     b.throwClip = null;
-    if (tr && tr.name === clip) anim.retime(clip, { rate: 1 });
-    else anim.retimeOverlay(clip, 1);
+    const fin = throwFinish(s, a);
+    const name = fin ? `${clip}_fin_${fin}` : clip;
+    const now = fin && anim.continueAs(clip, name, THROW_MASK) ? name : clip;
+    if (tr && tr.name === clip) anim.retime(now, { rate: 1 });
+    else anim.retimeOverlay(now, 1);
   }
+  // A QB who moves off before his finish is through runs out of it (the finish is keyed standing).
+  if (i === s.qb && !w && tr && !tr.done && tr.name.includes('_fin_') && sp * YARD >= FINISH_RUN) anim.release();
   if (i === s.qb) throwSlot(b, s, a, simT, sp * YARD >= 1.6);
   // The handoff (the QB places it, the back's pocket takes it) and the
   // play-action fake, timed to the sim's mesh: overlays, the legs are the sim's.

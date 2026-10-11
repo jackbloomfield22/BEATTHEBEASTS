@@ -97,6 +97,26 @@ const FOLLOW9: Record<string, string> = {
   'p9-rac-a': 'X,-6,6,2.4,46',
   'p9-rac-b': 'X,-6,6,2.4,46',
 };
+// BTB_PASSING10=1: passing round 10 (docs/passing/PASSING10.md): round nine's passes plus the fade (src/game/clips.ts PASSING10)
+// from the default broadcast camera, into docs/passing/round10/<BTB_PASSING_TAG>; BTB_FOLLOW=1 records each from a close
+// camera (FOLLOW10: the QB for the throw, the tight end for the box-out). BTB_WINDOW=1 records only from the windup to the
+// ball's end (+ BTB_AFTER_BALL s): the frames before it are drawn at 30 fps (the camera and the clips step as in play) but
+// not kept, so a 60-fps recording (BTB_VIDEO_FPS=60) of the throw and the camera's move costs half the frames.
+const PASSING10 = !!process.env.BTB_PASSING10;
+const WINDOW = !!process.env.BTB_WINDOW;
+const FOLLOW10: Record<string, string> = {
+  'p9-slant': 'QB,4,-5,2.2,40',
+  'p9-out': 'QB,4,-5,2.2,40',
+  'p9-dig': 'QB,4,-5,2.2,40',
+  'p9-curl': 'QB,4,-5,2.2,40',
+  'p9-go': 'QB,4,-5,2.2,40',
+  'p9-post': 'QB,4,-5,2.2,40',
+  'p9-corner': 'QB,4,-5,2.2,40',
+  'p9-cross': 'QB,4,-5,2.2,40',
+  'p9-screen': 'QB,4,-5,2.2,40',
+  'p9-contested': 'TE,-1.5,-4,1.7,36',
+  'p10-fade': 'QB,4,-5,2.2,40',
+};
 const FOLLOW6: Record<string, string> = {
   'p6-go': 'X,6,5,2.2,42',
   'p6-post': 'X,6,-5,2.2,42',
@@ -124,14 +144,14 @@ const FOLLOW: Record<string, string> = {
   'p2-arm-a': 'QB,22,36,8,50,22',
   'p2-arm-b': 'QB,22,36,8,50,22',
 };
-const OUT = PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
+const OUT = PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
 const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY || PASSING || PASSING2 || PHYSICS ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
-const LEAD_IN = Math.round(FPS * (PASSING || PASSING2 || PASSING3 || PASSING4 || PASSING5 || PASSING6 || PASSING7 || PASSING8 || PASSING9 ? 0.6 : 1.2));
-const TAIL = Math.round(FPS * (PASSING || PASSING2 || PASSING3 || PASSING4 || PASSING5 || PASSING6 || PASSING7 || PASSING8 || PASSING9 ? 0.6 : 2.5));
+const LEAD_IN = Math.round(FPS * (PASSING || PASSING2 || PASSING3 || PASSING4 || PASSING5 || PASSING6 || PASSING7 || PASSING8 || PASSING9 || PASSING10 ? 0.6 : 1.2));
+const TAIL = Math.round(FPS * (PASSING || PASSING2 || PASSING3 || PASSING4 || PASSING5 || PASSING6 || PASSING7 || PASSING8 || PASSING9 || PASSING10 ? 0.6 : 2.5));
 /** The passing clips stop this long (s) after the ball is caught or dead: the catch and the first steps after it are the moment (this container draws a frame in several seconds). */
-const AFTER_BALL = PASSING || PASSING2 || PASSING3 || PASSING4 || PASSING5 || PASSING6 || PASSING7 || PASSING8 || PASSING9 ? Number(process.env.BTB_AFTER_BALL ?? 1.8) : Infinity;
+const AFTER_BALL = PASSING || PASSING2 || PASSING3 || PASSING4 || PASSING5 || PASSING6 || PASSING7 || PASSING8 || PASSING9 || PASSING10 ? Number(process.env.BTB_AFTER_BALL ?? 1.8) : Infinity;
 /** Frame size (BTB_VIDEO_W, 16:9): the concepts record at 960 wide here, where a frame takes seconds to draw. */
 const W = Number(process.env.BTB_VIDEO_W ?? 1280);
 const H = Math.round((W * 9) / 16);
@@ -173,7 +193,7 @@ const DIAG = !!process.env.BTB_DIAG;
 function diagFrame(n: number) {
   type V = { x: number; y: number; z: number };
   type B = { player: { root: { position: V & { clone(): V }; rotation: { y: number } }; bones: Map<string, { getWorldPosition(v: V): V }> }; catchClip: string | null; animator: { transition: { name: string; t: number } | null; overlayAction: { name: string; t: number } | null; holdLayer?: { name: string; w: number } | null; actionLayer?: { name: string; w: number } | null } };
-  const w = window as unknown as { __btbBodies?: B[]; __btbBall?: { position: V }; __btbPractice: { runner: { state: { t: number; phase: string; carrier: number; ball: { mode: string; target: number; pos: V; arrive: number } } } | null } };
+  const w = window as unknown as { __btbBodies?: B[]; __btbBall?: { position: V }; __btbPractice: { runner: { state: { t: number; phase: string; carrier: number; qb: number; ball: { mode: string; target: number; pos: V; arrive: number } } } | null } };
   // (No runner yet: a swapped-in roster is still loading.)
   if (!w.__btbPractice.runner) return { n };
   const s = w.__btbPractice.runner.state;
@@ -182,6 +202,25 @@ function diagFrame(n: number) {
   const out: Record<string, unknown> = { n, t: r2(s.t), phase: s.phase, mode: s.ball.mode, i, arrive: r2(s.ball.arrive), simBall: [r2(s.ball.pos.x), r2(s.ball.pos.y), r2(s.ball.pos.z)] };
   const ball = w.__btbBall?.position;
   if (ball) out.ball = [r2(ball.x), r2(ball.y), r2(ball.z)];
+  // (Passing round 10) The camera: where it is, where it looks (a unit vector) and its lens, for the pan's speed frame to frame.
+  const cam = (window as unknown as { __btbCamera?: { position: V & { clone(): V }; fov: number; getWorldDirection(v: V): V } }).__btbCamera;
+  if (cam) {
+    const d = cam.getWorldDirection(cam.position.clone());
+    const r3 = (v: number) => Math.round(v * 1000) / 1000;
+    out.cam = [r2(cam.position.x), r2(cam.position.y), r2(cam.position.z), r3(d.x), r3(d.y), r3(d.z), r2(cam.fov)];
+  }
+  // The QB (his hands and feet) for the follow-through.
+  const qbi = (s as unknown as { qb: number }).qb;
+  const q = w.__btbBodies?.[qbi];
+  if (q) {
+    const qp = (name: string) => {
+      const bone = q.player.bones.get(name);
+      if (!bone) return null;
+      const v = bone.getWorldPosition(q.player.root.position.clone());
+      return [r2(v.x), r2(v.y), r2(v.z)];
+    };
+    out.qb = { hr: qp('hand_r'), fl: qp('foot_l'), fr: qp('foot_r'), pelvis: qp('pelvis'), head: qp('head'), clip: q.animator.transition && [q.animator.transition.name, r2(q.animator.transition.t)] };
+  }
   const b = i >= 0 ? w.__btbBodies?.[i] : undefined;
   if (b) {
     const p = (name: string) => {
@@ -201,12 +240,12 @@ const frame = (page: Page) => page.evaluate(() => (window as unknown as { __btbR
 
 async function record(page: Page, clip: Clip) {
   // (Round five records a clip from two cameras at once: each its own frames.)
-  const dir = `tools/shots/out/video/${clip.id}${PASSING5 || PASSING6 || PASSING7 || PASSING8 || PASSING9 ? `-${process.env.BTB_PASSING_TAG ?? 'after'}` : ''}`;
+  const dir = `tools/shots/out/video/${clip.id}${PASSING5 || PASSING6 || PASSING7 || PASSING8 || PASSING9 || PASSING10 ? `-${process.env.BTB_PASSING_TAG ?? 'after'}${process.env.BTB_FOLLOW ? '-close' : ''}${WINDOW ? `-w${FPS}` : ''}` : ''}`;
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   // No tutorial card in the videos.
   await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
-  const follow = PASSING9 && process.env.BTB_FOLLOW && FOLLOW9[clip.id] ? `&follow=${FOLLOW9[clip.id]}` : PASSING8 && process.env.BTB_FOLLOW && FOLLOW8[clip.id] ? `&follow=${FOLLOW8[clip.id]}` : PASSING7 && process.env.BTB_FOLLOW && FOLLOW7[clip.id] ? `&follow=${FOLLOW7[clip.id]}` : PASSING6 && process.env.BTB_FOLLOW && FOLLOW6[clip.id] ? `&follow=${FOLLOW6[clip.id]}` : PASSING5 && process.env.BTB_FOLLOW && FOLLOW5[clip.id] ? `&follow=${FOLLOW5[clip.id]}` : PASSING2 && FOLLOW[clip.id] ? `&follow=${FOLLOW[clip.id]}` : (PASSING3 || PASSING4) && process.env.BTB_FOLLOW ? `&follow=${process.env.BTB_FOLLOW}` : '';
+  const follow = PASSING10 && process.env.BTB_FOLLOW && FOLLOW10[clip.id] ? `&follow=${FOLLOW10[clip.id]}` : PASSING9 && process.env.BTB_FOLLOW && FOLLOW9[clip.id] ? `&follow=${FOLLOW9[clip.id]}` : PASSING8 && process.env.BTB_FOLLOW && FOLLOW8[clip.id] ? `&follow=${FOLLOW8[clip.id]}` : PASSING7 && process.env.BTB_FOLLOW && FOLLOW7[clip.id] ? `&follow=${FOLLOW7[clip.id]}` : PASSING6 && process.env.BTB_FOLLOW && FOLLOW6[clip.id] ? `&follow=${FOLLOW6[clip.id]}` : PASSING5 && process.env.BTB_FOLLOW && FOLLOW5[clip.id] ? `&follow=${FOLLOW5[clip.id]}` : PASSING2 && FOLLOW[clip.id] ? `&follow=${FOLLOW[clip.id]}` : (PASSING3 || PASSING4) && process.env.BTB_FOLLOW ? `&follow=${process.env.BTB_FOLLOW}` : '';
   await page.goto(`/?screen=practice&nointro&quality=${QUALITY}&video=${FPS}&pops&seed=1${follow}`);
   // The page only draws when asked: keep it drawing while it loads.
   const pump = (pred: string) =>
@@ -229,8 +268,13 @@ async function record(page: Page, clip: Clip) {
   let n = 0;
   const start = await clocks(page);
   const diag: unknown[] = [];
+  // BTB_WINDOW: only the frames from the windup on are kept (steps counts every scene step, kept or not).
+  let steps = 0;
+  let inWindow = !WINDOW;
   const shot = async () => {
     await frame(page);
+    steps++;
+    if (!inWindow) return;
     if (DIAG) diag.push(await page.evaluate(diagFrame, n));
     await page.screenshot({ path: `${dir}/${String(n++).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 88 });
   };
@@ -255,8 +299,9 @@ async function record(page: Page, clip: Clip) {
         }
         return !!w.__btbPractice.runner!.state.result;
       },
-      { id: clip.id, k: TICKS_PER_FRAME },
+      { id: clip.id, k: inWindow ? TICKS_PER_FRAME : 2 },
     );
+    if (!inWindow) inWindow = await page.evaluate(() => { const s = (window as unknown as { __btbPractice: { runner: { state: { windup: unknown; phase: string } } } }).__btbPractice.runner.state; return !!s.windup || s.phase === 'air'; });
     const phase = await page.evaluate(() => (window as unknown as Win).__btbPractice.runner!.state.phase);
     if (phase === 'air') wasAir = true;
     else if (wasAir && ballDone < 0) ballDone = n;
@@ -278,7 +323,7 @@ async function record(page: Page, clip: Clip) {
   // The recording's own check: one scene step per recorded frame, none in the screenshots'
   // redraws (platform.ts videoTime; a recording that ran fast: docs/m7/MONTAGE.md).
   const end = await clocks(page);
-  if (end.frames - start.frames !== n) throw new Error(`${clip.id}: the scene stepped ${end.frames - start.frames} times for ${n} recorded frames`);
+  if (end.frames - start.frames !== steps) throw new Error(`${clip.id}: the scene stepped ${end.frames - start.frames} times for ${n} recorded frames`);
   console.log(
     `${clip.id}: snap to whistle ${whistle.ticks} sim ticks = ${(whistle.ticks / 60).toFixed(3)} s, on ${whistle.frames} frames = ${(whistle.frames / FPS).toFixed(3)} s of video; ` +
       `whole clip ${n} frames = ${(n / FPS).toFixed(2)} s (${(LEAD_IN / FPS).toFixed(1)} s before the snap, ${(TAIL / FPS).toFixed(1)} s after the whistle), ${end.tick - start.tick} ticks, ${end.frames - start.frames} scene steps`,
@@ -288,9 +333,11 @@ async function record(page: Page, clip: Clip) {
     const sorted = [...p.rates].sort((a, b) => a - b);
     return { frames: p.rates.length, worst: Math.round(p.worst), p99: Math.round(sorted[Math.floor(sorted.length * 0.99)] ?? 0), spikes: p.spikes };
   });
-  writeFileSync(`${OUT}/${clip.id}.pops.json`, JSON.stringify(pops, null, 1) + '\n');
+  // (Round ten: the close camera's and the 60-fps window's recordings sit next to the broadcast one.)
+  const sfx = PASSING10 ? `${process.env.BTB_FOLLOW ? '-close' : ''}${WINDOW ? `-${FPS}` : ''}` : '';
+  writeFileSync(`${OUT}/${clip.id}${sfx}.pops.json`, JSON.stringify(pops, null, 1) + '\n');
   if (DIAG) writeFileSync(`${dir}/diag.json`, JSON.stringify(diag) + '\n');
-  execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', `${dir}/%04d.jpg`, '-c:v', 'libx264', '-preset', 'slow', '-crf', PASSING6 || PASSING7 || PASSING8 || PASSING9 ? '28' : '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${OUT}/${clip.id}.mp4`]);
+  execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', `${dir}/%04d.jpg`, '-c:v', 'libx264', '-preset', 'slow', '-crf', PASSING6 || PASSING7 || PASSING8 || PASSING9 || PASSING10 ? '28' : '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${OUT}/${clip.id}${sfx}.mp4`]);
   console.log(`${clip.id}: ${n} frames, pops worst ${pops.worst} rad/s, ${pops.spikes.length} spikes`);
   // BTB_KEEP_FRAMES unset: the frames go once they're encoded (a 20-fps clip is ~20 MB of JPEGs; disk was tight in passing round 2).
   if (!process.env.BTB_KEEP_FRAMES && PASSING2) rmSync(dir, { recursive: true, force: true });
@@ -308,7 +355,8 @@ const PASSING8_IDS = (process.env.BTB_PASSING8_IDS ?? Object.keys(FOLLOW8).join(
 const PASSING7_IDS = (process.env.BTB_PASSING7_IDS ?? Object.keys(FOLLOW7).join(',')).split(',');
 const PASSING6_IDS = (process.env.BTB_PASSING6_IDS ?? Object.keys(FOLLOW6).join(',')).split(',');
 const PASSING5_IDS = (process.env.BTB_PASSING5_IDS ?? Object.keys(FOLLOW5).join(',')).split(',');
-const IDS = (PASSING9 ? PASSING9_IDS : PASSING8 ? PASSING8_IDS : PASSING7 ? PASSING7_IDS : PASSING6 ? PASSING6_IDS : PASSING5 ? PASSING5_IDS : PASSING4 ? PASSING4_IDS : PASSING3 ? PASSING3_IDS : PASSING2 ? PASSING2_IDS : PHYSICS ? PHYSICS_IDS : PASSING ? PASSING_IDS : IDENTITY ? PAIRS.flatMap((p) => [`${p}-a`, `${p}-b`]) : CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || id.startsWith(process.env.BTB_CLIP));
+const PASSING10_IDS = (process.env.BTB_PASSING10_IDS ?? Object.keys(FOLLOW10).join(',')).split(',');
+const IDS = (PASSING10 ? PASSING10_IDS : PASSING9 ? PASSING9_IDS : PASSING8 ? PASSING8_IDS : PASSING7 ? PASSING7_IDS : PASSING6 ? PASSING6_IDS : PASSING5 ? PASSING5_IDS : PASSING4 ? PASSING4_IDS : PASSING3 ? PASSING3_IDS : PASSING2 ? PASSING2_IDS : PHYSICS ? PHYSICS_IDS : PASSING ? PASSING_IDS : IDENTITY ? PAIRS.flatMap((p) => [`${p}-a`, `${p}-b`]) : CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || id.startsWith(process.env.BTB_CLIP));
 test.use({ viewport: { width: W, height: H } });
 for (const id of IDS) {
   test(`feel video · ${id}`, async ({ page }) => {

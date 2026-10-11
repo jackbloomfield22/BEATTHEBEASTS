@@ -499,3 +499,12 @@ export const PASSING9: Clip[] = [
   { id: 'p9-rac-a', title: 'The quick out and the run after it: Tyreek Hill', seed: 4, play: 'doubles-quick-outs', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 50 }), swap: { off: 'X', name: 'Tyreek Hill', pos: 'WR' } },
   { id: 'p9-rac-b', title: 'The quick out and the run after it: Wes Welker', seed: 4, play: 'doubles-quick-outs', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 50 }), swap: { off: 'X', name: 'Wes Welker', pos: 'WR' } },
 ];
+
+// Passing round 10 (docs/passing/PASSING10.md): the QB's end of the throw, from the
+// default broadcast camera and a close one on the QB. Round nine's passes give the
+// quick flick (the slant) and the full drive (the go, the post); the fade is the
+// touch throw: the Z's fade on Stick against Cover 3, the key held half a second for touch,
+// caught over the shoulder 19 yd downfield (tools/sim/p10_clips.ts --scan=trips-stick:cover3:1-12:3:36:30).
+export const PASSING10: Clip[] = [
+  { id: 'p10-fade', title: 'The fade with touch', seed: 3, play: 'trips-stick', def: 'cover3', los: 30, script: userThrow({ icon: 3, at: 36, hold: 30 }) },
+];
