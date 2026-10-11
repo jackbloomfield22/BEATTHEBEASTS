@@ -1,5 +1,5 @@
 // Passing round 12 (docs/passing/PASSING12.md): the contested ball's post-up against the broadcast camera, in Node on
-// the game's own code (the sim, src/render/game/broadcastCam.ts stepped at 60 fps, choreo.ts catchClip). For the last
+// the game's own code (the sim, src/render/game/broadcastCam.ts stepped at 60 fps, choreo.ts catchClip's side). For the last
 // second before the ball: where the man he boxes out is against the camera's line to the receiver (0° = straight beyond
 // him, 180° = between him and the camera, ±90° = side by side, the bar in profile), which side the box clip puts the
 // bar on, and on which side of him on screen the man is.
@@ -9,7 +9,6 @@ import { createPlay, defById, defenseFor, offenseFor, playById, practiceRosters,
 import { PASSING9, withSwap, type Clip } from '../../src/game/clips.ts';
 import { capture, emptySnapshot } from '../../src/game/snapshot.ts';
 import { BroadcastCam, poseToWorld, Spring } from '../../src/render/game/broadcastCam.ts';
-import { catchClip } from '../../src/render/game/choreo.ts';
 import { contactAt } from '../../src/sim/catchstyle.ts';
 import { worldX, worldZ } from '../../src/game/coords.ts';
 
@@ -48,7 +47,13 @@ for (const c of PASSING9.filter((x: Clip) => ids.includes(x.id))) {
         const rel = deg(wrap(pair - view));
         // The man's bearing off the receiver's facing (sim frame), and the clip.
         const bearing = deg(wrap(Math.atan2(d.pos.y - a.pos.y, d.pos.x - a.pos.x) - a.face));
-        const clip = catchClip(s, a.i, 'contested');
+        // The box clip's side as choreo.ts catchClip picks it (the man's side of his run at the arrival; not imported: choreo
+        // pulls in the render's asset loaders, which the tools' typecheck doesn't have).
+        const sp = Math.hypot(a.vel.x, a.vel.y);
+        const hx = sp > 1 ? a.vel.x / sp : Math.cos(a.face);
+        const hy = sp > 1 ? a.vel.y / sp : Math.sin(a.face);
+        const left = hx * (d.pos.y + d.vel.y * T - (a.pos.y + a.vel.y * T)) - hy * (d.pos.x + d.vel.x * T - (a.pos.x + a.vel.x * T)) > 0;
+        const clip = left ? 'catch_box_l' : 'catch_box_r';
         // The eye and the man in the receiver's frame (m: ahead, to his left, up), and the man's facing off his.
         const YD = 0.9144;
         const f = [Math.cos(a.face), Math.sin(a.face)] as const;
