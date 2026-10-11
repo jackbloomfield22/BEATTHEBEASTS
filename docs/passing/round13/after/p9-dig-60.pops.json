@@ -1,0 +1,1527 @@
+{
+ "frames": 4173,
+ "worst": 163,
+ "p99": 55,
+ "spikes": [
+  {
+   "frame": 41,
+   "slot": "LE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_dl_3pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 41,
+   "slot": "LDT",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_dl_4pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 41,
+   "slot": "RDT",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_dl_4pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 41,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_dl_3pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 46,
+   "slot": "LDT",
+   "bone": "upperarm_l",
+   "rate": 46,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "snap"
+  },
+  {
+   "frame": 46,
+   "slot": "LDT",
+   "bone": "upperarm_r",
+   "rate": 44,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "snap"
+  },
+  {
+   "frame": 46,
+   "slot": "RDT",
+   "bone": "upperarm_l",
+   "rate": 46,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "snap"
+  },
+  {
+   "frame": 46,
+   "slot": "RDT",
+   "bone": "upperarm_r",
+   "rate": 44,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "snap"
+  },
+  {
+   "frame": 50,
+   "slot": "LDT",
+   "bone": "upperarm_l",
+   "rate": 32,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 50,
+   "slot": "LDT",
+   "bone": "upperarm_r",
+   "rate": 32,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 50,
+   "slot": "RDT",
+   "bone": "upperarm_l",
+   "rate": 32,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 50,
+   "slot": "RDT",
+   "bone": "upperarm_r",
+   "rate": 32,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 51,
+   "slot": "LDT",
+   "bone": "upperarm_l",
+   "rate": 30,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 51,
+   "slot": "LDT",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 51,
+   "slot": "RDT",
+   "bone": "upperarm_l",
+   "rate": 30,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 51,
+   "slot": "RDT",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 60,
+   "slot": "LE",
+   "bone": "upperarm_l",
+   "rate": 32,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 60,
+   "slot": "LE",
+   "bone": "upperarm_r",
+   "rate": 32,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 60,
+   "slot": "RE",
+   "bone": "upperarm_l",
+   "rate": 32,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 60,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 32,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 61,
+   "slot": "LE",
+   "bone": "upperarm_l",
+   "rate": 30,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 61,
+   "slot": "LE",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 61,
+   "slot": "RE",
+   "bone": "upperarm_l",
+   "rate": 30,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 61,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "dl_bull_rush",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "dropback"
+  },
+  {
+   "frame": 83,
+   "slot": "LE",
+   "bone": "upperarm_l",
+   "rate": 77,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 83,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 77,
+   "clip": "dl_rip_r",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 88,
+   "slot": "LE",
+   "bone": "upperarm_l",
+   "rate": 50,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 88,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 50,
+   "clip": "dl_rip_r",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 88,
+   "slot": "RCB",
+   "bone": "head",
+   "rate": 31,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "pocket"
+  },
+  {
+   "frame": 88,
+   "slot": "RCB",
+   "bone": "calf_l",
+   "rate": 69,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "pocket"
+  },
+  {
+   "frame": 89,
+   "slot": "LE",
+   "bone": "upperarm_l",
+   "rate": 50,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 89,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 50,
+   "clip": "dl_rip_r",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 89,
+   "slot": "MLB",
+   "bone": "calf_l",
+   "rate": 60,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "pocket"
+  },
+  {
+   "frame": 92,
+   "slot": "RDT",
+   "bone": "upperarm_l",
+   "rate": 50,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 93,
+   "slot": "LE",
+   "bone": "thigh_r",
+   "rate": 46,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 93,
+   "slot": "LDT",
+   "bone": "thigh_r",
+   "rate": 45,
+   "clip": "dl_club_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 93,
+   "slot": "RDT",
+   "bone": "upperarm_l",
+   "rate": 50,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 93,
+   "slot": "RE",
+   "bone": "thigh_l",
+   "rate": 50,
+   "clip": "dl_rip_r",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 93,
+   "slot": "RE",
+   "bone": "calf_l",
+   "rate": 46,
+   "clip": "dl_rip_r",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 94,
+   "slot": "LCB",
+   "bone": "forearm_l",
+   "rate": 31,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "pocket"
+  },
+  {
+   "frame": 95,
+   "slot": "QB",
+   "bone": "upperarm_l",
+   "rate": 32,
+   "clip": "qb_throw_quick",
+   "overlay": "",
+   "anim": "throw",
+   "phase": "pocket"
+  },
+  {
+   "frame": 96,
+   "slot": "QB",
+   "bone": "upperarm_l",
+   "rate": 46,
+   "clip": "qb_throw_quick",
+   "overlay": "",
+   "anim": "throw",
+   "phase": "pocket"
+  },
+  {
+   "frame": 96,
+   "slot": "LDT",
+   "bone": "upperarm_l",
+   "rate": 34,
+   "clip": "dl_club_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 97,
+   "slot": "LDT",
+   "bone": "upperarm_l",
+   "rate": 34,
+   "clip": "dl_club_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 97,
+   "slot": "RDT",
+   "bone": "thigh_r",
+   "rate": 57,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 97,
+   "slot": "RDT",
+   "bone": "calf_r",
+   "rate": 54,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 97,
+   "slot": "SS",
+   "bone": "thigh_l",
+   "rate": 79,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "pocket"
+  },
+  {
+   "frame": 97,
+   "slot": "SS",
+   "bone": "calf_l",
+   "rate": 61,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "pocket"
+  },
+  {
+   "frame": 98,
+   "slot": "Z",
+   "bone": "calf_l",
+   "rate": 46,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "pocket"
+  },
+  {
+   "frame": 99,
+   "slot": "WLB",
+   "bone": "thigh_l",
+   "rate": 49,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "pocket"
+  },
+  {
+   "frame": 99,
+   "slot": "MLB",
+   "bone": "thigh_r",
+   "rate": 71,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "pocket"
+  },
+  {
+   "frame": 99,
+   "slot": "MLB",
+   "bone": "calf_r",
+   "rate": 60,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "pocket"
+  },
+  {
+   "frame": 99,
+   "slot": "SS",
+   "bone": "thigh_l",
+   "rate": 55,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "pocket"
+  },
+  {
+   "frame": 101,
+   "slot": "LE",
+   "bone": "thigh_l",
+   "rate": 50,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 101,
+   "slot": "LDT",
+   "bone": "thigh_l",
+   "rate": 46,
+   "clip": "dl_club_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 101,
+   "slot": "RE",
+   "bone": "thigh_r",
+   "rate": 50,
+   "clip": "dl_rip_r",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "pocket"
+  },
+  {
+   "frame": 103,
+   "slot": "QB",
+   "bone": "upperarm_l",
+   "rate": 31,
+   "clip": "qb_throw_quick",
+   "overlay": "",
+   "anim": "throw",
+   "phase": "pocket"
+  },
+  {
+   "frame": 103,
+   "slot": "RB",
+   "bone": "thigh_l",
+   "rate": 69,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "pocket"
+  },
+  {
+   "frame": 103,
+   "slot": "RB",
+   "bone": "calf_l",
+   "rate": 68,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "pocket"
+  },
+  {
+   "frame": 104,
+   "slot": "QB",
+   "bone": "upperarm_l",
+   "rate": 31,
+   "clip": "qb_throw_quick",
+   "overlay": "",
+   "anim": "throw",
+   "phase": "pocket"
+  },
+  {
+   "frame": 105,
+   "slot": "SLOT",
+   "bone": "calf_r",
+   "rate": 51,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 105,
+   "slot": "RDT",
+   "bone": "thigh_l",
+   "rate": 48,
+   "clip": "dl_rip_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "air"
+  },
+  {
+   "frame": 105,
+   "slot": "RCB",
+   "bone": "thigh_l",
+   "rate": 72,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 109,
+   "slot": "LCB",
+   "bone": "thigh_l",
+   "rate": 60,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 113,
+   "slot": "WLB",
+   "bone": "calf_r",
+   "rate": 53,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 113,
+   "slot": "FS",
+   "bone": "calf_l",
+   "rate": 52,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 114,
+   "slot": "MLB",
+   "bone": "thigh_r",
+   "rate": 49,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 114,
+   "slot": "SS",
+   "bone": "thigh_r",
+   "rate": 46,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 114,
+   "slot": "SS",
+   "bone": "calf_r",
+   "rate": 46,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 119,
+   "slot": "SS",
+   "bone": "thigh_r",
+   "rate": 57,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 119,
+   "slot": "SS",
+   "bone": "calf_r",
+   "rate": 60,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 126,
+   "slot": "Z",
+   "bone": "calf_l",
+   "rate": 50,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 127,
+   "slot": "WLB",
+   "bone": "thigh_l",
+   "rate": 51,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 129,
+   "slot": "RCB",
+   "bone": "thigh_r",
+   "rate": 48,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 130,
+   "slot": "RCB",
+   "bone": "thigh_r",
+   "rate": 52,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 131,
+   "slot": "MLB",
+   "bone": "thigh_l",
+   "rate": 50,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 131,
+   "slot": "MLB",
+   "bone": "calf_l",
+   "rate": 56,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 135,
+   "slot": "C",
+   "bone": "calf_r",
+   "rate": 48,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 136,
+   "slot": "X",
+   "bone": "calf_l",
+   "rate": 47,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 140,
+   "slot": "RG",
+   "bone": "thigh_r",
+   "rate": 52,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 140,
+   "slot": "RG",
+   "bone": "calf_r",
+   "rate": 76,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 140,
+   "slot": "RDT",
+   "bone": "thigh_l",
+   "rate": 48,
+   "clip": "dl_shed_l",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "air"
+  },
+  {
+   "frame": 140,
+   "slot": "RDT",
+   "bone": "calf_l",
+   "rate": 58,
+   "clip": "dl_shed_l",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "air"
+  },
+  {
+   "frame": 140,
+   "slot": "RDT",
+   "bone": "calf_r",
+   "rate": 70,
+   "clip": "dl_shed_l",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "air"
+  },
+  {
+   "frame": 140,
+   "slot": "SS",
+   "bone": "thigh_r",
+   "rate": 62,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 140,
+   "slot": "SS",
+   "bone": "calf_r",
+   "rate": 57,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 141,
+   "slot": "WLB",
+   "bone": "thigh_r",
+   "rate": 50,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 142,
+   "slot": "RB",
+   "bone": "thigh_l",
+   "rate": 46,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 143,
+   "slot": "SLOT",
+   "bone": "calf_l",
+   "rate": 48,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 144,
+   "slot": "RCB",
+   "bone": "thigh_r",
+   "rate": 64,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "air"
+  },
+  {
+   "frame": 145,
+   "slot": "FS",
+   "bone": "calf_l",
+   "rate": 47,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 147,
+   "slot": "RB",
+   "bone": "thigh_r",
+   "rate": 61,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "air"
+  },
+  {
+   "frame": 153,
+   "slot": "X",
+   "bone": "forearm_r",
+   "rate": 32,
+   "clip": "cut_plant_sharp_l",
+   "overlay": "catch_reach_out",
+   "anim": "carry",
+   "phase": "carrier"
+  },
+  {
+   "frame": 155,
+   "slot": "RDT",
+   "bone": "thigh_r",
+   "rate": 49,
+   "clip": "dl_shed_l",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "carrier"
+  },
+  {
+   "frame": 155,
+   "slot": "RDT",
+   "bone": "calf_r",
+   "rate": 55,
+   "clip": "dl_shed_l",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "carrier"
+  },
+  {
+   "frame": 157,
+   "slot": "WLB",
+   "bone": "thigh_r",
+   "rate": 51,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 161,
+   "slot": "RCB",
+   "bone": "calf_l",
+   "rate": 64,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "carrier"
+  },
+  {
+   "frame": 161,
+   "slot": "SS",
+   "bone": "thigh_r",
+   "rate": 46,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 162,
+   "slot": "LG",
+   "bone": "thigh_r",
+   "rate": 66,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 162,
+   "slot": "LG",
+   "bone": "calf_r",
+   "rate": 71,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 162,
+   "slot": "MLB",
+   "bone": "thigh_r",
+   "rate": 46,
+   "clip": "",
+   "overlay": "",
+   "anim": "backpedal",
+   "phase": "carrier"
+  },
+  {
+   "frame": 163,
+   "slot": "C",
+   "bone": "thigh_r",
+   "rate": 55,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 163,
+   "slot": "C",
+   "bone": "calf_r",
+   "rate": 56,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 164,
+   "slot": "RB",
+   "bone": "thigh_l",
+   "rate": 47,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 164,
+   "slot": "LE",
+   "bone": "upperarm_l",
+   "rate": 34,
+   "clip": "dl_club_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 165,
+   "slot": "RT",
+   "bone": "thigh_l",
+   "rate": 53,
+   "clip": "",
+   "overlay": "",
+   "anim": "block",
+   "phase": "carrier"
+  },
+  {
+   "frame": 165,
+   "slot": "RT",
+   "bone": "calf_l",
+   "rate": 59,
+   "clip": "",
+   "overlay": "",
+   "anim": "block",
+   "phase": "carrier"
+  },
+  {
+   "frame": 165,
+   "slot": "LE",
+   "bone": "upperarm_l",
+   "rate": 34,
+   "clip": "dl_club_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 166,
+   "slot": "LDT",
+   "bone": "calf_l",
+   "rate": 67,
+   "clip": "dl_shed_l",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "carrier"
+  },
+  {
+   "frame": 167,
+   "slot": "RDT",
+   "bone": "thigh_l",
+   "rate": 64,
+   "clip": "dl_shed_l",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "carrier"
+  },
+  {
+   "frame": 167,
+   "slot": "RDT",
+   "bone": "calf_l",
+   "rate": 69,
+   "clip": "dl_shed_l",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "carrier"
+  },
+  {
+   "frame": 170,
+   "slot": "X",
+   "bone": "thigh_r",
+   "rate": 83,
+   "clip": "cut_plant_sharp_l",
+   "overlay": "catch_reach_out",
+   "anim": "carry",
+   "phase": "carrier"
+  },
+  {
+   "frame": 170,
+   "slot": "LE",
+   "bone": "thigh_l",
+   "rate": 49,
+   "clip": "dl_club_l",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 172,
+   "slot": "MLB",
+   "bone": "upperarm_l",
+   "rate": 33,
+   "clip": "dive",
+   "overlay": "",
+   "anim": "down",
+   "phase": "carrier"
+  },
+  {
+   "frame": 175,
+   "slot": "SS",
+   "bone": "thigh_r",
+   "rate": 49,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 176,
+   "slot": "LCB",
+   "bone": "upperarm_r",
+   "rate": 62,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 177,
+   "slot": "LCB",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 180,
+   "slot": "X",
+   "bone": "thigh_l",
+   "rate": 46,
+   "clip": "",
+   "overlay": "",
+   "anim": "carry",
+   "phase": "carrier"
+  },
+  {
+   "frame": 181,
+   "slot": "SLB",
+   "bone": "thigh_r",
+   "rate": 97,
+   "clip": "dive",
+   "overlay": "",
+   "anim": "dive",
+   "phase": "carrier"
+  },
+  {
+   "frame": 181,
+   "slot": "SLB",
+   "bone": "calf_r",
+   "rate": 101,
+   "clip": "dive",
+   "overlay": "",
+   "anim": "dive",
+   "phase": "carrier"
+  },
+  {
+   "frame": 181,
+   "slot": "LCB",
+   "bone": "upperarm_l",
+   "rate": 60,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 181,
+   "slot": "LCB",
+   "bone": "upperarm_r",
+   "rate": 84,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 181,
+   "slot": "LCB",
+   "bone": "forearm_l",
+   "rate": 47,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 181,
+   "slot": "LCB",
+   "bone": "forearm_r",
+   "rate": 41,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 181,
+   "slot": "LCB",
+   "bone": "thigh_l",
+   "rate": 46,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 182,
+   "slot": "SLB",
+   "bone": "upperarm_r",
+   "rate": 163,
+   "clip": "dive",
+   "overlay": "",
+   "anim": "dive",
+   "phase": "carrier"
+  },
+  {
+   "frame": 183,
+   "slot": "SLB",
+   "bone": "thigh_r",
+   "rate": 62,
+   "clip": "dive",
+   "overlay": "",
+   "anim": "dive",
+   "phase": "carrier"
+  },
+  {
+   "frame": 185,
+   "slot": "LCB",
+   "bone": "forearm_l",
+   "rate": 76,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 185,
+   "slot": "LCB",
+   "bone": "forearm_r",
+   "rate": 87,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 186,
+   "slot": "RE",
+   "bone": "thigh_l",
+   "rate": 51,
+   "clip": "",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 186,
+   "slot": "RE",
+   "bone": "thigh_r",
+   "rate": 53,
+   "clip": "",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 186,
+   "slot": "RE",
+   "bone": "calf_l",
+   "rate": 78,
+   "clip": "",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 186,
+   "slot": "RE",
+   "bone": "calf_r",
+   "rate": 71,
+   "clip": "",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 186,
+   "slot": "LCB",
+   "bone": "forearm_l",
+   "rate": 76,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 186,
+   "slot": "LCB",
+   "bone": "forearm_r",
+   "rate": 87,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 187,
+   "slot": "WLB",
+   "bone": "calf_r",
+   "rate": 57,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 188,
+   "slot": "RDT",
+   "bone": "calf_r",
+   "rate": 71,
+   "clip": "",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "carrier"
+  },
+  {
+   "frame": 191,
+   "slot": "LG",
+   "bone": "calf_r",
+   "rate": 80,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 191,
+   "slot": "RG",
+   "bone": "thigh_r",
+   "rate": 46,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 192,
+   "slot": "C",
+   "bone": "calf_r",
+   "rate": 70,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 195,
+   "slot": "LE",
+   "bone": "calf_l",
+   "rate": 49,
+   "clip": "",
+   "overlay": "",
+   "anim": "engaged",
+   "phase": "carrier"
+  },
+  {
+   "frame": 195,
+   "slot": "MLB",
+   "bone": "upperarm_l",
+   "rate": 35,
+   "clip": "getup_prone",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 195,
+   "slot": "MLB",
+   "bone": "upperarm_r",
+   "rate": 49,
+   "clip": "getup_prone",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 195,
+   "slot": "MLB",
+   "bone": "forearm_l",
+   "rate": 67,
+   "clip": "getup_prone",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 195,
+   "slot": "MLB",
+   "bone": "forearm_r",
+   "rate": 85,
+   "clip": "getup_prone",
+   "overlay": "",
+   "anim": "run",
+   "phase": "carrier"
+  },
+  {
+   "frame": 197,
+   "slot": "SLOT",
+   "bone": "thigh_r",
+   "rate": 59,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "dead"
+  },
+  {
+   "frame": 203,
+   "slot": "TE",
+   "bone": "calf_l",
+   "rate": 45,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "dead"
+  },
+  {
+   "frame": 205,
+   "slot": "SS",
+   "bone": "thigh_r",
+   "rate": 46,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "dead"
+  },
+  {
+   "frame": 205,
+   "slot": "SS",
+   "bone": "calf_r",
+   "rate": 76,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "dead"
+  },
+  {
+   "frame": 212,
+   "slot": "Z",
+   "bone": "calf_r",
+   "rate": 74,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "dead"
+  },
+  {
+   "frame": 215,
+   "slot": "RG",
+   "bone": "calf_l",
+   "rate": 51,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "dead"
+  },
+  {
+   "frame": 219,
+   "slot": "LG",
+   "bone": "calf_l",
+   "rate": 49,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "dead"
+  }
+ ]
+}

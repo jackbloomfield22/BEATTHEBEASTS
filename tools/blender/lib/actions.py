@@ -344,6 +344,37 @@ def qb_drop(steps_n: int) -> Clip:
     return Clip(f"qb_drop_gun{steps_n}", "transition", T, pose, travel, "stance_qb_gun", "stance_qb_set", steps)
 
 
+# The throw's hips: the pelvis's drop (m, below the rig's rest; the set, STANCES["qb_set"], is -0.085) at the load, the
+# cock (the stride landing), the release and the base throw's own follow-through (qb_throw here, actions_pass.py _throw).
+# Passing round 13 (docs/passing/PASSING13.md): round four keyed THROW_UP_R4, the hips going down through the throw and
+# staying there, so the front knee was bent ~59 deg at the release and ~64 deg through the quick finish (the bones'
+# hip-knee-ankle angle; the rig's rest leg reads 8, its idle stance 23), the hips 9-11 cm under his standing height: he
+# threw from a sit. A passer lands the stride on a flexed front knee and firms it up through the release, the hips
+# rising onto it ("throw tall", the firm front side): the lead knee extends from the stride's landing to the release,
+# ~35 +/- 12 deg at the release for an elite pitcher's long stride (Fleisig, ASMI), 29-46 deg through a quarterback's
+# full throw (Labbe et al. 2025, IJSPT 20(8)), less on the quick game's six-inch stride (20-35 deg: the owner's brief,
+# a quick slant from the gun or three steps). Measured on the rig (scratch knees.py, PASSING13.md): the stride lands on
+# a ~54 deg front knee, 25-34 at the release (the M4 throw, the quick and the long), the hips ~1.5 cm under his
+# standing height (round four: 59 and 9 cm); the hips rise ~4 cm from the stride to the release over 0.13 s.
+# (The base throw's own follow-through, seen only when he's hit as he throws and has no finish, goes back down to
+# -0.08: on the long stride the back foot is still planted 0.15 s past the release, and higher hips over-reached it,
+# the foot sliding 1.7 cm.)
+THROW_UP_R4 = (-0.10, -0.12, -0.11, -0.12)
+THROW_UP = (-0.085, -0.06, -0.035, -0.08)
+
+
+def throw_rise(k: int, up=None) -> float:
+    """How much higher (m) the hips are at key `k` (load, cock, release, follow-through) than round four keyed them: the
+    hands and the elbow poles ride up with them, so the upper body keeps the shape it was keyed in (the arm slot, the
+    ball's height against the head)."""
+    return (THROW_UP if up is None else up)[k] - THROW_UP_R4[k]
+
+
+def lifted(v, dz: float):
+    """A hand target or an elbow pole `dz` m higher."""
+    return (v[0], v[1], round(v[2] + dz, 4), *v[3:])
+
+
 def qb_throw() -> Clip:
     """From the set: load, stride and throw, follow through, into a stand.
     Release at frame 11 (0.37 s)."""
@@ -365,23 +396,24 @@ def qb_throw() -> Clip:
     ], height=0.06)
     grip_r, spread_r = hands_of(GRIP, "r"), hands_of(SPREAD, "r")
     # Load: the ball to the right ear in both hands, the shoulders turned away.
-    load = with_upper(qset, {"r": (-0.19, 0.04, 1.58), "l": (-0.09, -0.04, 1.51)}, {**GRIP, "hand_r": (-30, 0, 20)}, {"r": (-0.8, 0.3, 1.2), "l": (0.3, -0.2, 1.1)})
-    load.pelvis.update({"twist": -30, "up": -0.10})
+    r0, r1, r2, r3 = (throw_rise(k) for k in range(4))
+    load = with_upper(qset, {"r": lifted((-0.19, 0.04, 1.58), r0), "l": lifted((-0.09, -0.04, 1.51), r0)}, {**GRIP, "hand_r": (-30, 0, 20)}, {"r": lifted((-0.8, 0.3, 1.2), r0), "l": lifted((0.3, -0.2, 1.1), r0)})
+    load.pelvis.update({"twist": -30, "up": THROW_UP[0]})
     load.joints.update({"spine_02": (3, 0, -8), "spine_03": (2, 0, -8), "spine_04": (0, 0, -6)})
     load.gaze = (3.0, 0.0, 0.8)
     # Cocked: the stride lands, the elbow at shoulder height, the ball behind the head; the glove arm points at the target.
-    cock = shift(with_upper(qset, {"r": (-0.33, 0.16, 1.60), "l": (0.20, -0.52, 1.46)}, {**grip_r, **hands_of(SPREAD, "l"), "hand_r": (-45, 0, 30)}, {"r": (-0.9, 0.0, 1.55), "l": (0.6, 0.0, 1.2)}), 0.0, -fwd(0.30))
-    cock.pelvis.update({"twist": -32, "up": -0.12, "flex": 10})
+    cock = shift(with_upper(qset, {"r": lifted((-0.33, 0.16, 1.60), r1), "l": lifted((0.20, -0.52, 1.46), r1)}, {**grip_r, **hands_of(SPREAD, "l"), "hand_r": (-45, 0, 30)}, {"r": lifted((-0.9, 0.0, 1.55), r1), "l": lifted((0.6, 0.0, 1.2), r1)}), 0.0, -fwd(0.30))
+    cock.pelvis.update({"twist": -32, "up": THROW_UP[1], "flex": 10})
     cock.joints.update({"spine_02": (0, 4, -10), "spine_03": (-2, 4, -10), "spine_04": (-2, 0, -8)})
     cock.gaze = (3.0, 0.0, 0.9)
     # Release: hips and shoulders square to the target, the hand high in front of the head.
-    rel = shift(with_upper(qset, {"r": (-0.11, -0.44, 1.78), "l": (0.26, -0.10, 1.12)}, {**spread_r, **hands_of(RELAXED, "l"), "hand_r": (10, 0, 0)}, {"r": (-0.7, -0.2, 1.35), "l": (0.7, 0.3, 1.0)}), 0.0, -fwd(0.367))
-    rel.pelvis.update({"twist": 8, "up": -0.11, "flex": 16})
+    rel = shift(with_upper(qset, {"r": lifted((-0.11, -0.44, 1.78), r2), "l": lifted((0.26, -0.10, 1.12), r2)}, {**spread_r, **hands_of(RELAXED, "l"), "hand_r": (10, 0, 0)}, {"r": lifted((-0.7, -0.2, 1.35), r2), "l": lifted((0.7, 0.3, 1.0), r2)}), 0.0, -fwd(0.367))
+    rel.pelvis.update({"twist": 8, "up": THROW_UP[2], "flex": 16})
     rel.joints.update({"spine_02": (6, -2, 6), "spine_03": (4, -2, 6), "spine_04": (2, 0, 4)})
     rel.gaze = (4.0, 0.0, 0.9)
     # Follow-through: across the body to the left hip, the chest over the front knee.
-    fol = shift(with_upper(qset, {"r": (0.17, -0.36, 1.00), "l": (0.28, 0.02, 1.06)}, {**hands_of(RELAXED, "r"), **hands_of(RELAXED, "l")}, {"r": (-0.3, -0.5, 1.2), "l": (0.7, 0.4, 1.0)}), 0.0, -fwd(0.55))
-    fol.pelvis.update({"twist": 24, "up": -0.12, "flex": 26})
+    fol = shift(with_upper(qset, {"r": lifted((0.17, -0.36, 1.00), r3), "l": lifted((0.28, 0.02, 1.06), r3)}, {**hands_of(RELAXED, "r"), **hands_of(RELAXED, "l")}, {"r": lifted((-0.3, -0.5, 1.2), r3), "l": lifted((0.7, 0.4, 1.0), r3)}), 0.0, -fwd(0.55))
+    fol.pelvis.update({"twist": 24, "up": THROW_UP[3], "flex": 26})
     fol.joints.update({"spine_02": (10, -2, 10), "spine_03": (8, -2, 8), "spine_04": (4, 0, 4)})
     fol.gaze = (6.0, 0.0, 0.9)
     stand = copy.deepcopy(end)

@@ -395,6 +395,7 @@ export function GameScene() {
         b.lastYaw = yawOf(a.face);
         b.yaw = b.lastYaw;
         b.lastSpeed = 0;
+        b.postYaw = 0;
         b.gaitSpeed = 0;
       });
       if (urlFlags.pops) resetPops();
@@ -468,7 +469,15 @@ export function GameScene() {
         root.rotation.y = b.lie.prone ? b.lie.yaw : b.lie.yaw + Math.PI;
         // A clip that lay him down keeps the yaw it had (its root already faces along him).
       }
-      const yawRate = animDt > 0 ? lerpAngle(0, yaw - b.lastYaw, 1) / Math.max(animDt, 1 / 120) : 0;
+      // (Passing round 13) The post-up's turn (choreo.ts boxPost, d.turn: a receiver turning his back into the man he's
+      // boxing out) turns him on his line; it isn't a curve in his run, and banked as one (the run's lean, animator.ts:
+      // atan(v·ω/g)) it tipped him ~20° toward the man as the bar went up, the bar arm dropping to the man's belt and
+      // behind his own back from the broadcast camera. Its share of the drawn yaw's rate (eased as the yaw is) comes off
+      // the rate the lean reads.
+      const postPrev = b.postYaw ?? 0;
+      const postNow = animDt > 0 ? postPrev + ((d.turn ?? 0) - postPrev) * (1 - Math.exp(-animDt * 22)) : (d.turn ?? 0);
+      b.postYaw = postNow;
+      const yawRate = animDt > 0 ? (lerpAngle(0, yaw - b.lastYaw, 1) - (postNow - postPrev)) / Math.max(animDt, 1 / 120) : 0;
       const accel = animDt > 0 ? (d.speed - b.lastSpeed) / Math.max(animDt, 1 / 120) : 0;
       b.lastYaw = yaw;
       b.lastSpeed = d.speed;

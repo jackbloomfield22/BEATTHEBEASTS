@@ -135,13 +135,22 @@ def over_shoulder_low(side: str) -> Clip:
 # his own shoulder height, the forearm folding back onto the man, so the arm crosses the gap the shove opens (0.3-0.4 m:
 # ~10-15 px at broadcast distance) in profile. Ours, from the broadcast picture of a tight end walling a safety off.
 BAR_HAND, BAR_POLE = (0.52, 0.22, 1.26), (1.0, -0.10, 1.34)
+# When the bar is up (s before the secure). Passing round 13 (docs/passing/PASSING13.md): round twelve's came up 0.58 s
+# before the ball, as the man arrived on the receiver's shoulder (the sim's p9-contested: Lott 0.59 m off Gronkowski
+# centre to centre, his pads already on him), so the bar landed between the two bodies and its first beat was hidden
+# from the broadcast camera (the forearm seen on 19 of the post's 23 frames, the hidden ones its first). A receiver feels
+# the man closing and gets the bar up into him as he comes: 0.75 s out Lott is still 0.75 m off (tools/sim/p13_box.ts),
+# a hand's width of air between the bodies for the arm to go up across, and it meets him as he arrives. The keys after
+# it are where they were against the ball (the hold, the fight 0.12 s out, the hands' snap); the post is 0.17 s longer.
+BAR_LEAD = 0.75
 FIGHT_HAND, FIGHT_POLE = (0.58, 0.26, 1.24), (1.05, -0.10, 1.32)
 
 
 def box_out(side: str) -> Clip:
     """The box-out on a contested ball, the defender on his left (authored on
     the left; overlay over the run, so the legs keep driving). Posted up
-    through the ball's last two-thirds of a second: the trunk leans and turns
+    through the ball's last three-quarters of a second (passing round 13,
+    BAR_LEAD; two-thirds before): the trunk leans and turns
     into the man (the left hip and shoulder into him), the left forearm a bar
     across his chest at the numbers, the elbow up and out, the right hand up
     ready; held until the ball is nearly there, then late, both hands go up
@@ -159,8 +168,10 @@ def box_out(side: str) -> Clip:
     0.12 s before the ball, the hands' snap up to the high point taking the
     last 0.1 s (a receiver's late hands: the arms fight until the ball is on
     him)."""
-    T = 1.3
-    ts, tt = 20 / FPS, 32 / FPS
+    # (Passing round 13: the bar up BAR_LEAD before the ball, the secure and the tuck 5 frames later in the clip and the
+    # clip as much longer, so everything from the post on is where it was against the ball.)
+    T = 1.3 + 5 / FPS
+    ts, tt = 25 / FPS, 37 / FPS
     m = sided(side)
     # Into the man on the left: the trunk leans and turns toward him (flex, lean, twist added per bone).
     post = {"spine_02": (2, 8, 7), "spine_03": (2, 10, 10), "spine_04": (1, 7, 8)}
@@ -191,7 +202,7 @@ def box_out(side: str) -> Clip:
     snatch = posted(run_upper({"l": (0.08, -0.36, 1.86), "r": (-0.02, -0.38, 1.84)}, {**GRIP, "hand_l": (-45, 0, 0), "hand_r": (-45, 0, 0)}, {"l": (0.45, 0.0, 1.40), "r": (-0.42, 0.0, 1.38)}, (-3, -3, -2)), 0.85)
     # Chinned: the ball under the face mask, both forearms over it, the left shoulder still into him.
     chin = posted(run_upper({"l": (0.07, -0.24 - FWD, 1.42), "r": (-0.06, -0.23 - FWD, 1.44)}, {**GRIP, "hand_l": (25, 0, -30), "hand_r": (-5, 0, 30)}, {"l": (0.30, 0.15, 1.05), "r": (-0.30, 0.15, 1.05)}, (6, 5, 4)), 1.0)
-    keys = [(0.0, carriage()), (ts - 0.58, m(bar)), (ts - 0.3, m(bar)), (ts - 0.12, m(fight)), (ts - 0.03, m(reach)), (ts, m(reach)), (ts + 0.04, m(snatch)), (ts + 0.13, m(chin)), (tt - 0.08, m(chin)), (tt + 0.04, tuck()), (T, tuck())]
+    keys = [(0.0, carriage()), (ts - BAR_LEAD, m(bar)), (ts - 0.3, m(bar)), (ts - 0.12, m(fight)), (ts - 0.03, m(reach)), (ts, m(reach)), (ts + 0.04, m(snatch)), (ts + 0.13, m(chin)), (tt - 0.08, m(chin)), (tt + 0.04, tuck()), (T, tuck())]
     return Clip(f"catch_box_{side}", "overlay", T, lambda t: keyed(keys, t), mask=MASK, events=events(ts, tt))
 
 
@@ -223,13 +234,16 @@ def throw_slot(base: str, slot: str) -> Clip:
     timing (the runtime plays it over the throw at the time the throw is at,
     weighted by how far the sim moved his release off a lineman: choreo.ts
     throwSlot)."""
-    from .actions_pass import _throw
+    from .actions_pass import FADE_UP, _throw
 
     b, d = THROWS[base], SLOTS[slot]
     add = lambda v, dv: tuple(round(x + y, 3) for x, y in zip(v, dv))  # noqa: E731
     c = _throw(
         f"{base}_{slot}", b["T"], b["S"], b["keys_t"], b["load_r"], add(b["cock_r"], d["cock"]), add(b["rel_r"], d["rel"]), add(b["fol_r"], d["fol"]),
         twist=b["twist"], flex=b["flex"], lean=b.get("lean", 0.0), feet=b["feet"], elbows=d["elbows"], bend=d["bend"],
+        # (Passing round 13) The throw's own hips (actions.py THROW_UP; the fade-away keeps round four's), so the slot's arm is
+        # solved against the body it's laid over.
+        up=FADE_UP if base == "qb_throw_fade" else None,
     )
     # In place, the feet held where the throw starts: an overlay drives only the upper body (the throw's own legs step).
     feet0 = c.pose(0).feet
