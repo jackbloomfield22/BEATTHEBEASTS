@@ -9,12 +9,13 @@ import { practice, usePractice } from '@/game/practice';
 import { replay, replayCam } from '@/game/replaySession';
 import { YARD } from '../world/constants';
 import { view } from '@/game/view';
-import { fieldDir, worldX, worldZ } from '@/game/coords';
+import { fieldDir, worldX, worldY, worldZ } from '@/game/coords';
 import { frameEvents } from './frameEvents';
 import { montage } from '@/game/montageSession';
 import { celebView } from './celebrate';
 import { reveal } from '@/game/tunnelReveal';
 import { revealPose, type RevealPose } from './tunnelShow';
+import { catchAhead } from '@/sim/passing';
 
 // The play cameras (GDD §11.1, TECH_PLAN §8), driven from the sim snapshot
 // through critically damped springs so every cut is a glide:
@@ -332,6 +333,60 @@ function replayPose(): Pose {
 /** The throw being followed: where and when it left, and the flight time it was given. */
 const flight = { arrive: -1, x0: 0, y0: 0, total: 1 };
 
+/** The camera as drawn last frame (world m) and its aspect: the air framing fits its zoom to where the eye really is (the dolly lags the pose). */
+const camNow = { ok: false, eye: new THREE.Vector3(), aspect: 16 / 9 };
+
+/**
+ * The air framing's zoom (passing round 9). From the broadcast camera the
+ * quick throws were never framed: on the slant (0.7 s in the air) the look
+ * and the dolly were still swinging off the pocket when the ball got there,
+ * so the catch was drawn in the left third of the frame, ~70 px tall at
+ * 960×540, with the line's pile filling the near corner, and the ball (a
+ * brown speck) and the receiver only met on screen on the catch frame. Now
+ * the lens leads the landing spot from the release and zooms to keep the
+ * ball, the man and the spot where they'll meet in the frame together, as a
+ * broadcast operator does on a pass (pan to the receiver, the ball flies into
+ * the shot), tightening as the ball comes in:
+ * - FIT_MARGIN: the points sit inside the frame by this share (ours: a
+ *   tenth either side, so the ball isn't on the edge);
+ * - AIR_FOV_MAX: no wider than the pre-snap shot's lens (52°);
+ * - CATCH_FRAME: never tighter than this much field height (m) at the
+ *   catch point, so the receiver is about a quarter of the frame (~1.9 m of
+ *   7.5) on a quick throw; a deep ball (two seconds in the air and more) no
+ *   tighter than CATCH_FRAME_DEEP, a fifth, so the race with the man on him
+ *   and the safety coming over read as they do on a broadcast;
+ * - the defender nearest the spot as the ball gets there (within
+ *   NEAR_DEF yd) is held in the frame too: the catch is a contest.
+ */
+const FIT_MARGIN = 1.22;
+const AIR_FOV_MAX = 52;
+const CATCH_FRAME = 7.5;
+const CATCH_FRAME_DEEP = 10;
+const NEAR_DEF = 4;
+const _f = new THREE.Vector3();
+const _r = new THREE.Vector3();
+const _u = new THREE.Vector3();
+const _d = new THREE.Vector3();
+const _UP = new THREE.Vector3(0, 1, 0);
+const _look = new THREE.Vector3();
+const _spot = new THREE.Vector3();
+const _pts: THREE.Vector3[] = Array.from({ length: 8 }, () => new THREE.Vector3());
+
+/** The vertical fov (deg) from `eye` looking at `look` that holds every point (world) inside FIT_MARGIN of the frame. */
+function fitFov(eye: THREE.Vector3, look: THREE.Vector3, pts: THREE.Vector3[], n: number, aspect: number): number {
+  _f.subVectors(look, eye).normalize();
+  _r.crossVectors(_f, _UP).normalize();
+  _u.crossVectors(_r, _f);
+  let tv = 0;
+  for (let k = 0; k < n; k++) {
+    _d.subVectors(pts[k]!, eye);
+    const z = _d.dot(_f);
+    if (z < 1) continue;
+    tv = Math.max(tv, Math.abs(_d.dot(_u)) / z, Math.abs(_d.dot(_r)) / z / aspect);
+  }
+  return (2 * Math.atan(tv * FIT_MARGIN) * 180) / Math.PI;
+}
+
 /**
  * The pass: from the moment it's out, the camera rides behind the ball on
  * its line to the receiver and pushes in so the catch point fills the frame
@@ -365,27 +420,68 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   const yaw = Math.max(-AIR_YAW, Math.min(AIR_YAW, Math.atan2(dy * 0.8, ux0)));
   const ux = Math.cos(yaw);
   const uy = Math.sin(yaw);
-  // Look: the ball early, the catch late. The catch is between the aim
-  // point and the receiver closing on it (he's often a stride short).
+  // Where the ball and the man will meet (passing round 9): the sim's own catch (the tick it gets to his hands,
+  // sim/passing.ts catchAhead), else between the aim and where he'll be at the arrival (he's often a stride short).
+  const tr = b.target >= 0 ? s.agents[b.target] : undefined;
   const r = b.target >= 0 ? cur.agents[b.target] : undefined;
-  const cx = r ? (ax + r.x) / 2 : ax;
-  const cy = r ? (ay + r.y) / 2 : ay;
-  const lx = ball.x + (cx - ball.x) * (0.3 + 0.7 * e);
-  const ly = ball.y + (cy - ball.y) * (0.3 + 0.7 * e);
-  // Back off along the line: wide at release, 10.5 yd off the catch at
-  // arrival (round two: the push-in ends ~17% wider than M5.5's 9 yd, 3.4 up,
-  // so the receiver and the nearest defenders are all in frame).
-  const back = 20 - 9.5 * e;
+  const meet = tr && b.mode === 'air' ? catchAhead(s, tr) : null;
+  const T = Math.max(0, b.arrive - s.t);
+  const cx = meet ? meet.pos.x : r ? (ax + r.x + r.vx * T) / 2 : ax;
+  const cy = meet ? meet.pos.y : r ? (ay + r.y + r.vy * T) / 2 : ay;
+  // Look: the landing spot, led from the release (passing round 9: round two's look started 70% of the way back at
+  // the ball and came to the catch only as it arrived, so a quick throw was never framed); halfway between the ball
+  // and the spot as it leaves his hand, on the spot as it gets there.
+  const lead = 0.5 * (1 - e);
+  const lx = cx + (ball.x - cx) * lead;
+  const ly = cy + (ball.y - cy) * lead;
+  // Back off along the line: wide at release, 13 yd off the catch and 4.8 m up at arrival (passing round 9: the long
+  // lens. Round two's 10.5 yd and 3.9 m put the eye among the underneath defenders, so with the zoom framing the catch a
+  // linebacker between the camera and the ball filled a corner of the frame; from further back and higher, on a
+  // tighter lens, the catch is framed as large with the perspective flatter, as a broadcast's long lens has it).
+  const back = 20 - 7 * e;
   const pose: Pose = {
     ex: lx - ux * back,
     ey: ly - uy * back,
-    eh: 8 - 4.1 * e,
+    eh: 8 - 3.2 * e,
     lx,
     ly,
     // Low enough that the catch sits just above center, clear of the catch-call panel.
     lh: 0.4 + 0.2 * e,
     fov: 50 - 12 * e,
   };
+  if (camNow.ok) {
+    // The zoom (passing round 9): the ball, the man, the spot and the nearest defender to it held in the frame from
+    // where the eye really is, no tighter than CATCH_FRAME at the spot.
+    let n = 0;
+    _pts[n++]!.set(worldX(ball.y), worldY(ball.z), worldZ(ball.x));
+    _pts[n++]!.set(worldX(cy), 0, worldZ(cx));
+    _pts[n++]!.set(worldX(cy), 2.1, worldZ(cx));
+    if (r) {
+      _pts[n++]!.set(worldX(r.y), 0, worldZ(r.x));
+      _pts[n++]!.set(worldX(r.y), 2.1, worldZ(r.x));
+    }
+    let nd = -1;
+    let bd = NEAR_DEF;
+    for (const j of s.def) {
+      const o = cur.agents[j];
+      if (!o || o.down) continue;
+      const k = Math.hypot(o.x + o.vx * T - cx, o.y + o.vy * T - cy);
+      if (k < bd) {
+        bd = k;
+        nd = j;
+      }
+    }
+    if (nd >= 0) {
+      const o = cur.agents[nd]!;
+      _pts[n++]!.set(worldX(o.y), 0, worldZ(o.x));
+      _pts[n++]!.set(worldX(o.y), 2.1, worldZ(o.x));
+    }
+    const fit = fitFov(camNow.eye, _look.set(worldX(ly), pose.lh, worldZ(lx)), _pts, n, camNow.aspect);
+    const toSpot = camNow.eye.distanceTo(_spot.set(worldX(cy), 1, worldZ(cx)));
+    const frameH = CATCH_FRAME + (CATCH_FRAME_DEEP - CATCH_FRAME) * Math.min(1, Math.max(0, flight.total - 1));
+    const tight = (2 * Math.atan(frameH / 2 / Math.max(1, toSpot)) * 180) / Math.PI;
+    pose.fov = Math.min(AIR_FOV_MAX, Math.max(fit, tight));
+  }
   // Kept for the catch beat (with where the receiver is), while the ball is in the air.
   if (cur.phase === 'air') {
     lastAir.pose = pose;
@@ -394,6 +490,9 @@ function airPose(s: NonNullable<typeof practice.runner>['state'], cur: NonNullab
   }
   return pose;
 }
+
+/** The most a quick throw stiffens the air rig (× its springs' frequency). Ours: a 0.7-s slant at ~1.4×, settled on the spot as the ball gets there. */
+const AIR_QUICK = 1.5;
 
 /** Game time the video camera last stepped to. */
 const videoClock = { t: 0 };
@@ -499,8 +598,15 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     // The celebration's: the dolly slow and smooth (the push), the lens keeping him framed as he moves.
     const celeb = !rmode && !mshot && celebView.on;
     // (?follow rides its man close: a stiff rig, or a man on the move leaves the frame.)
-    const w = rmode ? REPLAY_RATES : celeb ? [2.2, 2.2, 2.2, 5, 5, 5, 3] : urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5] : [2.6, 2.6, 2.6, 4, 4, 4, 3];
+    // (Passing round 9) A quick throw tightens it further: a slant's 0.7 s in the air is over before the
+    // rig settles at its usual pace (the eye's time constant ~0.24 s), so the stiffness goes with the flight's
+    // shortness, up to AIR_QUICK times for a ball in the air under a second.
+    const quick = air && rr?.cur.phase === 'air' ? Math.min(AIR_QUICK, Math.max(1, 1 / flight.total)) : 1;
+    const w = rmode ? REPLAY_RATES : celeb ? [2.2, 2.2, 2.2, 5, 5, 5, 3] : urlFlags.follow ? [9, 9, 9, 14, 14, 14, 9] : air ? [4.2, 4.2, 4.2, 7, 7, 7, 4.5].map((x) => x * quick) : [2.6, 2.6, 2.6, 4, 4, 4, 3];
     const v = sp.map((s, i) => s.step(t[i]!, w[i]!, step));
+    camNow.eye.set(v[0]!, v[1]!, v[2]!);
+    camNow.aspect = camera.aspect;
+    camNow.ok = true;
     // Shake: hits kick it, it rings down in ~0.3 s.
     for (const e of frameEvents) {
       if (e.type === 'hit' || e.type === 'sack') {

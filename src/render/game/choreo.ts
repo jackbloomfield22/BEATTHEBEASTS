@@ -71,6 +71,8 @@ export interface Body {
   box: number;
   /** Passing round 6: the arm the ball is carried in (carrySide), or null before he has it. */
   carry?: CarryArm | null;
+  /** Passing round 9: the forward reach's depth (reachDepth: 0 the chest catch's arms, 1 all of catch_reach_out) and the sim time it was last eased. */
+  reachK?: { k: number; t: number };
 }
 
 /**
@@ -142,7 +144,9 @@ export function resetBody(b: Body): void {
   b.box = 0.5;
   b.carry = null;
   b.armSlot = undefined;
+  b.reachK = undefined;
   b.animator.setSlot(null, null, 0);
+  b.animator.setMix(null, null, 0);
   b.animator.onTurn = null;
 }
 
@@ -384,8 +388,29 @@ export function catchPoint(s: PlayState, a: Agent): { ahead: number; z: number }
 const LUNGE = 1.5;
 const LUNGE_FROM = 0.3;
 const LUNGE_HOLD = 0.1;
-/** A chest-high ball taken further than this (m) ahead of his centre is the forward reach: the chest catch's straight arms put the finger roots 0.67 m ahead (tools/blender/measure_reach.py), the reach out 1.00. Ours: between them. */
-const REACH_OUT_FROM = 0.78;
+/**
+ * A chest-high ball taken further than this (m) ahead of his centre is the
+ * forward reach: the chest catch's straight arms put the finger roots 0.67 m
+ * ahead (tools/blender/measure_reach.py). Passing round 9: from there, not
+ * 0.78, because the reach is now blended by how far out the ball is
+ * (reachDepth), so at 0.67 m it is the chest catch's own arms and the two
+ * meet without a step.
+ */
+const REACH_OUT_FROM = 0.67;
+/** All of catch_reach_out at this far out (m): its finger roots at the secure frame (1.00 m, measure_reach.py) and the lunge's ~0.05 (LUNGE). */
+const REACH_OUT_FULL = 1.05;
+/**
+ * The forward reach's depth (passing round 9; PASSING8's still open: "a ball
+ * 0.8 m out gets the same deep fold as one at 1.15 m"): how much of
+ * catch_reach_out over the chest catch (catch_hands_run, laid back over it by
+ * 1 − k: animator.ts setMix), linear in how far ahead of his centre the sim
+ * takes the ball (m), 0 at the chest catch's reach and 1 at the full reach's.
+ */
+export function reachDepth(ahead: number): number {
+  return Math.max(0, Math.min(1, (ahead - REACH_OUT_FROM) / (REACH_OUT_FULL - REACH_OUT_FROM)));
+}
+/** How fast the depth follows the sim's catch point as it comes (1/s): the hands don't flicker between depths on a tick's change of a few cm. Ours. */
+const REACH_K_RATE = 12;
 /** ...below this (yd, ~1.6 m: the shoulders); higher, the hands go up over the face mask instead. */
 const HIGH_OUT = 1.75;
 
@@ -589,6 +614,12 @@ const REACH_CLIPS = new Set(['catch_hands_run', 'catch_reach_out', 'catch_hands_
 const TRUNK_MAX = 0.44;
 /** The hands come to the ball over this long (s of clip) before the secure frame: the late hands. */
 const REACH_IN = 0.2;
+/**
+ * ...and a posted-up receiver's over this long (passing round 9): the bar arm stays on the man until the ball is
+ * nearly there (catch_box keys it to 0.12 s out), then the hands snap up to it. At REACH_IN the hands' reach took
+ * the arms off the bar 0.2 s out, and from the broadcast camera there was no post-up to see.
+ */
+const REACH_IN_POSTED = 0.12;
 /** How far the hands can go for it (m from between the shoulders, where they'll be at the catch) at full weight, and past which they don't chase it. Ours: a long arm's reach, and (passing round 8) the trunk's fold after it (TRUNK_MAX: the forward reach's ball 1.15 m out in front of his centre is ~0.85 m from his shoulders as they run). */
 const REACH_NEAR = 0.95;
 const REACH_FAR = 1.35;
@@ -653,7 +684,7 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
     b.animator.reachHands(one === 'r' ? null : _hl, k, one === 'l' ? null : _hr, k, TRUNK_MAX);
     return;
   }
-  let w = THREE.MathUtils.smoothstep(t, secure - REACH_IN, secure - 0.02);
+  let w = THREE.MathUtils.smoothstep(t, secure - (POSTED.has(c) ? REACH_IN_POSTED : REACH_IN), secure - 0.02);
   if (w <= 0) return;
   // The ball at the secure frame (sim yd, z up): where the sim will call the
   // catch (passing round 6: the tick it gets to his hands, its own flight
@@ -1457,10 +1488,27 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   if (b.catchClip && b.catchClip !== 'catch_body' && ball.mode === 'air' && ball.target === i && s.bobble?.who !== i) paceCatch(b, s, a, simT);
   // (Passing round 8) Out at the end of his reach he lunges into it: the run's own forward pitch (the press of a
   // designed run, animator.ts) through the reach and the catch, so the drawn hands get as far as the sim takes it.
+  // (Passing round 9) As deep as the ball is out: the chest catch laid back over the reach by 1 − its depth
+  // (reachDepth), eased on the sim's catch point while the ball's in the air, held from the catch on.
   if (b.catchClip === 'catch_reach_out') {
+    if (ball.mode === 'air' && ball.target === i) {
+      const want = reachDepth(catchPoint(s, a).ahead);
+      const r = b.reachK;
+      if (!r) b.reachK = { k: want, t: simT };
+      else {
+        r.k += (want - r.k) * Math.min(1, Math.max(0, simT - r.t) * REACH_K_RATE);
+        r.t = simT;
+      }
+    }
+    const k = b.reachK?.k ?? 1;
+    const sh = eventAt(b, 'catch_hands_run', 'secure');
+    const sr = eventAt(b, 'catch_reach_out', 'secure');
+    anim.setMix('catch_reach_out', 'catch_hands_run', 1 - k, sh !== null && sr !== null ? sh - sr : 0);
     const t = catchTime(b);
-    const sec = eventAt(b, 'catch_reach_out', 'secure');
-    if (t !== null && sec !== null && t > sec - LUNGE_FROM && t < sec + LUNGE_HOLD) out.press = Math.max(out.press, LUNGE);
+    if (t !== null && sr !== null && t > sr - LUNGE_FROM && t < sr + LUNGE_HOLD) out.press = Math.max(out.press, LUNGE * k);
+  } else if (b.reachK) {
+    b.reachK = undefined;
+    anim.setMix(null, null, 0);
   }
   // What the hands hold.
   const holder = ball.mode === 'held' && s.phase !== 'presnap' && simT - s.snapT > 0.3 ? ball.holder : -1;

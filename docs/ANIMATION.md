@@ -177,8 +177,8 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `catch_reach_out` | overlay | 27 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_over_shoulder_low_l` | overlay | 26 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_over_shoulder_low_r` | overlay | 26 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `catch_box_l` | overlay | 32 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
-| `catch_box_r` | overlay | 32 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_box_l` | overlay | 39 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_box_r` | overlay | 39 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `qb_throw_side` | overlay | 24 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
 | `qb_throw_over` | overlay | 24 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
 | `qb_throw_quick_side` | overlay | 21 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
