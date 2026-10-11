@@ -8,6 +8,7 @@ import { YARD } from '../world/constants';
 import { worldDir, worldX, worldY, worldZ } from '@/game/coords';
 import { latency } from '@/game/latency';
 import { catchAhead, findsBallAt, laneAhead, LANE_MAX, releaseOf, type CatchLook } from '@/sim/passing';
+import { slotThreat } from './slotThreat';
 import { has } from '@/sim/traits';
 import { arrivalOf, catchStyle, contactAt, meetTime, pluckOf, type CatchStyle } from '@/sim/catchstyle';
 import { dropPlan, dropStart, GUN_CATCH, planFrom, UC_EXCHANGE, type DropPlan } from '@/sim/pocket';
@@ -518,10 +519,14 @@ function throwSlot(b: Body, s: PlayState, qb: Agent, simT: number, running: bool
   }
   const w = s.windup;
   let lane: number;
+  // (Passing round 11) The arm drops or goes over the top only for a man in the lane who is pressure (slotThreat.ts):
+  // round eight's drew it for any lineman in the line of the throw, on 57% of the AI's throws (52% of clean pockets).
+  let threat = 1;
   if (w && b.throwAt === w.from) {
     // Winding up: the lane he'd take for this throw now.
     const rec = s.agents[s.icons[w.icon] ?? -1];
     lane = w.away || !rec ? 0 : laneAhead(s, qb, rec, w.charge, w.aim);
+    threat = lane && rec ? slotThreat(s, qb, rec.pos) : 0;
   } else {
     // Out of his hand: the lane he took (the throw event's).
     if (sl.lane === null) {
@@ -533,11 +538,11 @@ function throwSlot(b: Body, s: PlayState, qb: Agent, simT: number, running: bool
   }
   // (Passing round 10: from the release the throw's finish is its own, by the throw: the slot lets go of it.)
   const released = !(w && b.throwAt === w.from);
-  const target = released ? 0 : SLOT_K * Math.max(-1, Math.min(1, lane / LANE_MAX - (running && has(qb, 'off-platform') ? SLING : 0)));
+  const target = released ? 0 : SLOT_K * Math.max(-1, Math.min(1, Math.max(-1, Math.min(1, lane / LANE_MAX)) * threat - (running && has(qb, 'off-platform') ? SLING : 0)));
   sl.w += (target - sl.w) * (1 - Math.exp(-dt * SLOT_RATE));
   anim.setSlot(base, `${base}_${sl.w < 0 ? 'side' : 'over'}`, Math.abs(sl.w));
 }
-/** The most of a slot variant drawn (at the full move, LANE_MAX): three-quarters to side-arm, or nearly over the top; the rest of the move is the slide and the ball's own blend onto its line (ballFlight.ts). Ours: the AI book moves the release on 56% of throws, by 0.3 yd or more on a third (tools/sim/p8_lane.ts), and a pure side-arm on one throw in three would read as a gimmick. */
+/** The most of a slot variant drawn (at the full move, LANE_MAX, with the man in the lane full pressure): three-quarters to side-arm, or nearly over the top; the rest of the move is the slide and the ball's own blend onto its line (ballFlight.ts). Ours: the AI book moves the release on 56% of throws, by 0.3 yd or more on a third (tools/sim/p8_lane.ts), and a pure side-arm on one throw in three would read as a gimmick (round 11: drawn on 14% of the AI's throws, 5% of clean pockets and 41% of pressured ones, tools/sim/p11_slot.ts). */
 const SLOT_K = 0.8;
 /** The arm slot eases to where he wants it at this rate (1/s: ~0.1 s, a beat of the windup). Ours. */
 const SLOT_RATE = 12;
