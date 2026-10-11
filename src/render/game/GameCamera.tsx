@@ -117,6 +117,10 @@ export function GameCamera({ fovOffset = 0 }: { fovOffset?: number }) {
     }
     // Screenshots and browser tests cut straight to the pose every frame.
     if (urlFlags.shot !== null && !urlFlags.video) springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
+    // (Passing round 11) A recording draws its pre-snap frames with no game time passing (the camera steps by game
+    // time), so it opened a second into the play still gliding down from the play call's framing (a quick throw's
+    // windup came with the camera 2 m high and 5 yd back). In play it has settled long before the snap: so here.
+    if (urlFlags.video && practice.runner?.cur.phase === 'presnap') springs.current.forEach((s, i) => ((s.x = t[i]!), (s.v = 0)));
     const sp = springs.current;
     // Eye slower than the look: the lens leads, the dolly follows.
     // In the air the whole rig tightens up so it keeps pace with the ball.
