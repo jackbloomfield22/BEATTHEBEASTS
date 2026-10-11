@@ -92,7 +92,7 @@ const FOLLOW9: Record<string, string> = {
   'p9-corner': 'SLOT,6,-5,2.2,42',
   'p9-cross': 'TE,5,-5,2,42',
   'p9-screen': 'RB,4,5,1.8,40',
-  'p9-contested': 'TE,-2,-6,1.9,42',
+  'p9-contested': 'TE,-1.5,-4,1.7,36',
   'p9-rac-a': 'X,-6,6,2.4,46',
   'p9-rac-b': 'X,-6,6,2.4,46',
 };
