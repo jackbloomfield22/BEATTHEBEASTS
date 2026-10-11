@@ -7,7 +7,7 @@
 //   node tools/run-ts.mjs tools/sim/p8_clips.ts [--ids=p8-reach,...] [--scan=slant:cover3:1-16:21]
 import { readFileSync } from 'node:fs';
 import { createPlay, defById, defenseFor, NEUTRAL, offenseFor, playById, practiceRosters, stepPlay, type PlayState, type SnapshotLike } from '../../src/sim/index.ts';
-import { PASSING10, userThrow, withSwap, type Clip } from '../../src/game/clips.ts';
+import { PASSING9, PASSING10, userThrow, withSwap, type Clip } from '../../src/game/clips.ts';
 import { catchStyle, contactAt } from '../../src/sim/catchstyle.ts';
 import { catchAhead } from '../../src/sim/passing.ts';
 import type { Agent } from '../../src/sim/types.ts';
@@ -18,7 +18,7 @@ const rosters = practiceRosters(snap);
 const ids = process.argv.find((a) => a.startsWith('--ids='))?.slice(6).split(',');
 const scan = process.argv.find((a) => a.startsWith('--scan='))?.slice(7);
 const user = !process.argv.includes('--ai');
-let list: Clip[] = PASSING10.filter((c) => !ids || ids.includes(c.id));
+let list: Clip[] = [...PASSING9, ...PASSING10].filter((c) => !ids || ids.includes(c.id));
 if (scan) {
   // play:def:seedFrom-seedTo:icon:at[:hold]
   const [play, def, seeds, icon, at, hold] = scan.split(':');
@@ -40,9 +40,12 @@ for (const c of list) {
   const r = c.swap ? withSwap({ team: rosters.team, beasts: rosters.beasts }, c.play, c.swap, snap) : null;
   const s: PlayState = createPlay({ seed: c.seed, offense: r ? offenseFor(playById(c.play), r.team) : rosters.offense, defense: r ? defenseFor(defById(c.def), r.beasts) : rosters.defense, play: playById(c.play), def: defById(c.def), los: c.los, toGo: 10, user: c.user ?? true });
   let drawn = '';
+  // (Round 10) The throw as it leaves his hand: its distance to the aim (yd) and launch angle (deg), as render/game/choreo.ts throwFinish reads them.
+  let out = '';
   let box = '';
   for (let k = 0; k < 1500 && !s.result; k++) {
     const b = s.ball;
+    if (!out && b.mode === 'air') out = `d ${Math.hypot(b.aim.x - b.pos.x, b.aim.y - b.pos.y).toFixed(1)} yd, ${((Math.atan2(b.vel.z, Math.hypot(b.vel.x, b.vel.y)) * 180) / Math.PI).toFixed(0)} deg | `;
     if (!drawn && b.mode === 'air' && b.target >= 0 && s.agents[b.target]!.side === 'off' && b.arrive - s.t <= 0.2) {
       const a = s.agents[b.target]!;
       const st = catchStyle(s, a);
@@ -59,5 +62,5 @@ for (const c of list) {
   const rel = rec?.mem.catchRel as { x: number; y: number } | undefined;
   const tev = th?.data as { kind?: string; air?: number } | undefined;
   const rel0 = s.ball.releaseT;
-  console.log(`${c.id}: ${tev?.kind ?? '-'} air ${tev?.air ?? '-'} hang ${(s.ball.arrive - rel0).toFixed(2)} | lane ${th?.data?.lane ?? 0} | ${drawn}${box} | ${ev.join(' ')} -> ${s.result?.reason} ${s.result?.yards}${rel ? ` (caught ${Math.hypot(rel.x, rel.y).toFixed(2)} yd off his centre)` : ''}`);
+  console.log(`${c.id}: ${out}${tev?.kind ?? '-'} air ${tev?.air ?? '-'} hang ${(s.ball.arrive - rel0).toFixed(2)} | lane ${th?.data?.lane ?? 0} | ${drawn}${box} | ${ev.join(' ')} -> ${s.result?.reason} ${s.result?.yards}${rel ? ` (caught ${Math.hypot(rel.x, rel.y).toFixed(2)} yd off his centre)` : ''}`);
 }

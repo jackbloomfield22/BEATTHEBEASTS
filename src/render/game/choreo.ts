@@ -567,12 +567,13 @@ export function throwClip(b: Body, s: PlayState, qb: Agent, running: boolean): s
 }
 /**
  * How the throw finishes (passing round 10; tools/blender/lib/actions_p10.py),
- * from the ball as it leaves his hand: a driven ball under QUICK_THROW yd is
- * the quick game's flick; a lofted one (leaving above TOUCH_ANGLE) short of
- * DEEP_THROW is touch (the fade, a ball dropped in over a man); everything
- * else, the driven intermediate ball and the deep ball (layered or not), is
- * the full drive. A man hit as he throws never finishes (null: his own
- * throw's short follow-through), and the fade-away has no finishes.
+ * from the throw as it leaves his hand: touch for a ball the sim says he put
+ * air on (its kind: the player's hold, or lofted over a man underneath)
+ * short of DEEP_AIR air yards; the quick game's flick for a driven ball in the
+ * air under QUICK_HANG; everything else, the driven intermediate ball and the
+ * deep ball (layered or not), the full drive. A man hit as he throws never
+ * finishes (null: his own throw's short follow-through), and the fade-away
+ * has no finishes.
  */
 export function throwFinish(s: PlayState, qb: Agent): 'flick' | 'drive' | 'touch' | null {
   const b = s.ball;
@@ -583,23 +584,21 @@ export function throwFinish(s: PlayState, qb: Agent): 'flick' | 'drive' | 'touch
     if (e.data?.hit) return null;
     break;
   }
-  const d = Math.hypot(b.aim.x - b.pos.x, b.aim.y - b.pos.y);
-  if (d >= DEEP_THROW) return 'drive';
-  if (Math.atan2(b.vel.z, Math.hypot(b.vel.x, b.vel.y)) > TOUCH_ANGLE) return 'touch';
-  return d < QUICK_THROW ? 'flick' : 'drive';
+  const air = s.pass?.airYards ?? 0;
+  if (b.kind === 'touch' && air < DEEP_AIR) return 'touch';
+  return b.arrive - b.releaseT < QUICK_HANG ? 'flick' : 'drive';
 }
 /**
- * The finish's lines. QUICK_THROW (yd to the catch point): the quick game's
- * throws (a slant, hitch or quick out from the gun is ~6–11 yd of air).
- * TOUCH_ANGLE (rad, 22°): a driven 20-yd ball leaves at ~13°, the player's
- * half-second hold on the fade at ~34° (tools/sim/p10_clips.ts: 19 yd in
- * 1.55 s), so 22° is clearly air put on it. DEEP_THROW: past it the throw is
- * a full drive whatever its arc (the AI's layered deep ball leaves at ~30°).
- * Ours.
+ * The finish's lines (tools/sim/p10_clips.ts prints each recorded throw's).
+ * QUICK_HANG (s): the quick game's driven balls hang 0.5–0.75 s (the slant
+ * 0.71, the RB screen 0.47), the first intermediate ones 0.8 and more (the
+ * dig 0.81, the curl 0.90). DEEP_AIR (yd): the AI's deep ball is layered
+ * (touch) from 24 air yards (sim/passing.ts layer), and a ball that deep is
+ * thrown with the whole body whatever its arc; the fade (19 air yards, held)
+ * and a ball lofted over a man underneath stay touch. Ours.
  */
-const QUICK_THROW = 12;
-const TOUCH_ANGLE = (22 * Math.PI) / 180;
-const DEEP_THROW = 28;
+const QUICK_HANG = 0.78;
+const DEEP_AIR = 25;
 /** A QB moving faster than this (m/s) after the release runs out of his finish. Ours: a drift settling is slower. */
 const FINISH_RUN = 2;
 /** A rusher this close (the sim's pressure, 0..1: a free man within ~2.4 yd) puts him on his back foot. Ours. */
