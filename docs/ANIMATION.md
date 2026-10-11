@@ -174,6 +174,19 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `carry_drive_run_l` | locomotion | 16 | 6.2 | 0.00 | 0.00 | 23.1 | — | pass |
 | `carry_drive_sprint_l` | locomotion | 14 | 8.2 | 0.00 | 0.00 | 24.6 | — | pass |
 | `ovl_carry_l` | overlay | 30 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_reach_out` | overlay | 27 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_over_shoulder_low_l` | overlay | 26 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_over_shoulder_low_r` | overlay | 26 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_box_l` | overlay | 32 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `catch_box_r` | overlay | 32 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
+| `qb_throw_side` | overlay | 24 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
+| `qb_throw_over` | overlay | 24 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
+| `qb_throw_quick_side` | overlay | 21 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
+| `qb_throw_quick_over` | overlay | 21 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
+| `qb_throw_long_side` | overlay | 30 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
+| `qb_throw_long_over` | overlay | 30 | 0.0 | 0.00 | 0.00 | 33.0 | — | pass |
+| `qb_throw_fade_side` | overlay | 23 | 0.0 | 0.00 | 0.00 | 33.4 | — | pass |
+| `qb_throw_fade_over` | overlay | 23 | 0.0 | 0.00 | 0.00 | 33.4 | — | pass |
 | `carry_jog` | locomotion | 22 | 3.5 | 0.01 | 0.00 | 19.8 | — | pass |
 | `carry_run` | locomotion | 20 | 5.8 | 0.00 | 0.00 | 23.2 | — | pass |
 | `carry_sprint` | locomotion | 14 | 8.5 | 0.00 | 0.00 | 24.7 | — | pass |
@@ -200,4 +213,4 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `catch_bobble` | overlay | 24 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `catch_resecure` | overlay | 15 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 
-**193 of 193 clips pass.**
+**206 of 206 clips pass.**

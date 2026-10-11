@@ -1451,6 +1451,17 @@ function contactStep(s: PlayState): void {
       continue;
     }
     const low = goesLow(s, c, o);
+    // Bruiser (passing round 8, the trait catalog's "DBs tackling him alone lose the collision"): a defensive back alone on
+    // him after the catch who doesn't bring him down has lost the collision: he's bounced off and down, not hanging on an
+    // arm while the tight end drags him (round seven had every broken tackle an arm he dragged, so Gronkowski's broken
+    // tackles gained what Tony Gonzalez's tackles gave up: tools/sim/p8_yac.ts).
+    if (out === 'broken' && !inPocket && bounces(s, c, o)) {
+      knockDown(s, o, c.pos.x - o.pos.x, c.pos.y - o.pos.y);
+      o.anim = 'down';
+      o.mem.tackleCd = s.t + 1;
+      s.events.push({ t: s.t, type: 'brokenTackle', who: [c.i, o.i], at: { ...c.pos }, data: { force: Math.round(force * 10) / 10, move: c.move ?? '', how: 'bounced', flat: true } });
+      continue;
+    }
     if (out === 'broken' && !inPocket) {
       // A hand on him (tackle.ts): run through at once, or dragged until the hand gives or help arrives.
       grab(s, c, o, 'arm', { engaged: !!engaged, low, force });
@@ -1513,6 +1524,15 @@ function contactStep(s: PlayState): void {
     whistle(s, c.pos.x <= 0 ? 'safety' : 'sack', c.pos.x, true);
     return;
   }
+}
+
+/** A Bruiser after the catch and a defensive back alone on him (contact.ts tackleOdds' "alone": nobody else of his within 1.6 yd): the back who loses the collision bounces off (passing round 8). */
+function bounces(s: PlayState, c: Agent, o: Agent): boolean {
+  if (c.mem.caughtAt === undefined || !has(c, 'bruiser-te') || (o.p.pos !== 'CB' && o.p.pos !== 'S')) return false;
+  return !s.def.concat(s.off).some((k) => {
+    const m = s.agents[k]!;
+    return m.side === o.side && m.i !== o.i && !m.down && dist(m.pos, c.pos) < 1.6;
+  });
 }
 
 /**

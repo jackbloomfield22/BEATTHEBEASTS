@@ -15,6 +15,7 @@
 // a man running at him has to go round, step over or hurdle him.
 
 import type { Agent, SimPlayer } from './types';
+import { has } from './traits';
 
 const YD_PER_M = 1 / 0.9144;
 
@@ -143,3 +144,30 @@ export function runMeets(b: Lying, px: number, py: number, hx: number, hy: numbe
   }
   return null;
 }
+
+/**
+ * The box-out (passing round 8, docs/passing/PASSING8.md): how well a
+ * receiver walls a defender off the ball with his body (0..1). "Post up":
+ * the near hip and shoulder into the man, the near arm a bar on his chest,
+ * then up for the ball. His share of their mass (2·m/(m + m_d) − 1: about
+ * +0.14 for Gronkowski, 265 lb, on Ronnie Lott, 199), his Strength over the
+ * other's, his height over the other's (yd), and Big Body (the trait
+ * catalog: "boxes out defenders"). Ours, sized so a big, strong tight end
+ * on a safety (Gronkowski ~0.7, Tony Gonzalez ~0.55) and Kelvin Benjamin on
+ * a corner (~0.7) box out, Terrell Owens a little (~0.2), and a 185-lb
+ * slot receiver not at all. The contest (passing.ts resolveCatch), the
+ * bodies' push (contact.ts separate) and the boxed man's first tackle after
+ * the catch (contact.ts tackleOdds) use it.
+ */
+export function boxOut(r: Agent, d: Agent): number {
+  const mass = (2 * r.fx.mass) / (r.fx.mass + d.fx.mass) - 1;
+  const str = r.fx.a('strength') - d.fx.a('strength');
+  const tall = r.fx.height - d.fx.height;
+  const k = BOX_MASS_K * mass + BOX_STR_K * str + BOX_TALL_K * tall + (has(r, 'big-body') ? BOX_BIG : 0);
+  return Math.max(0, Math.min(1, k));
+}
+/** The box-out's weights: per unit of mass share, of Strength (0..1) over his, and per yd of height over his; Big Body's own. Ours (see boxOut). */
+const BOX_MASS_K = 2.5;
+const BOX_STR_K = 1.5;
+const BOX_TALL_K = 0.6;
+const BOX_BIG = 0.3;

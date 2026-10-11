@@ -175,7 +175,7 @@ export interface SimEvent {
 }
 
 /** Why a catchable ball was hard to catch: a hit as it arrived, thrown behind him, a bullet from close, a reach at full stretch, or only his hands. */
-export type CatchHard = 'contact' | 'behind' | 'bullet' | 'reach' | 'late' | 'tracking' | 'hands';
+export type CatchHard = 'contact' | 'behind' | 'bullet' | 'reach' | 'stretch' | 'late' | 'tracking' | 'hands';
 
 export interface PlayResult {
   reason: WhistleReason;
