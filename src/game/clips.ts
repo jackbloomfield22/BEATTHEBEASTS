@@ -458,3 +458,16 @@ export const PASSING7: Clip[] = [
   // Smash against Cover 2: the corner over the squatting corner, outside the half safety, toward the pylon.
   { id: 'p7-corner', title: 'The deep corner on the cue', seed: 4, play: 'doubles-smash', def: 'cover2', los: 30, script: userThrow({ icon: 1, at: 81 }) },
 ];
+
+// Passing round 8 (docs/passing/PASSING8.md): the catch out at the end of his
+// reach (the slant led a stride), the deep ball taken low over the shoulder,
+// the QB throwing around a lineman in his lane (the arm slot), and Gronk
+// boxing out on a contested ball (tools/sim/p8_clips.ts), from the default
+// broadcast camera and a close one (FOLLOW8: on the catcher, or the QB).
+export const PASSING8: Clip[] = [
+  { id: 'p8-reach', title: 'The slant led a stride: reached for', seed: 1, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 21 }) },
+  { id: 'p8-low-shoulder', title: 'The deep corner taken low over the shoulder', seed: 5, play: 'doubles-smash', def: 'cover2', los: 30, script: userThrow({ icon: 1, at: 81 }) },
+  { id: 'p8-lane', title: 'The slant thrown over the end', seed: 15, play: 'doubles-slants', def: 'cover3', los: 30, script: userThrow({ icon: 1, at: 21 }) },
+  { id: 'p8-lane-side', title: 'The corner thrown round the rusher, side-arm', seed: 4, play: 'doubles-smash', def: 'cover3', los: 30, user: false, script: () => NEUTRAL },
+  { id: 'p8-box', title: 'The box-out: Gronk on Lott', seed: 3, play: 'trips-y-cross', def: 'cover1', los: 30, user: false, script: () => NEUTRAL, swap: { off: 'TE', name: 'Rob Gronkowski', pos: 'TE' } },
+];

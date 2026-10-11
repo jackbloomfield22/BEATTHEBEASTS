@@ -50,26 +50,31 @@ from __future__ import annotations
 
 from .actions import GRIP, SPREAD, SPINE_UP, Clip, keyed
 from .actions_m65 import DIAMOND_WRIST, PINKIES_WRIST, sided
-from .actions_p5 import ARMS, MASK, carriage, events, run_upper, sternum, tuck
+from .actions_p5 import ARMS, FWD, MASK, carriage, events, run_upper, sternum, tuck
 from .gait import FPS
 from .poses import Pose
 
 # The forward reach folds from the lower spine too (spine_01: the run's own is a twentieth of its lean).
-REACH_MASK = ARMS + ["spine_01"] + SPINE_UP
+REACH_MASK = ARMS + ["spine_01"] + SPINE_UP + ["neck_01", "neck_02"]
 
 
 def _flex(p: Pose, fl: tuple[float, float, float, float]) -> Pose:
-    """Add forward flexion (deg) to spine_01..04 (on top of the run's trunk)."""
+    """Add forward flexion (deg) to spine_01..04 (on top of the run's trunk), the neck extending back by most of it so
+    the face stays up on the ball (the runtime's look-at then aims it)."""
     for b, d in zip(["spine_01", *SPINE_UP], fl):
         f0 = p.joints.get(b, (0, 0, 0))
         p.joints[b] = (f0[0] + d, *f0[1:])
+    up = -0.7 * sum(fl)
+    for b, k in (("neck_01", 0.5), ("neck_02", 0.5)):
+        f0 = p.joints.get(b, (0, 0, 0))
+        p.joints[b] = (f0[0] + up * k, *f0[1:])
     return p
 
 
 def reach_out() -> Clip:
     """The ball led a stride ahead of him (overlay over the run): the hands
     come up late out of the carriage, then the whole upper body extends
-    into it, the trunk folding ~30 degrees further forward from the lower
+    into it, the trunk folding ~50 degrees further forward from the lower
     spine so the shoulders go after the hands, the arms long, the diamond
     at chest height at the end of them (the finger roots ~0.95 m ahead of
     his centre: measure_reach.py). The fingers take it (secure), the elbows
@@ -79,7 +84,7 @@ def reach_out() -> Clip:
     ts, tt = 10 / FPS, 21 / FPS
     z = 1.30
     up = _flex(run_upper({"l": (0.11, -0.46, z), "r": (-0.11, -0.46, z)}, {**SPREAD, **DIAMOND_WRIST}, {"l": (0.55, 0.0, z - 0.42), "r": (-0.55, 0.0, z - 0.42)}, (-1, -1, 0)), (3, 4, 4, 2))
-    reach = _flex(run_upper({"l": (0.07, -1.00, z), "r": (-0.07, -1.00, z)}, {**SPREAD, **DIAMOND_WRIST}, {"l": (0.6, -0.4, z - 0.25), "r": (-0.6, -0.4, z - 0.25)}, (0, 0, 0)), (12, 13, 11, 6))
+    reach = _flex(run_upper({"l": (0.07, -1.00, z), "r": (-0.07, -1.00, z)}, {**SPREAD, **DIAMOND_WRIST}, {"l": (0.6, -0.4, z - 0.25), "r": (-0.6, -0.4, z - 0.25)}, (0, 0, 0)), (15, 16, 13, 6))
     give = _flex(run_upper({"l": (0.06, -0.62, z + 0.02), "r": (-0.06, -0.62, z + 0.02)}, {**GRIP, **DIAMOND_WRIST}, {"l": (0.6, -0.1, z - 0.40), "r": (-0.6, -0.1, z - 0.40)}, (0, 0, 0)), (6, 7, 6, 3))
     keys = [(0.0, carriage()), (ts - 0.2, up), (ts - 0.07, reach), (ts, reach), (ts + 0.07, give), (ts + 0.2, sternum()), (tt, tuck()), (T, tuck())]
     return Clip("catch_reach_out", "overlay", T, lambda t: keyed(keys, t), mask=REACH_MASK, events=events(ts, tt))
@@ -119,6 +124,39 @@ def over_shoulder_low(side: str) -> Clip:
     return Clip(f"catch_over_shoulder_low_{side}", "overlay", T, lambda t: keyed(keys, t), mask=MASK, events=events(ts, tt))
 
 
+def box_out(side: str) -> Clip:
+    """The box-out on a contested ball, the defender on his left (authored on
+    the left; overlay over the run, so the legs keep driving). Posted up
+    through the ball's last half second: the trunk leans and turns into the
+    man (the left hip and shoulder into him), the left forearm a bar across
+    his chest at the numbers, the right hand up ready; then late, both hands go
+    up together over the bar arm's side to take it at its highest point above
+    the face mask (secure), the chest staying on the man; snatched and
+    chinned at once, both forearms over it, the shoulder still into him; the
+    tuck late, as the contested catch's."""
+    T = 1.05
+    ts, tt = 14 / FPS, 26 / FPS
+    m = sided(side)
+    # Into the man on the left: the trunk leans and turns toward him (flex, lean, twist added per bone).
+    post = {"spine_02": (2, 6, 6), "spine_03": (2, 8, 8), "spine_04": (1, 6, 6)}
+
+    def posted(p: Pose, k: float) -> Pose:
+        for b, (fl, ab, tw) in post.items():
+            f0 = p.joints.get(b, (0, 0, 0))
+            p.joints[b] = (f0[0] + fl * k, f0[1] + ab * k, f0[2] + tw * k)
+        return p
+
+    # The bar: the left forearm across his chest out to the left, at the numbers; the right hand up at the chest, ready.
+    bar = posted(run_upper({"l": (0.42, -0.26, 1.28), "r": (-0.10, -0.40, 1.42)}, {**GRIP, **SPREAD, "hand_l": (-10, 0, 40), "hand_r": (-30, 0, 0)}, {"l": (0.40, -0.05, 1.18), "r": (-0.45, 0.05, 1.05)}, (0, 0, 0)), 1.0)
+    # Late hands: both up together over the face mask on the bar's side, the chest still on him.
+    reach = posted(run_upper({"l": (0.10, -0.40, 1.98), "r": (-0.02, -0.42, 1.96)}, {**SPREAD, "hand_l": (-55, 0, 0), "hand_r": (-55, 0, 0)}, {"l": (0.55, -0.05, 1.50), "r": (-0.50, -0.05, 1.48)}, (-6, -5, -4)), 0.8)
+    snatch = posted(run_upper({"l": (0.08, -0.36, 1.86), "r": (-0.02, -0.38, 1.84)}, {**GRIP, "hand_l": (-45, 0, 0), "hand_r": (-45, 0, 0)}, {"l": (0.45, 0.0, 1.40), "r": (-0.42, 0.0, 1.38)}, (-3, -3, -2)), 0.8)
+    # Chinned: the ball under the face mask, both forearms over it, the left shoulder still into him.
+    chin = posted(run_upper({"l": (0.07, -0.24 - FWD, 1.42), "r": (-0.06, -0.23 - FWD, 1.44)}, {**GRIP, "hand_l": (25, 0, -30), "hand_r": (-5, 0, 30)}, {"l": (0.30, 0.15, 1.05), "r": (-0.30, 0.15, 1.05)}, (6, 5, 4)), 1.0)
+    keys = [(0.0, carriage()), (ts - 0.42, m(bar)), (ts - 0.17, m(bar)), (ts - 0.05, m(reach)), (ts, m(reach)), (ts + 0.04, m(snatch)), (ts + 0.13, m(chin)), (tt - 0.08, m(chin)), (tt + 0.04, tuck()), (T, tuck())]
+    return Clip(f"catch_box_{side}", "overlay", T, lambda t: keyed(keys, t), mask=MASK, events=events(ts, tt))
+
+
 # --- The arm slot: around or over a rusher (overlays on the throw) -----------------------------------
 
 # Each throw as actions_pass.py keys it (the M4 throw, actions.py qb_throw, in the same terms): T, the stride,
@@ -155,8 +193,16 @@ def throw_slot(base: str, slot: str) -> Clip:
         f"{base}_{slot}", b["T"], b["S"], b["keys_t"], b["load_r"], add(b["cock_r"], d["cock"]), add(b["rel_r"], d["rel"]), add(b["fol_r"], d["fol"]),
         twist=b["twist"], flex=b["flex"], lean=b.get("lean", 0.0), feet=b["feet"], elbows=d["elbows"], bend=d["bend"],
     )
-    return Clip(c.name, "overlay", c.frames / FPS, c._pose, travel=c._travel, mask=SLOT_MASK, events=c.events)
+    # In place, the feet held where the throw starts: an overlay drives only the upper body (the throw's own legs step).
+    feet0 = c.pose(0).feet
+
+    def pose(t):
+        p = c.pose(round(t * FPS))
+        p.feet = dict(feet0)
+        return p
+
+    return Clip(c.name, "overlay", c.frames / FPS, pose, mask=SLOT_MASK, events=c.events)
 
 
 def p8_clips() -> list[Clip]:
-    return [reach_out(), over_shoulder_low("l"), over_shoulder_low("r"), *[throw_slot(b, sl) for b in THROWS for sl in SLOTS]]
+    return [reach_out(), over_shoulder_low("l"), over_shoulder_low("r"), box_out("l"), box_out("r"), *[throw_slot(b, sl) for b in THROWS for sl in SLOTS]]

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { carrierPace, GOAL_X, holds, manOf, pullers, TAP_MAX, TICK } from '@/sim';
+import { carrierPace, GOAL_X, manOf, pullers, TAP_MAX, TICK } from '@/sim';
 import type { PlayerAnimator } from '@/anim/animator';
 import type { Ragdoll } from '@/anim/ragdoll';
 import type { Agent, PlayState, SimEvent } from '@/sim';
@@ -7,10 +7,12 @@ import type { Player } from '../players/playerAsset';
 import { YARD } from '../world/constants';
 import { worldDir, worldX, worldY, worldZ } from '@/game/coords';
 import { latency } from '@/game/latency';
-import { catchAhead, findsBallAt, releaseOf, type CatchLook } from '@/sim/passing';
+import { catchAhead, findsBallAt, laneAhead, LANE_MAX, releaseOf, type CatchLook } from '@/sim/passing';
+import { has } from '@/sim/traits';
 import { arrivalOf, catchStyle, contactAt, meetTime, pluckOf, type CatchStyle } from '@/sim/catchstyle';
 import { dropPlan, dropStart, GUN_CATCH, planFrom, UC_EXCHANGE, type DropPlan } from '@/sim/pocket';
 import { pressureOn, routeOf } from '@/sim/ai';
+import { boxOut } from '@/sim/bodies';
 import { threatOf } from '@/sim/moves';
 import type { BodyExtent } from './contact';
 
@@ -59,6 +61,8 @@ export interface Body {
   cutAt: number;
   /** His trunk's measured extent (contact.ts), from his position, height and weight. */
   ext: BodyExtent;
+  /** Passing round 8: the throw's drawn arm slot (throwSlot): the throw it rides, its eased weight (− side-arm, + over the top), the last sim time and the released throw's lane. */
+  armSlot?: { base: string | null; w: number; t: number; lane: number | null };
   /** M6.5 #12: the man he's contesting a catch with (body index) until this sim time, or null. */
   contest: { with: number; until: number } | null;
   /** Passing round 5: the catch being drawn (its style, his pluck) and where his hands met the ball, or null. */
@@ -137,6 +141,8 @@ export function resetBody(b: Body): void {
   b.grip = null;
   b.box = 0.5;
   b.carry = null;
+  b.armSlot = undefined;
+  b.animator.setSlot(null, null, 0);
   b.animator.onTurn = null;
 }
 
@@ -237,13 +243,11 @@ export function contests(bodies: Body[], s: PlayState, simT: number, out: [numbe
  * Strength 85 on a 200-lb safety takes ~0.7 of it.
  */
 export function boxShare(r: Agent, d: Agent): number {
-  const body = BOX_MASS * ((2 * r.fx.mass) / (r.fx.mass + d.fx.mass) - 1) + BOX_STR * (r.fx.a('strength') - d.fx.a('strength'));
-  return Math.max(0.25, Math.min(0.8, 0.5 + BOX_LEAN * body + (holds(r.p, 'big-body') ? 0.1 : 0)));
+  // (Passing round 8: the sim's own box-out, sim/bodies.ts boxOut, which also holds his ground in the bodies' push.)
+  return Math.max(0.25, Math.min(0.8, 0.5 + BOX_LEAN * (boxOut(r, d) - boxOut(d, r))));
 }
-/** passing.ts resolveCatch's body-position weights, and how far a unit of them moves the lean share. Ours. */
-const BOX_MASS = 0.4;
-const BOX_STR = 0.25;
-const BOX_LEAN = 2.5;
+/** How far a unit of the box-out moves the lean share. Ours: Gronkowski on a safety (~0.7) takes ~0.75 of it. */
+const BOX_LEAN = 0.35;
 
 function lyingClip(b: Body, name: string, t0 = 0): void {
   b.animator.play(name, { now: true, t0 });
@@ -268,6 +272,8 @@ function lyingClip(b: Body, name: string, t0 = 0): void {
 
 /** Catch clips that drive the whole body (the rest are overlays over the legs' gait). */
 const CATCH_FULL = new Set(['catch_high_point', 'catch_body_down', 'catch_dive_l', 'catch_dive_r', 'catch_toe_tap_l', 'catch_toe_tap_r']);
+/** Overlays that start their whole lead before the ball (passing round 8: the box-out posts up for half a second, then the late hands). */
+const POSTED = new Set(['catch_box_l', 'catch_box_r']);
 /** The ones that leave him lying on the ball. */
 const CATCH_LYING = new Set(['catch_body_down', 'catch_dive_l', 'catch_dive_r']);
 /**
@@ -285,6 +291,8 @@ const LATE_HANDS = 0.2;
 const CATCH_LOOKAHEAD = 0.9;
 /** Below this (yd, ~0.9 m: the belt) a hands catch is taken with the pinkies together. */
 const LOW_HANDS = 1.0;
+/** A receiver who boxes the man out at least this well (sim/bodies.ts boxOut: Gronkowski on a safety ~0.7, Tony Gonzalez ~0.55, Kelvin Benjamin on a corner ~0.7, Terrell Owens ~0.2) posts up for it (catch_box). Ours. */
+const BOX_CLIP = 0.4;
 /** Over the shoulder, a ball taken below this (yd, ~1.1 m: just above the belt) drops into the low basket (catch_over_shoulder_low: the hands at 0.84 m, the high basket's at 1.69 m; tools/blender/measure_reach.py). Ours: between them, nearer the low one, where a hand catch turns its pinkies together (LOW_HANDS). */
 const LOW_SHOULDER = 1.2;
 /** GO UP leaps only for a ball arriving at least this high (yd, ~1.6 m: the shoulders). */
@@ -329,7 +337,11 @@ export function catchClip(s: PlayState, i: number, style: CatchStyle): string {
       // The near shoulder into the man: the side he'll be on at the arrival.
       const d = contactAt(s, a);
       if (!d) return 'catch_hands_run';
-      return leftOf(d.pos.x + d.vel.x * T - (a.pos.x + a.vel.x * T), d.pos.y + d.vel.y * T - (a.pos.y + a.vel.y * T)) ? 'catch_contested_l' : 'catch_contested_r';
+      const left = leftOf(d.pos.x + d.vel.x * T - (a.pos.x + a.vel.x * T), d.pos.y + d.vel.y * T - (a.pos.y + a.vel.y * T));
+      // (Passing round 8) A big, strong man boxes him out (sim/bodies.ts boxOut, which the sim's contest and tackle use):
+      // posted up, the near forearm a bar on the man, then up for it over him.
+      if (boxOut(a, d) >= BOX_CLIP) return left ? 'catch_box_l' : 'catch_box_r';
+      return left ? 'catch_contested_l' : 'catch_contested_r';
     }
     case 'highPoint':
       // GO UP on a ball he can't jump for (it arrives below his shoulders):
@@ -368,7 +380,11 @@ export function catchPoint(s: PlayState, a: Agent): { ahead: number; z: number }
   const hy = sp > 1 ? a.vel.y / sp : Math.sin(a.face);
   return { ahead: ((p.x - (a.pos.x + a.vel.x * dt)) * hx + (p.y - (a.pos.y + a.vel.y * dt)) * hy) * YARD, z: p.z };
 }
-/** A chest-high ball taken further than this (m) ahead of his centre is the forward reach: the chest catch's straight arms put the finger roots 0.67 m ahead (tools/blender/measure_reach.py), the reach out 0.96. Ours: between them. */
+/** The lunge into a ball at the end of his reach: the press input (× animator.ts PRESS_PITCH, 0.12 rad), from this long before the secure frame to this long after it (s of clip). Ours: ~10 degrees at full weight, eased in over ~0.2 s (sim/passing.ts REACH_OUT counts on ~0.05 m of it). */
+const LUNGE = 1.5;
+const LUNGE_FROM = 0.3;
+const LUNGE_HOLD = 0.1;
+/** A chest-high ball taken further than this (m) ahead of his centre is the forward reach: the chest catch's straight arms put the finger roots 0.67 m ahead (tools/blender/measure_reach.py), the reach out 1.00. Ours: between them. */
 const REACH_OUT_FROM = 0.78;
 /** ...below this (yd, ~1.6 m: the shoulders); higher, the hands go up over the face mask instead. */
 const HIGH_OUT = 1.75;
@@ -394,6 +410,64 @@ function paceCatch(b: Body, s: PlayState, a: Agent, simT: number): void {
 /** How far the catch clip's pace may bend to meet the sim's catch (× its keyed speed). Ours: past these the hands visibly rush or stall. */
 const PACE_MIN = 0.6;
 const PACE_MAX = 1.6;
+
+/**
+ * The throw's arm slot (passing round 8). Round seven's throwing lane moves
+ * his release up to LANE_MAX off a lineman whose hands are in the line of the
+ * throw (sim/passing.ts throwingLane), and the throw looked the same. Now the
+ * throw playing is laid over with its side-arm version (the release moved to
+ * his throwing side: the elbow drops and he slings it round the man) or its
+ * over-the-top one (to his glove side: tall, the glove shoulder down, the
+ * hand over the helmet), keyed in-house on the same timing
+ * (tools/blender/lib/actions_p8.py throw_slot), weighted by how far he moved
+ * it: through the windup by the lane he'd find for the throw as it would go
+ * now (laneAhead), from the release by the throw's own (its event's lane).
+ * The QB is himself in it: the move is his Pocket Presence's (none for a man
+ * with none), the motion his Release's (quick, long, the fade), and a QB who
+ * throws Off-Platform slings it lower on the run.
+ */
+function throwSlot(b: Body, s: PlayState, qb: Agent, simT: number, running: boolean): void {
+  const anim = b.animator;
+  const sl = (b.armSlot ??= { base: null, w: 0, t: simT, lane: null });
+  const dt = Math.max(0, Math.min(0.1, simT - sl.t));
+  sl.t = simT;
+  if (b.throwClip && sl.base !== b.throwClip) {
+    sl.base = b.throwClip;
+    sl.lane = null;
+  }
+  const base = sl.base;
+  const tr = anim.transition;
+  if (!base || !anim.lib.meta[`${base}_side`] || (tr?.name !== base && anim.overlayAction?.name !== base)) {
+    sl.base = null;
+    sl.w = 0;
+    anim.setSlot(null, null, 0);
+    return;
+  }
+  const w = s.windup;
+  let lane: number;
+  if (w && b.throwAt === w.from) {
+    // Winding up: the lane he'd take for this throw now.
+    const rec = s.agents[s.icons[w.icon] ?? -1];
+    lane = w.away || !rec ? 0 : laneAhead(s, qb, rec, w.charge, w.aim);
+  } else {
+    // Out of his hand: the lane he took (the throw event's).
+    if (sl.lane === null) {
+      let ev: SimEvent | undefined;
+      for (let k = s.events.length - 1; k >= 0 && !ev; k--) if (s.events[k]!.type === 'throw' && s.events[k]!.who?.[0] === qb.i) ev = s.events[k];
+      if (ev) sl.lane = Number(ev.data?.lane ?? 0);
+    }
+    lane = sl.lane ?? 0;
+  }
+  const target = SLOT_K * Math.max(-1, Math.min(1, lane / LANE_MAX - (running && has(qb, 'off-platform') ? SLING : 0)));
+  sl.w += (target - sl.w) * (1 - Math.exp(-dt * SLOT_RATE));
+  anim.setSlot(base, `${base}_${sl.w < 0 ? 'side' : 'over'}`, Math.abs(sl.w));
+}
+/** The most of a slot variant drawn (at the full move, LANE_MAX): three-quarters to side-arm, or nearly over the top; the rest of the move is the slide and the ball's own blend onto its line (ballFlight.ts). Ours: the AI book moves the release on 56% of throws, by 0.3 yd or more on a third (tools/sim/p8_lane.ts), and a pure side-arm on one throw in three would read as a gimmick. */
+const SLOT_K = 0.8;
+/** The arm slot eases to where he wants it at this rate (1/s: ~0.1 s, a beat of the windup). Ours. */
+const SLOT_RATE = 12;
+/** An Off-Platform QB on the run drops his arm this far toward side-arm (of the slot's full weight). Ours: the broadcast's off-balance sling. */
+const SLING = 0.35;
 
 /** A clip this library has, or the in-stride hands catch (an older library without passing round five's set). */
 function clipOr(b: Body, clip: string): string {
@@ -510,7 +584,7 @@ const HOLD_EARLY = 0.1;
 
 /** The run-speed catches whose hands go to the ball (the full-body ones are keyed to their own reach). */
 // (Passing round 6: and the high point and the toe tap, full-body clips keyed to a fixed reach: on the recorded toe tap the ball came in 0.4 m from where the clip held the hands.)
-const REACH_CLIPS = new Set(['catch_hands_run', 'catch_reach_out', 'catch_hands_run_low', 'catch_hands_high', 'catch_scoop', 'catch_reach_l', 'catch_reach_r', 'catch_contested_l', 'catch_contested_r', 'catch_over_shoulder_l', 'catch_over_shoulder_r', 'catch_over_shoulder_low_l', 'catch_over_shoulder_low_r', 'catch_one_hand_l', 'catch_one_hand_r', 'catch_high_point', 'catch_toe_tap_l', 'catch_toe_tap_r']);
+const REACH_CLIPS = new Set(['catch_hands_run', 'catch_reach_out', 'catch_hands_run_low', 'catch_hands_high', 'catch_scoop', 'catch_reach_l', 'catch_reach_r', 'catch_contested_l', 'catch_contested_r', 'catch_box_l', 'catch_box_r', 'catch_over_shoulder_l', 'catch_over_shoulder_r', 'catch_over_shoulder_low_l', 'catch_over_shoulder_low_r', 'catch_one_hand_l', 'catch_one_hand_r', 'catch_high_point', 'catch_toe_tap_l', 'catch_toe_tap_r']);
 /** The hands come to the ball over this long (s of clip) before the secure frame: the late hands. */
 const REACH_IN = 0.2;
 /** How far the hands can go for it (m from between the shoulders) at full weight, and past which they don't chase it. Ours: a long arm's reach. */
@@ -1016,7 +1090,7 @@ export function onEvents(bodies: Body[], s: PlayState, events: SimEvent[]): void
           // saw. A catch the sim calls a dive, a toe tap, a jump, one hand,
           // over the shoulder or SECURE does what the sim says.
           const drawing = a.catchClip !== null && catchTime(a) !== null;
-          const secures = a.catchClip === 'catch_body' || a.catchClip?.startsWith('catch_contested_') === true;
+          const secures = a.catchClip === 'catch_body' || a.catchClip?.startsWith('catch_contested_') === true || a.catchClip?.startsWith('catch_box_') === true;
           const keep = drawing && (look === 'hands' || (look === 'body' && secures));
           const want0 = keep ? a.catchClip! : clipOr(a, catchClip(s, who[0]!, LOOK_STYLE[look]));
           // (Passing round 6) The same catch on the other side (over the other shoulder, the other sideline) is the one already drawn: the ball is in
@@ -1303,6 +1377,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     if (tr && tr.name === clip) anim.retime(clip, { rate: 1 });
     else anim.retimeOverlay(clip, 1);
   }
+  if (i === s.qb) throwSlot(b, s, a, simT, sp * YARD >= 1.6);
   // The handoff (the QB places it, the back's pocket takes it) and the
   // play-action fake, timed to the sim's mesh: overlays, the legs are the sim's.
   const play = s.setup.play;
@@ -1353,7 +1428,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
         b.catchFor = ball.arrive;
         anim.playOverlay(ball.aim.z > 1.75 ? 'ovl_catch_high' : 'ovl_catch');
       }
-    } else if (left <= (CATCH_FULL.has(clip) ? lead : Math.min(lead, LATE_HANDS))) {
+    } else if (left <= (CATCH_FULL.has(clip) || POSTED.has(clip) ? lead : Math.min(lead, LATE_HANDS))) {
       // Late hands (passing round 5): an in-stride catch comes up out of the
       // run's arm swing LATE_HANDS before the ball, not the whole of its lead;
       // a full-body one (the jump, the dive) needs all of its own.
@@ -1372,6 +1447,13 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // land on the tick the ball gets to his hands, not where it was predicted
   // when the clip started.
   if (b.catchClip && b.catchClip !== 'catch_body' && ball.mode === 'air' && ball.target === i && s.bobble?.who !== i) paceCatch(b, s, a, simT);
+  // (Passing round 8) Out at the end of his reach he lunges into it: the run's own forward pitch (the press of a
+  // designed run, animator.ts) through the reach and the catch, so the drawn hands get as far as the sim takes it.
+  if (b.catchClip === 'catch_reach_out') {
+    const t = catchTime(b);
+    const sec = eventAt(b, 'catch_reach_out', 'secure');
+    if (t !== null && sec !== null && t > sec - LUNGE_FROM && t < sec + LUNGE_HOLD) out.press = Math.max(out.press, LUNGE);
+  }
   // What the hands hold.
   const holder = ball.mode === 'held' && s.phase !== 'presnap' && simT - s.snapT > 0.3 ? ball.holder : -1;
   // (The throw on the move is an overlay over the legs: its hands are the throw's too, not the two-hand hold's.

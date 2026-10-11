@@ -188,6 +188,12 @@ export class PlayerAnimator {
   /** Overlays: a held one (the ball carried, the QB's hold) and a one-shot action over it. */
   private holdLayer: Overlay | null = null;
   private actionLayer: Overlay | null = null;
+  /**
+   * The throw's arm slot (passing round 8): a variant of the throw playing now
+   * (its side-arm or over-the-top version, keyed on the same timing), laid
+   * over its upper body at the throw's own time, by a weight the caller sets.
+   */
+  private slot: { base: string; o: Overlay; w: number } | null = null;
   /** The dip before contact, one held overlay per side, weighted by the input (between the hold and the action). */
   private dipL: Overlay | null = null;
   private dipR: Overlay | null = null;
@@ -252,6 +258,7 @@ export class PlayerAnimator {
     this.queued = null;
     this.holdLayer = null;
     this.actionLayer = null;
+    this.slot = null;
     this.dipL = null;
     this.dipR = null;
     this.carryW = 0;
@@ -330,6 +337,24 @@ export class PlayerAnimator {
   retimeOverlay(name: string, rate: number): void {
     const o = this.actionLayer;
     if (o && !o.out && o.name === name) o.rate = rate;
+  }
+
+  /**
+   * The throw's arm slot (passing round 8): `name` (a slot variant of the
+   * throw `base`: render/game/choreo.ts throwSlot) over the upper body at
+   * weight `w`, sampled at the time `base` is at (as a transition, or as the
+   * one-shot overlay of a throw on the run). Null clears it.
+   */
+  setSlot(base: string | null, name: string | null, w: number): void {
+    if (!base || !name || w <= 0) {
+      this.slot = null;
+      return;
+    }
+    if (!this.slot || this.slot.o.name !== name || this.slot.base !== base) {
+      const o = this.overlay(name, {});
+      this.slot = o ? { base, o, w } : null;
+    }
+    if (this.slot) this.slot.w = Math.min(1, w);
   }
 
   /** Let the one-shot overlay go (it fades out): a full-body clip takes the arms over. */
@@ -580,6 +605,17 @@ export class PlayerAnimator {
     this.dipL = this.stepWeighted(this.dipL, 'ovl_dip_l', dip > 0 ? Math.min(1, dip) : 0, dt);
     this.dipR = this.stepWeighted(this.dipR, 'ovl_dip_r', dip < 0 ? Math.min(1, -dip) : 0, dt);
     this.actionLayer = this.stepOverlay(this.actionLayer, dt);
+    const sl = this.slot;
+    if (sl) {
+      // At the throw's own time, faded with it: the transition's weight, or the throw-on-the-run overlay's.
+      const tr2 = this.trans;
+      const al = this.actionLayer;
+      const at = tr2 && tr2.name === sl.base ? { t: tr2.t, w: tr2.w } : al && al.name === sl.base ? { t: al.t, w: al.w } : null;
+      if (at) {
+        sl.o.t = at.t;
+        this.applyOverlay(sl.o, sl.w * at.w);
+      }
+    }
     this.player.root.updateMatrixWorld(true);
 
     // 3. Lean (before the feet are locked, so the lock sees the leaned body).

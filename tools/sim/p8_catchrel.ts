@@ -23,11 +23,10 @@ const rows: Row[] = [];
 
 function watch(s: PlayState, f: () => InputFrame, tag: string): void {
   let tgt = -1;
-  let pre: { x: number; y: number; vx: number; vy: number } | null = null;
   for (let t = 0; t < 60 * 40 && !s.result; t++) {
     if (s.ball.mode === 'air' && s.ball.target >= 0 && s.agents[s.ball.target]!.side === 'off') tgt = s.ball.target;
     const r = tgt >= 0 ? s.agents[tgt]! : null;
-    pre = r ? { x: r.pos.x, y: r.pos.y, vx: r.vel.x, vy: r.vel.y } : null;
+    const pre = r ? { x: r.pos.x, y: r.pos.y, vx: r.vel.x, vy: r.vel.y } : null;
     const wasAir = s.ball.mode === 'air';
     const before = s.events.length;
     stepPlay(s, f());
