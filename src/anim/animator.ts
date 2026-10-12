@@ -60,6 +60,12 @@ export interface AnimInput {
    * body pivots at the feet, which stay planted.
    */
   contactLean?: { x: number; z: number };
+  /**
+   * (Passing round 14) Hold the body over its planted feet against the sim's drift, and let a planted point give
+   * past that (holdOver, lockFoot: KNEE_GIVE, ROOT_GIVE). The game sets it for the quarterback, whose set, throws and
+   * finishes are planted one-shots while the sim slides him in the pocket; everyone else keeps the lock as it was.
+   */
+  holdFeet?: boolean;
 }
 
 const FEET = ['l', 'r'] as const;
@@ -165,7 +171,8 @@ const LEAN_PIVOT = 0.95;
  * (Passing round 14) A planted foot keeps the clip's knee. The lock holds a planted foot where it landed while the
  * body goes where the sim has it, and the clips play in place; when the sim carried him off a planted foot (the
  * contested ball's QB drifting 0.10 m back in the pocket as he threw off his front foot), the IK reached the foot with
- * a straight leg: 3 deg at the release against 34 keyed (docs/passing/PASSING14.md). Standing or in a one-shot (not the
+ * a straight leg: 3 deg at the release against 34 keyed (docs/passing/PASSING14.md). For the QB (AnimInput.holdFeet),
+ * standing or in a one-shot (not the
  * run's cycle, whose feet re-plant every step), the body is first held over its planted feet against the sim's drift, up
  * to ROOT_GIVE off the sim's spot (holdOver), and past that the planted point gives: it follows the clip's foot by just
  * enough that the knee is never straighter than the clip's less KNEE_GIVE (lockFoot).
@@ -761,6 +768,7 @@ export class PlayerAnimator {
       plant[s] = { down, source: this.loco > 0.5 ? 'loco' : 'stand' };
     }
     // (Passing round 14) The body over its planted feet, then each foot's lock.
+    this.holdFeet = !!input.holdFeet;
     this.holdOver(dt, input.groundVelocity);
     for (const s of FEET) this.lockFoot(s, plant[s].source, plant[s].down, dt, input.groundVelocity);
     // 4 and 5.
@@ -912,6 +920,8 @@ export class PlayerAnimator {
     root.updateMatrixWorld(true);
   }
 
+  /** This frame's AnimInput.holdFeet. */
+  private holdFeet = false;
   /** This frame's plant per foot (down, and what plants it), from the clips' contacts. */
   private plant: Record<'l' | 'r', { down: boolean; source: LockSource }> = { l: { down: false, source: 'stand' }, r: { down: false, source: 'stand' } };
 
@@ -945,7 +955,7 @@ export class PlayerAnimator {
    */
   private holdOver(dt: number, ground?: THREE.Vector3): void {
     const root = this.bone('root');
-    const on = this.footLock && !(ground && ground.lengthSq() > 0);
+    const on = this.footLock && this.holdFeet && !(ground && ground.lengthSq() > 0);
     let any = false;
     _need.set(0, 0, 0);
     if (on) {
@@ -981,7 +991,7 @@ export class PlayerAnimator {
     const out = _need.lengthSq() >= this.give.lengthSq() ? 1 : 1 - Math.exp(-dt / ROOT_OUT);
     this.give.lerp(_need, out);
     if (this.give.lengthSq() < 1e-8) this.give.set(0, 0, 0);
-    if (on) this.shiftRoot(root, this.give);
+    if (this.give.lengthSq() > 0) this.shiftRoot(root, this.give);
   }
 
   /** Move the root bone by a world offset (the whole body, the feet's IK still to come). */
@@ -1034,7 +1044,7 @@ export class PlayerAnimator {
     // Ankle target: the locked ball plus the clip's current ankle-to-ball offset.
     const ankleTarget = foot.getWorldPosition(_w).sub(_v).add(st.pos);
     this.slid[s] = 0;
-    if (source !== 'loco' && down) {
+    if (this.holdFeet && source !== 'loco' && down) {
       // (Passing round 14) Past what the hold over the feet took up, the planted point gives: along the ground toward
       // the clip's own foot, by just enough that the knee is no straighter than the clip's less KNEE_GIVE, and no
       // further than the sim's drift away from the foot that the hold didn't take (a clip's own travel played in place

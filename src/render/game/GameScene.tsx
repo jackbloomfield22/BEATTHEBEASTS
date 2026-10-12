@@ -481,7 +481,7 @@ export function GameScene() {
       const accel = animDt > 0 ? (d.speed - b.lastSpeed) / Math.max(animDt, 1 / 120) : 0;
       b.lastYaw = yaw;
       b.lastSpeed = d.speed;
-      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean });
+      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean, holdFeet: i === s.qb });
       // The hands to the ball on a catch (passing round 3), over the clip's own reach.
       catchReach(b, i, s, drawnBall);
       b.ragdoll.update(animDt);
