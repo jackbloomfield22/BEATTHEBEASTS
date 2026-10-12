@@ -46,7 +46,7 @@ import copy
 import math
 from dataclasses import replace
 
-from .actions import GRIP, HOLD_ELBOW, STANCES, Clip, mix, shift, with_upper
+from .actions import GRIP, HOLD_ELBOW, SET_RISE, STANCES, Clip, mix, shift, with_upper
 from .actions_m6 import rotate_pose
 from .gait import FPS, smoothstep
 from .poses import Foot
@@ -95,6 +95,8 @@ CONTACT_LONG = 0.42
 # Each foot this far (m) either side of the line of the drop, across the hips' own width as they turn (a running stride's track).
 HALF_STANCE = 0.16
 PEDAL_TURN = -8.0
+# (Passing round 14) A drop step longer than this (m) keeps the old set's depth until the last step (qb_drop below).
+LONG_STRIDE = 0.85
 
 
 def qb_drop(kind: str, style: str = "open") -> Clip:
@@ -164,7 +166,16 @@ def qb_drop(kind: str, style: str = "open") -> Clip:
     def pose(t):
         b = back(t)
         th = theta(t)
-        base = mix(shift(start, 0.0, b), shift(qset, 0.0, b), smoothstep(0.05, max(0.3, ts + 0.35 * td), t))
+        w_set = smoothstep(0.05, max(0.3, ts + 0.35 * td), t)
+        base = mix(shift(start, 0.0, b), shift(qset, 0.0, b), w_set)
+        # (Passing round 14) The set stands 5.5 cm taller (actions.py SET_UP, SET_RISE). A drop of long strides (LONG_STRIDE:
+        # from under center, and the gun's five-step) keeps round two's depth through its steps, as a run backward at that
+        # pace does (taller hips over-reached the 3-step's 1.1 m strides: a planted foot slid 1.9 cm, the clip gate is 0.5;
+        # the gun 5-step's 0.9 m, 0.5), and rises into the set over the last step; the gun's 3- and 7-step (0.7 m) are as
+        # tall as the set throughout. Either way the plant is the taller set (a throw off it releases at the set's height,
+        # choreo.ts FINISH_PLANTED).
+        sink = w_set * SET_RISE * (1.0 - smoothstep(ts + td - step, ts + td, t)) if D / n > LONG_STRIDE else 0.0
+        base.pelvis["up"] = base.pelvis.get("up", 0.0) - sink
         up = shift(qset, 0.0, b)
         if t < t_up:
             c = shift(caught, 0.0, b)
@@ -176,6 +187,9 @@ def qb_drop(kind: str, style: str = "open") -> Clip:
             base.hands = up.hands
             base.elbow = up.elbow
             base.joints.update(GRIP)
+        # (The ball rides with the hips: at the chest through the drop.)
+        base.hands = {s: (h[0], h[1], h[2] - sink, *h[3:]) for s, h in base.hands.items()}
+        base.elbow = {s: (e[0], e[1], e[2] - sink) for s, e in base.elbow.items()}
         # The body turned about its hips; the feet are the plan's.
         p = rotate_pose(base, th, base.pelvis.get("side", 0.0), 0.01 - base.pelvis.get("forward", 0.0))
         # The shoulders come back a third of the way (the chest less open than the hips), the head to the middle of the field.
@@ -191,7 +205,9 @@ def qb_drop(kind: str, style: str = "open") -> Clip:
         return p
 
     name = f"qb_drop_{kind}" + ("_pedal" if style == "pedal" else "")
-    return Clip(name, "transition", T, pose, travel, f"stance_{stance}", "stance_qb_set", steps)
+    # (Passing round 14) The plant's frame ("set": the sim's set, pocket.ts), for the render to land it there (choreo.ts
+    # startDrop): the clip runs a frame and a rounding past it, standing.
+    return Clip(name, "transition", T, pose, travel, f"stance_{stance}", "stance_qb_set", steps, events={"set": round((ts + td) * FPS)})
 
 
 def qb_hitch() -> Clip:
@@ -217,8 +233,11 @@ def qb_hitch() -> Clip:
 
     def pose(t):
         p = shift(qset, 0.0, -fwd(t))
-        # A little rise and settle through the step (the weight forward onto the front foot, then back to balance).
-        p.pelvis["up"] = p.pelvis.get("up", 0.0) + 0.015 * math.sin(math.pi * min(1.0, t / TH))
+        # A little sink and rise through the step (the weight forward onto the front foot, then back to balance).
+        # (Passing round 14: the set now stands 5.5 cm taller, actions.py SET_UP. Round two's 1.5 cm rise through the step
+        # put the front leg dead straight as it reached for its landing, 0.3 deg from 0.15 to 0.20 s on the rig, scratch
+        # knees.py; dipping 4 cm onto it gives the reach round two had, ~15-25 deg, the hips ~0.93 m at the landing.)
+        p.pelvis["up"] = p.pelvis.get("up", 0.0) - 0.04 * math.sin(math.pi * min(1.0, t / TH))
         p.feet = {s: steps.foot(s, t) for s in "lr"}
         return p
 

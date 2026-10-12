@@ -448,14 +448,14 @@
       },
       "gates": {
         "stance": {
-          "hip": 0.89,
+          "hip": 0.94,
           "trunk": 75.16,
           "eyes": -3.0
         },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 34.4,
-        "com_cm": 7.7,
+        "clear_cm": 32.6,
+        "com_cm": 8.8,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -2744,7 +2744,10 @@
         3.429
       ],
       "from": "stance_qb_center",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 28
+      }
     },
     "qb_drop_uc5": {
       "kind": "transition",
@@ -2843,7 +2846,10 @@
         5.2578
       ],
       "from": "stance_qb_center",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 39
+      }
     },
     "qb_drop_uc7": {
       "kind": "transition",
@@ -2960,7 +2966,10 @@
         7.0866
       ],
       "from": "stance_qb_center",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 50
+      }
     },
     "qb_drop_gun3": {
       "kind": "transition",
@@ -2997,7 +3006,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 24.5,
+        "clear_cm": 24.9,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -3026,7 +3035,10 @@
         1.3716
       ],
       "from": "stance_qb_gun",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 18
+      }
     },
     "qb_drop_gun5": {
       "kind": "transition",
@@ -3109,7 +3121,10 @@
         2.7432
       ],
       "from": "stance_qb_gun",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 32
+      }
     },
     "qb_drop_gun7": {
       "kind": "transition",
@@ -3158,7 +3173,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 11.3,
+        "clear_cm": 11.4,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -3208,7 +3223,10 @@
         3.6576
       ],
       "from": "stance_qb_gun",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 39
+      }
     },
     "qb_drop_uc3_pedal": {
       "kind": "transition",
@@ -3288,7 +3306,10 @@
         3.429
       ],
       "from": "stance_qb_center",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 28
+      }
     },
     "qb_drop_gun5_pedal": {
       "kind": "transition",
@@ -3371,7 +3392,10 @@
         2.7432
       ],
       "from": "stance_qb_gun",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 32
+      }
     },
     "qb_drop_gun7_pedal": {
       "kind": "transition",
@@ -3420,7 +3444,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 25.7,
+        "clear_cm": 26.3,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -3470,7 +3494,10 @@
         3.6576
       ],
       "from": "stance_qb_gun",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 39
+      }
     },
     "qb_hitch": {
       "kind": "transition",
@@ -3507,7 +3534,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 32.4,
+        "clear_cm": 31.9,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -11935,7 +11962,7 @@
         "loop_deg": 0.0,
         "clear_cm": 32.8,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "events": {
@@ -12006,7 +12033,7 @@
         "loop_deg": 0.0,
         "clear_cm": 32.8,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "events": {
@@ -12217,9 +12244,9 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 32.7,
+        "clear_cm": 32.6,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "events": {
@@ -12288,9 +12315,9 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 32.7,
+        "clear_cm": 32.6,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "events": {
@@ -12359,7 +12386,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 33.4,
+        "clear_cm": 33.1,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -12430,7 +12457,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 33.4,
+        "clear_cm": 33.1,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -15873,7 +15900,7 @@
         "loop_deg": 0.0,
         "clear_cm": 23.7,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "travel": [
@@ -15952,7 +15979,7 @@
         "loop_deg": 0.0,
         "clear_cm": 23.8,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "travel": [
@@ -16752,7 +16779,7 @@
         "loop_deg": 0.0,
         "clear_cm": 23.8,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "travel": [
@@ -16986,5 +17013,5 @@
       }
     }
   },
-  "bytes": 10023756
+  "bytes": 10017944
 }

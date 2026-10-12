@@ -109,7 +109,11 @@ const FOLLOW9: Record<string, string> = {
 // (the bar's visibility), each bone's head in world m.
 // BTB_PASSING13=1: passing round 13 (docs/passing/PASSING13.md): round twelve's recordings and log, into
 // docs/passing/round13/<BTB_PASSING_TAG>.
-const PASSING13 = !!process.env.BTB_PASSING13;
+// BTB_PASSING14=1: passing round 14 (docs/passing/PASSING14.md): round thirteen's recordings and log, into
+// docs/passing/round14/<BTB_PASSING_TAG>; the log also has the QB's feet at the mm (the balls of the feet, the root, each
+// foot's lock: locked, weight, the lock's point) and his sim velocity, and the pop meter's log the planted feet's drift.
+const PASSING14 = !!process.env.BTB_PASSING14;
+const PASSING13 = !!process.env.BTB_PASSING13 || PASSING14;
 const PASSING12 = !!process.env.BTB_PASSING12 || PASSING13;
 const PASSING11 = !!process.env.BTB_PASSING11 || PASSING12;
 const PASSING10 = !!process.env.BTB_PASSING10 || PASSING11;
@@ -154,7 +158,7 @@ const FOLLOW: Record<string, string> = {
   'p2-arm-a': 'QB,22,36,8,50,22',
   'p2-arm-b': 'QB,22,36,8,50,22',
 };
-const OUT = PASSING13 ? `docs/passing/round13/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING12 ? `docs/passing/round12/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING11 ? `docs/passing/round11/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
+const OUT = PASSING14 ? `docs/passing/round14/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING13 ? `docs/passing/round13/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING12 ? `docs/passing/round12/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING11 ? `docs/passing/round11/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
 const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY || PASSING || PASSING2 || PHYSICS ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
@@ -234,6 +238,21 @@ function diagFrame(n: number) {
     out.qb = { hr: qp('hand_r'), fl: qp('foot_l'), fr: qp('foot_r'), pelvis: qp('pelvis'), head: qp('head'), clip: q.animator.transition && [q.animator.transition.name, r2(q.animator.transition.t)], ovl: q.animator.overlayAction && [q.animator.overlayAction.name, r2(q.animator.overlayAction.t)] };
     // (Passing round 12) The whole figure, for the finish's silhouette from the camera.
     (out.qb as Record<string, unknown>).sk = Object.fromEntries(SK.map((n) => [n, qp(n)]));
+    // (Passing round 14) The feet at the mm, the root and the locks, and the sim's velocity (yd/s).
+    const r3 = (v: number) => Math.round(v * 1000) / 1000;
+    const mm = (name: string) => {
+      const bone = q.player.bones.get(name);
+      if (!bone) return null;
+      const v = bone.getWorldPosition(q.player.root.position.clone());
+      return [r3(v.x), r3(v.y), r3(v.z)];
+    };
+    const an = q.animator as unknown as { footLockOf?(f: string): { locked: boolean; weight: number; pos: V }; give?: V; slid?: { l: number; r: number }; keyedKnee?: { l: number; r: number } };
+    const lk = (f: string) => {
+      const l = an.footLockOf?.(f);
+      return l ? [l.locked ? 1 : 0, r3(l.weight), r3(l.pos.x), r3(l.pos.y), r3(l.pos.z)] : null;
+    };
+    const qa = (s as unknown as { agents: { vel: { x: number; y: number } }[] }).agents[qbi]!;
+    Object.assign(out.qb as Record<string, unknown>, { mm: { toe_l: mm('toe_l'), toe_r: mm('toe_r'), foot_l: mm('foot_l'), foot_r: mm('foot_r'), thigh_l: mm('thigh_l'), thigh_r: mm('thigh_r'), calf_l: mm('calf_l'), calf_r: mm('calf_r'), pelvis: mm('pelvis') }, root: [r3(q.player.root.position.x), r3(q.player.root.position.z), r3(q.player.root.rotation.y)], lock: { l: lk('l'), r: lk('r') }, vel: [r3(qa.vel.x), r3(qa.vel.y)], ...(an.give ? { give: [r3(an.give.x), r3(an.give.z)], slid: [r3(an.slid!.l), r3(an.slid!.r)], kk: [Math.round((an.keyedKnee!.l * 180) / Math.PI), Math.round((an.keyedKnee!.r * 180) / Math.PI)] } : {}) });
   }
   const b = i >= 0 ? w.__btbBodies?.[i] : undefined;
   if (b) {
@@ -368,7 +387,9 @@ async function record(page: Page, clip: Clip) {
   const pops = await page.evaluate(() => {
     const p = (window as unknown as Win).__btbPops;
     const sorted = [...p.rates].sort((a, b) => a - b);
-    return { frames: p.rates.length, worst: Math.round(p.worst), p99: Math.round(sorted[Math.floor(sorted.length * 0.99)] ?? 0), spikes: p.spikes };
+    // (Passing round 14) The planted feet's drift, by group (popMeter.ts).
+    const slide = (p as unknown as { slide?: unknown }).slide;
+    return { frames: p.rates.length, worst: Math.round(p.worst), p99: Math.round(sorted[Math.floor(sorted.length * 0.99)] ?? 0), ...(slide ? { slide } : {}), spikes: p.spikes };
   });
   // (Round ten: the close camera's and the 60-fps window's recordings sit next to the broadcast one.)
   const sfx = PASSING10 ? `${process.env.BTB_FOLLOW ? '-close' : ''}${WINDOW ? `-${FPS}` : ''}` : '';

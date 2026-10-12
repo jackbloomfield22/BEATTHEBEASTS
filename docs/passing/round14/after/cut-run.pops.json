@@ -1,0 +1,251 @@
+{
+ "frames": 1713,
+ "worst": 87,
+ "p99": 30,
+ "slide": {
+  "qb": {
+   "spans": 5,
+   "over5mm": 1,
+   "over2cm": 1,
+   "max": 1.1071709305905952,
+   "sum": 1.1099105391269044,
+   "jumps": 15,
+   "maxStep": 0.2705989495332649,
+   "worst": {
+    "slot": "QB",
+    "foot": "l",
+    "drift": 1.107,
+    "frames": 16,
+    "from": "handoff",
+    "clip": "ovl_handoff_r",
+    "frame": 43
+   }
+  },
+  "skill": {
+   "spans": 21,
+   "over5mm": 6,
+   "over2cm": 5,
+   "max": 0.4588406859433693,
+   "sum": 1.258838119655206,
+   "jumps": 30,
+   "maxStep": 0.7164416210628074,
+   "worst": {
+    "slot": "SLOT",
+    "foot": "l",
+    "drift": 0.459,
+    "frames": 6,
+    "from": "run",
+    "clip": "run",
+    "frame": 86
+   }
+  },
+  "line": {
+   "spans": 27,
+   "over5mm": 9,
+   "over2cm": 7,
+   "max": 0.2691898441333813,
+   "sum": 0.9740511723125684,
+   "jumps": 49,
+   "maxStep": 0.9888387109002381,
+   "worst": {
+    "slot": "RG",
+    "foot": "r",
+    "drift": 0.269,
+    "frames": 38,
+    "from": "block",
+    "clip": "block",
+    "frame": 89
+   }
+  },
+  "def": {
+   "spans": 63,
+   "over5mm": 15,
+   "over2cm": 13,
+   "max": 0.46506637019733454,
+   "sum": 2.069070861616902,
+   "jumps": 74,
+   "maxStep": 0.6764917395488328,
+   "worst": {
+    "slot": "FS",
+    "foot": "r",
+    "drift": 0.465,
+    "frames": 8,
+    "from": "backpedal",
+    "clip": "backpedal",
+    "frame": 58
+   }
+  }
+ },
+ "spikes": [
+  {
+   "frame": 25,
+   "slot": "LE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_dl_3pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 25,
+   "slot": "LDT",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_dl_4pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 25,
+   "slot": "RDT",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_dl_4pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 25,
+   "slot": "RE",
+   "bone": "upperarm_r",
+   "rate": 31,
+   "clip": "getoff_dl_3pt",
+   "overlay": "",
+   "anim": "rush",
+   "phase": "snap"
+  },
+  {
+   "frame": 30,
+   "slot": "LT",
+   "bone": "upperarm_l",
+   "rate": 30,
+   "clip": "ol_fire_drive",
+   "overlay": "",
+   "anim": "run",
+   "phase": "snap"
+  },
+  {
+   "frame": 30,
+   "slot": "LT",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "ol_fire_drive",
+   "overlay": "",
+   "anim": "run",
+   "phase": "snap"
+  },
+  {
+   "frame": 30,
+   "slot": "LG",
+   "bone": "upperarm_l",
+   "rate": 30,
+   "clip": "ol_fire_drive",
+   "overlay": "",
+   "anim": "run",
+   "phase": "snap"
+  },
+  {
+   "frame": 30,
+   "slot": "LG",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "ol_fire_drive",
+   "overlay": "",
+   "anim": "run",
+   "phase": "snap"
+  },
+  {
+   "frame": 30,
+   "slot": "C",
+   "bone": "upperarm_l",
+   "rate": 30,
+   "clip": "ol_fire_drive",
+   "overlay": "",
+   "anim": "block",
+   "phase": "snap"
+  },
+  {
+   "frame": 30,
+   "slot": "C",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "ol_fire_drive",
+   "overlay": "",
+   "anim": "block",
+   "phase": "snap"
+  },
+  {
+   "frame": 30,
+   "slot": "RG",
+   "bone": "upperarm_l",
+   "rate": 30,
+   "clip": "ol_fire_drive",
+   "overlay": "",
+   "anim": "block",
+   "phase": "snap"
+  },
+  {
+   "frame": 30,
+   "slot": "RG",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "ol_fire_drive",
+   "overlay": "",
+   "anim": "block",
+   "phase": "snap"
+  },
+  {
+   "frame": 30,
+   "slot": "RT",
+   "bone": "upperarm_l",
+   "rate": 30,
+   "clip": "ol_fire_drive",
+   "overlay": "",
+   "anim": "run",
+   "phase": "snap"
+  },
+  {
+   "frame": 30,
+   "slot": "RT",
+   "bone": "upperarm_r",
+   "rate": 30,
+   "clip": "ol_fire_drive",
+   "overlay": "",
+   "anim": "run",
+   "phase": "snap"
+  },
+  {
+   "frame": 42,
+   "slot": "LG",
+   "bone": "thigh_r",
+   "rate": 48,
+   "clip": "",
+   "overlay": "",
+   "anim": "run",
+   "phase": "snap"
+  },
+  {
+   "frame": 80,
+   "slot": "WLB",
+   "bone": "forearm_l",
+   "rate": 76,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  },
+  {
+   "frame": 80,
+   "slot": "WLB",
+   "bone": "forearm_r",
+   "rate": 87,
+   "clip": "tackle",
+   "overlay": "",
+   "anim": "tackle",
+   "phase": "carrier"
+  }
+ ]
+}
