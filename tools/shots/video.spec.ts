@@ -246,13 +246,13 @@ function diagFrame(n: number) {
       const v = bone.getWorldPosition(q.player.root.position.clone());
       return [r3(v.x), r3(v.y), r3(v.z)];
     };
-    const an = q.animator as unknown as { footLockOf?(f: string): { locked: boolean; weight: number; pos: V } };
+    const an = q.animator as unknown as { footLockOf?(f: string): { locked: boolean; weight: number; pos: V }; give?: V; slid?: { l: number; r: number }; keyedKnee?: { l: number; r: number } };
     const lk = (f: string) => {
       const l = an.footLockOf?.(f);
       return l ? [l.locked ? 1 : 0, r3(l.weight), r3(l.pos.x), r3(l.pos.y), r3(l.pos.z)] : null;
     };
     const qa = (s as unknown as { agents: { vel: { x: number; y: number } }[] }).agents[qbi]!;
-    Object.assign(out.qb as Record<string, unknown>, { mm: { toe_l: mm('toe_l'), toe_r: mm('toe_r'), foot_l: mm('foot_l'), foot_r: mm('foot_r'), thigh_l: mm('thigh_l'), thigh_r: mm('thigh_r'), calf_l: mm('calf_l'), calf_r: mm('calf_r'), pelvis: mm('pelvis') }, root: [r3(q.player.root.position.x), r3(q.player.root.position.z), r3(q.player.root.rotation.y)], lock: { l: lk('l'), r: lk('r') }, vel: [r3(qa.vel.x), r3(qa.vel.y)] });
+    Object.assign(out.qb as Record<string, unknown>, { mm: { toe_l: mm('toe_l'), toe_r: mm('toe_r'), foot_l: mm('foot_l'), foot_r: mm('foot_r'), thigh_l: mm('thigh_l'), thigh_r: mm('thigh_r'), calf_l: mm('calf_l'), calf_r: mm('calf_r'), pelvis: mm('pelvis') }, root: [r3(q.player.root.position.x), r3(q.player.root.position.z), r3(q.player.root.rotation.y)], lock: { l: lk('l'), r: lk('r') }, vel: [r3(qa.vel.x), r3(qa.vel.y)], ...(an.give ? { give: [r3(an.give.x), r3(an.give.z)], slid: [r3(an.slid!.l), r3(an.slid!.r)], kk: [Math.round((an.keyedKnee!.l * 180) / Math.PI), Math.round((an.keyedKnee!.r * 180) / Math.PI)] } : {}) });
   }
   const b = i >= 0 ? w.__btbBodies?.[i] : undefined;
   if (b) {

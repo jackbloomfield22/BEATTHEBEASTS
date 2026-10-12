@@ -43,7 +43,7 @@ export interface PopSpike {
  * Each planted span's drift is how far the drawn ball of the foot (toe_*)
  * gets from where it was on the span's first frame, along the ground; the
  * clips' own gate is 0.5 cm (tools/blender/build_anims.py SLIDE_MAX). A span
- * ends when the foot lifts or the lock re-plants (its point moves); a foot
+ * ends when the foot lifts or the lock re-plants (its point jumps); a foot
  * moving more than 2 cm in one frame while it's down is a jump (a re-plant
  * the drawn foot follows at once). By group: the QB, the line (both sides),
  * the backs and receivers, the back seven.
@@ -165,14 +165,17 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
       const g = (pops.slide[groupOf(b.slot)] ??= newSlide());
       if (step > JUMP) g.jumps++;
       g.maxStep = Math.max(g.maxStep, step);
-      if (Math.hypot(lk.pos.x - cur.px, lk.pos.z - cur.pz) > 0.001) {
-        // Re-planted (the lock's point moved): a new span.
+      if (Math.hypot(lk.pos.x - cur.px, lk.pos.z - cur.pz) > JUMP) {
+        // Re-planted (the lock's point jumped): a new span. (A point that gives a little at a time, animator.ts
+        // lockFoot, is the same plant sliding: its drift counts.)
         closeSpan(b, f, cur, what, frame);
         cur = null;
       }
     }
     if (!cur) sp[f] = cur = { x: _toe.x, z: _toe.z, px: lk.pos.x, pz: lk.pos.z, lx: _toe.x, lz: _toe.z, drift: 0, n: 0, from: what };
     cur.drift = Math.max(cur.drift, Math.hypot(_toe.x - cur.x, _toe.z - cur.z));
+    cur.px = lk.pos.x;
+    cur.pz = lk.pos.z;
     cur.lx = _toe.x;
     cur.lz = _toe.z;
     cur.n++;
