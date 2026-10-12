@@ -110,6 +110,8 @@ export interface CatchGrip {
   w: number;
   /** The hands have been put on the ball where the sim took it (passing round 7: catchSpot), once, on the first frame drawn after the catch. */
   met?: boolean;
+  /** (Passing round 14) A posted-up catch taken in one hand (catchReach, BOX_ONE): which, held through the give. */
+  one?: 'l' | 'r' | null;
 }
 
 /** Upper body, for a throw on the run (the legs keep running). */
@@ -750,6 +752,13 @@ const REACH_IN = 0.2;
  * the arms off the bar 0.2 s out, and from the broadcast camera there was no post-up to see.
  */
 const REACH_IN_POSTED = 0.12;
+/**
+ * (Passing round 14) A posted-up receiver (catch_box) takes the ball with the outside hand, away from the man, the bar
+ * staying on him to the catch (tools/blender/lib/actions_p8.py AWAY_HAND): unless the ball comes this far (m) or more
+ * onto the man's side of his middle, where the outside hand would reach across him; then both hands, as before.
+ * Ours: about a shoulder's half-width, past which the ball is over the bar arm.
+ */
+const BOX_ONE = 0.12;
 /** How far the hands can go for it (m from between the shoulders, where they'll be at the catch) at full weight, and past which they don't chase it. Ours: a long arm's reach, and (passing round 8) the trunk's fold after it (TRUNK_MAX: the forward reach's ball 1.15 m out in front of his centre is ~0.85 m from his shoulders as they run). */
 const REACH_NEAR = 0.95;
 const REACH_FAR = 1.35;
@@ -784,7 +793,8 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
   const tuck = eventAt(b, c, 'tuck');
   if (t === null || secure === null || tuck === null) return;
   const root = b.player.root;
-  const one = c.startsWith('catch_one_hand_') ? (c.endsWith('_l') ? 'l' : 'r') : null;
+  // (Passing round 14) A posted-up receiver snatches it with the outside hand, the bar on the man to the catch (BOX_ONE).
+  const one = c.startsWith('catch_one_hand_') ? (c.endsWith('_l') ? 'l' : 'r') : POSTED.has(c) ? (g?.one ?? null) : null;
   if (ball.mode !== 'air' || ball.target !== i) {
     // Caught (passing round 5): the hands stay on the ball where they met it
     // (in his own frame, so they ride with him) and give with it into the
@@ -850,14 +860,24 @@ export function catchReach(b: Body, i: number, s: PlayState, drawn: THREE.Vector
   _bd.set(worldX(ball.vel.y) - worldX(0), 0, worldZ(ball.vel.x) - worldZ(0));
   if (_bd.lengthSq() < 1e-6) _bd.set(0, 0, 1);
   _bd.normalize();
-  handsOn(b, _bp, _bd, one);
+  let hand = one;
+  if (POSTED.has(c) && g) {
+    // The outside hand alone (catch_box_l: the man on his left, the right hand), unless the ball comes on the man's
+    // side of him (BOX_ONE): then both, as a contested ball's.
+    const yaw = root.rotation.y;
+    const out = (_bp.x - root.position.x) * Math.cos(yaw) - (_bp.z - root.position.z) * Math.sin(yaw);
+    const manLeft = c === 'catch_box_l';
+    hand = (manLeft ? out : -out) < BOX_ONE ? (manLeft ? 'r' : 'l') : null;
+    g.one = hand;
+  }
+  handsOn(b, _bp, _bd, hand);
   // Kept in his frame for the give after the catch tick.
   if (g) {
     root.worldToLocal(g.l.copy(_hl));
     root.worldToLocal(g.r.copy(_hr));
     g.w = w;
   }
-  b.animator.reachHands(one === 'r' ? null : _hl, w, one === 'l' ? null : _hr, w, TRUNK_MAX);
+  b.animator.reachHands(hand === 'r' ? null : _hl, w, hand === 'l' ? null : _hr, w, TRUNK_MAX);
 }
 /**
  * Where the ball is drawn on the catch frame (passing round 7): where it was
@@ -1132,7 +1152,14 @@ function startDrop(b: Body, s: PlayState, plan: DropPlan, t0: number): void {
   const m = lib[name];
   if (!m) return;
   const ts = k.startsWith('gun') ? GUN_CATCH : UC_EXCHANGE;
-  const rate = Math.max(0.6, Math.min(1.6, (m.duration - ts) / plan.T));
+  // (Passing round 14) The clip's plant (its "set" event, tools/blender/lib/actions_drop.py) lands on the sim's set. Paced
+  // on the clip's whole length, which runs a frame and a rounding past the plant (standing), it ran 4-21% fast: from the
+  // gun on a 3-step the drawn plant came 0.1 s before the sim's, and the planted front foot was held while the sim carried
+  // him on another half metre (the slant's QB: the front leg straight for four frames, then the foot jumping 0.6 m to
+  // the stance's lock as the clip handed over, just before the ball left).
+  // From the snap (t0 0) the clip's catch plays too: its plant goes on the set counted from the snap (plan.t0 + plan.T).
+  const plant = eventAt(b, name, 'set') ?? m.duration;
+  const rate = Math.max(0.6, Math.min(1.6, t0 > 0 ? (plant - ts) / plan.T : plant / (plan.t0 + plan.T)));
   b.once.add('drop');
   b.animator.play(name, { now: true, rate, t0: t0 > 0 ? ts : 0 });
 }
@@ -1624,6 +1651,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
       g.pluck = pluck;
       g.w = 0;
       g.met = false;
+      g.one = null;
       b.grip = g;
       startCatch(b, clip, Math.max(0, lead - left));
     }

@@ -2744,7 +2744,10 @@
         3.429
       ],
       "from": "stance_qb_center",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 28
+      }
     },
     "qb_drop_uc5": {
       "kind": "transition",
@@ -2843,7 +2846,10 @@
         5.2578
       ],
       "from": "stance_qb_center",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 39
+      }
     },
     "qb_drop_uc7": {
       "kind": "transition",
@@ -2960,7 +2966,10 @@
         7.0866
       ],
       "from": "stance_qb_center",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 50
+      }
     },
     "qb_drop_gun3": {
       "kind": "transition",
@@ -3026,7 +3035,10 @@
         1.3716
       ],
       "from": "stance_qb_gun",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 18
+      }
     },
     "qb_drop_gun5": {
       "kind": "transition",
@@ -3109,7 +3121,10 @@
         2.7432
       ],
       "from": "stance_qb_gun",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 32
+      }
     },
     "qb_drop_gun7": {
       "kind": "transition",
@@ -3208,7 +3223,10 @@
         3.6576
       ],
       "from": "stance_qb_gun",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 39
+      }
     },
     "qb_drop_uc3_pedal": {
       "kind": "transition",
@@ -3288,7 +3306,10 @@
         3.429
       ],
       "from": "stance_qb_center",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 28
+      }
     },
     "qb_drop_gun5_pedal": {
       "kind": "transition",
@@ -3371,7 +3392,10 @@
         2.7432
       ],
       "from": "stance_qb_gun",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 32
+      }
     },
     "qb_drop_gun7_pedal": {
       "kind": "transition",
@@ -3470,7 +3494,10 @@
         3.6576
       ],
       "from": "stance_qb_gun",
-      "to": "stance_qb_set"
+      "to": "stance_qb_set",
+      "events": {
+        "set": 39
+      }
     },
     "qb_hitch": {
       "kind": "transition",
@@ -14936,5 +14963,5 @@
       }
     }
   },
-  "bytes": 8988336
+  "bytes": 8986652
 }

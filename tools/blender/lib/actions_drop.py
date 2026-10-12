@@ -205,7 +205,9 @@ def qb_drop(kind: str, style: str = "open") -> Clip:
         return p
 
     name = f"qb_drop_{kind}" + ("_pedal" if style == "pedal" else "")
-    return Clip(name, "transition", T, pose, travel, f"stance_{stance}", "stance_qb_set", steps)
+    # (Passing round 14) The plant's frame ("set": the sim's set, pocket.ts), for the render to land it there (choreo.ts
+    # startDrop): the clip runs a frame and a rounding past it, standing.
+    return Clip(name, "transition", T, pose, travel, f"stance_{stance}", "stance_qb_set", steps, events={"set": round((ts + td) * FPS)})
 
 
 def qb_hitch() -> Clip:

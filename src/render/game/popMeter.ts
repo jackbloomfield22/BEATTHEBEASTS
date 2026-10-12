@@ -42,27 +42,61 @@ export interface PopSpike {
  * animator.ts footLockOf) should not move on the ground while it stays down.
  * Each planted span's drift is how far the drawn ball of the foot (toe_*)
  * gets from where it was on the span's first frame, along the ground; the
- * clips' own gate is 0.5 cm (tools/blender/build_anims.py SLIDE_MAX). By
- * group: the QB, the line (both sides), the backs and receivers, the back
- * seven.
+ * clips' own gate is 0.5 cm (tools/blender/build_anims.py SLIDE_MAX). A span
+ * ends when the foot lifts or the lock re-plants (its point moves); a foot
+ * moving more than 2 cm in one frame while it's down is a jump (a re-plant
+ * the drawn foot follows at once). By group: the QB, the line (both sides),
+ * the backs and receivers, the back seven.
  */
 export interface SlideStats {
   spans: number;
   /** Spans whose drift passed 0.5 cm and 2 cm. */
   over5mm: number;
   over2cm: number;
-  /** The largest drift (m) and the mean over spans. */
+  /** The largest drift (m) and the sum over spans. */
   max: number;
   sum: number;
-  /** The worst span: who, which foot, its drift, frames planted, and what was playing at its end. */
-  worst: { slot: string; foot: string; drift: number; frames: number; clip: string; frame: number } | null;
+  /** Frames a planted foot moved more than JUMP in one frame, and the largest such move (m). */
+  jumps: number;
+  maxStep: number;
+  /** The worst span: who, which foot, its drift, frames planted, and what was playing at its start and end. */
+  worst: { slot: string; foot: string; drift: number; frames: number; from: string; clip: string; frame: number } | null;
 }
 const LOCK_FULL = 0.98;
+const JUMP = 0.02;
 const OL = new Set(['LT', 'LG', 'C', 'RG', 'RT', 'DE1', 'DT1', 'DT2', 'DE2', 'NT', 'DE', 'DT']);
 const groupOf = (slot: string): string => (slot === 'QB' ? 'qb' : OL.has(slot) || /^(D[ET]|NT)/.test(slot) ? 'line' : /^(RB|FB|HB|WR|X|Y|Z|TE|SLOT|H)/.test(slot) ? 'skill' : 'def');
-const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, worst: null });
-const span = new Map<Body, Record<'l' | 'r', { x: number; z: number; drift: number; n: number } | null>>();
+const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, jumps: 0, maxStep: 0, worst: null });
+interface Span {
+  x: number;
+  z: number;
+  px: number;
+  pz: number;
+  lx: number;
+  lz: number;
+  drift: number;
+  n: number;
+  from: string;
+}
+const span = new Map<Body, Record<'l' | 'r', Span | null>>();
 const _toe = new THREE.Vector3();
+/** Where each body's root was last frame: a root moving more than TELEPORT (m) in a frame was placed (a new play, a lineup), not moved. */
+const lastRoot = new Map<Body, THREE.Vector3>();
+const TELEPORT = 0.5;
+
+function closeSpan(b: Body, f: 'l' | 'r', cur: Span, clip: string, frame: number): void {
+  // A span of a frame or two is a touch-down's blend, not a plant.
+  if (cur.n < 3) return;
+  const g = (pops.slide[groupOf(b.slot)] ??= newSlide());
+  g.spans++;
+  g.sum += cur.drift;
+  if (cur.drift > 0.005) g.over5mm++;
+  if (cur.drift > 0.02) g.over2cm++;
+  if (cur.drift > g.max) {
+    g.max = cur.drift;
+    g.worst = { slot: b.slot, foot: f, drift: Math.round(cur.drift * 1000) / 1000, frames: cur.n, from: cur.from, clip, frame };
+  }
+}
 
 const last = new Map<Body, THREE.Quaternion[]>();
 const lastYaw = new Map<Body, number>();
@@ -73,6 +107,7 @@ export function resetPops(): void {
   last.clear();
   lastYaw.clear();
   span.clear();
+  lastRoot.clear();
   pops.slide = {};
   pops.frames = 0;
   pops.spikes.length = 0;
@@ -108,31 +143,38 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
   // (Passing round 14) The planted feet's drift.
   let sp = span.get(b);
   if (!sp) span.set(b, (sp = { l: null, r: null }));
+  const rp = b.player.root.position;
+  const lr = lastRoot.get(b);
+  if (lr && Math.hypot(rp.x - lr.x, rp.z - lr.z) > TELEPORT) sp.l = sp.r = null;
+  if (lr) lr.copy(rp);
+  else lastRoot.set(b, rp.clone());
+  const what = ctx.clip || ctx.overlay || ctx.anim;
   for (const f of ['l', 'r'] as const) {
     const lk = b.animator.footLockOf(f);
     const toe = b.player.bones.get(`toe_${f}`);
     const down = !b.ragdoll.active && !b.lie && lk.locked && lk.weight >= LOCK_FULL && !!toe;
-    const cur = sp[f];
-    if (down) {
-      toe!.getWorldPosition(_toe);
-      if (!cur) sp[f] = { x: _toe.x, z: _toe.z, drift: 0, n: 1 };
-      else {
-        cur.drift = Math.max(cur.drift, Math.hypot(_toe.x - cur.x, _toe.z - cur.z));
-        cur.n++;
-      }
-    } else if (cur) {
+    let cur = sp[f];
+    if (!down) {
+      if (cur) closeSpan(b, f, cur, what, frame);
       sp[f] = null;
-      // A span of a frame or two is a touch-down's blend, not a plant.
-      if (cur.n < 3) continue;
+      continue;
+    }
+    toe!.getWorldPosition(_toe);
+    if (cur) {
+      const step = Math.hypot(_toe.x - cur.lx, _toe.z - cur.lz);
       const g = (pops.slide[groupOf(b.slot)] ??= newSlide());
-      g.spans++;
-      g.sum += cur.drift;
-      if (cur.drift > 0.005) g.over5mm++;
-      if (cur.drift > 0.02) g.over2cm++;
-      if (cur.drift > g.max) {
-        g.max = cur.drift;
-        g.worst = { slot: b.slot, foot: f, drift: Math.round(cur.drift * 1000) / 1000, frames: cur.n, clip: ctx.clip || ctx.overlay || ctx.anim, frame };
+      if (step > JUMP) g.jumps++;
+      g.maxStep = Math.max(g.maxStep, step);
+      if (Math.hypot(lk.pos.x - cur.px, lk.pos.z - cur.pz) > 0.001) {
+        // Re-planted (the lock's point moved): a new span.
+        closeSpan(b, f, cur, what, frame);
+        cur = null;
       }
     }
+    if (!cur) sp[f] = cur = { x: _toe.x, z: _toe.z, px: lk.pos.x, pz: lk.pos.z, lx: _toe.x, lz: _toe.z, drift: 0, n: 0, from: what };
+    cur.drift = Math.max(cur.drift, Math.hypot(_toe.x - cur.x, _toe.z - cur.z));
+    cur.lx = _toe.x;
+    cur.lz = _toe.z;
+    cur.n++;
   }
 }
