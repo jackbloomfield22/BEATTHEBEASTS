@@ -37,14 +37,43 @@ export interface PopSpike {
   phase: string;
 }
 
+/**
+ * (Passing round 14) Foot slide in play: a planted foot (its lock fully on,
+ * animator.ts footLockOf) should not move on the ground while it stays down.
+ * Each planted span's drift is how far the drawn ball of the foot (toe_*)
+ * gets from where it was on the span's first frame, along the ground; the
+ * clips' own gate is 0.5 cm (tools/blender/build_anims.py SLIDE_MAX). By
+ * group: the QB, the line (both sides), the backs and receivers, the back
+ * seven.
+ */
+export interface SlideStats {
+  spans: number;
+  /** Spans whose drift passed 0.5 cm and 2 cm. */
+  over5mm: number;
+  over2cm: number;
+  /** The largest drift (m) and the mean over spans. */
+  max: number;
+  sum: number;
+  /** The worst span: who, which foot, its drift, frames planted, and what was playing at its end. */
+  worst: { slot: string; foot: string; drift: number; frames: number; clip: string; frame: number } | null;
+}
+const LOCK_FULL = 0.98;
+const OL = new Set(['LT', 'LG', 'C', 'RG', 'RT', 'DE1', 'DT1', 'DT2', 'DE2', 'NT', 'DE', 'DT']);
+const groupOf = (slot: string): string => (slot === 'QB' ? 'qb' : OL.has(slot) || /^(D[ET]|NT)/.test(slot) ? 'line' : /^(RB|FB|HB|WR|X|Y|Z|TE|SLOT|H)/.test(slot) ? 'skill' : 'def');
+const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, worst: null });
+const span = new Map<Body, Record<'l' | 'r', { x: number; z: number; drift: number; n: number } | null>>();
+const _toe = new THREE.Vector3();
+
 const last = new Map<Body, THREE.Quaternion[]>();
 const lastYaw = new Map<Body, number>();
-export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[] };
+export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats> };
 if (typeof window !== 'undefined') (window as unknown as { __btbPops: typeof pops }).__btbPops = pops;
 
 export function resetPops(): void {
   last.clear();
   lastYaw.clear();
+  span.clear();
+  pops.slide = {};
   pops.frames = 0;
   pops.spikes.length = 0;
   pops.worst = 0;
@@ -76,4 +105,34 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
   }
   lastYaw.set(b, yaw);
   last.set(b, now);
+  // (Passing round 14) The planted feet's drift.
+  let sp = span.get(b);
+  if (!sp) span.set(b, (sp = { l: null, r: null }));
+  for (const f of ['l', 'r'] as const) {
+    const lk = b.animator.footLockOf(f);
+    const toe = b.player.bones.get(`toe_${f}`);
+    const down = !b.ragdoll.active && !b.lie && lk.locked && lk.weight >= LOCK_FULL && !!toe;
+    const cur = sp[f];
+    if (down) {
+      toe!.getWorldPosition(_toe);
+      if (!cur) sp[f] = { x: _toe.x, z: _toe.z, drift: 0, n: 1 };
+      else {
+        cur.drift = Math.max(cur.drift, Math.hypot(_toe.x - cur.x, _toe.z - cur.z));
+        cur.n++;
+      }
+    } else if (cur) {
+      sp[f] = null;
+      // A span of a frame or two is a touch-down's blend, not a plant.
+      if (cur.n < 3) continue;
+      const g = (pops.slide[groupOf(b.slot)] ??= newSlide());
+      g.spans++;
+      g.sum += cur.drift;
+      if (cur.drift > 0.005) g.over5mm++;
+      if (cur.drift > 0.02) g.over2cm++;
+      if (cur.drift > g.max) {
+        g.max = cur.drift;
+        g.worst = { slot: b.slot, foot: f, drift: Math.round(cur.drift * 1000) / 1000, frames: cur.n, clip: ctx.clip || ctx.overlay || ctx.anim, frame };
+      }
+    }
+  }
 }

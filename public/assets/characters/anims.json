@@ -448,14 +448,14 @@
       },
       "gates": {
         "stance": {
-          "hip": 0.89,
+          "hip": 0.94,
           "trunk": 75.16,
           "eyes": -3.0
         },
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 34.4,
-        "com_cm": 7.7,
+        "clear_cm": 32.6,
+        "com_cm": 8.8,
         "reach_cm": 0.0,
         "pass": true
       }
@@ -2997,7 +2997,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 24.5,
+        "clear_cm": 24.9,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -3158,7 +3158,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 11.3,
+        "clear_cm": 11.4,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -3420,7 +3420,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 25.7,
+        "clear_cm": 26.3,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -3507,7 +3507,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 32.4,
+        "clear_cm": 31.9,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -11935,7 +11935,7 @@
         "loop_deg": 0.0,
         "clear_cm": 32.8,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "events": {
@@ -12006,7 +12006,7 @@
         "loop_deg": 0.0,
         "clear_cm": 32.8,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "events": {
@@ -12217,9 +12217,9 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 32.7,
+        "clear_cm": 32.6,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "events": {
@@ -12288,9 +12288,9 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 32.7,
+        "clear_cm": 32.6,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "events": {
@@ -12359,7 +12359,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 33.4,
+        "clear_cm": 33.1,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -12430,7 +12430,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 33.4,
+        "clear_cm": 33.1,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -13823,7 +13823,7 @@
         "loop_deg": 0.0,
         "clear_cm": 23.7,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "travel": [
@@ -13902,7 +13902,7 @@
         "loop_deg": 0.0,
         "clear_cm": 23.8,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "travel": [
@@ -14702,7 +14702,7 @@
         "loop_deg": 0.0,
         "clear_cm": 23.8,
         "com_cm": null,
-        "reach_cm": 0.01,
+        "reach_cm": 0.0,
         "pass": true
       },
       "travel": [
@@ -14936,5 +14936,5 @@
       }
     }
   },
-  "bytes": 8992732
+  "bytes": 8988336
 }

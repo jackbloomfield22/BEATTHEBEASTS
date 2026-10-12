@@ -236,6 +236,11 @@ export class PlayerAnimator {
   /** Last frame's foot-lock correction per foot (m): how much slide the lock removed. */
   readonly correction = { l: 0, r: 0 };
 
+  /** A foot's lock as it stands after this frame (passing round 14: the pop meter's slide on planted feet, render/game/popMeter.ts). */
+  footLockOf(s: 'l' | 'r'): { readonly locked: boolean; readonly weight: number; readonly pos: THREE.Vector3 } {
+    return this.feet[s];
+  }
+
   constructor(
     readonly player: Player,
     readonly lib: AnimLibrary,

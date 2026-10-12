@@ -37,7 +37,7 @@ import copy
 import math
 from dataclasses import replace
 
-from .actions import GRIP, IDLE, RELAXED, SPINE_UP, SPREAD, STANCES, THROW_UP, THROW_UP_R4, Clip, arm_mask, hands_of, keyed, lifted, shift, throw_rise, with_upper
+from .actions import GRIP, IDLE, RELAXED, SET_UP, SPINE_UP, SPREAD, STANCES, THROW_UP, THROW_UP_R4, Clip, arm_mask, hands_of, keyed, lifted, shift, throw_rise, with_upper
 from .actions_m65 import DIAMOND_WRIST, ready_pose, tuck_pose, upper
 from .gait import FPS, smoothstep
 from .transitions import Plant, Steps
@@ -45,7 +45,10 @@ from .transitions import Plant, Steps
 ARMS = arm_mask("l") + arm_mask("r")
 # The fade-away keeps round four's hips (actions.py THROW_UP): off platform he sits back on the back leg, and passing
 # round 13 re-keyed only the throws that step into the ball.
-FADE_UP = THROW_UP_R4
+# (Passing round 14) ...as a drop from the set: round four keyed them against the set at -0.085, and the set now stands at
+# SET_UP (-0.03), so the fade-away goes down the same 1.5 / 3.5 / 2.5 / 3.5 cm from it. Kept absolute, he dropped 6.5 cm
+# in the first two frames, a sit, where round four's load was a 1.5 cm give onto the back foot.
+FADE_UP = tuple(round(SET_UP + (u - (-0.085)), 4) for u in THROW_UP_R4)
 
 
 def _throw(name: str, T: float, S: float, keys_t: tuple[float, float, float, float], load_r, cock_r, rel_r, fol_r, *, twist=(-30, -32, 8, 24), flex=(0, 10, 16, 26), lean=0.0, feet=None, glove=(0.20, -0.52, 1.46), elbows=((-0.9, 0.0, 1.55), (-0.7, -0.2, 1.35)), bend=0.0, up=None) -> Clip:

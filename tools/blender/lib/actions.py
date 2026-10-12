@@ -241,16 +241,28 @@ def carry_pose(base: Pose = IDLE) -> Pose:
 # Quarterback set in the pocket: feet a little wider than the shoulders,
 # the right (back) foot staggered ~15 cm, knees flexed, on the balls of the
 # feet, the ball at the chest in both hands, eyes downfield.
+# Passing round 14 (docs/passing/PASSING14.md): the depth. Keyed at 0.085 m under the rig's rest, the set bent the
+# knees 55-57 deg (the bones' hip-knee-ankle angle; the rig's rest leg reads 8, its idle stance 23) with the hips 6.6 cm
+# under his standing height: a squat, deeper than any throw's release (25-34 deg, actions.py THROW_UP), and it is the
+# legs of every throw on the move at the instant the ball leaves (choreo.ts FINISH_PLANTED: the finish's legs fade in
+# over 0.14 s from the release), so he rose ~5 cm into the finish. A passer in the pocket sits in an athletic base,
+# not a squat: the knees flexed roughly 25-40 deg (the owner's brief; the quick game's release, 20-35, is the same
+# body), the weight on the balls of the feet, ready to hitch or slide. At 0.03 m under the rest the set reads 37 deg
+# front and 41 back on the rig (scratch knees.py), the hips at 0.969 m: level with a throw's release (0.964), so the
+# release from the set no longer rises. The ball stays at the chest: the hands and elbow poles go up with the hips
+# (SET_RISE; the pocket's own hold overlay, ovl_qb_hold, is keyed on the idle body at 0.980).
+SET_UP = -0.03
+SET_RISE = SET_UP - (-0.085)
 STANCES["qb_set"] = with_upper(
     Pose(
-        pelvis={"forward": -0.03, "up": -0.085, "flex": 12, "twist": -6},
+        pelvis={"forward": -0.03, "up": SET_UP, "flex": 12, "twist": -6},
         joints={"spine_02": (4, 0, 3), "spine_03": (3, 0, 2)},
         feet={"l": Foot(0.21, -0.15, heel=8, out=6), "r": Foot(-0.21, 0.01, heel=12, out=14)},
         gaze=(3.0, 0.0),
     ),
-    HOLD,
+    {s: (h[0], h[1], round(h[2] + SET_RISE, 4)) for s, h in HOLD.items()},
     {**GRIP, "hand_l": (-10, 0, -20), "hand_r": (-25, 0, 15)},
-    HOLD_ELBOW,
+    {s: (e[0], e[1], round(e[2] + SET_RISE, 4)) for s, e in HOLD_ELBOW.items()},
 )
 
 # Lying face down (tackled forward, after a dive): the trunk flat, hips on
@@ -359,8 +371,9 @@ def qb_drop(steps_n: int) -> Clip:
 # (The base throw's own follow-through, seen only when he's hit as he throws and has no finish, goes back down to
 # -0.08: on the long stride the back foot is still planted 0.15 s past the release, and higher hips over-reached it,
 # the foot sliding 1.7 cm.)
+# (Passing round 14) The load is at the set's height (SET_UP, from -0.085): the throw starts where the set now stands.
 THROW_UP_R4 = (-0.10, -0.12, -0.11, -0.12)
-THROW_UP = (-0.085, -0.06, -0.035, -0.08)
+THROW_UP = (SET_UP, -0.05, -0.035, -0.08)
 
 
 def throw_rise(k: int, up=None) -> float:
