@@ -161,8 +161,8 @@ Nothing in `src/sim` or `src/engine` changed. The harnesses were run on this bra
 | Passing identity (`passidentity.ts`) | 9 / 9 | identical |
 | Trait audit (`traitaudit.ts`) | 127 / 127, 25 / 25 | identical |
 | Clip gates (`build_anims.py`) | 215 / 215 | 215 / 215 |
-| `npm run check` | passes | CHECK |
-| `e2e/practice.spec.ts` | 7 / 7 | E2E |
+| `npm run check` | passes | passes (79 files, 758 tests) |
+| `e2e/practice.spec.ts` | 7 / 7 | 7 / 7 (port 5605), the browser reproducing the Node hashes |
 
 The determinism golden doesn't move: `tests/` is untouched and passes, with no re-pin.
 
