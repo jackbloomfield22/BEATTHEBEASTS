@@ -84,6 +84,8 @@ interface FootState {
   pos: THREE.Vector3;
   /** (Passing round 14) Where the sim had him (the player's root) when the foot planted: holdOver's drift. */
   anchor: THREE.Vector3;
+  /** (Passing round 14) The one-shot's travel (m, transTravel) when the foot planted: the stride it keys over the foot since. */
+  travel0: number;
   /** What planted it: standing, or locomotion. A change re-captures the lock. */
   source: 'stand' | 'loco' | 'trans' | null;
 }
@@ -188,7 +190,6 @@ type LockSource = 'loco' | 'stand' | 'trans';
 const _hip = new THREE.Vector3();
 const _knee = new THREE.Vector3();
 const _ank = new THREE.Vector3();
-const _ball = new THREE.Vector3();
 const _need = new THREE.Vector3();
 const _rp = new THREE.Vector3();
 const _oq = new THREE.Quaternion();
@@ -207,8 +208,8 @@ export class PlayerAnimator {
   private back = 0;
   private backPhase = 0;
   private feet: Record<'l' | 'r', FootState> = {
-    l: { weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), source: null },
-    r: { weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), source: null },
+    l: { weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), travel0: 0, source: null },
+    r: { weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), travel0: 0, source: null },
   };
   private look = new THREE.Quaternion();
   private padSpring = { x: 0, v: 0 };
@@ -739,6 +740,15 @@ export class PlayerAnimator {
     }
     this.player.root.updateMatrixWorld(true);
 
+    // (Passing round 14) The feet as the clips keyed them, before the leans tilt the whole body: a planted foot stays
+    // flat on the ground under a lean (lockFoot, for AnimInput.holdFeet).
+    if (input.holdFeet) {
+      for (const s of FEET) {
+        const f = this.bone(`foot_${s}`);
+        f.getWorldQuaternion(this.footQ[s]);
+        f.getWorldPosition(this.footOff[s]).sub(this.bone(`toe_${s}`).getWorldPosition(_v));
+      }
+    }
     // 3. Lean (before the feet are locked, so the lock sees the leaned body).
     this.lean(speed, input.yawRate ?? 0, input.accel ?? 0, this.pressW * PRESS_PITCH);
     // Where the trunk is before any contact lean (contact.ts reads it: leaning must not feed back into the lean).
@@ -922,6 +932,9 @@ export class PlayerAnimator {
 
   /** This frame's AnimInput.holdFeet. */
   private holdFeet = false;
+  /** (Passing round 14) Each foot's world rotation and ankle-from-ball offset as the clips keyed them, before the leans (holdFeet). */
+  private footQ = { l: new THREE.Quaternion(), r: new THREE.Quaternion() };
+  private footOff = { l: new THREE.Vector3(), r: new THREE.Vector3() };
   /** This frame's plant per foot (down, and what plants it), from the clips' contacts. */
   private plant: Record<'l' | 'r', { down: boolean; source: LockSource }> = { l: { down: false, source: 'stand' }, r: { down: false, source: 'stand' } };
 
@@ -949,9 +962,9 @@ export class PlayerAnimator {
    * sim has carried him off a planted foot since it planted (his spot moving away from it: the contested ball's QB
    * drifting back off his front foot as he throws) and the leg would be straighter than the clip's less KNEE_GIVE, the
    * body is drawn back over it along the ground, by as much as the knee needs and no more than the drift, up to
-   * ROOT_GIVE. Held while the foot stays planted, let go over ROOT_OUT once none needs it. Only the sim's drift: a
-   * clip's own travel played in place (the throws' stride, the finishes' step) is the clip's, and was keyed with the
-   * body where the sim keeps it. The run's cycle re-plants its feet every step and is left alone.
+   * ROOT_GIVE. Held while the foot stays planted, let go over ROOT_OUT once none needs it. The sim's drift and the
+   * one-shot's own stride over the foot since it planted (its travel, played in place); not the clip's mismatches
+   * otherwise. The run's cycle re-plants its feet every step and is left alone.
    */
   private holdOver(dt: number, ground?: THREE.Vector3): void {
     const root = this.bone('root');
@@ -967,20 +980,23 @@ export class PlayerAnimator {
         if (!pl.down || pl.source === 'loco' || !st.locked || st.source !== pl.source || st.weight < 0.5) continue;
         any = true;
         const dMax = this.keyedReach(s);
-        this.bone(`toe_${s}`).getWorldPosition(_ball);
-        // The ankle's target, as lockFoot puts it: the locked ball plus the clip's ankle-to-ball offset (the body as the
-        // clips and leans left it, before any hold).
-        const tx = _ank.x - _ball.x + st.pos.x - _hip.x;
-        const ty = _ank.y - _ball.y + st.pos.y - _hip.y;
-        const tz = _ank.z - _ball.z + st.pos.z - _hip.z;
+        // The ankle's target, as lockFoot puts it: the locked ball plus the clip's ankle-to-ball offset before the leans
+        // (the hip as the clips and leans left it, before any hold).
+        const o = this.footOff[s];
+        const tx = o.x + st.pos.x - _hip.x;
+        const ty = o.y + st.pos.y - _hip.y;
+        const tz = o.z + st.pos.z - _hip.z;
         const r = Math.hypot(tx, tz);
         if (tx * tx + ty * ty + tz * tz <= dMax * dMax || r < 1e-6) continue;
         const ux = tx / r;
         const uz = tz / r;
-        // As far as the knee needs, and no further than the sim has carried him away from the foot since it planted.
+        // As far as the knee needs, and no further than the sim has carried him away from the foot since it planted,
+        // plus the stride the one-shot keys over the foot since (its travel, played in place: the throw's step onto the
+        // front foot, which the sim doesn't make).
         const e = r - Math.sqrt(Math.max(0, dMax * dMax - ty * ty));
         const away = -((spot.x - st.anchor.x) * ux + (spot.z - st.anchor.z) * uz);
-        const k = Math.min(e, Math.max(0, away)) * st.weight;
+        const stride = pl.source === 'trans' ? Math.max(0, this.transTravel() - st.travel0) : 0;
+        const k = Math.min(e, Math.max(0, away) + stride) * st.weight;
         _need.x += ux * k;
         _need.z += uz * k;
       }
@@ -992,6 +1008,13 @@ export class PlayerAnimator {
     this.give.lerp(_need, out);
     if (this.give.lengthSq() < 1e-8) this.give.set(0, 0, 0);
     if (this.give.lengthSq() > 0) this.shiftRoot(root, this.give);
+  }
+
+  /** The one-shot playing now: how far it has carried the body (m, its travel, scaled), or 0. */
+  private transTravel(): number {
+    const tr = this.trans;
+    const m = tr ? this.lib.meta[tr.name] : undefined;
+    return tr && m ? travelAt(m, this.lib.fps, tr.t) * this.player.shape.scale : 0;
   }
 
   /** Move the root bone by a world offset (the whole body, the feet's IK still to come). */
@@ -1026,6 +1049,7 @@ export class PlayerAnimator {
     if (down && (!st.locked || st.source !== source)) {
       ball.getWorldPosition(st.pos);
       this.player.root.getWorldPosition(st.anchor);
+      st.travel0 = this.transTravel();
       st.locked = true;
       st.source = source;
     } else if (!down && st.weight < 0.02) {
@@ -1038,11 +1062,15 @@ export class PlayerAnimator {
     const thigh = this.bone(`thigh_${s}`);
     const calf = this.bone(`calf_${s}`);
     // Keep the foot's own orientation through the solve.
-    const footWorld = foot.getWorldQuaternion(new THREE.Quaternion());
+    // (Passing round 14: for holdFeet, as the clip keyed it before the leans. The run's lean pitches the whole body
+    // about the hips on the sim's acceleration, the planted foot with it: on the contested ball the QB's drift back
+    // tipped him ~15 deg as he threw and his planted front foot rolled onto its heel, the ankle pulled 5 cm down to the
+    // turf and the leg dead straight, 4 deg at the release against 34 keyed.)
+    const footWorld = this.holdFeet ? this.footQ[s].clone() : foot.getWorldQuaternion(new THREE.Quaternion());
     ball.getWorldPosition(_v);
     if (down) this.correction[s] = _v.distanceTo(st.pos);
     // Ankle target: the locked ball plus the clip's current ankle-to-ball offset.
-    const ankleTarget = foot.getWorldPosition(_w).sub(_v).add(st.pos);
+    const ankleTarget = this.holdFeet ? _w.copy(this.footOff[s]).add(st.pos) : foot.getWorldPosition(_w).sub(_v).add(st.pos);
     this.slid[s] = 0;
     if (this.holdFeet && source !== 'loco' && down) {
       // (Passing round 14) Past what the hold over the feet took up, the planted point gives: along the ground toward
