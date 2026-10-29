@@ -1216,8 +1216,14 @@ const DL_SLOTS = new Set(['LE', 'RE', 'LDT', 'RDT', 'NT', 'DT']);
 /** (Round 16) The block clips whose hands go on over the gait once the sim moves him faster than HANDS_MOVING (m/s: past a shuffle step's drift). */
 const HANDS_ON_THE_MOVE = new Set(['ol_anchor', 'ol_punch_mirror_l', 'ol_punch_mirror_r', 'dl_shed_l', 'dl_shed_r']);
 const HANDS_MOVING = 1.2;
-/** (Round 16) The read step lets go once the sim moves him faster than this (m/s, a jog's start: ours). */
+/**
+ * (Round 16) The read step lets go once the sim moves him faster than READ_MOVING (m/s, a jog's start), or faster than
+ * READ_DRIFT (m/s, a slow walk) more than READ_OFF (rad, 45 deg) off the way it steps (a linebacker opening to his drop
+ * at the snap, back and turning). Ours.
+ */
 const READ_MOVING = 1.2;
+const READ_DRIFT = 0.5;
+const READ_OFF = Math.PI / 4;
 /**
  * (Round 16) The drives paced by the sim (and the get-offs: their first steps are keyed at 1.4-2 m/s, the sim's
  * first steps off the ball are 2.5-3 m/s), and how far (ours: a third either way still reads as the keyed rhythm).
@@ -1631,10 +1637,13 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     // off the turf and the first kick are the one-shot's.
     if (keyed > 0 && tr.t >= KICK_HANDOFF && (sp * YARD) / (keyed * b.player.shape.scale) > KICK_RATE) anim.release();
   }
-  // (Round 16) The linebacker's read step is a short step in place (0.15 m in 0.5 s): a linebacker the sim already has
-  // flowing at a jog goes on in his gait or the side layer, paced by the sim. (A get-off goes on, paced: let go at the
-  // snap, the corners and safeties turning to bail stood and turned on planted feet and stepped twice as often.)
-  if (tr && !tr.done && tr.name === 'lb_read_step' && sp * YARD > READ_MOVING) anim.release(false);
+  // (Round 16) The linebacker's read step is a short step forward (0.15 m in 0.5 s): a linebacker the sim already has
+  // flowing at a jog, or dropping, goes on in his gait or the side layer, paced by the sim. (A get-off goes on, paced: let
+  // go at the snap, the corners and safeties turning to bail stood and turned on planted feet and stepped twice as often.)
+  if (tr && !tr.done && tr.name === 'lb_read_step' && sp * YARD > READ_DRIFT) {
+    const off = Math.abs(Math.atan2(Math.sin(Math.atan2(a.vel.y, a.vel.x) - a.face), Math.cos(Math.atan2(a.vel.y, a.vel.x) - a.face)));
+    if (sp * YARD > READ_MOVING || off > READ_OFF) anim.release(false);
+  }
   // (Round 16) A drive the sim paces: the bull rush and the run block's fire-out are keyed at their own speed along their
   // travel; they play at the sim's along it (PACE_LO to PACE_HI), as the drop and the kick-slide do.
   if (tr && !tr.done && (PACED.has(tr.name) || tr.name.startsWith('getoff_'))) {
