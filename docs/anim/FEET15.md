@@ -241,7 +241,7 @@ Nothing in `src/sim` or `src/engine` changed (`git diff 97a4a47 -- src/sim src/e
 | Passing identity (`a15_passidentity.ts`) | 9 / 9 | identical |
 | Trait audit (`a15_traitaudit.ts`) | 127 / 127, 25 / 25 | identical |
 | Clip gates | 215 / 215 | 215 / 215 (no clip changed) |
-| `npm run check` | passes | passes: typecheck, lint, extract, data, ratings; tests 79 files, 758 tests (two `sim-m6` tests timed out at 600 s while six recordings ran beside them, and pass alone, 27 / 27) |
+| `npm run check` | passes | passes (79 files, 758 tests; on the final code. An earlier run beside six recordings timed out two `sim-m6` tests at 600 s.) |
 | `e2e/practice.spec.ts` | 7 / 7 | 7 / 7 (port 5627), the browser reproducing the Node hashes |
 
 The determinism golden doesn't move: `tests/` is untouched and passes, with no re-pin.
