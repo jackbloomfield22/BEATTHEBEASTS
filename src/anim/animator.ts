@@ -79,6 +79,8 @@ export interface AnimInput {
    * turns the layer off.
    */
   side?: 'ol' | 'lb' | false;
+  /** (Round 16) The side the layer takes when he goes straight back (+1 his left, -1 his right): a tackle's kick foot is his outside one. */
+  sidePref?: number;
 }
 
 const FEET = ['l', 'r'] as const;
@@ -632,11 +634,13 @@ export class PlayerAnimator {
    * which carries on from the phase it's at (a cut's run-out steps giving
    * way to the burst's drive).
    */
-  release(): void {
+  release(toGait = true): void {
     const tr = this.trans;
     if (!tr || tr.done) return;
     tr.done = true;
-    this.loco = 1;
+    // (Round 16: or, toGait false, into whatever his speed asks for: a get-off let go as the sim starts him back or
+    // sideways at a walk eases into the gait rather than taking it at once.)
+    if (toGait) this.loco = 1;
   }
 
   /**
@@ -1365,7 +1369,7 @@ export class PlayerAnimator {
     if (!this.sideOn) return null;
     const sn = Math.sin(th);
     const fresh = this.sideL + this.sideR < 0.05;
-    if (fresh || sn * this.sideDir < -SIDE_FLIP) this.sideDir = sn >= 0 ? 1 : -1;
+    if (fresh || sn * this.sideDir < -SIDE_FLIP) this.sideDir = fresh && Math.abs(sn) < SIDE_FLIP && input.sidePref ? Math.sign(input.sidePref) : sn >= 0 ? 1 : -1;
     if (fresh && !on) {
       // Into the layer from the gait or a stance: the phase the feet are in (the left loops' phase; the left foot is the
       // lead going left). One foot planted: mid-way through its plant. Both: just before the lead foot lifts.

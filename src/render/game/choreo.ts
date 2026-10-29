@@ -1548,6 +1548,8 @@ export interface Drive {
   turn?: number;
   /** (Round 16) The side loops he plays moving at an angle to his facing (AnimInput.side): the line's slide and kick-slide. */
   side?: 'ol';
+  /** (Round 16) The side a lineman's set kicks to going straight back (AnimInput.sidePref): his outside foot. */
+  sidePref?: number;
 }
 
 const _look = new THREE.Vector3();
@@ -1566,7 +1568,11 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // (Round 16) An offensive lineman moving back or sideways slides and kick-slides (the animator's side layer, AnimInput.side):
   // he never backpedals. Round 15 left a lineman the sim still retreated after his kick-slide on the defensive back's pedal.
   const line = a.side === 'off' && OL.has(a.slot as string);
-  if (line) out.side = 'ol';
+  if (line) {
+    out.side = 'ol';
+    const slot = a.slot as string;
+    out.sidePref = slot === 'LT' || slot === 'LG' ? 1 : slot === 'RT' || slot === 'RG' ? -1 : 0;
+  }
   // Backward: a pedal up to a quick pace, else turn and run.
   if (along < -0.8 && !tr?.name.startsWith('qb_drop_') && !(line && sp * YARD < 5.2)) {
     if (sp * YARD < 5.2) {
@@ -1609,7 +1615,7 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // of the back seven's and the line's steps (docs/anim/FEET16.md).
   if (tr && !tr.done && (tr.name.startsWith('getoff_') || tr.name === 'lb_read_step') && sp * YARD > OFF_MOVING) {
     const off = Math.abs(Math.atan2(Math.sin(Math.atan2(a.vel.y, a.vel.x) - a.face), Math.cos(Math.atan2(a.vel.y, a.vel.x) - a.face)));
-    if (off > OFF_ANGLE || (tr.name === 'lb_read_step' && sp * YARD > READ_MOVING)) anim.release();
+    if (off > OFF_ANGLE || (tr.name === 'lb_read_step' && sp * YARD > READ_MOVING)) anim.release(false);
   }
   // (Round 16) A drive the sim paces: the bull rush and the run block's fire-out are keyed at their own speed along their
   // travel; they play at the sim's along it (PACE_LO to PACE_HI), as the drop and the kick-slide do.
