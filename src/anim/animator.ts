@@ -222,6 +222,12 @@ const _oq = new THREE.Quaternion();
 const _oq2 = new THREE.Quaternion();
 const _oq3 = new THREE.Quaternion();
 const _cb = new THREE.Vector3();
+/**
+ * (Round 15) A bone's world position from its world matrix as it stands. getWorldPosition recomputes every ancestor's
+ * matrix on each call; the round's reads come where the skeleton is already up to date (after the leans' and the
+ * solves' updateMatrixWorld), so they read it as it is (the animator's cost per body: docs/anim/FEET15.md).
+ */
+const wpos = (b: THREE.Object3D, v: THREE.Vector3): THREE.Vector3 => v.setFromMatrixPosition(b.matrixWorld);
 const _tb = new THREE.Vector3();
 const _fq = new THREE.Quaternion();
 /**
@@ -842,7 +848,7 @@ export class PlayerAnimator {
     // (Passing round 14) The feet as the clips keyed them, before the leans tilt the whole body: a planted foot stays
     // flat on the ground under a lean (lockFoot, for AnimInput.holdFeet).
     // (Round 15) And the balls' heights before the leans, for the lock's settle (lockFoot).
-    for (const s of FEET) this.preBallY[s] = this.bone(`toe_${s}`).getWorldPosition(this.preBall[s]).y;
+    for (const s of FEET) this.preBallY[s] = wpos(this.bone(`toe_${s}`), this.preBall[s]).y;
     if (input.holdFeet) {
       for (const s of FEET) {
         const f = this.bone(`foot_${s}`);
@@ -1248,7 +1254,7 @@ export class PlayerAnimator {
     this.slid[s] = 0;
     const scale = this.player.shape.scale;
     // Where the clips (and the leans) put the ball of the foot this frame.
-    const cb = ball.getWorldPosition(_cb);
+    const cb = wpos(ball, _cb);
     dbg.cb.copy(cb);
     if (!this.footLock) {
       st.locked = false;
@@ -1399,8 +1405,8 @@ export class PlayerAnimator {
       // a stance he drifts out of, a one-shot whose travel isn't the sim's, a turn on a planted foot) the IK reached for
       // it with a straight leg and then dragged it: 0.3-1.4 m on every play (docs/anim/FEET15.md). It steps instead
       // when the clip has its foot STEP_FAR from where it's held, or when the leg can't reach it.
-      thigh.getWorldPosition(_hip);
-      const reach = _hip.distanceTo(calf.getWorldPosition(_knee)) + _knee.distanceTo(foot.getWorldPosition(_ank));
+      wpos(thigh, _hip);
+      const reach = _hip.distanceTo(wpos(calf, _knee)) + _knee.distanceTo(wpos(foot, _ank));
       // (Against the clip's foot before the leans, less what the leans moved it when it planted: a burst's pitch or a
       // turn's bank swings the feet about the hips, and the lock holds a planted one through it, as it should.)
       const pb = this.preBall[s];
@@ -1422,7 +1428,7 @@ export class PlayerAnimator {
         this.stepFoot(st, cb, scale);
         dbg.stepped = true;
         tgt.copy(st.stepFrom);
-        ankleTarget.copy(this.holdFeet ? this.footOff[s] : foot.getWorldPosition(_v).sub(cb)).add(tgt);
+        ankleTarget.copy(this.holdFeet ? this.footOff[s] : wpos(foot, _v).sub(cb)).add(tgt);
         w = 1;
       }
     }
@@ -1434,7 +1440,7 @@ export class PlayerAnimator {
     const pq = foot.parent!.getWorldQuaternion(_q);
     foot.quaternion.copy(pq.invert().multiply(footWorld));
     foot.updateMatrixWorld(true);
-    ball.getWorldPosition(st.drawn);
+    wpos(ball, st.drawn);
   }
 
   /**
@@ -1451,9 +1457,9 @@ export class PlayerAnimator {
 
   /** (Round 15) The knee's pole for the leg's solve, into _pole: the clip's own bend, or over the toes. */
   private kneePole(thigh: THREE.Bone, calf: THREE.Bone, foot: THREE.Bone, ball: THREE.Vector3): void {
-    thigh.getWorldPosition(_hip);
-    calf.getWorldPosition(_knee);
-    foot.getWorldPosition(_ank);
+    wpos(thigh, _hip);
+    wpos(calf, _knee);
+    wpos(foot, _ank);
     // The knee off the hip-to-ankle line.
     _need.subVectors(_ank, _hip);
     const l2 = _need.lengthSq();
