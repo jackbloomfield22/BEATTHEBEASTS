@@ -85,6 +85,8 @@ const SCRIPTS: Script[] = [
   { name: 'jog-2.8', vel: (t) => [0, 2.8 * smooth(0, 0.5, t)], face: () => 0 },
   { name: 'run-4.5', vel: (t) => [0, 4.5 * smooth(0, 0.6, t)], face: () => 0 },
   { name: 'run-7', vel: (t) => [0, 7 * smooth(0, 0.8, t)], face: () => 0 },
+    // A hard curve at speed: 5 m/s, turning 2.5 rad/s from 0.8 s (the bank at its limit; the outside foot's reach).
+  { name: 'curve', vel: (t) => { const a = t < 0.8 ? 0 : 2.5 * (t - 0.8); const v = 5 * smooth(0, 0.6, t); return [v * Math.sin(a), v * Math.cos(a)]; }, face: (t) => (t < 0.8 ? 0 : 2.5 * (t - 0.8)) },
     // A defensive back's pedal at 3 m/s.
   { name: 'db-pedal', vel: (t) => [0, -3 * smooth(0.1, 0.4, t)], face: () => 0 },
 ];

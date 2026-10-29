@@ -1520,6 +1520,11 @@ export class PlayerAnimator {
       _pole.set(0, h, 0).applyQuaternion(_q);
       _v.y += h;
       _v.sub(_pole);
+      // (Round 16) And sinks by what the tilt lifts the feet about the hips (h(1 - cos)): a runner dips into a hard cut,
+      // his feet on the turf. Tilted about his hips and no more, the outside foot of a banked runner came up to 6 cm off
+      // the turf, and its leg, pinned there by the lock, couldn't reach: a step every stride through a curve
+      // (tools/sim/a16_animbench.ts 'curve'; docs/anim/FEET16.md).
+      _v.y -= h - _pole.y;
       root.parent.worldToLocal(_v);
       root.position.copy(_v);
     }
