@@ -377,9 +377,44 @@ const KNEE_BENT = 0.03;
 export class PlayerAnimator {
   readonly mixer: THREE.AnimationMixer;
   private actions = new Map<string, THREE.AnimationAction>();
-  /** (Round 16) The transitions' actions by name, and the one given weight last frame. */
-  private transActs = new Map<string, THREE.AnimationAction>();
+  /** (Round 16) The transition given weight last frame. */
   private transAct: THREE.AnimationAction | null = null;
+
+  /** (Round 16) A clip's action, made (playing, silent) the first time it's wanted. */
+  private act(name: string): THREE.AnimationAction | undefined {
+    let a = this.actions.get(name);
+    if (!a) {
+      const clip = this.lib.clips.get(name);
+      if (!clip) return undefined;
+      a = this.mixer.clipAction(clip);
+      a.setLoop(THREE.LoopRepeat, Infinity);
+      a.play();
+      this.off(a);
+      this.actions.set(name, a);
+    }
+    return a;
+  }
+
+  /**
+   * (Round 16) A clip at a weight: made if it's wanted and isn't yet; at 0, off (`enabled` false: the mixer passes it by
+   * without stepping its time, the same as a weight of 0). Returns its action, if it has one.
+   */
+  private weigh(name: string, w: number): THREE.AnimationAction | undefined {
+    const a = w > 0 ? this.act(name) : this.actions.get(name);
+    if (a) {
+      if (w > 0) this.on(a, w);
+      else this.off(a);
+    }
+    return a;
+  }
+  private on(a: THREE.AnimationAction, w: number): void {
+    a.enabled = true;
+    a.setEffectiveWeight(w);
+  }
+  private off(a: THREE.AnimationAction): void {
+    a.enabled = false;
+    a.setEffectiveWeight(0);
+  }
   private stance = 'stance_idle';
   private stanceWeights = new Map<string, number>();
   private stanceTime = 0;
@@ -404,7 +439,6 @@ export class PlayerAnimator {
   /** Its loops (preallocated: no per-frame garbage), by style and side, and each one's weight and phase this frame. */
   private sideFam: Record<'lb' | 'ol', Record<'l' | 'r', SideFam>> = { lb: { l: { slide: [], set: [] }, r: { slide: [], set: [] } }, ol: { l: { slide: [], set: [] }, r: { slide: [], set: [] } } };
   private sideClips: GaitClip[] = [];
-  private sideActs: THREE.AnimationAction[] = [];
   private sideRight: boolean[] = [];
   private sideW: number[] = [];
   private sidePh: number[] = [];
@@ -496,13 +530,10 @@ export class PlayerAnimator {
     readonly lib: AnimLibrary,
   ) {
     this.mixer = new THREE.AnimationMixer(player.root);
-    for (const [name, clip] of lib.clips) {
-      const a = this.mixer.clipAction(clip);
-      a.setLoop(THREE.LoopRepeat, Infinity);
-      a.play();
-      a.setEffectiveWeight(0);
-      this.actions.set(name, a);
-    }
+    // An action for every clip, in the library's order (the mixer blends them in that order; made as each is first
+    // wanted instead, the order changes a three-way crossfade by a few mm: tools/sim/a16_animbench.ts --dump). (Round 16)
+    // Each is off (`enabled` false) while it has no weight: the mixer passes it by without stepping its time.
+    for (const n of lib.clips.keys()) this.act(n);
     this.stanceWeights.set(this.stance, 1);
     this.rootB = this.bone('root');
     this.chestB = this.bone('spine_04');
@@ -517,7 +548,6 @@ export class PlayerAnimator {
     // angles on every write (Object3D's onQuaternionChange), and the clips, the restore of the clip pose, the overlays
     // and the solves write every bone several times a frame. It was a fifth of the animator's time (docs/anim/FEET16.md).
     for (const bone of player.bones.values()) bone.quaternion._onChange(NO_SYNC);
-    for (const [name, a] of this.actions) if (lib.meta[name]?.kind === 'transition') this.transActs.set(name, a);
     this.animRootPos.copy(this.rootB.position);
     for (const f of lib.families) {
       for (const g of f) if (!this.locos.includes(g)) this.locos.push(g);
@@ -537,7 +567,6 @@ export class PlayerAnimator {
             const g = this.sideClips.find((c) => c.name === n) ?? { name: n, speed: m.speed, duration: m.duration, duty: ((b - a + m.frames) % m.frames) / m.frames };
             if (!this.sideClips.includes(g)) {
               this.sideClips.push(g);
-              this.sideActs.push(this.actions.get(n)!);
               this.sideRight.push(sd === 'r');
             }
             out.push(g);
@@ -944,26 +973,23 @@ export class PlayerAnimator {
     // (warped phases), so the blended foot is either planted in all or swinging in all.
     for (let j = 0; j < this.locos.length; j++) {
       const gait = this.locos[j]!;
-      const a = this.actions.get(gait.name)!;
       const w = this.loco * lw[j]! * (1 - tw) * (1 - this.back) * (1 - side);
-      a.setEffectiveWeight(w);
+      const a = this.weigh(gait.name, w);
       // (Round 16) A clip with no weight leaves the pose alone: its phase isn't needed (warpPhase was a tenth of the cost).
       if (w > 0 || lw[j]! > 0.02) {
         const p = warpPhase(this.phase, gait.duty, duty);
         this.locoPhase[j] = p;
-        a.time = p * gait.duration;
+        if (a) a.time = p * gait.duration;
       }
     }
-    const bp = this.actions.get('loco_backpedal');
-    if (bp && bpMeta) {
-      bp.setEffectiveWeight(this.loco * this.back * (1 - tw) * (1 - side));
-      bp.time = this.backPhase * bpMeta.duration;
+    if (bpMeta) {
+      const bp = this.weigh('loco_backpedal', this.loco * this.back * (1 - tw) * (1 - side));
+      if (bp) bp.time = this.backPhase * bpMeta.duration;
     }
     for (let j = 0; j < this.sideClips.length; j++) {
-      const a = this.sideActs[j]!;
       const w = this.sideW[j]!;
-      a.setEffectiveWeight(this.loco * w * (1 - tw));
-      if (w > 0) a.time = this.sidePh[j]! * this.sideClips[j]!.duration;
+      const a = this.weigh(this.sideClips[j]!.name, this.loco * w * (1 - tw));
+      if (a && w > 0) a.time = this.sidePh[j]! * this.sideClips[j]!.duration;
     }
     this.stanceTime += dt;
     let total = 0;
@@ -971,7 +997,7 @@ export class PlayerAnimator {
       const w = ease(w0, name === this.stance ? 1 : 0, k);
       if (w === 0 && name !== this.stance) {
         // (Round 16) Faded out: silent from now on, and no longer weighed every frame.
-        this.actions.get(name)!.setEffectiveWeight(0);
+        this.weigh(name, 0);
         this.stanceWeights.delete(name);
         continue;
       }
@@ -979,17 +1005,16 @@ export class PlayerAnimator {
       total += w;
     }
     for (const [name, w] of this.stanceWeights) {
-      const a = this.actions.get(name)!;
-      a.setEffectiveWeight((1 - this.loco) * (total > 0 ? w / total : 0) * (1 - tw));
-      a.time = this.stanceTime % a.getClip().duration;
+      const a = this.weigh(name, (1 - this.loco) * (total > 0 ? w / total : 0) * (1 - tw));
+      if (a) a.time = this.stanceTime % a.getClip().duration;
     }
     // (Round 16) Only the transition playing has weight: the one that played last is set back to 0 (every other one
     // already is), rather than setting all of them every frame.
-    const ta = this.trans ? this.transActs.get(this.trans.name) : undefined;
-    if (this.transAct && this.transAct !== ta) this.transAct.setEffectiveWeight(0);
+    const ta = this.trans && this.lib.meta[this.trans.name]?.kind === 'transition' ? this.act(this.trans.name) : undefined;
+    if (this.transAct && this.transAct !== ta) this.off(this.transAct);
     this.transAct = ta ?? null;
     if (ta) {
-      ta.setEffectiveWeight(tw);
+      this.on(ta, tw);
       // Just inside the end: at exactly the duration a repeating action wraps to frame 0.
       ta.time = Math.min(this.trans!.t, ta.getClip().duration - 1e-4);
     }
@@ -1372,9 +1397,37 @@ export class PlayerAnimator {
       _q.setFromAxisAngle(_up, -a * share);
       this.twistB[k]!.quaternion.copy(this.twistP[k]!.invert().multiply(_q).multiply(this.twistW[k]!));
     }
-    root.updateMatrixWorld(true);
+    // (Round 16) Only the root, the pelvis and the legs now: the feet are read next (before the leans), and the lean
+    // that follows brings the whole skeleton up to date (or, with no lean this frame, does it then: upperStale).
+    this.legsFresh();
+    this.upperStale = true;
   }
   private twistP = WARP_TWIST.map(() => new THREE.Quaternion());
+  /** (Round 16) warpHips brought only the legs up to date; the rest of the skeleton waits for the lean (or its end). */
+  private upperStale = false;
+  /** (Round 16) The root's chain down to the thighs (the pelvis), parent first. */
+  private hipChain: THREE.Object3D[] | null = null;
+
+  /**
+   * (Round 16) The world matrices of the root, the pelvis and both legs, made as updateMatrixWorld makes them (each
+   * from its own matrix and its parent's world), and of nothing else: the spine, the arms and the head are left for the
+   * lean's update of the whole skeleton. warpHips's own full update was a sixth of the matrix work (docs/anim/FEET16.md).
+   */
+  private legsFresh(): void {
+    if (!this.hipChain) {
+      const chain: THREE.Object3D[] = [];
+      for (let o = this.legs.thigh.l.parent; o && o !== this.rootB.parent; o = o.parent) chain.unshift(o);
+      this.hipChain = chain;
+    }
+    for (const o of this.hipChain) {
+      o.updateMatrix();
+      if (o.parent) o.matrixWorld.multiplyMatrices(o.parent.matrixWorld, o.matrix);
+      else o.matrixWorld.copy(o.matrix);
+      o.matrixWorldNeedsUpdate = false;
+    }
+    this.legs.thigh.l.updateMatrixWorld(true);
+    this.legs.thigh.r.updateMatrixWorld(true);
+  }
   private twistW = WARP_TWIST.map(() => new THREE.Quaternion());
 
   private lean(speed: number, yawRate: number, accel: number, press = 0): void {
@@ -1386,8 +1439,13 @@ export class PlayerAnimator {
     const pitch = THREE.MathUtils.clamp(Math.atan2(accel, G) * 0.5 + press, -0.15, 0.3);
     this.leanDbg.bank = bank;
     this.leanDbg.pitch = pitch;
-    if (Math.abs(bank) < 1e-4 && Math.abs(pitch) < 1e-4) return;
     const root = this.rootB;
+    if (Math.abs(bank) < 1e-4 && Math.abs(pitch) < 1e-4) {
+      if (this.upperStale) root.updateMatrixWorld(true);
+      this.upperStale = false;
+      return;
+    }
+    this.upperStale = false;
     const rootQ = wquat(this.player.root, _q2);
     _fwd.set(0, 0, 1).applyQuaternion(rootQ);
     const right = _w.set(-1, 0, 0).applyQuaternion(rootQ);

@@ -1200,6 +1200,18 @@ const LB = new Set(['WLB', 'MLB', 'SLB']);
 /** (Round 16) The block clips whose hands go on over the gait once the sim moves him faster than HANDS_MOVING (m/s: past a shuffle step's drift). */
 const HANDS_ON_THE_MOVE = new Set(['ol_anchor', 'ol_punch_mirror_l', 'ol_punch_mirror_r', 'dl_shed_l', 'dl_shed_r']);
 const HANDS_MOVING = 1.2;
+/**
+ * (Round 16) A get-off or the read step lets go once the sim moves him faster than OFF_MOVING (m/s, a walk) more than
+ * OFF_ANGLE (rad, 60 deg) off his facing, or (the read step) faster than READ_MOVING (m/s: the read step's 0.15 m in
+ * 0.5 s is a step in place; a linebacker moving at a jog is already flowing). Ours.
+ */
+const OFF_MOVING = 0.6;
+const OFF_ANGLE = Math.PI / 3;
+const READ_MOVING = 1.2;
+/** (Round 16) The drives paced by the sim, and how far (ours: a third either way still reads as the keyed rhythm). */
+const PACED = new Set(['dl_bull_rush', 'ol_fire_drive']);
+const PACE_LO = 0.7;
+const PACE_HI = 1.4;
 
 /** Pass-rush moves (sim/blocks.ts RushMove) to the M6 clips; the side is where the rusher goes around the blocker. */
 const RUSH_CLIP: Record<string, string | null> = { bull: 'dl_bull_rush', longArm: 'dl_bull_rush', swim: 'dl_swim', rip: 'dl_rip', club: 'dl_club', spin: 'dl_spin', speed: null };
@@ -1590,6 +1602,23 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // the slide, the shuffle), paced by the sim. Played whole, its feet are keyed in place or along its own travel, and
   // they stepped off their plants whenever the sim's block moved him otherwise (docs/anim/FEET16.md: 110 of the line's
   // 259 steps were in the anchor and the punch-and-mirror).
+  // (Round 16) The one-shots that start him moving, against the way the sim moves him: a get-off is keyed into a forward
+  // run, and the linebacker's read step is a short step in place; a man the sim already has going back or sideways
+  // (a corner bailing at the snap, a linebacker flowing to the play) goes on in his gait, the side layer or the pedal,
+  // paced by the sim. Played to the end, their feet were planted where the clip has them and stepped off it: a fifth
+  // of the back seven's and the line's steps (docs/anim/FEET16.md).
+  if (tr && !tr.done && (tr.name.startsWith('getoff_') || tr.name === 'lb_read_step') && sp * YARD > OFF_MOVING) {
+    const off = Math.abs(Math.atan2(Math.sin(Math.atan2(a.vel.y, a.vel.x) - a.face), Math.cos(Math.atan2(a.vel.y, a.vel.x) - a.face)));
+    if (off > OFF_ANGLE || (tr.name === 'lb_read_step' && sp * YARD > READ_MOVING)) anim.release();
+  }
+  // (Round 16) A drive the sim paces: the bull rush and the run block's fire-out are keyed at their own speed along their
+  // travel; they play at the sim's along it (PACE_LO to PACE_HI), as the drop and the kick-slide do.
+  if (tr && !tr.done && PACED.has(tr.name)) {
+    const m = anim.lib.meta[tr.name];
+    const n = m?.travel?.length ?? 0;
+    const keyed = m && n > 1 ? m.travel![n - 1]! / m.duration : 0;
+    if (keyed > 0) anim.retime(tr.name, { rate: Math.max(PACE_LO, Math.min(PACE_HI, (Math.max(0, along) * YARD) / (keyed * b.player.shape.scale))) });
+  }
   if (tr && !tr.done && HANDS_ON_THE_MOVE.has(tr.name) && sp * YARD > HANDS_MOVING) {
     const t = tr.t;
     anim.release();
