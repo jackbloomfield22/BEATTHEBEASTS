@@ -221,5 +221,15 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `qb_throw_long_fin_flick` | transition | 34 | 0.0 | 0.00 | 0.00 | 23.8 | — | pass |
 | `qb_throw_long_fin_drive` | transition | 45 | 0.0 | 0.04 | 0.00 | 23.8 | — | pass |
 | `qb_throw_long_fin_touch` | transition | 40 | 0.0 | 0.43 | 0.00 | 23.8 | — | pass |
+| `ol_engage` | stance | 36 | 0.0 | 0.00 | 0.00 | 41.9 | — | pass |
+| `loco_backpedal_slow` | locomotion | 14 | 1.5 | 0.00 | 0.00 | 25.4 | — | pass |
+| `lb_shuffle_fast_l` | locomotion | 10 | 3.4 | 0.00 | 0.00 | 11.5 | — | pass |
+| `lb_shuffle_fast_r` | locomotion | 10 | 3.4 | 0.00 | 0.00 | 11.5 | — | pass |
+| `ol_slide_l` | locomotion | 12 | 1.8 | 0.00 | 0.00 | 21.1 | — | pass |
+| `ol_slide_r` | locomotion | 12 | 1.8 | 0.00 | 0.00 | 21.1 | — | pass |
+| `ol_set_l` | locomotion | 12 | 1.6 | 0.00 | 0.00 | 42.3 | — | pass |
+| `ol_set_r` | locomotion | 12 | 1.6 | 0.00 | 0.00 | 42.3 | — | pass |
+| `ol_set_fast_l` | locomotion | 9 | 3.2 | 0.00 | 0.00 | 43.3 | — | pass |
+| `ol_set_fast_r` | locomotion | 9 | 3.2 | 0.00 | 0.00 | 43.3 | — | pass |
 
-**215 of 215 clips pass.**
+**225 of 225 clips pass.**

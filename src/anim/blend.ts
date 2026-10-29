@@ -90,19 +90,38 @@ export function playbackRate(clip: GaitClip, speed: number, stride: number): num
 }
 
 /** The four foot events of a cycle: left down, left up, right down, right up. */
-function events(duty: number): number[] {
-  return [0, duty % 1, 0.5, (0.5 + duty) % 1];
+function events(duty: number, out: number[]): number[] {
+  out[0] = 0;
+  out[1] = duty % 1;
+  out[2] = 0.5;
+  out[3] = (0.5 + duty) % 1;
+  return out;
 }
 
-/** Event order around the cycle (walks, with double support, differ from runs, with flight). */
-function order(duty: number): string {
-  const e = events(duty);
-  return e
-    .map((t, i) => [t, i] as const)
-    .sort((a, b) => a[0] - b[0] || a[1] - b[1])
-    .map((x) => x[1])
-    .join('');
+/**
+ * The events' order around the cycle (walks, with double support, differ from runs, with flight): the indices sorted by
+ * event, ties by index, into `idx`; returned as one number (each index a digit) to compare orders.
+ * (Round 16: allocation-free, the same order as the sort it replaces; warpPhase runs for every clip with weight every
+ * frame, and its arrays and sorts were a tenth of the animator's cost: docs/anim/FEET16.md.)
+ */
+function order(ev: readonly number[], idx: number[]): number {
+  for (let i = 0; i < 4; i++) idx[i] = i;
+  // Insertion sort of four by (event, index): a strict order, so the same permutation as any sort.
+  for (let i = 1; i < 4; i++) {
+    const k = idx[i]!;
+    let j = i - 1;
+    while (j >= 0 && (ev[idx[j]!]! > ev[k]! || (ev[idx[j]!]! === ev[k]! && idx[j]! > k))) {
+      idx[j + 1] = idx[j]!;
+      j--;
+    }
+    idx[j + 1] = k;
+  }
+  return idx[0]! * 1000 + idx[1]! * 100 + idx[2]! * 10 + idx[3]!;
 }
+const _evC = [0, 0, 0, 0];
+const _evB = [0, 0, 0, 0];
+const _idxC = [0, 0, 0, 0];
+const _idxB = [0, 0, 0, 0];
 
 /**
  * Warp a shared phase into one clip's own phase so that both clips of a
@@ -112,15 +131,19 @@ function order(duty: number): string {
  * gaits order their events differently (no warp can align those).
  */
 export function warpPhase(phase: number, clipDuty: number, blendDuty: number): number {
-  if (order(clipDuty) !== order(blendDuty)) return phase;
-  const idx = [0, 1, 2, 3].sort((a, b) => events(blendDuty)[a]! - events(blendDuty)[b]! || a - b);
-  const src = [...idx.map((i) => events(blendDuty)[i]!), 1];
-  const dst = [...idx.map((i) => events(clipDuty)[i]!), 1];
+  const evC = events(clipDuty, _evC);
+  const evB = events(blendDuty, _evB);
+  if (order(evC, _idxC) !== order(evB, _idxB)) return phase;
+  const idx = _idxB;
   for (let k = 0; k < 4; k++) {
-    if (phase >= src[k]! && phase < src[k + 1]!) {
-      const span = src[k + 1]! - src[k]!;
-      const t = span > 1e-9 ? (phase - src[k]!) / span : 0;
-      return dst[k]! + (dst[k + 1]! - dst[k]!) * t;
+    const s0 = evB[idx[k]!]!;
+    const s1 = k < 3 ? evB[idx[k + 1]!]! : 1;
+    if (phase >= s0 && phase < s1) {
+      const span = s1 - s0;
+      const t = span > 1e-9 ? (phase - s0) / span : 0;
+      const d0 = evC[idx[k]!]!;
+      const d1 = k < 3 ? evC[idx[k + 1]!]! : 1;
+      return d0 + (d1 - d0) * t;
     }
   }
   return phase;

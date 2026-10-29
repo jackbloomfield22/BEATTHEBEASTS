@@ -853,6 +853,7 @@ def action_clips() -> list[Clip]:
     from .actions_pass import pass_clips, qb_throw_long, qb_throw_quick
     from .actions_drop import drop_clips
     from .actions_p10 import p10_clips
+    from .actions_a16 import a16_clips
 
     jl = juke_left()
     return [
@@ -868,6 +869,8 @@ def action_clips() -> list[Clip]:
         *pass_clips(),
         # Passing round 10: each throw's finish by the throw (the flick, the drive, touch), from its release frame on.
         *p10_clips([qb_throw(), qb_throw_quick(), qb_throw_long()]),
+        # Animation round 16: the side layer's shuffles and the line's slide and kick-slide loops.
+        *a16_clips(),
     ]
 
 

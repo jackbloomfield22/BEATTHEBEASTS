@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Player } from '@/render/players/playerAsset';
 import { advancePhase, familyWeights, MIN_LOCO_SPEED, sampleSorted, warpPhase, type GaitClip, type GaitSample } from './blend';
 import { rotateBoneWorld, solveTwoBone } from './ik';
-import { planted, travelAt, type AnimLibrary } from './library';
+import { planted, travelAt, type AnimLibrary, type ClipMeta } from './library';
 
 // The per-player animation runtime (TECH_PLAN §9.2), layered:
 //   1. clips: a settled stance, or locomotion (the two gait clips that
@@ -73,9 +73,29 @@ export interface AnimInput {
   vel?: { x: number; z: number } | null;
   /** (Round 15) The hips may turn toward `vel` (default true; the quarterback's pocket keeps his clips square). */
   warp?: boolean;
+  /**
+   * (Round 16) Which side loops a player moving at an angle to his facing plays (the side layer, sideDrive): the
+   * shuffle (default), or the line's slide and kick-slide ('ol': an offensive lineman, who never backpedals). False
+   * turns the layer off.
+   */
+  side?: 'ol' | 'lb' | false;
+  /** (Round 16) The side the layer takes when he goes straight back (+1 his left, -1 his right): a tackle's kick foot is his outside one. */
+  sidePref?: number;
 }
 
 const FEET = ['l', 'r'] as const;
+const NO_SYNC = (): void => {};
+/**
+ * (Round 16) An eased share (the gait's, the pedal's, the side layer's, a stance's) toward 0 or 1, taken there once it's
+ * within SNAP. Eased by a fraction a frame they never got there, and a clip at a weight of 1e-5 is sampled whole by the
+ * mixer all the same: half the clips sampled each frame were under 1e-3 (tools/sim/a16_animbench.ts --count). A share
+ * this close moves no bone by more than a tenth of a millimetre.
+ */
+const SNAP = 1e-3;
+const ease = (v: number, target: number, k: number): number => {
+  const n = v + (target - v) * k;
+  return Math.abs(target - n) < SNAP ? target : n;
+};
 const G = 9.81;
 
 const _v = new THREE.Vector3();
@@ -110,9 +130,11 @@ interface FootState {
   leanOff: THREE.Vector3;
   /** (Round 15) This release's length (s, letGo). */
   relDur: number;
+  /** (Round 16) How long it has been planted (s): the pop meter's step records. */
+  age: number;
 }
 
-const newFoot = (): FootState => ({ weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), travel0: 0, spent: 0, source: null, drawn: new THREE.Vector3(), relOff: new THREE.Vector3(), step: null, stepFrom: new THREE.Vector3(), preY: 0, leanOff: new THREE.Vector3(), relDur: 0.08 });
+const newFoot = (): FootState => ({ weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), travel0: 0, spent: 0, source: null, drawn: new THREE.Vector3(), relOff: new THREE.Vector3(), step: null, stepFrom: new THREE.Vector3(), preY: 0, leanOff: new THREE.Vector3(), relDur: 0.08, age: 0 });
 
 interface TransitionState {
   name: string;
@@ -228,6 +250,17 @@ const _cb = new THREE.Vector3();
  * solves' updateMatrixWorld), so they read it as it is (the animator's cost per body: docs/anim/FEET15.md).
  */
 const wpos = (b: THREE.Object3D, v: THREE.Vector3): THREE.Vector3 => v.setFromMatrixPosition(b.matrixWorld);
+/** (Round 16) Its world rotation, the same way (getWorldQuaternion's decompose, without recomputing the ancestors first). */
+const wquat = (b: THREE.Object3D, q: THREE.Quaternion): THREE.Quaternion => {
+  b.matrixWorld.decompose(_dpos, q, _dscale);
+  return q;
+};
+const _dpos = new THREE.Vector3();
+const _lw = new THREE.Quaternion();
+const _lq = new THREE.Quaternion();
+const _lp = new THREE.Quaternion();
+const _le = new THREE.Euler();
+const _dscale = new THREE.Vector3();
 const _tb = new THREE.Vector3();
 const _fq = new THREE.Quaternion();
 /**
@@ -235,6 +268,9 @@ const _fq = new THREE.Quaternion();
  * STEP_FAR: a planted foot steps when the clip has its foot this far (m, base body) from where the lock holds it. Ours: a
  * set lineman's or a defensive back's feet are ~0.3-0.4 m apart, so 0.2 m off reads as a different stance; under it the
  * lock takes up the stride's own mismatches (the gait blends' 2-10 cm), which are gone at the next lift.
+ * (Round 16: 0.25, half the set base of the line's new loops and ol_pass (0.54 m): with the side layer and the paced
+ * one-shots the mismatches left are slow drifts, and half of round 16's remaining steps fired between 0.20 and 0.25 m,
+ * a re-set of the feet a fraction of a second before the clips would have re-set them: docs/anim/FEET16.md.)
  * REACH_MISS: or when the leg can't reach it: the hip to the ankle's target longer than the straight leg by this much
  * (m). Ours: 3 cm of a ball of the foot held short of the turf is under a pixel at broadcast distance, and a banked
  * runner's outside leg (lean: the bank tips him about the hips) reaches for the turf at the edge of its length.
@@ -262,11 +298,81 @@ const WARP_TWIST: readonly (readonly [string, number])[] = [
   ['spine_04', 0.2],
 ];
 const _up = new THREE.Vector3(0, 1, 0);
-const STEP_FAR = 0.2;
+/**
+ * (Round 16) The side layer (sideDrive): a player moving at an angle to the way he faces shuffles (the keyed lb_shuffle
+ * and its quick version, tools/blender/lib/actions_a16.py), and a lineman slides or kick-slides (ol_slide, ol_set),
+ * instead of running a forward gait turned sideways (round 15's warpHips alone: a crossover run, docs/anim/FEET16.md).
+ * SIDE_IN / SIDE_OUT: his velocity this far (rad) off his facing, and as far off straight back, takes him into the layer;
+ * under SIDE_OUT (or past pi - SIDE_OUT) he leaves it (hysteresis: a scrape's angle wobbles a few degrees a tick). Ours:
+ * past ~55 deg off his chest a coach says "shuffle", not "open and run"; the forward gait's hips cover WARP_MAX (55 deg).
+ * The line has no upper bound: a lineman retreating kick-slides (a set), he never backpedals.
+ * SIDE_VIN / SIDE_VOUT: faster than this (m/s) he turns and runs instead (the quick shuffle is keyed at 3.4 m/s and reads
+ * as a shuffle to ~1.15x; past that a linebacker's scrape is a crossover run, the round-15 gait). The line's: a tackle's
+ * vertical set is kick-slides at the sim's 3-4 m/s (the deep set keyed at 3.2 m/s, played to ~1.4x).
+ * SIDE_WARP: in the layer the hips turn toward his velocity by up to this (rad, 45 deg) off the loop's own travel (a
+ * shuffle on a slant: the hips open or close, the chest kept where he faces, as warpHips).
+ * SET_OUT: the kick-slide loop's travel off straight back (rad, 28 deg: actions_a16.py KICK_OUT, the one-shot's 1.05 m
+ * back and 0.55 m out); the line's layer blends the slide (sideways) into the set (back and out) by the angle.
+ * SIDE_FLIP: the layer changes side (left to right) only once his velocity is this far (sin) on the other side, so a
+ * tackle setting straight back keeps his kick foot.
+ */
+const SIDE_IN = (58 * Math.PI) / 180;
+const SIDE_OUT = (48 * Math.PI) / 180;
+const SIDE_VIN = 3.9;
+const SIDE_VOUT = 4.4;
+const SIDE_VIN_OL = 5.0;
+const SIDE_VOUT_OL = 5.6;
+const SIDE_WARP = (45 * Math.PI) / 180;
+const SET_OUT = (28 * Math.PI) / 180;
+const SIDE_FLIP = 0.3;
+/**
+ * (Round 16) A lineman coming into the layer kicks with his outside foot (AnimInput.sidePref) unless the sim takes him
+ * more than this far (sin, 45 deg) off straight back to the other side. A tackle's set goes back and out (SET_OUT), and
+ * his first steps off the snap wobble 20-40 deg either side of straight back at under 1 m/s (the go's left tackle: 154
+ * deg off his facing, then 172-180, in the first 0.3 s): chosen by the sign alone, he slid the wrong way for 0.4 s after
+ * the kick-slide's first kick, then flipped. On his outside foot he also keeps it to the same line (not SIDE_FLIP's).
+ */
+const SIDE_PREF_OL = Math.SQRT1_2;
+/** (Round 16) The side loops by style and side: the slide (sideways) and the set (back and out), each slow to fast. */
+const SIDE_CLIPS = {
+  lb: { l: { slide: ['lb_shuffle_l', 'lb_shuffle_fast_l'], set: [] as string[] }, r: { slide: ['lb_shuffle_r', 'lb_shuffle_fast_r'], set: [] as string[] } },
+  ol: { l: { slide: ['ol_slide_l'], set: ['ol_set_l', 'ol_set_fast_l'] }, r: { slide: ['ol_slide_r'], set: ['ol_set_r', 'ol_set_fast_r'] } },
+} as const;
+type SideFam = { slide: GaitClip[]; set: GaitClip[] };
+const STEP_FAR = 0.25;
 const REACH_MISS = 0.03;
-const STEP_T0 = 0.1;
+/** (Round 16: a little longer, for the toe-off and the landing's roll either side of the swing; see STEP_OFF.) */
+const STEP_T0 = 0.12;
 const STEP_V = 4;
-const STEP_TMAX = 0.22;
+const STEP_TMAX = 0.26;
+/**
+ * (Round 16) The step's shape (stepRoll), from our gait keyer (tools/blender/lib/gait.py; the quick steps' numbers from
+ * actions_m6_back7.py SHUFFLE and gait.py's backpedal): the heel comes up off the ball over the first STEP_OFF of the step
+ * (toe-off, to STEP_TOE: the shuffle's 24 deg), the swing runs to STEP_ON, and the foot lands heel first (STEP_STRIKE toes
+ * up: between the keyer's walk, 16, and jog, 6) and rolls flat over the rest; a clip that has him on the balls of his
+ * feet (pitched STEP_ON_BALLS or more: a set lineman, a shuffle's 16) lands on the ball, as the keyer's forefoot gaits do.
+ */
+const STEP_OFF = 0.2;
+const STEP_ON = 0.85;
+const STEP_TOE = (24 * Math.PI) / 180;
+const STEP_STRIKE = (9 * Math.PI) / 180;
+const STEP_ON_BALLS = (12 * Math.PI) / 180;
+/**
+ * (Round 16) The rest foot (tools/blender/lib/skeleton.py J, poses.py HEEL_REST): the ankle 6.3 cm over and 14.5 cm
+ * behind the ball (its pitch), and the heel 21.0 cm behind the ball and 1.0 cm under it: off the ankle-from-ball
+ * direction by HEEL_TURN (rad, down) and HEEL_K times its length.
+ */
+const FOOT_REST_PITCH = Math.atan2(0.063, 0.145);
+const HEEL_TURN = -(Math.atan2(0.063, 0.145) + Math.atan2(0.01, 0.21));
+const HEEL_K = Math.hypot(0.21, 0.01) / Math.hypot(0.145, 0.063);
+const smooth01 = (x: number): number => {
+  const t = x <= 0 ? 0 : x >= 1 ? 1 : x;
+  return t * t * (3 - 2 * t);
+};
+const _so = new THREE.Vector3();
+const _sa = new THREE.Vector3();
+const _sh = new THREE.Vector3();
+const _sq = new THREE.Quaternion();
 const STEP_H0 = 0.03;
 const STEP_HK = 0.12;
 const STEP_HMAX = 0.09;
@@ -276,6 +382,16 @@ const REL_V = 3;
 const REL_MAX = 0.25;
 /** (Round 15) A planted foot the clips lift within this long (s) lets go early rather than step: a quarter of a run's swing. */
 const LIFT_SOON = 0.06;
+/**
+ * (Round 16) A planted foot only off the clip's (not out of reach) that the clips lift within HOLD_SOON (s) holds on
+ * to the lift, up to STEP_HOLD (m) off: a third of a jog's stance (0.26 s), and the stance's own width (the leg no
+ * further out than a set lineman's base). Ours.
+ */
+const HOLD_SOON = 0.1;
+/** (Round 16) How far ahead (s) and how finely the clips' next touch-down is looked for, for a fading lock (TOUCH: a run's swing is 0.2-0.4 s). */
+const TOUCH_STEP = 0.02;
+const TOUCH_MAX = 0.3;
+const STEP_HOLD = 0.3;
 /** (Round 15) The lock follows the clip's ball down while it's still landing: the ball this far (m) under where the lock took it. */
 const SETTLE = 0.002;
 /** (Round 15) A lock this far engaged (its weight) is planted: the pop meter's own line (popMeter.ts LOCK_FULL). */
@@ -286,6 +402,44 @@ const KNEE_BENT = 0.03;
 export class PlayerAnimator {
   readonly mixer: THREE.AnimationMixer;
   private actions = new Map<string, THREE.AnimationAction>();
+  /** (Round 16) The transition given weight last frame. */
+  private transAct: THREE.AnimationAction | null = null;
+
+  /** (Round 16) A clip's action, made (playing, silent) the first time it's wanted. */
+  private act(name: string): THREE.AnimationAction | undefined {
+    let a = this.actions.get(name);
+    if (!a) {
+      const clip = this.lib.clips.get(name);
+      if (!clip) return undefined;
+      a = this.mixer.clipAction(clip);
+      a.setLoop(THREE.LoopRepeat, Infinity);
+      a.play();
+      this.off(a);
+      this.actions.set(name, a);
+    }
+    return a;
+  }
+
+  /**
+   * (Round 16) A clip at a weight: made if it's wanted and isn't yet; at 0, off (`enabled` false: the mixer passes it by
+   * without stepping its time, the same as a weight of 0). Returns its action, if it has one.
+   */
+  private weigh(name: string, w: number): THREE.AnimationAction | undefined {
+    const a = w > 0 ? this.act(name) : this.actions.get(name);
+    if (a) {
+      if (w > 0) this.on(a, w);
+      else this.off(a);
+    }
+    return a;
+  }
+  private on(a: THREE.AnimationAction, w: number): void {
+    a.enabled = true;
+    a.setEffectiveWeight(w);
+  }
+  private off(a: THREE.AnimationAction): void {
+    a.enabled = false;
+    a.setEffectiveWeight(0);
+  }
   private stance = 'stance_idle';
   private stanceWeights = new Map<string, number>();
   private stanceTime = 0;
@@ -294,6 +448,30 @@ export class PlayerAnimator {
   /** The backpedal cycle's share of the gait layer and its own phase. */
   private back = 0;
   private backPhase = 0;
+  /**
+   * (Round 16) The side layer (sideDrive): its shares to the left and right (eased), its phase (the left loops'; the
+   * right ones play half a cycle on, so each foot keeps its own phase through a change of side), the sim's speed along
+   * the loop's travel (eased), the slide-to-set blend (the line's), the side it's on and whether it's on (hysteresis).
+   */
+  private sideL = 0;
+  private sideR = 0;
+  sidePhase = 0;
+  private sideSpeed = 0;
+  private sideU = 0;
+  private sideDir = 1;
+  private sideOn = false;
+  private sideStyle: 'lb' | 'ol' = 'lb';
+  /** Its loops (preallocated: no per-frame garbage), by style and side, and each one's weight and phase this frame. */
+  private sideFam: Record<'lb' | 'ol', Record<'l' | 'r', SideFam>> = { lb: { l: { slide: [], set: [] }, r: { slide: [], set: [] } }, ol: { l: { slide: [], set: [] }, r: { slide: [], set: [] } } };
+  private sideClips: GaitClip[] = [];
+  /** (Round 16) The pedal's family: its slow version and itself (slow to fast), and this frame's sample. */
+  private bpSlow: GaitClip | null = null;
+  private backFam: GaitClip[] = [];
+  private backSmp: GaitSample = { a: null as unknown as GaitClip, b: null as unknown as GaitClip, w: 1, stride: 0 };
+  private sideRight: boolean[] = [];
+  private sideW: number[] = [];
+  private sidePh: number[] = [];
+  private sideSmp: GaitSample[] = [0, 1].map(() => ({ a: null as unknown as GaitClip, b: null as unknown as GaitClip, w: 0, stride: 0 }));
   private feet: Record<'l' | 'r', FootState> = { l: newFoot(), r: newFoot() };
   private look = new THREE.Quaternion();
   private padSpring = { x: 0, v: 0 };
@@ -367,10 +545,10 @@ export class PlayerAnimator {
    * (Round 15, the pop meter's causes) Each foot's lock this frame: how far the leg's IK fell short of the ankle's
    * target (m: out of reach), and what re-planted it this frame ('' none; else the source it left and the one it took).
    */
-  readonly lockDbg = { l: { miss: 0, replant: '', stepped: false, why: '', cb: new THREE.Vector3() }, r: { miss: 0, replant: '', stepped: false, why: '', cb: new THREE.Vector3() } };
+  readonly lockDbg = { l: { miss: 0, replant: '', stepped: false, why: '', cb: new THREE.Vector3(), far: 0, over: 0, age: 0 }, r: { miss: 0, replant: '', stepped: false, why: '', cb: new THREE.Vector3(), far: 0, over: 0, age: 0 } };
   /** (Round 15) The gait's state this frame, for the pop meter's traces: the speed fed, the loco and backpedal shares, the phases. */
-  gaitDbg(): { speed: number; loco: number; back: number; phase: number; backPhase: number } {
-    return { speed: this.lastSpeed, loco: this.loco, back: this.back, phase: this.phase, backPhase: this.backPhase };
+  gaitDbg(): { speed: number; loco: number; back: number; phase: number; backPhase: number; side: number; sideSpeed: number; sidePhase: number; sideU: number; style: string } {
+    return { speed: this.lastSpeed, loco: this.loco, back: this.back, phase: this.phase, backPhase: this.backPhase, side: this.sideL - this.sideR, sideSpeed: this.sideSpeed, sidePhase: this.sidePhase, sideU: this.sideU, style: this.sideStyle };
   }
   private lastSpeed = 0;
   /** (Round 15) This frame's lean (rad): the bank into the turn and the pitch, for the per-frame log. */
@@ -381,22 +559,61 @@ export class PlayerAnimator {
     readonly lib: AnimLibrary,
   ) {
     this.mixer = new THREE.AnimationMixer(player.root);
-    for (const [name, clip] of lib.clips) {
-      const a = this.mixer.clipAction(clip);
-      a.setLoop(THREE.LoopRepeat, Infinity);
-      a.play();
-      a.setEffectiveWeight(0);
-      this.actions.set(name, a);
-    }
+    // An action for every clip, in the library's order (the mixer blends them in that order; made as each is first
+    // wanted instead, the order changes a three-way crossfade by a few mm: tools/sim/a16_animbench.ts --dump). (Round 16)
+    // Each is off (`enabled` false) while it has no weight: the mixer passes it by without stepping its time.
+    for (const n of lib.clips.keys()) this.act(n);
     this.stanceWeights.set(this.stance, 1);
+    this.rootB = this.bone('root');
+    this.chestB = this.bone('spine_04');
+    this.headB = this.bone('head');
+    this.neckB = this.bone('neck_02');
+    const both = (n: string) => ({ l: this.bone(`${n}_l`), r: this.bone(`${n}_r`) });
+    this.legs = { toe: both('toe'), foot: both('foot'), thigh: both('thigh'), calf: both('calf'), pad: both('pad') };
+    this.twistB = WARP_TWIST.map(([n]) => this.bone(n));
     for (const bone of player.bones.values()) this.animPose.push([bone, bone.quaternion.clone()]);
-    this.animRootPos.copy(this.bone('root').position);
+    // (Round 16) A bone's Euler rotation is never read (its matrix is made from its quaternion, and nothing in the game
+    // reads a bone's .rotation), so its quaternion no longer keeps it in step: three converts the quaternion to Euler
+    // angles on every write (Object3D's onQuaternionChange), and the clips, the restore of the clip pose, the overlays
+    // and the solves write every bone several times a frame. It was a fifth of the animator's time (docs/anim/FEET16.md).
+    for (const bone of player.bones.values()) bone.quaternion._onChange(NO_SYNC);
+    this.animRootPos.copy(this.rootB.position);
     for (const f of lib.families) {
       for (const g of f) if (!this.locos.includes(g)) this.locos.push(g);
       this.samples.push({ a: f[0]!, b: f[0]!, w: 0, stride: 0 });
     }
     this.locoW = this.locos.map(() => 0);
     this.locoPhase = this.locos.map(() => 0);
+    // (Round 16) The side loops, from the library (an older library without them: no side layer).
+    for (const st of ['lb', 'ol'] as const) {
+      for (const sd of ['l', 'r'] as const) {
+        for (const part of ['slide', 'set'] as const) {
+          const out = this.sideFam[st][sd][part];
+          for (const n of SIDE_CLIPS[st][sd][part]) {
+            const m = lib.meta[n];
+            if (!m || !lib.clips.has(n)) continue;
+            const [a, b] = m.contacts.l[0]!;
+            const g = this.sideClips.find((c) => c.name === n) ?? { name: n, speed: m.speed, duration: m.duration, duty: ((b - a + m.frames) % m.frames) / m.frames };
+            if (!this.sideClips.includes(g)) {
+              this.sideClips.push(g);
+              this.sideRight.push(sd === 'r');
+            }
+            out.push(g);
+          }
+          out.sort((x, y) => x.speed - y.speed);
+        }
+      }
+    }
+    this.sideW = this.sideClips.map(() => 0);
+    // (Round 16) The slow pedal, when the library has it.
+    const ms = lib.meta.loco_backpedal_slow;
+    const mb = lib.meta.loco_backpedal;
+    if (ms && mb && lib.clips.has('loco_backpedal_slow')) {
+      const gc = (n: string, m: ClipMeta): GaitClip => ({ name: n, speed: m.speed, duration: m.duration, duty: 0.5 });
+      this.bpSlow = gc('loco_backpedal_slow', ms);
+      this.backFam = [this.bpSlow, gc('loco_backpedal', mb)];
+    }
+    this.sidePh = this.sideClips.map(() => 0);
   }
 
   /** Forget all runtime state (phase, planted feet, springs): replay from a clean start. */
@@ -411,6 +628,9 @@ export class PlayerAnimator {
       this.feet[s].step = null;
     }
     this.give.set(0, 0, 0);
+    this.sideL = this.sideR = 0;
+    this.sideOn = false;
+    this.sideSpeed = 0;
     this.look.identity();
     this.padSpring = { x: 0, v: 0 };
     this.chestY = [];
@@ -449,11 +669,13 @@ export class PlayerAnimator {
    * which carries on from the phase it's at (a cut's run-out steps giving
    * way to the burst's drive).
    */
-  release(): void {
+  release(toGait = true): void {
     const tr = this.trans;
     if (!tr || tr.done) return;
     tr.done = true;
-    this.loco = 1;
+    // (Round 16: or, toGait false, into whatever his speed asks for: a get-off let go as the sim starts him back or
+    // sideways at a walk eases into the gait rather than taking it at once.)
+    if (toGait) this.loco = 1;
   }
 
   /**
@@ -689,6 +911,11 @@ export class PlayerAnimator {
     }
   }
 
+  /** (Round 16) The stance he settles into (setStance). */
+  get stanceName(): string {
+    return this.stance;
+  }
+
   /** Settle into a stance (crossfades from whatever is playing). */
   setStance(name: string): void {
     if (!this.lib.clips.has(name)) return;
@@ -701,6 +928,13 @@ export class PlayerAnimator {
     if (!b) throw new Error(`bone ${name} missing`);
     return b;
   }
+  /** (Round 16) The bones the animator reads every frame, looked up once (the animator's cost: docs/anim/FEET16.md). */
+  private rootB!: THREE.Bone;
+  private chestB!: THREE.Bone;
+  private headB!: THREE.Bone;
+  private neckB!: THREE.Bone;
+  private legs!: Record<'toe' | 'foot' | 'thigh' | 'calf' | 'pad', Record<'l' | 'r', THREE.Bone>>;
+  private twistB!: THREE.Bone[];
 
   update(dt: number, input: AnimInput): void {
     this.turned = false;
@@ -709,7 +943,11 @@ export class PlayerAnimator {
     const scale = this.player.shape.scale;
     // 1. Clips.
     const k = 1 - Math.exp(-dt * 8); // ~0.12 s fades
-    this.loco += ((speed > MIN_LOCO_SPEED ? 1 : 0) - this.loco) * k;
+    // (Round 16) The side layer's shares, eased as the backpedal's.
+    this.sideL = ease(this.sideL, this.sideOn && this.sideDir > 0 ? 1 : 0, k);
+    this.sideR = ease(this.sideR, this.sideOn && this.sideDir < 0 ? 1 : 0, k);
+    const side = this.sideL + this.sideR;
+    this.loco = ease(this.loco, (side > 0.5 ? this.sideSpeed : speed) > MIN_LOCO_SPEED ? 1 : 0, k);
     // The gait families (M6.5 #11): every clip of each family with weight,
     // on one shared phase advanced by the blended stride, each warped so the
     // feet plant and lift together.
@@ -734,11 +972,19 @@ export class PlayerAnimator {
       lw[this.locos.indexOf(smp.a)]! += fw * (1 - smp.w);
       lw[this.locos.indexOf(smp.b)]! += fw * smp.w;
     }
+    // (Round 16) The side loops with weight, on the side layer's phase (sideLoops).
+    const sd = this.sideLoops(side, scale, dt);
     const lastPhase = this.phase;
-    this.back += ((input.backpedal ? 1 : 0) - this.back) * k;
+    this.back = ease(this.back, input.backpedal ? 1 : 0, k);
     const bpMeta = this.lib.meta.loco_backpedal;
-    if (bpMeta && this.back > 0.01) this.backPhase = advancePhase(this.backPhase, speed, dt, bpMeta.speed * bpMeta.duration * scale);
-    if (!input.backpedal) this.phase = advancePhase(this.phase, speed, dt, stride);
+    // (Round 16) The phases advance by the ground he covers this frame (the sim's speed as it is), the clips' blend by the
+    // eased speed: stride matching is the feet moving back at the ground speed, and paced by the eased speed (60 ms behind
+    // the sim) a back accelerating at 10 m/s^2 ran his gait 0.6 m/s slow, his planted foot left behind the body.
+    // (Round 16) The pedal's stride: its slow version's (loco_backpedal_slow, actions_a16.py) blended in under its speed.
+    const bpSlow = this.bpSlow;
+    const bpStride = bpMeta ? (bpSlow ? sampleSorted(this.backFam, speed, scale, this.backSmp).stride : bpMeta.speed * bpMeta.duration * scale) : 0;
+    if (bpMeta && this.back > 0.01) this.backPhase = advancePhase(this.backPhase, this.rawSpeed, dt, bpStride);
+    if (!input.backpedal) this.phase = advancePhase(this.phase, this.rawSpeed, dt, stride);
     // A queued stop starts at the left touch-down (the phase wrapping).
     if (this.queued && (this.phase < lastPhase || this.loco < 0.5)) {
       this.start(this.queued);
@@ -777,42 +1023,65 @@ export class PlayerAnimator {
     // (warped phases), so the blended foot is either planted in all or swinging in all.
     for (let j = 0; j < this.locos.length; j++) {
       const gait = this.locos[j]!;
-      const a = this.actions.get(gait.name)!;
-      const p = warpPhase(this.phase, gait.duty, duty);
-      this.locoPhase[j] = p;
-      a.setEffectiveWeight(this.loco * lw[j]! * (1 - tw) * (1 - this.back));
-      a.time = p * gait.duration;
+      const w = this.loco * lw[j]! * (1 - tw) * (1 - this.back) * (1 - side);
+      const a = this.weigh(gait.name, w);
+      // (Round 16) A clip with no weight leaves the pose alone: its phase isn't needed (warpPhase was a tenth of the cost).
+      if (w > 0 || lw[j]! > 0.02) {
+        const p = warpPhase(this.phase, gait.duty, duty);
+        this.locoPhase[j] = p;
+        if (a) a.time = p * gait.duration;
+      }
     }
-    const bp = this.actions.get('loco_backpedal');
-    if (bp && bpMeta) {
-      bp.setEffectiveWeight(this.loco * this.back * (1 - tw));
-      bp.time = this.backPhase * bpMeta.duration;
+    if (bpMeta) {
+      const wb = this.loco * this.back * (1 - tw) * (1 - side);
+      const ws = bpSlow ? wb * (1 - this.backSmp.w) : 0;
+      const bp = this.weigh('loco_backpedal', wb - ws);
+      if (bp) bp.time = this.backPhase * bpMeta.duration;
+      if (bpSlow) {
+        const sl = this.weigh(bpSlow.name, ws);
+        // (The same contacts as the pedal's, the left foot down at 0 for half the cycle: no warp.)
+        if (sl) sl.time = this.backPhase * bpSlow.duration;
+      }
+    }
+    for (let j = 0; j < this.sideClips.length; j++) {
+      const w = this.sideW[j]!;
+      const a = this.weigh(this.sideClips[j]!.name, this.loco * w * (1 - tw));
+      if (a && w > 0) a.time = this.sidePh[j]! * this.sideClips[j]!.duration;
     }
     this.stanceTime += dt;
     let total = 0;
     for (const [name, w0] of this.stanceWeights) {
-      const w = w0 + ((name === this.stance ? 1 : 0) - w0) * k;
+      const w = ease(w0, name === this.stance ? 1 : 0, k);
+      if (w === 0 && name !== this.stance) {
+        // (Round 16) Faded out: silent from now on, and no longer weighed every frame.
+        this.weigh(name, 0);
+        this.stanceWeights.delete(name);
+        continue;
+      }
       this.stanceWeights.set(name, w);
       total += w;
     }
     for (const [name, w] of this.stanceWeights) {
-      const a = this.actions.get(name)!;
-      a.setEffectiveWeight((1 - this.loco) * (total > 0 ? w / total : 0) * (1 - tw));
-      a.time = this.stanceTime % a.getClip().duration;
+      const a = this.weigh(name, (1 - this.loco) * (total > 0 ? w / total : 0) * (1 - tw));
+      if (a) a.time = this.stanceTime % a.getClip().duration;
     }
-    for (const [name, a] of this.actions) {
-      if (this.lib.meta[name]?.kind !== 'transition') continue;
-      const on = this.trans?.name === name;
-      a.setEffectiveWeight(on ? tw : 0);
+    // (Round 16) Only the transition playing has weight: the one that played last is set back to 0 (every other one
+    // already is), rather than setting all of them every frame.
+    const ta = this.trans && this.lib.meta[this.trans.name]?.kind === 'transition' ? this.act(this.trans.name) : undefined;
+    if (this.transAct && this.transAct !== ta) this.off(this.transAct);
+    this.transAct = ta ?? null;
+    if (ta) {
+      this.on(ta, tw);
       // Just inside the end: at exactly the duration a repeating action wraps to frame 0.
-      if (on) a.time = Math.min(this.trans!.t, a.getClip().duration - 1e-4);
+      ta.time = Math.min(this.trans!.t, ta.getClip().duration - 1e-4);
     }
     // Everything else (the backpedal, future clips) stays silent unless driven.
-    const rootBone = this.bone('root');
-    for (const [bone, q] of this.animPose) bone.quaternion.copy(q);
+    const rootBone = this.rootB;
+    const ap = this.animPose;
+    for (let i = 0; i < ap.length; i++) ap[i]![0].quaternion.copy(ap[i]![1]);
     rootBone.position.copy(this.animRootPos);
     this.mixer.update(0);
-    for (const [bone, q] of this.animPose) q.copy(bone.quaternion);
+    for (let i = 0; i < ap.length; i++) ap[i]![1].copy(ap[i]![0].quaternion);
     this.animRootPos.copy(rootBone.position);
     // Overlays over the clips (the snapshot above is what the next frame
     // restores, so they never compound).
@@ -841,19 +1110,21 @@ export class PlayerAnimator {
         this.applyOverlay(sl.o, sl.w * at.w);
       }
     }
-    this.player.root.updateMatrixWorld(true);
+    // (Round 16) The skeleton and what it hangs from, not the meshes beside it (the render brings those up to date).
+    rootBone.parent?.updateWorldMatrix(true, false);
+    rootBone.updateMatrixWorld(true);
 
     // (Round 15) The hips toward where he's going, the chest kept where he faces.
     this.warpHips(tw);
     // (Passing round 14) The feet as the clips keyed them, before the leans tilt the whole body: a planted foot stays
     // flat on the ground under a lean (lockFoot, for AnimInput.holdFeet).
     // (Round 15) And the balls' heights before the leans, for the lock's settle (lockFoot).
-    for (const s of FEET) this.preBallY[s] = wpos(this.bone(`toe_${s}`), this.preBall[s]).y;
+    for (const s of FEET) this.preBallY[s] = wpos(this.legs.toe[s], this.preBall[s]).y;
     if (input.holdFeet) {
       for (const s of FEET) {
-        const f = this.bone(`foot_${s}`);
-        f.getWorldQuaternion(this.footQ[s]);
-        f.getWorldPosition(this.footOff[s]).sub(this.bone(`toe_${s}`).getWorldPosition(_v));
+        const f = this.legs.foot[s];
+        wquat(f, this.footQ[s]);
+        wpos(f, this.footOff[s]).sub(wpos(this.legs.toe[s], _v));
         this.footBall[s] = _v.y;
       }
     }
@@ -866,7 +1137,7 @@ export class PlayerAnimator {
     const leanW = input.holdFeet ? 1 - tw : 1;
     this.lean(speed, (input.yawRate ?? 0) * leanW, (input.accel ?? 0) * leanW, this.pressW * PRESS_PITCH);
     // Where the trunk is before any contact lean (contact.ts reads it: leaning must not feed back into the lean).
-    this.bone('spine_04').getWorldPosition(this.trunk);
+    wpos(this.chestB, this.trunk);
     const cl = input.contactLean;
     if (cl && (cl.x !== 0 || cl.z !== 0)) this.leanToward(cl.x, cl.z);
     // 2. Foot lock.
@@ -874,41 +1145,62 @@ export class PlayerAnimator {
     // warp can't align them, e.g. walk against jog, the stricter of the two).
     const plant = this.plant;
     // (Round 15) And whether the clips lift it within LIFT_SOON: a foot that can't hold that close to its lift lets go
-    // into its swing (lockFoot) instead of stepping.
-    const phaseSoon = stride > 1e-6 ? this.phase + (speed * LIFT_SOON) / stride : this.phase;
-    const bpSoon = bpMeta ? this.backPhase + (speed * LIFT_SOON) / Math.max(1e-6, bpMeta.speed * bpMeta.duration * scale) : 0;
+    // into its swing (lockFoot) instead of stepping. (Round 16: and within HOLD_SOON, when a foot that has only drifted
+    // off the clip's holds on to its lift rather than stepping just before it.)
+    // (Round 16) The stance playing, if its feet are keyed to lift (its contacts aren't the whole loop) and it has most of the weight.
+    const stMeta = this.lib.meta[this.stance];
+    const stFull = (c: [number, number][], n: number) => c.length === 1 && c[0]![0] === 0 && c[0]![1] === n;
+    const stPart = stMeta && (this.stanceWeights.get(this.stance) ?? 0) > 0.5 && !(stFull(stMeta.contacts.l, stMeta.frames) && stFull(stMeta.contacts.r, stMeta.frames)) ? stMeta : null;
+    const tr0 = this.trans;
+    const mode = tr0 && trMeta && tw > 0.5 ? 0 : this.loco > 0.5 && side > 0.5 && sd.stride > 1e-6 ? 1 : this.loco > 0.5 && this.back > 0.5 && bpMeta ? 2 : this.loco > 0.5 ? 3 : stPart ? 4 : 5;
+    /** Whether the clips have the foot down `h` s from now (h 0: now). */
+    const downIn = (s: 'l' | 'r', h: number): boolean => {
+      if (mode === 0) return planted(trMeta!, s, Math.min(tr0!.t + h * tr0!.rate, trMeta!.duration - 1e-4) / trMeta!.duration);
+      if (mode === 1) {
+        // (Round 16) The side layer's loops: planted when every one with weight has it planted.
+        const p = h > 0 ? this.sidePhase + (this.sideSpeed * h) / sd.stride : 0;
+        for (let j = 0; j < this.sideClips.length; j++) {
+          if (this.sideW[j]! > 0.02 && !planted(this.lib.meta[this.sideClips[j]!.name]!, s, h > 0 ? warpPhase((p + (this.sideRight[j] ? 0.5 : 0)) % 1, this.sideClips[j]!.duty, sd.duty) : this.sidePh[j]!)) return false;
+        }
+        return true;
+      }
+      if (mode === 2) return planted(bpMeta!, s, h > 0 ? (this.backPhase + (speed * h) / Math.max(1e-6, bpStride)) % 1 : this.backPhase);
+      if (mode === 3) {
+        const p = stride > 1e-6 ? this.phase + (speed * h) / stride : this.phase;
+        for (let j = 0; j < this.locos.length; j++) {
+          if (lw[j]! > 0.02 && !planted(this.lib.meta[this.locos[j]!.name]!, s, h > 0 ? warpPhase(p % 1, this.locos[j]!.duty, duty) : this.locoPhase[j]!)) return false;
+        }
+        return true;
+      }
+      // (Round 16) A stance whose feet are keyed to move (the engaged hand fight's chopping feet: dl_engage, ol_engage)
+      // plants them by its own contacts, as the gait does: the feet re-set under the block where the clip puts them,
+      // rather than held while the sim drifts the pair and then stepped off (docs/anim/FEET16.md).
+      if (mode === 4) return planted(stPart!, s, ((this.stanceTime + h) % stPart!.duration) / stPart!.duration);
+      return this.loco < 0.5;
+    };
     for (const s of FEET) {
       const pl = plant[s];
-      if (this.trans && trMeta && tw > 0.5) {
-        // The transition's own contacts (its frames are absolute, not a cycle).
-        pl.down = planted(trMeta, s, Math.min(this.trans.t, trMeta.duration - 1e-4) / trMeta.duration);
-        pl.soon = !planted(trMeta, s, Math.min(this.trans.t + LIFT_SOON * this.trans.rate, trMeta.duration - 1e-4) / trMeta.duration);
-        pl.source = 'trans';
-        continue;
-      }
-      let down: boolean;
-      let soon = false;
-      if (this.loco > 0.5 && this.back > 0.5 && bpMeta) {
-        down = planted(bpMeta, s, this.backPhase);
-        soon = !planted(bpMeta, s, bpSoon % 1);
-      } else if (this.loco > 0.5) {
-        down = true;
-        for (let j = 0; j < this.locos.length; j++) {
-          if (lw[j]! > 0.02) {
-            const m = this.lib.meta[this.locos[j]!.name]!;
-            down &&= planted(m, s, this.locoPhase[j]!);
-            soon ||= !planted(m, s, warpPhase(phaseSoon % 1, this.locos[j]!.duty, duty));
+      pl.down = downIn(s, 0);
+      pl.soon = mode !== 5 && !downIn(s, LIFT_SOON);
+      pl.hold = mode !== 5 && !downIn(s, HOLD_SOON);
+      pl.source = mode === 0 ? 'trans' : this.loco > 0.5 ? 'loco' : 'stand';
+      // (Round 16) A lifted foot whose lock still fades out: when the clips put it down again (lockFoot lets the fade
+      // finish by then).
+      const st = this.feet[s];
+      pl.touch = Infinity;
+      if (!pl.down && mode !== 5 && st.weight > 0 && !st.locked && !st.step) {
+        for (let h = TOUCH_STEP; h <= TOUCH_MAX + 1e-9; h += TOUCH_STEP) {
+          if (downIn(s, h)) {
+            pl.touch = h;
+            break;
           }
         }
-      } else down = this.loco < 0.5;
-      pl.down = down;
-      pl.soon = soon;
-      pl.source = this.loco > 0.5 ? 'loco' : 'stand';
+      }
     }
     // (Passing round 14) The body over its planted feet, then each foot's lock.
     this.holdFeet = !!input.holdFeet;
     this.holdOver(dt, input.groundVelocity);
-    for (const s of FEET) this.lockFoot(s, plant[s].source, plant[s].down, dt, input.groundVelocity, plant[s].soon);
+    for (const s of FEET) this.lockFoot(s, plant[s].source, plant[s].down, dt, input.groundVelocity, plant[s].soon, plant[s].hold, plant[s].touch);
     // 4 and 5.
     this.lookAt(input.lookAt ?? null, dt, !!input.lookWide);
     this.pads(dt);
@@ -1011,6 +1303,44 @@ export class PlayerAnimator {
     }
   }
 
+  /**
+   * (Round 16) The side layer's loops this frame: each one's weight (sideW: the layer's share to each side, the slide or
+   * the set by sideU, the two speeds that bracket the side speed) and phase (sidePh: the layer's phase, warped so every
+   * loop plants and lifts each foot together, the right loops half a cycle on), the phase advanced by the blended stride.
+   * Returns the blended stride (m per cycle) and duty.
+   */
+  private sideLoops(side: number, scale: number, dt: number): { stride: number; duty: number } {
+    const sw = this.sideW;
+    sw.fill(0);
+    const out = this._sideOut;
+    out.stride = 0;
+    out.duty = 0;
+    if (side <= 0) return out;
+    const fam = this.sideFam[this.sideStyle];
+    const u = fam.l.set.length ? this.sideU : 0;
+    const smp = this.sideSmp[0]!;
+    const add = (list: GaitClip[], w: number) => {
+      if (!list.length || w <= 0) return;
+      sampleSorted(list, this.sideSpeed, scale, smp);
+      sw[this.sideClips.indexOf(smp.a)]! += w * (1 - smp.w);
+      sw[this.sideClips.indexOf(smp.b)]! += w * smp.w;
+      out.stride += w * smp.stride;
+      out.duty += w * (smp.a.duty + (smp.b.duty - smp.a.duty) * smp.w);
+    };
+    add(fam.l.slide, this.sideL * (1 - u));
+    add(fam.l.set, this.sideL * u);
+    add(fam.r.slide, this.sideR * (1 - u));
+    add(fam.r.set, this.sideR * u);
+    out.stride /= side;
+    out.duty /= side;
+    this.sidePhase = advancePhase(this.sidePhase, this.sideOn ? this.rawSide : this.sideSpeed, dt, out.stride);
+    for (let j = 0; j < this.sideClips.length; j++) {
+      if (sw[j]! > 0) this.sidePh[j] = warpPhase((this.sidePhase + (this.sideRight[j] ? 0.5 : 0)) % 1, this.sideClips[j]!.duty, out.duty);
+    }
+    return out;
+  }
+  private _sideOut = { stride: 0, duty: 0 };
+
   /** (Round 15) The hips' turn toward the sim's velocity (rad, + left of the facing), eased; and the gait's eased ground speed. */
   private warp = 0;
   private groundSpeed = 0;
@@ -1027,27 +1357,98 @@ export class PlayerAnimator {
     const v = input.vel;
     const base = Math.max(0, input.speed);
     let want = 0;
-    if (v && input.warp !== false) {
+    // (Round 16) The side layer needs the angle too, the quarterback's included (his hips stay square: warp false).
+    const sideOk = input.side !== false && this.sideClips.length > 0;
+    let psi: number | null = null;
+    if (v && (input.warp !== false || sideOk)) {
       const sp = Math.hypot(v.x, v.z);
       const fwd = _fwd.set(0, 0, 1).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
       if (sp > WARP_MIN) {
-        let a = Math.atan2(v.x, v.z) - Math.atan2(fwd.x, fwd.z);
+        const th0 = Math.atan2(v.x, v.z) - Math.atan2(fwd.x, fwd.z);
+        let a = th0;
         if (input.backpedal) a -= Math.PI;
         a = Math.atan2(Math.sin(a), Math.cos(a));
-        // (Going away from where he faces without a pedal, a step or two back: no turn, the hips square.)
-        want = Math.abs(a) > WARP_OFF ? 0 : THREE.MathUtils.clamp(a, -WARP_MAX, WARP_MAX);
-        this.warpRes = a;
+        if (sideOk) psi = this.sideMode(input, Math.atan2(Math.sin(th0), Math.cos(th0)), sp);
+        else this.sideOn = false;
+        if (input.warp !== false) {
+          if (psi !== null) {
+            // (Round 16) In the side layer the hips turn toward his velocity off the loop's own travel (sideAxis).
+            want = this.sideDir * THREE.MathUtils.clamp(psi - this.sideAxis(psi), -SIDE_WARP, SIDE_WARP);
+          } else {
+            // (Going away from where he faces without a pedal, a step or two back: no turn, the hips square.)
+            want = Math.abs(a) > WARP_OFF ? 0 : THREE.MathUtils.clamp(a, -WARP_MAX, WARP_MAX);
+          }
+          this.warpRes = a;
+        }
       }
-    }
+    } else this.sideOn = false;
     const k = 1 - Math.exp(-dt * WARP_RATE);
     this.warp += (want - this.warp) * k;
-    if (!v || input.warp === false) return base;
+    // (Round 16) The side layer's speed: the sim's along the loop's travel, as the hips have turned it.
+    const ke = 1 - Math.exp(-dt / 0.06);
+    if (this.sideOn && v) {
+      const sp = Math.hypot(v.x, v.z);
+      let side = sp;
+      if (psi !== null) {
+        const r = psi - this.sideDir * this.warp;
+        const ax = this.sideAxis(r);
+        this.sideU = this.sideStyle === 'ol' ? THREE.MathUtils.clamp((ax - Math.PI / 2) / (Math.PI / 2 - SET_OUT), 0, 1) : 0;
+        side = sp * Math.max(0, Math.cos(r - ax));
+      }
+      this.rawSide = side;
+      this.sideSpeed += (side - this.sideSpeed) * ke;
+    } else this.sideSpeed += (0 - this.sideSpeed) * ke;
+    if (!v || input.warp === false) {
+      this.rawSpeed = base;
+      return base;
+    }
     const sp = Math.hypot(v.x, v.z);
     const along = sp > WARP_MIN ? sp * Math.max(0, Math.cos(this.warpRes - this.warp)) : base;
-    this.groundSpeed += (along - this.groundSpeed) * (1 - Math.exp(-dt / 0.06));
+    this.rawSpeed = along;
+    this.groundSpeed += (along - this.groundSpeed) * ke;
     return Math.max(0, this.groundSpeed);
   }
   private warpRes = 0;
+  /** (Round 16) This frame's speed along the gait's travel and along the side loop's, before the easing (the phases' pace). */
+  private rawSpeed = 0;
+  private rawSide = 0;
+
+  /**
+   * (Round 16) Into the side layer or out of it (SIDE_IN, SIDE_OUT, SIDE_VIN, SIDE_VOUT), and which side, from his
+   * velocity's angle off his facing (`th`, rad, + to his left) and his speed. Returns the angle measured toward the side
+   * it's on (pi/2 straight sideways; past pi for a lineman set back past straight back), or null when off.
+   */
+  private sideMode(input: AnimInput, th: number, sp: number): number | null {
+    const ol = input.side === 'ol';
+    this.sideStyle = ol ? 'ol' : 'lb';
+    const at = Math.abs(th);
+    const on = this.sideOn;
+    this.sideOn = on
+      ? sp < (ol ? SIDE_VOUT_OL : SIDE_VOUT) && at > SIDE_OUT && (ol || at < Math.PI - SIDE_OUT)
+      : sp < (ol ? SIDE_VIN_OL : SIDE_VIN) && at > SIDE_IN && (ol || at < Math.PI - SIDE_IN);
+    if (!this.sideOn) return null;
+    const sn = Math.sin(th);
+    const fresh = this.sideL + this.sideR < 0.05;
+    // On his outside foot, a lineman keeps it until the sim takes him as far inside as would have chosen the inside foot.
+    const pref = ol && input.sidePref ? Math.sign(input.sidePref) : 0;
+    const flip = pref !== 0 && this.sideDir === pref ? SIDE_PREF_OL : SIDE_FLIP;
+    if (fresh || sn * this.sideDir < -flip) this.sideDir = fresh && Math.abs(sn) < (ol ? SIDE_PREF_OL : SIDE_FLIP) && input.sidePref ? Math.sign(input.sidePref) : sn >= 0 ? 1 : -1;
+    if (fresh && !on) {
+      // Into the layer from the gait or a stance: the phase the feet are in (the left loops' phase; the left foot is the
+      // lead going left). One foot planted: mid-way through its plant. Both: just before the lead foot lifts.
+      const l = this.feet.l.locked;
+      const r = this.feet.r.locked;
+      this.sidePhase = l && !r ? 0.2 : r && !l ? 0.7 : l && r ? (this.sideDir > 0 ? 0.5 : 0) : 0;
+    }
+    let psi = this.sideDir * th;
+    if (psi < -Math.PI / 2) psi += 2 * Math.PI;
+    return psi;
+  }
+
+  /** (Round 16) The side loop's travel (rad, toward the side) nearest an angle: sideways, or for the line out to its set's. */
+  private sideAxis(psi: number): number {
+    return this.sideStyle === 'ol' ? THREE.MathUtils.clamp(psi, Math.PI / 2, Math.PI - SET_OUT) : Math.PI / 2;
+  }
 
   /**
    * (Round 15) The hips turned toward the sim's velocity by `warp` (up to WARP_MAX), the trunk turned back over the
@@ -1057,26 +1458,54 @@ export class PlayerAnimator {
   private warpHips(tw: number): void {
     const a = this.warp * this.loco * (1 - tw);
     if (Math.abs(a) < 1e-4) return;
-    const root = this.bone('root');
+    const root = this.rootB;
     // Every turn here is about the world's up, so they commute: each spine bone's new local rotation comes from the pose's
     // world rotations as they stand (its parent's and its own), and the skeleton is brought up to date once.
     for (let k = 0; k < WARP_TWIST.length; k++) {
-      const bone = this.bone(WARP_TWIST[k]![0]);
-      bone.parent!.getWorldQuaternion(this.twistP[k]!);
-      bone.getWorldQuaternion(this.twistW[k]!);
+      const bone = this.twistB[k]!;
+      wquat(bone.parent!, this.twistP[k]!);
+      wquat(bone, this.twistW[k]!);
     }
     _q.setFromAxisAngle(_up, a);
-    const wq = root.getWorldQuaternion(_oq2);
-    const pq = root.parent ? root.parent.getWorldQuaternion(_oq3) : _oq3.identity();
+    const wq = wquat(root, _oq2);
+    const pq = root.parent ? wquat(root.parent, _oq3) : _oq3.identity();
     root.quaternion.copy(pq.invert().multiply(_q).multiply(wq));
     for (let k = 0; k < WARP_TWIST.length; k++) {
-      const [name, share] = WARP_TWIST[k]!;
+      const share = WARP_TWIST[k]![1];
       _q.setFromAxisAngle(_up, -a * share);
-      this.bone(name).quaternion.copy(this.twistP[k]!.invert().multiply(_q).multiply(this.twistW[k]!));
+      this.twistB[k]!.quaternion.copy(this.twistP[k]!.invert().multiply(_q).multiply(this.twistW[k]!));
     }
-    root.updateMatrixWorld(true);
+    // (Round 16) Only the root, the pelvis and the legs now: the feet are read next (before the leans), and the lean
+    // that follows brings the whole skeleton up to date (or, with no lean this frame, does it then: upperStale).
+    this.legsFresh();
+    this.upperStale = true;
   }
   private twistP = WARP_TWIST.map(() => new THREE.Quaternion());
+  /** (Round 16) warpHips brought only the legs up to date; the rest of the skeleton waits for the lean (or its end). */
+  private upperStale = false;
+  /** (Round 16) The root's chain down to the thighs (the pelvis), parent first. */
+  private hipChain: THREE.Object3D[] | null = null;
+
+  /**
+   * (Round 16) The world matrices of the root, the pelvis and both legs, made as updateMatrixWorld makes them (each
+   * from its own matrix and its parent's world), and of nothing else: the spine, the arms and the head are left for the
+   * lean's update of the whole skeleton. warpHips's own full update was a sixth of the matrix work (docs/anim/FEET16.md).
+   */
+  private legsFresh(): void {
+    if (!this.hipChain) {
+      const chain: THREE.Object3D[] = [];
+      for (let o = this.legs.thigh.l.parent; o && o !== this.rootB.parent; o = o.parent) chain.unshift(o);
+      this.hipChain = chain;
+    }
+    for (const o of this.hipChain) {
+      o.updateMatrix();
+      if (o.parent) o.matrixWorld.multiplyMatrices(o.parent.matrixWorld, o.matrix);
+      else o.matrixWorld.copy(o.matrix);
+      o.matrixWorldNeedsUpdate = false;
+    }
+    this.legs.thigh.l.updateMatrixWorld(true);
+    this.legs.thigh.r.updateMatrixWorld(true);
+  }
   private twistW = WARP_TWIST.map(() => new THREE.Quaternion());
 
   private lean(speed: number, yawRate: number, accel: number, press = 0): void {
@@ -1088,14 +1517,19 @@ export class PlayerAnimator {
     const pitch = THREE.MathUtils.clamp(Math.atan2(accel, G) * 0.5 + press, -0.15, 0.3);
     this.leanDbg.bank = bank;
     this.leanDbg.pitch = pitch;
-    if (Math.abs(bank) < 1e-4 && Math.abs(pitch) < 1e-4) return;
-    const root = this.bone('root');
-    const rootQ = this.player.root.getWorldQuaternion(_q2);
+    const root = this.rootB;
+    if (Math.abs(bank) < 1e-4 && Math.abs(pitch) < 1e-4) {
+      if (this.upperStale) root.updateMatrixWorld(true);
+      this.upperStale = false;
+      return;
+    }
+    this.upperStale = false;
+    const rootQ = wquat(this.player.root, _q2);
     _fwd.set(0, 0, 1).applyQuaternion(rootQ);
     const right = _w.set(-1, 0, 0).applyQuaternion(rootQ);
-    _q.setFromAxisAngle(_fwd, -bank).multiply(new THREE.Quaternion().setFromAxisAngle(right, pitch));
-    const wq = root.getWorldQuaternion(new THREE.Quaternion());
-    const pq = root.parent ? root.parent.getWorldQuaternion(new THREE.Quaternion()) : new THREE.Quaternion();
+    _q.setFromAxisAngle(_fwd, -bank).multiply(_oq.setFromAxisAngle(right, pitch));
+    const wq = wquat(root, _oq2);
+    const pq = root.parent ? wquat(root.parent, _oq3) : _oq3.identity();
     root.quaternion.copy(pq.invert().multiply(_q).multiply(wq));
     // About the hips, not the feet (M6.5 #12): the sim's spot is where his
     // mass goes, so the body tilts about it and the feet swing out under a
@@ -1105,10 +1539,15 @@ export class PlayerAnimator {
     // five; tools/sim/catchcontact.ts).
     if (root.parent) {
       const h = LEAN_PIVOT * this.player.shape.scale;
-      root.getWorldPosition(_v);
+      wpos(root, _v);
       _pole.set(0, h, 0).applyQuaternion(_q);
       _v.y += h;
       _v.sub(_pole);
+      // (Round 16) And sinks by what the tilt lifts the feet about the hips (h(1 - cos)): a runner dips into a hard cut,
+      // his feet on the turf. Tilted about his hips and no more, the outside foot of a banked runner came up to 6 cm off
+      // the turf, and its leg, pinned there by the lock, couldn't reach: a step every stride through a curve
+      // (tools/sim/a16_animbench.ts 'curve'; docs/anim/FEET16.md).
+      _v.y -= h - _pole.y;
       root.parent.worldToLocal(_v);
       root.position.copy(_v);
     }
@@ -1119,11 +1558,11 @@ export class PlayerAnimator {
   private leanToward(x: number, z: number): void {
     const ang = Math.hypot(x, z);
     if (ang < 1e-5) return;
-    const root = this.bone('root');
+    const root = this.rootB;
     // Up turns toward (x, z): about the axis up × dir.
     _q.setFromAxisAngle(_w.set(z / ang, 0, -x / ang), ang);
-    const wq = root.getWorldQuaternion(_oq2);
-    const pq = root.parent ? root.parent.getWorldQuaternion(_oq3) : _oq3.identity();
+    const wq = wquat(root, _oq2);
+    const pq = root.parent ? wquat(root.parent, _oq3) : _oq3.identity();
     root.quaternion.copy(pq.invert().multiply(_q).multiply(wq));
     root.updateMatrixWorld(true);
   }
@@ -1138,7 +1577,7 @@ export class PlayerAnimator {
   private preBallY = { l: 0, r: 0 };
   private preBall = { l: new THREE.Vector3(), r: new THREE.Vector3() };
   /** This frame's plant per foot (down, and what plants it), from the clips' contacts. */
-  private plant: Record<'l' | 'r', { down: boolean; soon: boolean; source: LockSource }> = { l: { down: false, soon: false, source: 'stand' }, r: { down: false, soon: false, source: 'stand' } };
+  private plant: Record<'l' | 'r', { down: boolean; soon: boolean; hold: boolean; touch: number; source: LockSource }> = { l: { down: false, soon: false, hold: false, touch: Infinity, source: 'stand' }, r: { down: false, soon: false, hold: false, touch: Infinity, source: 'stand' } };
 
   /**
    * The keyed leg's reach (passing round 14): the hip, the clip's own ankle and the farthest the hip may be from the
@@ -1146,9 +1585,9 @@ export class PlayerAnimator {
    * any IK). Fills _hip and _ank.
    */
   private keyedReach(s: 'l' | 'r'): number {
-    this.bone(`thigh_${s}`).getWorldPosition(_hip);
-    this.bone(`calf_${s}`).getWorldPosition(_knee);
-    this.bone(`foot_${s}`).getWorldPosition(_ank);
+    wpos(this.legs.thigh[s], _hip);
+    wpos(this.legs.calf[s], _knee);
+    wpos(this.legs.foot[s], _ank);
     const la = _hip.distanceTo(_knee);
     const lb = _knee.distanceTo(_ank);
     const d = _hip.distanceTo(_ank);
@@ -1169,14 +1608,14 @@ export class PlayerAnimator {
    * otherwise. The run's cycle re-plants its feet every step and is left alone.
    */
   private holdOver(dt: number, ground?: THREE.Vector3): void {
-    const root = this.bone('root');
+    const root = this.rootB;
     const on = this.footLock && this.holdFeet && !(ground && ground.lengthSq() > 0);
     let any = false;
     _need.set(0, 0, 0);
     if (on) {
       // The sim's spot (where the game puts the player's root), against where it was when each foot planted.
-      const spot = this.player.root.getWorldPosition(_rp);
-      const fwd = _fwd.set(0, 0, 1).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
+      const spot = wpos(this.player.root, _rp);
+      const fwd = _fwd.set(0, 0, 1).applyQuaternion(wquat(this.player.root, _q2));
       for (const s of FEET) {
         const st = this.feet[s];
         const pl = this.plant[s];
@@ -1226,7 +1665,7 @@ export class PlayerAnimator {
   /** Move the root bone by a world offset (the whole body, the feet's IK still to come). */
   private shiftRoot(root: THREE.Bone, by: THREE.Vector3): void {
     if (by.lengthSq() === 0) return;
-    root.getWorldPosition(_v).add(by);
+    wpos(root, _v).add(by);
     if (root.parent) root.parent.worldToLocal(_v);
     root.position.copy(_v);
     root.updateMatrixWorld(true);
@@ -1239,12 +1678,14 @@ export class PlayerAnimator {
     dt: number,
     ground?: THREE.Vector3,
     soon = false,
+    hold = false,
+    touch = Infinity,
   ): void {
     const st = this.feet[s];
-    const foot = this.bone(`foot_${s}`);
+    const foot = this.legs.foot[s];
     // The ball of the foot is what stays put on the ground: through late
     // stance the heel rises and the ankle rolls forward over it.
-    const ball = this.bone(`toe_${s}`);
+    const ball = this.legs.toe[s];
     const down = this.footLock && isDown;
     const dbg = this.lockDbg[s];
     dbg.replant = '';
@@ -1269,8 +1710,8 @@ export class PlayerAnimator {
       st.drawn.addScaledVector(ground, dt);
       if (st.step) st.stepFrom.addScaledVector(ground, dt);
     }
-    const thigh = this.bone(`thigh_${s}`);
-    const calf = this.bone(`calf_${s}`);
+    const thigh = this.legs.thigh[s];
+    const calf = this.legs.calf[s];
     // (Round 15) A step under way (stepFoot): the foot goes on in its arc whatever the clip's contacts say, and lands
     // where the clip has its foot when it gets there.
     const step = st.step;
@@ -1305,12 +1746,13 @@ export class PlayerAnimator {
           // clip has far from it steps there (below).
           dbg.replant = `keep:${st.source}>${source}`;
           st.source = source;
-          this.player.root.getWorldPosition(st.anchor);
+          wpos(this.player.root, st.anchor);
           st.travel0 = this.transTravel();
           st.spent = 0;
         }
         // Engage in ~50 ms.
         st.weight += (1 - st.weight) * (1 - Math.exp(-dt * 40));
+        st.age += dt;
       } else if (st.locked) {
         // (Round 15) Lifted: the foot goes with the clip's swing from where the lock held it, the difference blended out
         // over RELEASE. Let go in ~15 ms (round 1's, so a lingering lock wouldn't drag the swinging foot back), the
@@ -1322,9 +1764,14 @@ export class PlayerAnimator {
     let w: number;
     const tgt = _tb;
     if (st.step) {
-      const k = st.step.u * st.step.u * (3 - 2 * st.step.u);
+      // (Round 16) The swing between the toe-off and the landing (STEP_OFF, STEP_ON): the ball of the foot from where it
+      // was to the clip's, on the gait keyer's swing (tools/blender/lib/gait.py foot_track: the lift peaks early, the foot
+      // set down slower than it came up). Before it the ball stays on the turf (the heel rises off it); after it the foot
+      // is down and rolls onto the clip's pose (stepRoll).
+      const sw = THREE.MathUtils.clamp((st.step.u - STEP_OFF) / (STEP_ON - STEP_OFF), 0, 1);
+      const k = sw * sw * (3 - 2 * sw);
       tgt.lerpVectors(st.stepFrom, cb, k);
-      tgt.y += st.step.h * Math.sin(Math.PI * st.step.u);
+      tgt.y += st.step.h * Math.sin(Math.PI * Math.min(1, sw ** 0.8)) ** 1.3;
       w = 1;
     } else if (st.locked) {
       // (Round 15) The lock settles with the ball of the foot: while the clip still has it coming down (a heel strike
@@ -1346,7 +1793,11 @@ export class PlayerAnimator {
       w = st.weight;
       this.correction[s] = cb.distanceTo(st.pos);
     } else {
-      st.weight = Math.max(0, st.weight - dt / st.relDur);
+      // (Round 16) Faded out by the time the clips put the foot down again: a lock still fading at the touch-down planted
+      // the foot where the fade had it, up to 30 cm off the clip's, and it stepped within a few frames (a third of the
+      // round's steps came within 0.15 s of a plant: docs/anim/FEET16.md).
+      const left = Math.max(dt, touch - TOUCH_STEP);
+      st.weight = Math.max(0, st.weight - dt * Math.max(1 / st.relDur, st.weight / left));
       if (st.weight <= 0) {
         st.drawn.copy(cb);
         return;
@@ -1359,9 +1810,11 @@ export class PlayerAnimator {
     // about the hips on the sim's acceleration, the planted foot with it: on the contested ball the QB's drift back
     // tipped him ~15 deg as he threw and his planted front foot rolled onto its heel, the ankle pulled 5 cm down to the
     // turf and the leg dead straight, 4 deg at the release against 34 keyed.)
-    const footWorld = this.holdFeet ? _fq.copy(this.footQ[s]) : foot.getWorldQuaternion(_fq);
+    const footWorld = this.holdFeet ? _fq.copy(this.footQ[s]) : wquat(foot, _fq);
     // Ankle target: the ball's target plus the clip's current ankle-to-ball offset.
-    const ankleTarget = this.holdFeet ? _w.copy(this.footOff[s]).add(tgt) : foot.getWorldPosition(_w).sub(cb).add(tgt);
+    const ankleTarget = this.holdFeet ? _w.copy(this.footOff[s]).add(tgt) : wpos(foot, _w).sub(cb).add(tgt);
+    // (Round 16) The step's toe-off, heel strike and roll.
+    if (st.step) this.stepRoll(st.step.u, tgt, ankleTarget, footWorld);
     if (this.holdFeet && st.locked && source === 'trans' && down) {
       // (Passing round 14) Past what the hold over the feet took up, the planted point gives: along the ground toward
       // the clip's own foot, by just enough that the knee is no straighter than the clip's less KNEE_GIVE, and no
@@ -1377,7 +1830,7 @@ export class PlayerAnimator {
       const a = gx * gx + gz * gz;
       const r = Math.hypot(ax, az);
       if (c > 0 && a > 1e-10 && r > 1e-6) {
-        const spot = this.player.root.getWorldPosition(_rp);
+        const spot = wpos(this.player.root, _rp);
         const away = -((spot.x - st.anchor.x) * ax + (spot.z - st.anchor.z) * az) / r;
         const held = (this.give.x * ax + this.give.z * az) / r;
         // (Round 15: and no more than GIVE_MAX in all. Past that it's a slide: on the contested ball the point gave 12 cm
@@ -1416,8 +1869,17 @@ export class PlayerAnimator {
       const gz = this.holdFeet ? this.give.z : 0;
       const far = Math.hypot(st.pos.x - pb.x - st.leanOff.x - gx, st.pos.z - pb.z - st.leanOff.z - gz);
       const over = _hip.distanceTo(ankleTarget) > reach + REACH_MISS * scale;
+      // (Round 16, the pop meter's step records) How far off and how far out of reach, and how long it had held.
+      dbg.far = far;
+      dbg.over = _hip.distanceTo(ankleTarget) - reach;
+      dbg.age = st.age;
       const other = this.feet[s === 'l' ? 'r' : 'l'].step;
-      if ((far > STEP_FAR * scale || over) && soon) {
+      if (far > STEP_FAR * scale && !over && hold && far < STEP_HOLD * scale) {
+        // (Round 16) Only drifted off the clip's foot, and the clips lift it within HOLD_SOON: it holds on to its lift,
+        // the leg a little further out than keyed, rather than stepping and then lifting again at once (a step just
+        // before the lift was most of the gait's and the one-shots' steps: docs/anim/FEET16.md).
+        dbg.why = '';
+      } else if ((far > STEP_FAR * scale || over) && soon) {
         // About to lift anyway: let go into the clip's swing now (the release's blend), rather than step.
         dbg.why = `${st.source}:lift`;
         this.letGo(st, cb);
@@ -1436,8 +1898,8 @@ export class PlayerAnimator {
     // straight, over the toes. It was 0.5 m ahead of the knee along his facing, so a clip that turns the body off the
     // root (a hip flip, the hips turned toward his run, warpHips) had its knees bent sideways by the solve.
     this.kneePole(thigh, calf, foot, cb);
-    dbg.miss = solveTwoBone(thigh, calf, foot, ankleTarget, _pole, w);
-    const pq = foot.parent!.getWorldQuaternion(_q);
+    dbg.miss = solveTwoBone(thigh, calf, foot, ankleTarget, _pole, w, true);
+    const pq = wquat(foot.parent!, _q);
     foot.quaternion.copy(pq.invert().multiply(footWorld));
     foot.updateMatrixWorld(true);
     wpos(ball, st.drawn);
@@ -1455,6 +1917,43 @@ export class PlayerAnimator {
     st.weight = 1;
   }
 
+  /**
+   * (Round 16) The step's foot: the clip's own foot (its pose and orientation), pitched about its own lateral axis through
+   * the step, as the gait keyer pitches a stepping foot (tools/blender/lib/gait.py stance_heel, swing_heel): the heel
+   * rises off the ball (toe-off, STEP_TOE, pivoting at the ball while it's still on the turf), the foot comes level through
+   * the swing, it lands heel first (STEP_STRIKE: toes up, less for a clip that has him on the balls of his feet) and rolls
+   * down about the heel onto the clip's foot. `tgt` is where the ball of the foot would be with the foot at the clip's
+   * pitch; the ankle's target and the foot's world rotation are turned with it.
+   */
+  private stepRoll(u: number, tgt: THREE.Vector3, ankle: THREE.Vector3, footWorld: THREE.Quaternion): void {
+    // The clip's foot: the ankle from the ball, and its pitch (heel up +) against the rest foot's.
+    const off = _so.subVectors(ankle, tgt);
+    const h = Math.hypot(off.x, off.z);
+    if (h < 1e-4) return;
+    const pitch = Math.atan2(off.y, h) - FOOT_REST_PITCH;
+    const strike = -STEP_STRIKE * (1 - THREE.MathUtils.clamp(pitch / STEP_ON_BALLS, 0, 1));
+    let d: number;
+    if (u < STEP_OFF) d = STEP_TOE * smooth01(u / STEP_OFF);
+    else if (u < STEP_ON) {
+      const sw = (u - STEP_OFF) / (STEP_ON - STEP_OFF);
+      d = STEP_TOE * (1 - smooth01(sw / 0.55)) + strike * smooth01((sw - 0.7) / 0.3);
+    } else d = strike * (1 - smooth01((u - STEP_ON) / (1 - STEP_ON)));
+    if (Math.abs(d) < 1e-4) return;
+    // The foot's lateral axis (a turn about it by + takes the heel up).
+    const ax = _sa.set(off.x / h, 0, off.z / h).cross(_up).normalize();
+    const q = _sq.setFromAxisAngle(ax, d);
+    if (d > 0) {
+      // About the ball.
+      ankle.copy(off).applyQuaternion(q).add(tgt);
+    } else {
+      // About the heel: the rest foot's heel from its ball (tools/blender/lib/skeleton.py, poses.py HEEL_REST), turned and
+      // scaled off the clip's ankle-from-ball.
+      const heel = _sh.copy(off).applyAxisAngle(ax, HEEL_TURN).multiplyScalar(HEEL_K);
+      ankle.subVectors(off, heel).applyQuaternion(q).add(heel).add(tgt);
+    }
+    footWorld.premultiply(q);
+  }
+
   /** (Round 15) The knee's pole for the leg's solve, into _pole: the clip's own bend, or over the toes. */
   private kneePole(thigh: THREE.Bone, calf: THREE.Bone, foot: THREE.Bone, ball: THREE.Vector3): void {
     wpos(thigh, _hip);
@@ -1468,7 +1967,7 @@ export class PlayerAnimator {
     if (_pole.lengthSq() < KNEE_BENT * KNEE_BENT) {
       // Near straight: over the toes (the ankle to the ball, along the ground).
       _pole.set(ball.x - _ank.x, 0, ball.z - _ank.z);
-      if (_pole.lengthSq() < 1e-8) _pole.set(0, 0, 1).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
+      if (_pole.lengthSq() < 1e-8) _pole.set(0, 0, 1).applyQuaternion(wquat(this.player.root, _q2));
     }
     _pole.normalize().multiplyScalar(0.5).add(_knee);
   }
@@ -1482,11 +1981,12 @@ export class PlayerAnimator {
     // there held a receiver's planted foot in the air through a curved route.
     st.pos.y = this.preBallY[s];
     st.leanOff.subVectors(_cb, this.preBall[s]).setY(0);
-    this.player.root.getWorldPosition(st.anchor);
+    wpos(this.player.root, st.anchor);
     st.travel0 = this.transTravel();
     st.spent = 0;
     st.locked = true;
     st.source = source;
+    st.age = 0;
   }
 
   /**
@@ -1507,21 +2007,22 @@ export class PlayerAnimator {
   }
 
   private lookAt(target: THREE.Vector3 | null, dt: number, wide = false): void {
-    const head = this.bone('head');
-    const neck = this.bone('neck_02');
-    const rootQ = this.player.root.getWorldQuaternion(_q2);
+    const head = this.headB;
+    const neck = this.neckB;
+    // (Round 16: the world matrices as they stand, and no allocation.)
+    const rootQ = wquat(this.player.root, _q2);
     const facing = _fwd.set(0, 0, 1).applyQuaternion(rootQ);
-    let want = new THREE.Quaternion();
+    const want = _lw.identity();
     if (target) {
-      head.getWorldPosition(_v);
+      wpos(head, _v);
       const d = _w.subVectors(target, _v).normalize();
       // Clamp to what a neck can do: ±70° side to side, ±35° up and down
       // (wide: the chest turns too, and the eyes go down into the hands).
       const yawLim = wide ? LOOK_WIDE : 1.22;
       const yaw = THREE.MathUtils.clamp(Math.atan2(Math.sin(Math.atan2(d.x, d.z) - Math.atan2(facing.x, facing.z)), Math.cos(Math.atan2(d.x, d.z) - Math.atan2(facing.x, facing.z))), -yawLim, yawLim);
       const pitch = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(d.y, -1, 1)), wide ? -LOOK_DOWN_WIDE : -0.6, 0.6);
-      want = new THREE.Quaternion().setFromEuler(new THREE.Euler(-pitch, yaw, 0, 'YXZ'));
-      want.premultiply(rootQ).multiply(rootQ.clone().invert());
+      want.setFromEuler(_le.set(-pitch, yaw, 0, 'YXZ'));
+      want.premultiply(rootQ).multiply(_lq.copy(rootQ).invert());
     }
     // Critically damped-ish follow (~0.15 s).
     this.look.slerp(want, 1 - Math.exp(-dt * 10));
@@ -1529,10 +2030,10 @@ export class PlayerAnimator {
     // 40% in the neck, 60% in the head; a wide look puts a third of it in the upper back first (the shoulders turn with the head).
     const parts = wide ? LOOK_PARTS_WIDE : LOOK_PARTS;
     for (const [name, share] of parts) {
-      const bone = name === 'head' ? head : name === 'neck_02' ? neck : this.bone(name);
-      const part = new THREE.Quaternion().slerp(this.look, share);
-      const wq = bone.getWorldQuaternion(new THREE.Quaternion());
-      const pq = bone.parent!.getWorldQuaternion(new THREE.Quaternion());
+      const bone = name === 'head' ? head : name === 'neck_02' ? neck : this.chestB;
+      const part = _lp.identity().slerp(this.look, share);
+      const wq = wquat(bone, _oq2);
+      const pq = wquat(bone.parent!, _oq3);
       bone.quaternion.copy(pq.invert().multiply(part).multiply(wq));
       bone.updateMatrixWorld(true);
     }
@@ -1540,8 +2041,8 @@ export class PlayerAnimator {
 
   private pads(dt: number): void {
     if (dt <= 0) return;
-    const chest = this.bone('spine_04');
-    chest.getWorldPosition(_v);
+    const chest = this.chestB;
+    wpos(chest, _v);
     this.chestY.push(_v.y);
     if (this.chestY.length > 3) this.chestY.shift();
     if (this.chestY.length < 3) return;
@@ -1553,11 +2054,10 @@ export class PlayerAnimator {
     sp.v += (-kS * sp.x - 12 * sp.v - accel * 0.02) * dt;
     sp.x += sp.v * dt;
     const angle = THREE.MathUtils.clamp(sp.x, -0.08, 0.08);
-    const right = _w.set(1, 0, 0).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
+    const right = _w.set(1, 0, 0).applyQuaternion(wquat(this.player.root, _q2));
     for (const s of FEET) {
-      const pad = this.bone(`pad_${s}`);
-      pad.getWorldPosition(_v);
-      rotateBoneWorld(pad, _fwd.set(0, 0, 1), _pole.set(0, 0, 1).applyAxisAngle(right, angle));
+      const pad = this.legs.pad[s];
+      rotateBoneWorld(pad, _fwd.set(0, 0, 1), _pole.set(0, 0, 1).applyAxisAngle(right, angle), 1, true);
     }
   }
 }
