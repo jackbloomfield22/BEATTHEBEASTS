@@ -25,6 +25,11 @@ import type { BodyExtent } from './contact';
 // get-up after the whistle.
 
 export interface Body {
+  /**
+   * (Round 16) The drawn body off the sim's spot by a one-shot's own travel (ROOT_DRAWN: the linebacker's read step,
+   * which the sim doesn't make), world m; eased back to the sim's spot once it's over (GameScene).
+   */
+  rootOff?: THREE.Vector3;
   /** Who the body is dressed as (player id) and in which kit (personnel can change the man in a slot). */
   who: string;
   kit: string;
@@ -142,6 +147,7 @@ const _w = new THREE.Vector3();
 /** New play: forget clips, falls and per-play state. */
 export function resetBody(b: Body): void {
   b.ragdoll.stop();
+  (b.rootOff ??= new THREE.Vector3()).set(0, 0, 0);
   b.throwAt = -1;
   b.throwClip = null;
   b.catchFor = -1;
@@ -1197,6 +1203,14 @@ const KICK_RATE = 1.6;
 /** (Round 16) The kick-slide one-shot's first slide is down by this (s of the clip: tools/blender/lib/actions_m6_line.py kick_slide, the slide lands at 0.32). */
 const KICK_HANDOFF = 0.34;
 const LB = new Set(['WLB', 'MLB', 'SLB']);
+/**
+ * (Round 16) One-shots whose travel the drawn body makes (GameScene, Body.rootOff): the read step's 0.15 m forward,
+ * which the sim doesn't make (its linebackers hold at the snap). Played in place, its planted feet went back by the
+ * travel under a body that stayed put, and stepped (docs/anim/FEET16.md); drawn, the body steps with them and then
+ * eases back onto the sim's spot (ROOT_BACK) as he moves off.
+ */
+export const ROOT_DRAWN = new Set(['lb_read_step']);
+export const ROOT_BACK = 0.3;
 /** (Round 16) The defensive line's slots (the hand fight's loop when engaged). */
 const DL_SLOTS = new Set(['LE', 'RE', 'LDT', 'RDT', 'NT', 'DT']);
 /** (Round 16) The block clips whose hands go on over the gait once the sim moves him faster than HANDS_MOVING (m/s: past a shuffle step's drift). */

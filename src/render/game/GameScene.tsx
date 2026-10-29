@@ -40,7 +40,7 @@ import { ballWorldVel, createBallFlight, heldAt, placeFlight, resetFlight } from
 import { createFieldMarks } from './fieldMarks';
 import { hudTime, placeCue } from './cueRing';
 import { frameEvents } from './frameEvents';
-import { ballInHands, catchMagnet, catchReach, catchSpot, contests, drive, onEvents, onSnap, resetBody, type Body } from './choreo';
+import { ballInHands, catchMagnet, catchReach, catchSpot, contests, drive, onEvents, onSnap, resetBody, ROOT_BACK, ROOT_DRAWN, type Body } from './choreo';
 import { Officials } from './officials';
 import { kickView } from './kickView';
 
@@ -257,6 +257,7 @@ const contactPairs: [number, number][] = [];
 const _lean = { x: 0, z: 0 };
 /** (Round 15) Each body's sim velocity in the world (m/s), for the gait's pace and the hips' turn (animator.ts warpHips). */
 const _vel = new THREE.Vector3();
+const _fwdY = new THREE.Vector3();
 
 /** The carrier's move options as the HUD says them (one word each). */
 const OPTION_WORD: Record<string, string> = { juke: 'Juke', stiffArm: 'Stiff arm', spin: 'Spin', truck: 'Truck', hurdle: 'Hurdle', dive: 'Dive', protect: 'Protect' };
@@ -469,6 +470,15 @@ export function GameScene() {
         root.position.z += cc.oz;
         _lean.x = cc.lx;
         _lean.z = cc.lz;
+      }
+      // (Round 16) A one-shot's own travel, drawn (choreo.ts ROOT_DRAWN): taken from last frame's update, eased back once it's over.
+      const ro = b.rootOff;
+      if (ro && !b.lie) {
+        const tr = b.animator.transition;
+        if (tr && !tr.done && ROOT_DRAWN.has(tr.name) && animDt > 0) ro.addScaledVector(_fwdY.set(Math.sin(yaw), 0, Math.cos(yaw)), b.animator.rootMotion);
+        else ro.multiplyScalar(Math.exp(-animDt / ROOT_BACK));
+        root.position.x += ro.x;
+        root.position.z += ro.z;
       }
       if (b.lie) {
         // Lying where the fall left him (the lying clip's root is at his hips, his head along +Z).
