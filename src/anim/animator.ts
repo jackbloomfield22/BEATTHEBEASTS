@@ -268,6 +268,9 @@ const _fq = new THREE.Quaternion();
  * STEP_FAR: a planted foot steps when the clip has its foot this far (m, base body) from where the lock holds it. Ours: a
  * set lineman's or a defensive back's feet are ~0.3-0.4 m apart, so 0.2 m off reads as a different stance; under it the
  * lock takes up the stride's own mismatches (the gait blends' 2-10 cm), which are gone at the next lift.
+ * (Round 16: 0.25, half the set base of the line's new loops and ol_pass (0.54 m): with the side layer and the paced
+ * one-shots the mismatches left are slow drifts, and half of round 16's remaining steps fired between 0.20 and 0.25 m,
+ * a re-set of the feet a fraction of a second before the clips would have re-set them: docs/anim/FEET16.md.)
  * REACH_MISS: or when the leg can't reach it: the hip to the ankle's target longer than the straight leg by this much
  * (m). Ours: 3 cm of a ball of the foot held short of the turf is under a pixel at broadcast distance, and a banked
  * runner's outside leg (lean: the bank tips him about the hips) reaches for the turf at the edge of its length.
@@ -328,7 +331,7 @@ const SIDE_CLIPS = {
   ol: { l: { slide: ['ol_slide_l'], set: ['ol_set_l', 'ol_set_fast_l'] }, r: { slide: ['ol_slide_r'], set: ['ol_set_r', 'ol_set_fast_r'] } },
 } as const;
 type SideFam = { slide: GaitClip[]; set: GaitClip[] };
-const STEP_FAR = 0.2;
+const STEP_FAR = 0.25;
 const REACH_MISS = 0.03;
 /** (Round 16: a little longer, for the toe-off and the landing's roll either side of the swing; see STEP_OFF.) */
 const STEP_T0 = 0.12;
