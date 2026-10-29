@@ -1165,6 +1165,8 @@ function startDrop(b: Body, s: PlayState, plan: DropPlan, t0: number): void {
 }
 
 const OL = new Set(['LT', 'LG', 'C', 'RG', 'RT']);
+/** (Round 15) The kick-slide plays up to this much faster than keyed (ours: 1.6x is a quick set's ~0.6 s for its four steps, still read as steps at 30 fps). */
+const KICK_RATE = 1.6;
 const LB = new Set(['WLB', 'MLB', 'SLB']);
 
 /** Pass-rush moves (sim/blocks.ts RushMove) to the M6 clips; the side is where the rusher goes around the blocker. */
@@ -1531,6 +1533,15 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
       }
     }
     if (out.backpedal) b.once.add('pedal');
+  }
+  // (Round 15) A tackle's kick-slide (a one-shot keyed at ~1.2 m/s: 1.05 m back and 0.55 m out over its second) quickens
+  // with the sim's set, up to KICK_RATE: on a vertical set the sim takes him back at 3-4 m/s and the clip's planted feet
+  // were left behind every step (docs/anim/FEET15.md: his feet stepped off their plants ten times in the set).
+  if (tr && !tr.done && tr.name.startsWith('ol_kick_slide_')) {
+    const m = anim.lib.meta[tr.name];
+    const n = m?.travel?.length ?? 0;
+    const keyed = m && n > 1 ? Math.hypot(m.travel![n - 1]!, m.side?.[n - 1] ?? 0) / m.duration : 0;
+    if (keyed > 0) anim.retime(tr.name, { rate: Math.max(1, Math.min(KICK_RATE, (sp * YARD) / (keyed * b.player.shape.scale))) });
   }
   // The throw: the release frame lands on the sim's release. The motion is
   // the man's (throwClip): a quick release's compact one, a long windup's

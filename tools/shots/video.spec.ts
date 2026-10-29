@@ -301,12 +301,13 @@ const frame = (page: Page) => page.evaluate(() => (window as unknown as { __btbR
 
 async function record(page: Page, clip: Clip) {
   // (Round five records a clip from two cameras at once: each its own frames.)
-  const dir = `tools/shots/out/video/${clip.id}${PASSING5 || PASSING6 || PASSING7 || PASSING8 || PASSING9 || PASSING10 ? `-${process.env.BTB_PASSING_TAG ?? 'after'}${process.env.BTB_FOLLOW ? '-close' : ''}${WINDOW ? `-w${FPS}` : ''}` : ''}`;
+  const dir = `tools/shots/out/video/${clip.id}${PASSING5 || PASSING6 || PASSING7 || PASSING8 || PASSING9 || PASSING10 ? `-${process.env.BTB_PASSING_TAG ?? 'after'}${process.env.BTB_FOLLOW || process.env.BTB_FOLLOW15 ? '-close' : ''}${WINDOW ? `-w${FPS}` : ''}` : ''}`;
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   // No tutorial card in the videos.
   await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
-  const follow = PASSING10 && process.env.BTB_FOLLOW && FOLLOW10[clip.id] ? `&follow=${FOLLOW10[clip.id]}` : PASSING9 && process.env.BTB_FOLLOW && FOLLOW9[clip.id] ? `&follow=${FOLLOW9[clip.id]}` : PASSING8 && process.env.BTB_FOLLOW && FOLLOW8[clip.id] ? `&follow=${FOLLOW8[clip.id]}` : PASSING7 && process.env.BTB_FOLLOW && FOLLOW7[clip.id] ? `&follow=${FOLLOW7[clip.id]}` : PASSING6 && process.env.BTB_FOLLOW && FOLLOW6[clip.id] ? `&follow=${FOLLOW6[clip.id]}` : PASSING5 && process.env.BTB_FOLLOW && FOLLOW5[clip.id] ? `&follow=${FOLLOW5[clip.id]}` : PASSING2 && FOLLOW[clip.id] ? `&follow=${FOLLOW[clip.id]}` : (PASSING3 || PASSING4) && process.env.BTB_FOLLOW ? `&follow=${process.env.BTB_FOLLOW}` : '';
+  // (Round 15) BTB_FOLLOW15=slot,dx,dy,h,fov: a close camera on one man (the feet), for any of the round's plays.
+  const follow = PASSING15 && process.env.BTB_FOLLOW15 ? `&follow=${process.env.BTB_FOLLOW15}` : PASSING10 && process.env.BTB_FOLLOW && FOLLOW10[clip.id] ? `&follow=${FOLLOW10[clip.id]}` : PASSING9 && process.env.BTB_FOLLOW && FOLLOW9[clip.id] ? `&follow=${FOLLOW9[clip.id]}` : PASSING8 && process.env.BTB_FOLLOW && FOLLOW8[clip.id] ? `&follow=${FOLLOW8[clip.id]}` : PASSING7 && process.env.BTB_FOLLOW && FOLLOW7[clip.id] ? `&follow=${FOLLOW7[clip.id]}` : PASSING6 && process.env.BTB_FOLLOW && FOLLOW6[clip.id] ? `&follow=${FOLLOW6[clip.id]}` : PASSING5 && process.env.BTB_FOLLOW && FOLLOW5[clip.id] ? `&follow=${FOLLOW5[clip.id]}` : PASSING2 && FOLLOW[clip.id] ? `&follow=${FOLLOW[clip.id]}` : (PASSING3 || PASSING4) && process.env.BTB_FOLLOW ? `&follow=${process.env.BTB_FOLLOW}` : '';
   await page.goto(`/?screen=practice&nointro&quality=${QUALITY}&video=${FPS}&pops&seed=1${follow}${MEASURE ? '&noshadow&noao' : ''}${process.env.BTB_TRACE ? `&trace=${process.env.BTB_TRACE}` : ''}`);
   // The page only draws when asked: keep it drawing while it loads.
   const pump = (pred: string) =>
@@ -404,7 +405,7 @@ async function record(page: Page, clip: Clip) {
     return { frames: p.rates.length, worst: Math.round(p.worst), p99: Math.round(sorted[Math.floor(sorted.length * 0.99)] ?? 0), ...(slide ? { slide } : {}), ...(ex.worstSpans ? { worstSpans: ex.worstSpans } : {}), ...(ex.stepSpans ? { stepSpans: ex.stepSpans } : {}), ...(ex.trace?.length ? { trace: ex.trace } : {}), ...(cost ? { cost } : {}), spikes: p.spikes };
   });
   // (Round ten: the close camera's and the 60-fps window's recordings sit next to the broadcast one.)
-  const sfx = PASSING10 ? `${process.env.BTB_FOLLOW ? '-close' : ''}${WINDOW ? `-${FPS}` : ''}` : '';
+  const sfx = PASSING10 ? `${process.env.BTB_FOLLOW || process.env.BTB_FOLLOW15 ? '-close' : ''}${WINDOW ? `-${FPS}` : ''}` : '';
   writeFileSync(`${OUT}/${clip.id}${sfx}.pops.json`, JSON.stringify(pops, null, 1) + '\n');
   if (DIAG) writeFileSync(`${dir}/diag.json`, JSON.stringify(diag) + '\n');
   if (MEASURE) {

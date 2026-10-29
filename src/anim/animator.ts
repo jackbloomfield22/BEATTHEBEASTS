@@ -267,6 +267,8 @@ const LIFT_SOON = 0.06;
 const SETTLE = 0.002;
 /** (Round 15) A lock this far engaged (its weight) is planted: the pop meter's own line (popMeter.ts LOCK_FULL). */
 const LOCK_ON = 0.98;
+/** (Round 15) The clip's knee this far (m) off the hip-to-ankle line is a bend the leg's solve keeps (~8 deg on this rig's 0.46 m bones). */
+const KNEE_BENT = 0.03;
 
 export class PlayerAnimator {
   readonly mixer: THREE.AnimationMixer;
@@ -985,8 +987,6 @@ export class PlayerAnimator {
 
   /** (Round 15) The hips' turn toward the sim's velocity (rad, + left of the facing), eased; and the gait's eased ground speed. */
   private warp = 0;
-  /** The turn applied this frame (rad): the knees' pole turns with the hips (lockFoot). */
-  private warpOn = 0;
   private groundSpeed = 0;
 
   /**
@@ -1030,23 +1030,28 @@ export class PlayerAnimator {
    */
   private warpHips(tw: number): void {
     const a = this.warp * this.loco * (1 - tw);
-    this.warpOn = a;
     if (Math.abs(a) < 1e-4) return;
     const root = this.bone('root');
+    // Every turn here is about the world's up, so they commute: each spine bone's new local rotation comes from the pose's
+    // world rotations as they stand (its parent's and its own), and the skeleton is brought up to date once.
+    for (let k = 0; k < WARP_TWIST.length; k++) {
+      const bone = this.bone(WARP_TWIST[k]![0]);
+      bone.parent!.getWorldQuaternion(this.twistP[k]!);
+      bone.getWorldQuaternion(this.twistW[k]!);
+    }
     _q.setFromAxisAngle(_up, a);
     const wq = root.getWorldQuaternion(_oq2);
     const pq = root.parent ? root.parent.getWorldQuaternion(_oq3) : _oq3.identity();
     root.quaternion.copy(pq.invert().multiply(_q).multiply(wq));
-    root.updateMatrixWorld(true);
-    for (const [name, share] of WARP_TWIST) {
-      const bone = this.bone(name);
+    for (let k = 0; k < WARP_TWIST.length; k++) {
+      const [name, share] = WARP_TWIST[k]!;
       _q.setFromAxisAngle(_up, -a * share);
-      const bw = bone.getWorldQuaternion(_oq2);
-      const bp = bone.parent!.getWorldQuaternion(_oq3);
-      bone.quaternion.copy(bp.invert().multiply(_q).multiply(bw));
-      bone.updateMatrixWorld(true);
+      this.bone(name).quaternion.copy(this.twistP[k]!.invert().multiply(_q).multiply(this.twistW[k]!));
     }
+    root.updateMatrixWorld(true);
   }
+  private twistP = WARP_TWIST.map(() => new THREE.Quaternion());
+  private twistW = WARP_TWIST.map(() => new THREE.Quaternion());
 
   private lean(speed: number, yawRate: number, accel: number, press = 0): void {
     // A body turning at ω while moving at v leans by atan(v·ω / g) into the
@@ -1397,16 +1402,33 @@ export class PlayerAnimator {
         w = 1;
       }
     }
-    // Knee pole: in front of the current knee (round 15: the way the hips point, warpHips).
-    calf.getWorldPosition(_pole);
-    _fwd.set(0, 0, 1).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
-    if (this.warpOn !== 0) _fwd.applyAxisAngle(_up, this.warpOn);
-    _pole.addScaledVector(_fwd, 0.5);
+    // Knee pole: (round 15) the way the clip bends the knee (the knee off the hip-to-ankle line), or, with the leg near
+    // straight, over the toes. It was 0.5 m ahead of the knee along his facing, so a clip that turns the body off the
+    // root (a hip flip, the hips turned toward his run, warpHips) had its knees bent sideways by the solve.
+    this.kneePole(thigh, calf, foot, cb);
     dbg.miss = solveTwoBone(thigh, calf, foot, ankleTarget, _pole, w);
     const pq = foot.parent!.getWorldQuaternion(_q);
     foot.quaternion.copy(pq.invert().multiply(footWorld));
     foot.updateMatrixWorld(true);
     ball.getWorldPosition(st.drawn);
+  }
+
+  /** (Round 15) The knee's pole for the leg's solve, into _pole: the clip's own bend, or over the toes. */
+  private kneePole(thigh: THREE.Bone, calf: THREE.Bone, foot: THREE.Bone, ball: THREE.Vector3): void {
+    thigh.getWorldPosition(_hip);
+    calf.getWorldPosition(_knee);
+    foot.getWorldPosition(_ank);
+    // The knee off the hip-to-ankle line.
+    _need.subVectors(_ank, _hip);
+    const l2 = _need.lengthSq();
+    _pole.subVectors(_knee, _hip);
+    if (l2 > 1e-8) _pole.addScaledVector(_need, -_pole.dot(_need) / l2);
+    if (_pole.lengthSq() < KNEE_BENT * KNEE_BENT) {
+      // Near straight: over the toes (the ankle to the ball, along the ground).
+      _pole.set(ball.x - _ank.x, 0, ball.z - _ank.z);
+      if (_pole.lengthSq() < 1e-8) _pole.set(0, 0, 1).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
+    }
+    _pole.normalize().multiplyScalar(0.5).add(_knee);
   }
 
   /** (Passing round 14; round 15) A foot planted now at `at` (a world point): the lock and the hold's bookkeeping. */
