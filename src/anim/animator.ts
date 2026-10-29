@@ -380,6 +380,9 @@ const LIFT_SOON = 0.06;
  * further out than a set lineman's base). Ours.
  */
 const HOLD_SOON = 0.1;
+/** (Round 16) How far ahead (s) and how finely the clips' next touch-down is looked for, for a fading lock (TOUCH: a run's swing is 0.2-0.4 s). */
+const TOUCH_STEP = 0.02;
+const TOUCH_MAX = 0.3;
 const STEP_HOLD = 0.3;
 /** (Round 15) The lock follows the clip's ball down while it's still landing: the ball this far (m) under where the lock took it. */
 const SETTLE = 0.002;
@@ -1173,11 +1176,23 @@ export class PlayerAnimator {
       pl.soon = mode !== 5 && !downIn(s, LIFT_SOON);
       pl.hold = mode !== 5 && !downIn(s, HOLD_SOON);
       pl.source = mode === 0 ? 'trans' : this.loco > 0.5 ? 'loco' : 'stand';
+      // (Round 16) A lifted foot whose lock still fades out: when the clips put it down again (lockFoot lets the fade
+      // finish by then).
+      const st = this.feet[s];
+      pl.touch = Infinity;
+      if (!pl.down && mode !== 5 && st.weight > 0 && !st.locked && !st.step) {
+        for (let h = TOUCH_STEP; h <= TOUCH_MAX + 1e-9; h += TOUCH_STEP) {
+          if (downIn(s, h)) {
+            pl.touch = h;
+            break;
+          }
+        }
+      }
     }
     // (Passing round 14) The body over its planted feet, then each foot's lock.
     this.holdFeet = !!input.holdFeet;
     this.holdOver(dt, input.groundVelocity);
-    for (const s of FEET) this.lockFoot(s, plant[s].source, plant[s].down, dt, input.groundVelocity, plant[s].soon, plant[s].hold);
+    for (const s of FEET) this.lockFoot(s, plant[s].source, plant[s].down, dt, input.groundVelocity, plant[s].soon, plant[s].hold, plant[s].touch);
     // 4 and 5.
     this.lookAt(input.lookAt ?? null, dt, !!input.lookWide);
     this.pads(dt);
@@ -1551,7 +1566,7 @@ export class PlayerAnimator {
   private preBallY = { l: 0, r: 0 };
   private preBall = { l: new THREE.Vector3(), r: new THREE.Vector3() };
   /** This frame's plant per foot (down, and what plants it), from the clips' contacts. */
-  private plant: Record<'l' | 'r', { down: boolean; soon: boolean; hold: boolean; source: LockSource }> = { l: { down: false, soon: false, hold: false, source: 'stand' }, r: { down: false, soon: false, hold: false, source: 'stand' } };
+  private plant: Record<'l' | 'r', { down: boolean; soon: boolean; hold: boolean; touch: number; source: LockSource }> = { l: { down: false, soon: false, hold: false, touch: Infinity, source: 'stand' }, r: { down: false, soon: false, hold: false, touch: Infinity, source: 'stand' } };
 
   /**
    * The keyed leg's reach (passing round 14): the hip, the clip's own ankle and the farthest the hip may be from the
@@ -1653,6 +1668,7 @@ export class PlayerAnimator {
     ground?: THREE.Vector3,
     soon = false,
     hold = false,
+    touch = Infinity,
   ): void {
     const st = this.feet[s];
     const foot = this.legs.foot[s];
@@ -1766,7 +1782,11 @@ export class PlayerAnimator {
       w = st.weight;
       this.correction[s] = cb.distanceTo(st.pos);
     } else {
-      st.weight = Math.max(0, st.weight - dt / st.relDur);
+      // (Round 16) Faded out by the time the clips put the foot down again: a lock still fading at the touch-down planted
+      // the foot where the fade had it, up to 30 cm off the clip's, and it stepped within a few frames (a third of the
+      // round's steps came within 0.15 s of a plant: docs/anim/FEET16.md).
+      const left = Math.max(dt, touch - TOUCH_STEP);
+      st.weight = Math.max(0, st.weight - dt * Math.max(1 / st.relDur, st.weight / left));
       if (st.weight <= 0) {
         st.drawn.copy(cb);
         return;
