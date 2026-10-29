@@ -1,8 +1,11 @@
+/// <reference types="vite/client" />
 // Animation round 16 (docs/anim/FEET16.md): the animator alone, headless in Node, on the exported clip library
 // (public/assets/characters/anims.glb, anims.json): scripted bodies moving the ways the round's plays move them
 // (a shuffle, a scrape, a lineman's set, a run with a cut, a pedal), for the side layer's and the step's checks and
 // the animator's cost per body without the browser.
 //   node tools/run-ts.mjs tools/sim/a16_animbench.ts [frames] [--trace]
+// (vite/client's types: the animator's library and the player asset read import.meta.env.BASE_URL, and this file is in
+// tsconfig.node.json's program, which has Node's types only.)
 import { readFileSync, writeFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
