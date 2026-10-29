@@ -371,6 +371,13 @@ const REL_V = 3;
 const REL_MAX = 0.25;
 /** (Round 15) A planted foot the clips lift within this long (s) lets go early rather than step: a quarter of a run's swing. */
 const LIFT_SOON = 0.06;
+/**
+ * (Round 16) A planted foot only off the clip's (not out of reach) that the clips lift within HOLD_SOON (s) holds on
+ * to the lift, up to STEP_HOLD (m) off: a third of a jog's stance (0.26 s), and the stance's own width (the leg no
+ * further out than a set lineman's base). Ours.
+ */
+const HOLD_SOON = 0.1;
+const STEP_HOLD = 0.3;
 /** (Round 15) The lock follows the clip's ball down while it's still landing: the ball this far (m) under where the lock took it. */
 const SETTLE = 0.002;
 /** (Round 15) A lock this far engaged (its weight) is planted: the pop meter's own line (popMeter.ts LOCK_FULL). */
@@ -1124,63 +1131,50 @@ export class PlayerAnimator {
     // warp can't align them, e.g. walk against jog, the stricter of the two).
     const plant = this.plant;
     // (Round 15) And whether the clips lift it within LIFT_SOON: a foot that can't hold that close to its lift lets go
-    // into its swing (lockFoot) instead of stepping.
-    const phaseSoon = stride > 1e-6 ? this.phase + (speed * LIFT_SOON) / stride : this.phase;
-    const bpSoon = bpMeta ? this.backPhase + (speed * LIFT_SOON) / Math.max(1e-6, bpStride) : 0;
+    // into its swing (lockFoot) instead of stepping. (Round 16: and within HOLD_SOON, when a foot that has only drifted
+    // off the clip's holds on to its lift rather than stepping just before it.)
     // (Round 16) The stance playing, if its feet are keyed to lift (its contacts aren't the whole loop) and it has most of the weight.
     const stMeta = this.lib.meta[this.stance];
     const stFull = (c: [number, number][], n: number) => c.length === 1 && c[0]![0] === 0 && c[0]![1] === n;
     const stPart = stMeta && (this.stanceWeights.get(this.stance) ?? 0) > 0.5 && !(stFull(stMeta.contacts.l, stMeta.frames) && stFull(stMeta.contacts.r, stMeta.frames)) ? stMeta : null;
+    const tr0 = this.trans;
+    const mode = tr0 && trMeta && tw > 0.5 ? 0 : this.loco > 0.5 && side > 0.5 && sd.stride > 1e-6 ? 1 : this.loco > 0.5 && this.back > 0.5 && bpMeta ? 2 : this.loco > 0.5 ? 3 : stPart ? 4 : 5;
+    /** Whether the clips have the foot down `h` s from now (h 0: now). */
+    const downIn = (s: 'l' | 'r', h: number): boolean => {
+      if (mode === 0) return planted(trMeta!, s, Math.min(tr0!.t + h * tr0!.rate, trMeta!.duration - 1e-4) / trMeta!.duration);
+      if (mode === 1) {
+        // (Round 16) The side layer's loops: planted when every one with weight has it planted.
+        const p = h > 0 ? this.sidePhase + (this.sideSpeed * h) / sd.stride : 0;
+        for (let j = 0; j < this.sideClips.length; j++) {
+          if (this.sideW[j]! > 0.02 && !planted(this.lib.meta[this.sideClips[j]!.name]!, s, h > 0 ? warpPhase((p + (this.sideRight[j] ? 0.5 : 0)) % 1, this.sideClips[j]!.duty, sd.duty) : this.sidePh[j]!)) return false;
+        }
+        return true;
+      }
+      if (mode === 2) return planted(bpMeta!, s, h > 0 ? (this.backPhase + (speed * h) / Math.max(1e-6, bpStride)) % 1 : this.backPhase);
+      if (mode === 3) {
+        const p = stride > 1e-6 ? this.phase + (speed * h) / stride : this.phase;
+        for (let j = 0; j < this.locos.length; j++) {
+          if (lw[j]! > 0.02 && !planted(this.lib.meta[this.locos[j]!.name]!, s, h > 0 ? warpPhase(p % 1, this.locos[j]!.duty, duty) : this.locoPhase[j]!)) return false;
+        }
+        return true;
+      }
+      // (Round 16) A stance whose feet are keyed to move (the engaged hand fight's chopping feet: dl_engage, ol_engage)
+      // plants them by its own contacts, as the gait does: the feet re-set under the block where the clip puts them,
+      // rather than held while the sim drifts the pair and then stepped off (docs/anim/FEET16.md).
+      if (mode === 4) return planted(stPart!, s, ((this.stanceTime + h) % stPart!.duration) / stPart!.duration);
+      return this.loco < 0.5;
+    };
     for (const s of FEET) {
       const pl = plant[s];
-      if (this.trans && trMeta && tw > 0.5) {
-        // The transition's own contacts (its frames are absolute, not a cycle).
-        pl.down = planted(trMeta, s, Math.min(this.trans.t, trMeta.duration - 1e-4) / trMeta.duration);
-        pl.soon = !planted(trMeta, s, Math.min(this.trans.t + LIFT_SOON * this.trans.rate, trMeta.duration - 1e-4) / trMeta.duration);
-        pl.source = 'trans';
-        continue;
-      }
-      let down: boolean;
-      let soon = false;
-      if (this.loco > 0.5 && side > 0.5 && sd.stride > 1e-6) {
-        // (Round 16) The side layer's loops: planted when every one with weight has it planted.
-        down = true;
-        const soonP = this.sidePhase + (this.sideSpeed * LIFT_SOON) / sd.stride;
-        for (let j = 0; j < this.sideClips.length; j++) {
-          if (this.sideW[j]! > 0.02) {
-            const m = this.lib.meta[this.sideClips[j]!.name]!;
-            down &&= planted(m, s, this.sidePh[j]!);
-            soon ||= !planted(m, s, warpPhase((soonP + (this.sideRight[j] ? 0.5 : 0)) % 1, this.sideClips[j]!.duty, sd.duty));
-          }
-        }
-      } else if (this.loco > 0.5 && this.back > 0.5 && bpMeta) {
-        down = planted(bpMeta, s, this.backPhase);
-        soon = !planted(bpMeta, s, bpSoon % 1);
-      } else if (this.loco > 0.5) {
-        down = true;
-        for (let j = 0; j < this.locos.length; j++) {
-          if (lw[j]! > 0.02) {
-            const m = this.lib.meta[this.locos[j]!.name]!;
-            down &&= planted(m, s, this.locoPhase[j]!);
-            soon ||= !planted(m, s, warpPhase(phaseSoon % 1, this.locos[j]!.duty, duty));
-          }
-        }
-      } else if (this.loco < 0.5 && stPart) {
-        // (Round 16) A stance whose feet are keyed to move (the engaged hand fight's chopping feet: dl_engage, ol_engage)
-        // plants them by its own contacts, as the gait does: the feet re-set under the block where the clip puts them,
-        // rather than held while the sim drifts the pair and then stepped off (docs/anim/FEET16.md).
-        const ph = (this.stanceTime % stPart.duration) / stPart.duration;
-        down = planted(stPart, s, ph);
-        soon = !planted(stPart, s, ((this.stanceTime + LIFT_SOON) % stPart.duration) / stPart.duration);
-      } else down = this.loco < 0.5;
-      pl.down = down;
-      pl.soon = soon;
-      pl.source = this.loco > 0.5 ? 'loco' : 'stand';
+      pl.down = downIn(s, 0);
+      pl.soon = mode !== 5 && !downIn(s, LIFT_SOON);
+      pl.hold = mode !== 5 && !downIn(s, HOLD_SOON);
+      pl.source = mode === 0 ? 'trans' : this.loco > 0.5 ? 'loco' : 'stand';
     }
     // (Passing round 14) The body over its planted feet, then each foot's lock.
     this.holdFeet = !!input.holdFeet;
     this.holdOver(dt, input.groundVelocity);
-    for (const s of FEET) this.lockFoot(s, plant[s].source, plant[s].down, dt, input.groundVelocity, plant[s].soon);
+    for (const s of FEET) this.lockFoot(s, plant[s].source, plant[s].down, dt, input.groundVelocity, plant[s].soon, plant[s].hold);
     // 4 and 5.
     this.lookAt(input.lookAt ?? null, dt, !!input.lookWide);
     this.pads(dt);
@@ -1554,7 +1548,7 @@ export class PlayerAnimator {
   private preBallY = { l: 0, r: 0 };
   private preBall = { l: new THREE.Vector3(), r: new THREE.Vector3() };
   /** This frame's plant per foot (down, and what plants it), from the clips' contacts. */
-  private plant: Record<'l' | 'r', { down: boolean; soon: boolean; source: LockSource }> = { l: { down: false, soon: false, source: 'stand' }, r: { down: false, soon: false, source: 'stand' } };
+  private plant: Record<'l' | 'r', { down: boolean; soon: boolean; hold: boolean; source: LockSource }> = { l: { down: false, soon: false, hold: false, source: 'stand' }, r: { down: false, soon: false, hold: false, source: 'stand' } };
 
   /**
    * The keyed leg's reach (passing round 14): the hip, the clip's own ankle and the farthest the hip may be from the
@@ -1655,6 +1649,7 @@ export class PlayerAnimator {
     dt: number,
     ground?: THREE.Vector3,
     soon = false,
+    hold = false,
   ): void {
     const st = this.feet[s];
     const foot = this.legs.foot[s];
@@ -1845,7 +1840,12 @@ export class PlayerAnimator {
       dbg.over = _hip.distanceTo(ankleTarget) - reach;
       dbg.age = st.age;
       const other = this.feet[s === 'l' ? 'r' : 'l'].step;
-      if ((far > STEP_FAR * scale || over) && soon) {
+      if (far > STEP_FAR * scale && !over && hold && far < STEP_HOLD * scale) {
+        // (Round 16) Only drifted off the clip's foot, and the clips lift it within HOLD_SOON: it holds on to its lift,
+        // the leg a little further out than keyed, rather than stepping and then lifting again at once (a step just
+        // before the lift was most of the gait's and the one-shots' steps: docs/anim/FEET16.md).
+        dbg.why = '';
+      } else if ((far > STEP_FAR * scale || over) && soon) {
         // About to lift anyway: let go into the clip's swing now (the release's blend), rather than step.
         dbg.why = `${st.source}:lift`;
         this.letGo(st, cb);
