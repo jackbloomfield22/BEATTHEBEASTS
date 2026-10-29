@@ -251,6 +251,9 @@ function diagFrame(n: number) {
       const v = bone.getWorldPosition(q.player.root.position.clone());
       return [r3(v.x), r3(v.y), r3(v.z)];
     };
+    // (Round 15) The lean (deg): the bank and the pitch.
+    const ld = (q.animator as unknown as { leanDbg?: { bank: number; pitch: number } }).leanDbg;
+    if (ld) (out.qb as Record<string, unknown>).lean = [Math.round((ld.bank * 1800) / Math.PI) / 10, Math.round((ld.pitch * 1800) / Math.PI) / 10];
     const an = q.animator as unknown as { footLockOf?(f: string): { locked: boolean; weight: number; pos: V }; give?: V; slid?: { l: number; r: number }; keyedKnee?: { l: number; r: number } };
     const lk = (f: string) => {
       const l = an.footLockOf?.(f);

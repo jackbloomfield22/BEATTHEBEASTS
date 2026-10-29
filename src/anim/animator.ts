@@ -365,6 +365,8 @@ export class PlayerAnimator {
     return { speed: this.lastSpeed, loco: this.loco, back: this.back, phase: this.phase, backPhase: this.backPhase };
   }
   private lastSpeed = 0;
+  /** (Round 15) This frame's lean (rad): the bank into the turn and the pitch, for the per-frame log. */
+  readonly leanDbg = { bank: 0, pitch: 0 };
 
   constructor(
     readonly player: Player,
@@ -848,7 +850,13 @@ export class PlayerAnimator {
       }
     }
     // 3. Lean (before the feet are locked, so the lock sees the leaned body).
-    this.lean(speed, input.yawRate ?? 0, input.accel ?? 0, this.pressW * PRESS_PITCH);
+    // (Round 15) For the quarterback (holdFeet) the run's lean is his gait's alone: in his one-shots (the drop, the set,
+    // the throw and its finish) the clip has him balanced. On the contested ball the sim turns him 3 rad/s and stops
+    // his drift just as the ball goes, and the lean read that as a run: banked 13 deg and pitched from +17 to -9 deg in
+    // 0.1 s, it lifted his front hip 5 cm over the planted foot (the front leg straight, 2 deg, for two frames after the
+    // release: docs/anim/FEET15.md).
+    const leanW = input.holdFeet ? 1 - tw : 1;
+    this.lean(speed, (input.yawRate ?? 0) * leanW, (input.accel ?? 0) * leanW, this.pressW * PRESS_PITCH);
     // Where the trunk is before any contact lean (contact.ts reads it: leaning must not feed back into the lean).
     this.bone('spine_04').getWorldPosition(this.trunk);
     const cl = input.contactLean;
@@ -1070,6 +1078,8 @@ export class PlayerAnimator {
     // runs pitched a little further into it.
     const bank = THREE.MathUtils.clamp(Math.atan2(speed * yawRate, G), -0.35, 0.35);
     const pitch = THREE.MathUtils.clamp(Math.atan2(accel, G) * 0.5 + press, -0.15, 0.3);
+    this.leanDbg.bank = bank;
+    this.leanDbg.pitch = pitch;
     if (Math.abs(bank) < 1e-4 && Math.abs(pitch) < 1e-4) return;
     const root = this.bone('root');
     const rootQ = this.player.root.getWorldQuaternion(_q2);
@@ -1390,7 +1400,10 @@ export class PlayerAnimator {
       // (Against the clip's foot before the leans, less what the leans moved it when it planted: a burst's pitch or a
       // turn's bank swings the feet about the hips, and the lock holds a planted one through it, as it should.)
       const pb = this.preBall[s];
-      const far = Math.hypot(st.pos.x - pb.x - st.leanOff.x, st.pos.z - pb.z - st.leanOff.z);
+      // (The quarterback's planted one-shots keep his lock as round 14 holds it: the body held over the foot and the
+      // point given to keep the knee, holdOver. Off the clip's foot is how that hold works; only a leg that can't reach
+      // steps. A 'far' step lifted his front foot 8 cm in the middle of the contested ball's finish.)
+      const far = this.holdFeet && source === 'trans' ? 0 : Math.hypot(st.pos.x - pb.x - st.leanOff.x, st.pos.z - pb.z - st.leanOff.z);
       const over = _hip.distanceTo(ankleTarget) > reach + REACH_MISS * scale;
       const other = this.feet[s === 'l' ? 'r' : 'l'].step;
       if ((far > STEP_FAR * scale || over) && soon) {
