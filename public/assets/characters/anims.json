@@ -15187,7 +15187,7 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 43.4,
+        "clear_cm": 43.3,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
@@ -15220,12 +15220,12 @@
       "gates": {
         "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 43.4,
+        "clear_cm": 43.3,
         "com_cm": null,
         "reach_cm": 0.01,
         "pass": true
       }
     }
   },
-  "bytes": 9256808
+  "bytes": 9254888
 }

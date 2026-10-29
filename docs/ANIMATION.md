@@ -227,7 +227,7 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `ol_slide_r` | locomotion | 12 | 1.8 | 0.00 | 0.00 | 21.1 | — | pass |
 | `ol_set_l` | locomotion | 12 | 1.6 | 0.00 | 0.00 | 42.3 | — | pass |
 | `ol_set_r` | locomotion | 12 | 1.6 | 0.00 | 0.00 | 42.3 | — | pass |
-| `ol_set_fast_l` | locomotion | 9 | 3.2 | 0.00 | 0.00 | 43.4 | — | pass |
-| `ol_set_fast_r` | locomotion | 9 | 3.2 | 0.00 | 0.00 | 43.4 | — | pass |
+| `ol_set_fast_l` | locomotion | 9 | 3.2 | 0.00 | 0.00 | 43.3 | — | pass |
+| `ol_set_fast_r` | locomotion | 9 | 3.2 | 0.00 | 0.00 | 43.3 | — | pass |
 
 **223 of 223 clips pass.**

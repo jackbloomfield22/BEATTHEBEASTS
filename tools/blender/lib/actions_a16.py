@@ -43,10 +43,13 @@ SHUFFLE_FAST = Gait(
     strike=16, flat_by=0.1, heel_mid=16, rise_at=0.5, toe_off=26, dorsi=0, gaze=4, dir=(1.0, 0.0), ahead=0.5,
 )
 
+# The line's trunk: ol_pass's 22 deg of pelvis (actions_m6_line.py STANCES["ol_pass"]), the keyer's lean * 0.65.
+LINE_LEAN = 22.0 / 0.65
+
 # The lineman's slide (to the left): ol_pass's base and hands (actions_m6_line.py),
 # short steps close to the turf.
 OL_SLIDE = Gait(
-    "ol_slide", frames=12, speed=1.8, duty=6.99 / 12, width=0.30, pelvis_up=-0.20, bob=0.008, sway=0.0, drop=1, turn=0, counter=0, lean=30,
+    "ol_slide", frames=12, speed=1.8, duty=6.99 / 12, width=0.30, pelvis_up=-0.20, bob=0.008, sway=0.0, drop=1, turn=0, counter=0, lean=LINE_LEAN,
     arm_c=READY.flex, arm_a=3, elbow=READY.elbow, elbow_d=3, arm_abd=READY.abd, inward=READY.inward, clavicle=0, hand="spread",
     hip_max=26, hip_ext=-8, knee_max=50, retract=0, fk=0.0, lift=0.045,
     strike=12, flat_by=0.1, heel_mid=10, rise_at=0.5, toe_off=20, dorsi=0, gaze=4, dir=(1.0, 0.0), ahead=0.5,
@@ -58,13 +61,13 @@ OL_SLIDE = Gait(
 KICK_OUT = math.radians(28.0)
 KICK_DIR = (math.sin(KICK_OUT), math.cos(KICK_OUT))  # Blender: +x left, +y back
 OL_SET = Gait(
-    "ol_set", frames=12, speed=1.6, duty=6.99 / 12, width=0.27, pelvis_up=-0.19, bob=0.01, sway=0.0, drop=1, turn=0, counter=0, lean=30,
+    "ol_set", frames=12, speed=1.6, duty=6.99 / 12, width=0.27, pelvis_up=-0.19, bob=0.01, sway=0.0, drop=1, turn=0, counter=0, lean=LINE_LEAN,
     arm_c=READY.flex, arm_a=3, elbow=READY.elbow, elbow_d=3, arm_abd=READY.abd, inward=READY.inward, clavicle=0, hand="spread",
     hip_max=26, hip_ext=-8, knee_max=52, retract=0, fk=0.0, lift=0.045,
     strike=12, flat_by=0.1, heel_mid=10, rise_at=0.5, toe_off=20, dorsi=0, gaze=4, dir=KICK_DIR, ahead=0.5,
 )
 OL_SET_FAST = Gait(
-    "ol_set_fast", frames=9, speed=3.2, duty=3.99 / 9, width=0.29, pelvis_up=-0.18, bob=0.016, sway=0.0, drop=1, turn=0, counter=0, lean=30,
+    "ol_set_fast", frames=9, speed=3.2, duty=3.99 / 9, width=0.29, pelvis_up=-0.18, bob=0.016, sway=0.0, drop=1, turn=0, counter=0, lean=LINE_LEAN,
     arm_c=READY.flex, arm_a=5, elbow=READY.elbow, elbow_d=4, arm_abd=READY.abd, inward=READY.inward, clavicle=0, hand="spread",
     hip_max=28, hip_ext=-10, knee_max=58, retract=0, fk=0.0, lift=0.06,
     strike=12, flat_by=0.1, heel_mid=10, rise_at=0.5, toe_off=22, dorsi=0, gaze=4, dir=KICK_DIR, ahead=0.5,
@@ -80,7 +83,8 @@ def lineman(p, g: Gait, kick: str | None):
     in with the wrists cocked (READY, STRIKE_WRISTS), the eyes on the rusher; for the
     set, the outside hip opened and the kick foot staggered back."""
     p.arms = {"l": READY, "r": READY}
-    p.joints.update({"spine_02": (4 + g.lean * 0.15, 0.0, 0.0), "spine_03": (2 + g.lean * 0.15, 0.0, 0.0), **STRIKE_WRISTS})
+    # ol_pass's chest (spine_02 4, spine_03 2 over the pelvis's 22 deg: the keyer puts lean * 0.65 in the pelvis, LINE_LEAN).
+    p.joints.update({"spine_02": (4.0, 0.0, 0.0), "spine_03": (2.0, 0.0, 0.0), **STRIKE_WRISTS})
     if kick:
         d = 1.0 if kick == "l" else -1.0
         S = STAGGER[g.name]
