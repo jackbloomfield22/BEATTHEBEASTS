@@ -191,7 +191,8 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
   const now = BONES.map((n) => b.player.bones.get(n)?.quaternion.clone() ?? new THREE.Quaternion());
   const tr = b.animator.transition;
   const ctx = { clip: tr && !tr.done ? tr.name : '', overlay: b.animator.overlayAction?.name ?? '', anim, phase };
-  if (prev && !b.ragdoll.active) {
+  // (Round 15: nor across a turning clip's hand-over, where the root takes the clip's turn: animator.ts turned.)
+  if (prev && !b.ragdoll.active && !b.animator.turned) {
     let worst = 0;
     now.forEach((q, k) => {
       const rate = (2 * Math.acos(Math.min(1, Math.abs(q.dot(prev[k]!))))) / dt;
@@ -203,7 +204,7 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
   }
   const yaw = b.player.root.rotation.y;
   const py = lastYaw.get(b);
-  if (py !== undefined && !b.lie && !b.ragdoll.active) {
+  if (py !== undefined && !b.lie && !b.ragdoll.active && !b.animator.turned) {
     const d = Math.abs(Math.atan2(Math.sin(yaw - py), Math.cos(yaw - py))) / dt;
     if (d > YAW_RATE) pops.spikes.push({ frame, slot: b.slot, bone: 'root-yaw', rate: Math.round(d), ...ctx });
   }

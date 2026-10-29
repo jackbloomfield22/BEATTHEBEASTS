@@ -108,9 +108,11 @@ interface FootState {
   preY: number;
   /** (Round 15) What the leans had moved the clip's foot by where the lock took it (horizontal; the step's 'far'). */
   leanOff: THREE.Vector3;
+  /** (Round 15) This release's length (s, letGo). */
+  relDur: number;
 }
 
-const newFoot = (): FootState => ({ weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), travel0: 0, spent: 0, source: null, drawn: new THREE.Vector3(), relOff: new THREE.Vector3(), step: null, stepFrom: new THREE.Vector3(), preY: 0, leanOff: new THREE.Vector3() });
+const newFoot = (): FootState => ({ weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), travel0: 0, spent: 0, source: null, drawn: new THREE.Vector3(), relOff: new THREE.Vector3(), step: null, stepFrom: new THREE.Vector3(), preY: 0, leanOff: new THREE.Vector3(), relDur: 0.08 });
 
 interface TransitionState {
   name: string;
@@ -261,6 +263,9 @@ const STEP_H0 = 0.03;
 const STEP_HK = 0.12;
 const STEP_HMAX = 0.09;
 const RELEASE = 0.08;
+/** (Round 15) A release's difference goes at no more than REL_V m/s (a jog's swing foot), in at most REL_MAX s. */
+const REL_V = 3;
+const REL_MAX = 0.25;
 /** (Round 15) A planted foot the clips lift within this long (s) lets go early rather than step: a quarter of a run's swing. */
 const LIFT_SOON = 0.06;
 /** (Round 15) The lock follows the clip's ball down while it's still landing: the ball this far (m) under where the lock took it. */
@@ -564,6 +569,8 @@ export class PlayerAnimator {
    * The transition then cuts instead of fading (its last frame is the turned stance).
    */
   onTurn: ((deg: number) => void) | null = null;
+  /** (Round 15) This frame's update handed a turning clip over (onTurn): the pose is the same in the world, its bones' local rotations jumped by the turn (the pop meter skips the frame). */
+  turned = false;
 
   /** The one-shot overlay playing now and its time, or null. */
   get overlayAction(): { name: string; t: number } | null {
@@ -686,6 +693,7 @@ export class PlayerAnimator {
   }
 
   update(dt: number, input: AnimInput): void {
+    this.turned = false;
     const speed = this.gaitSpeed(input, dt);
     this.lastSpeed = speed;
     const scale = this.player.shape.scale;
@@ -738,7 +746,9 @@ export class PlayerAnimator {
           tr.t = trMeta.duration;
           tr.done = true;
           if (trMeta.to) this.handOver(trMeta.to, trMeta.toPhase);
-          if (trMeta.turn && trMeta.to && !trMeta.to.startsWith('loco_') && this.onTurn) {
+          // (Round 15: into the gait too, when the caller holds the facing through the clip: choreo.ts turnClip.)
+          if (trMeta.turn && trMeta.to && this.onTurn) {
+            this.turned = true;
             this.onTurn(trMeta.turn);
             tr.w = 0;
           }
@@ -1261,6 +1271,7 @@ export class PlayerAnimator {
           st.source = null;
           st.weight = 1;
           st.relOff.set(0, 0, 0);
+          st.relDur = RELEASE;
         }
       }
     }
@@ -1286,10 +1297,7 @@ export class PlayerAnimator {
         // (Round 15) Lifted: the foot goes with the clip's swing from where the lock held it, the difference blended out
         // over RELEASE. Let go in ~15 ms (round 1's, so a lingering lock wouldn't drag the swinging foot back), the
         // foot jumped by whatever the lock had corrected (the mismatch between the clip's stride and the sim's).
-        st.locked = false;
-        st.source = null;
-        st.relOff.subVectors(st.drawn, cb).setY(0);
-        st.weight = 1;
+        this.letGo(st, cb);
       }
     }
     // The ball's target this frame and the IK's weight.
@@ -1320,7 +1328,7 @@ export class PlayerAnimator {
       w = st.weight;
       this.correction[s] = cb.distanceTo(st.pos);
     } else {
-      st.weight = Math.max(0, st.weight - dt / RELEASE);
+      st.weight = Math.max(0, st.weight - dt / st.relDur);
       if (st.weight <= 0) {
         st.drawn.copy(cb);
         return;
@@ -1388,11 +1396,9 @@ export class PlayerAnimator {
       if ((far > STEP_FAR * scale || over) && soon) {
         // About to lift anyway: let go into the clip's swing now (the release's blend), rather than step.
         dbg.why = `${st.source}:lift`;
-        st.locked = false;
-        st.source = null;
-        st.relOff.subVectors(st.drawn, cb).setY(0);
-        st.weight = 1;
+        this.letGo(st, cb);
         dbg.stepped = true;
+
       } else if ((far > STEP_FAR * scale || over) && (!other || other.u > 0.5 || over)) {
         dbg.why = `${st.source}:${over ? 'reach' : 'far'}`;
         this.stepFoot(st, cb, scale);
@@ -1411,6 +1417,18 @@ export class PlayerAnimator {
     foot.quaternion.copy(pq.invert().multiply(footWorld));
     foot.updateMatrixWorld(true);
     ball.getWorldPosition(st.drawn);
+  }
+
+  /**
+   * (Round 15) A foot let go of its lock into the clip's own motion: the lock's difference from the clip's foot blended
+   * out over RELEASE, longer for a larger difference (at most REL_V m/s of foot, up to REL_MAX s).
+   */
+  private letGo(st: FootState, cb: THREE.Vector3): void {
+    st.locked = false;
+    st.source = null;
+    st.relOff.subVectors(st.drawn, cb).setY(0);
+    st.relDur = THREE.MathUtils.clamp(st.relOff.length() / (REL_V * this.player.shape.scale), RELEASE, REL_MAX);
+    st.weight = 1;
   }
 
   /** (Round 15) The knee's pole for the leg's solve, into _pole: the clip's own bend, or over the toes. */

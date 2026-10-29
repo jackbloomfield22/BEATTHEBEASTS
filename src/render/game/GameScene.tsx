@@ -448,7 +448,12 @@ export function GameScene() {
       const want = yawOf(heading);
       const dy = lerpAngle(0, want - b.yaw, 1);
       const turn = Math.max(-YAW_MAX * animDt, Math.min(YAW_MAX * animDt, dy * (1 - Math.exp(-animDt * 22))));
-      b.yaw = animDt > 0 ? b.yaw + turn : want;
+      // (Round 15) A clip turning him into his run holds the facing (choreo.ts turnClip), until it hands over or is cut off.
+      if (b.turnHold && (b.animator.transition?.name !== b.turnHold.clip || b.animator.transition.done)) {
+        b.turnHold = null;
+        b.animator.onTurn = null;
+      }
+      if (!b.turnHold) b.yaw = animDt > 0 ? b.yaw + turn : want;
       const yaw = b.yaw;
       // The gait's speed, eased over ~60 ms (a juke's sidestep changes the speed along his facing in a tick).
       b.gaitSpeed += (d.speed - b.gaitSpeed) * (1 - Math.exp(-animDt / 0.06));
