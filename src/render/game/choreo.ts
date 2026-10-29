@@ -1200,14 +1200,7 @@ const LB = new Set(['WLB', 'MLB', 'SLB']);
 /** (Round 16) The block clips whose hands go on over the gait once the sim moves him faster than HANDS_MOVING (m/s: past a shuffle step's drift). */
 const HANDS_ON_THE_MOVE = new Set(['ol_anchor', 'ol_punch_mirror_l', 'ol_punch_mirror_r', 'dl_shed_l', 'dl_shed_r']);
 const HANDS_MOVING = 1.2;
-/**
- * (Round 16) A get-off or the read step lets go once the sim moves him faster than OFF_MOVING (m/s, a walk) more than
- * OFF_ANGLE (rad, 35 deg: past that the get-off's straight-ahead first steps are off his line by a stance's width within
- * two of them; the gait turns its hips up to 55 deg) off his facing, or (the read step) faster than READ_MOVING (m/s: the read step's 0.15 m in
- * 0.5 s is a step in place; a linebacker moving at a jog is already flowing). Ours.
- */
-const OFF_MOVING = 0.6;
-const OFF_ANGLE = (35 * Math.PI) / 180;
+/** (Round 16) The read step lets go once the sim moves him faster than this (m/s, a jog's start: ours). */
 const READ_MOVING = 1.2;
 /**
  * (Round 16) The drives paced by the sim (and the get-offs: their first steps are keyed at 1.4-2 m/s, the sim's
@@ -1607,22 +1600,9 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     // off the turf and the first kick are the one-shot's.
     if (keyed > 0 && tr.t >= KICK_HANDOFF && (sp * YARD) / (keyed * b.player.shape.scale) > KICK_RATE) anim.release();
   }
-  // (Round 16) A block's hands while the sim moves him (the anchor driven back, a mirror on the move, a shed on the run):
-  // the clip goes on over the upper body at the time it's at, and the legs are his gait's or the side layer's (the set,
-  // the slide, the shuffle), paced by the sim. Played whole, its feet are keyed in place or along its own travel, and
-  // they stepped off their plants whenever the sim's block moved him otherwise (docs/anim/FEET16.md: 110 of the line's
-  // 259 steps were in the anchor and the punch-and-mirror).
-  // (Round 16) The one-shots that start him moving, against the way the sim moves him: a get-off is keyed into a forward
-  // run, and the linebacker's read step is a short step in place; a man the sim already has going back or sideways
-  // (a corner bailing at the snap, a linebacker flowing to the play) goes on in his gait, the side layer or the pedal,
-  // paced by the sim. Played to the end, their feet were planted where the clip has them and stepped off it: a fifth
-  // of the back seven's and the line's steps (docs/anim/FEET16.md).
-  // (The read step lets go on the sim's speed alone: it is keyed in place, and let go as the sim drifts him a step it
-  // left its feet where it had moved them, and they stepped back.)
-  if (tr && !tr.done && tr.name.startsWith('getoff_') && sp * YARD > OFF_MOVING) {
-    const off = Math.abs(Math.atan2(Math.sin(Math.atan2(a.vel.y, a.vel.x) - a.face), Math.cos(Math.atan2(a.vel.y, a.vel.x) - a.face)));
-    if (off > OFF_ANGLE) anim.release(false);
-  }
+  // (Round 16) The linebacker's read step is a short step in place (0.15 m in 0.5 s): a linebacker the sim already has
+  // flowing at a jog goes on in his gait or the side layer, paced by the sim. (A get-off goes on, paced: let go at the
+  // snap, the corners and safeties turning to bail stood and turned on planted feet and stepped twice as often.)
   if (tr && !tr.done && tr.name === 'lb_read_step' && sp * YARD > READ_MOVING) anim.release(false);
   // (Round 16) A drive the sim paces: the bull rush and the run block's fire-out are keyed at their own speed along their
   // travel; they play at the sim's along it (PACE_LO to PACE_HI), as the drop and the kick-slide do.
@@ -1632,6 +1612,11 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     const keyed = m && n > 1 ? m.travel![n - 1]! / m.duration : 0;
     if (keyed > 0) anim.retime(tr.name, { rate: Math.max(PACE_LO, Math.min(PACE_HI, (Math.max(0, along) * YARD) / (keyed * b.player.shape.scale))) });
   }
+  // (Round 16) A block's hands while the sim moves him (the anchor driven back, a mirror on the move, a shed on the run):
+  // the clip goes on over the upper body at the time it's at, and the legs are his gait's or the side layer's (the set,
+  // the slide, the shuffle), paced by the sim. Played whole, its feet are keyed in place or along its own travel, and
+  // they stepped off their plants whenever the sim's block moved him otherwise (docs/anim/FEET16.md: 110 of the line's
+  // 259 steps were in the anchor and the punch-and-mirror).
   if (tr && !tr.done && HANDS_ON_THE_MOVE.has(tr.name) && sp * YARD > HANDS_MOVING) {
     const t = tr.t;
     anim.release();
