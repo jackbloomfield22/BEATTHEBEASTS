@@ -25,6 +25,11 @@ import type { BodyExtent } from './contact';
 // get-up after the whistle.
 
 export interface Body {
+  /**
+   * (Round 16) The drawn body off the sim's spot by a one-shot's own travel (ROOT_DRAWN: the linebacker's read step,
+   * which the sim doesn't make), world m; eased back to the sim's spot once it's over (GameScene).
+   */
+  rootOff?: THREE.Vector3;
   /** Who the body is dressed as (player id) and in which kit (personnel can change the man in a slot). */
   who: string;
   kit: string;
@@ -142,6 +147,7 @@ const _w = new THREE.Vector3();
 /** New play: forget clips, falls and per-play state. */
 export function resetBody(b: Body): void {
   b.ragdoll.stop();
+  (b.rootOff ??= new THREE.Vector3()).set(0, 0, 0);
   b.throwAt = -1;
   b.throwClip = null;
   b.catchFor = -1;
@@ -1194,7 +1200,37 @@ function startDrop(b: Body, s: PlayState, plan: DropPlan, t0: number): void {
 const OL = new Set(['LT', 'LG', 'C', 'RG', 'RT']);
 /** (Round 15) The kick-slide plays up to this much faster than keyed (ours: 1.6x is a quick set's ~0.6 s for its four steps, still read as steps at 30 fps). */
 const KICK_RATE = 1.6;
+/** (Round 16) The kick-slide one-shot's first slide is down by this (s of the clip: tools/blender/lib/actions_m6_line.py kick_slide, the slide lands at 0.32). */
+const KICK_HANDOFF = 0.34;
 const LB = new Set(['WLB', 'MLB', 'SLB']);
+/**
+ * (Round 16) One-shots whose travel the drawn body makes (GameScene, Body.rootOff): the read step's 0.15 m forward,
+ * which the sim doesn't make (its linebackers hold at the snap). Played in place, its planted feet went back by the
+ * travel under a body that stayed put, and stepped (docs/anim/FEET16.md); drawn, the body steps with them and then
+ * eases back onto the sim's spot (ROOT_BACK) as he moves off.
+ */
+export const ROOT_DRAWN = new Set(['lb_read_step']);
+export const ROOT_BACK = 0.3;
+/** (Round 16) The defensive line's slots (the hand fight's loop when engaged). */
+const DL_SLOTS = new Set(['LE', 'RE', 'LDT', 'RDT', 'NT', 'DT']);
+/** (Round 16) The block clips whose hands go on over the gait once the sim moves him faster than HANDS_MOVING (m/s: past a shuffle step's drift). */
+const HANDS_ON_THE_MOVE = new Set(['ol_anchor', 'ol_punch_mirror_l', 'ol_punch_mirror_r', 'dl_shed_l', 'dl_shed_r']);
+const HANDS_MOVING = 1.2;
+/**
+ * (Round 16) The read step lets go once the sim moves him faster than READ_MOVING (m/s, a jog's start), or faster than
+ * READ_DRIFT (m/s, a slow walk) more than READ_OFF (rad, 45 deg) off the way it steps (a linebacker opening to his drop
+ * at the snap, back and turning). Ours.
+ */
+const READ_MOVING = 1.2;
+const READ_DRIFT = 0.5;
+const READ_OFF = Math.PI / 4;
+/**
+ * (Round 16) The drives paced by the sim (and the get-offs: their first steps are keyed at 1.4-2 m/s, the sim's
+ * first steps off the ball are 2.5-3 m/s), and how far (ours: a third either way still reads as the keyed rhythm).
+ */
+const PACED = new Set(['dl_bull_rush', 'ol_fire_drive']);
+const PACE_LO = 0.7;
+const PACE_HI = 1.4;
 
 /** Pass-rush moves (sim/blocks.ts RushMove) to the M6 clips; the side is where the rusher goes around the blocker. */
 const RUSH_CLIP: Record<string, string | null> = { bull: 'dl_bull_rush', longArm: 'dl_bull_rush', swim: 'dl_swim', rip: 'dl_rip', club: 'dl_club', spin: 'dl_spin', speed: null };
@@ -1529,6 +1565,10 @@ export interface Drive {
   carryLeft?: number;
   /** Passing round 10: turned off his heading by this much (rad, sim angle, + left): the post-up's back into the man. */
   turn?: number;
+  /** (Round 16) The side loops he plays moving at an angle to his facing (AnimInput.side): the line's slide and kick-slide. */
+  side?: 'ol';
+  /** (Round 16) The side a lineman's set kicks to going straight back (AnimInput.sidePref): his outside foot. */
+  sidePref?: number;
 }
 
 const _look = new THREE.Vector3();
@@ -1544,8 +1584,31 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   const ball = s.ball;
   const tr = anim.transition;
   const out: Drive = { speed: Math.max(0, along) * YARD, backpedal: false, faceVelocity: false, look: null, carry: 0, traffic: 0, drive: 0, press: 0, dip: 0 };
+  // (Round 16) An offensive lineman moving back or sideways slides and kick-slides (the animator's side layer, AnimInput.side):
+  // he never backpedals. Round 15 left a lineman the sim still retreated after his kick-slide on the defensive back's pedal.
+  const line = a.side === 'off' && OL.has(a.slot as string);
+  if (line) {
+    out.side = 'ol';
+    const slot = a.slot as string;
+    out.sidePref = slot === 'LT' || slot === 'LG' ? 1 : slot === 'RT' || slot === 'RG' ? -1 : 0;
+  }
+  // (Round 16) Engaged, the linemen's feet stay alive: the blocker in pass protection and the rusher on him stand in the
+  // hand fight's loops (ol_engage, dl_engage), whose feet chop in place and re-set where the clip puts them, rather than
+  // in a still stance with the feet held while the sim drifts the pair and then stepped off (docs/anim/FEET16.md: most of
+  // the line's slow steps). Out of it, back to the set (the line) or the ready stance (the rush).
+  if (s.phase !== 'presnap' && s.snapT >= 0) {
+    const slot = a.slot as string;
+    const cur = anim.stanceName;
+    if (line && !s.setup.play.run) {
+      const want = a.anim === 'block' && anim.lib.meta.ol_engage ? 'ol_engage' : 'stance_ol_pass';
+      if (cur !== want && (cur === 'ol_engage' || cur === 'stance_ol_pass')) anim.setStance(want);
+    } else if (a.side === 'def' && DL_SLOTS.has(slot)) {
+      if (a.anim === 'engaged' && cur !== 'dl_engage' && anim.lib.meta.dl_engage) anim.setStance('dl_engage');
+      else if (a.anim !== 'engaged' && cur === 'dl_engage') anim.setStance('stance_idle');
+    }
+  }
   // Backward: a pedal up to a quick pace, else turn and run.
-  if (along < -0.8 && !tr?.name.startsWith('qb_drop_')) {
+  if (along < -0.8 && !tr?.name.startsWith('qb_drop_') && !(line && sp * YARD < 5.2)) {
     if (sp * YARD < 5.2) {
       out.backpedal = true;
       out.speed = sp * YARD;
@@ -1569,6 +1632,35 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     const n = m?.travel?.length ?? 0;
     const keyed = m && n > 1 ? Math.hypot(m.travel![n - 1]!, m.side?.[n - 1] ?? 0) / m.duration : 0;
     if (keyed > 0) anim.retime(tr.name, { rate: Math.max(1, Math.min(KICK_RATE, (sp * YARD) / (keyed * b.player.shape.scale))) });
+    // (Round 16) A set the clip can't keep up with (past KICK_RATE: the sim's vertical sets at 3-4 m/s) goes on into the
+    // kick-slide loop (the animator's side layer, paced by the sim) once the clip's first kick and slide are down: the hand
+    // off the turf and the first kick are the one-shot's.
+    if (keyed > 0 && tr.t >= KICK_HANDOFF && (sp * YARD) / (keyed * b.player.shape.scale) > KICK_RATE) anim.release();
+  }
+  // (Round 16) The linebacker's read step is a short step forward (0.15 m in 0.5 s): a linebacker the sim already has
+  // flowing at a jog, or dropping, goes on in his gait or the side layer, paced by the sim. (A get-off goes on, paced: let
+  // go at the snap, the corners and safeties turning to bail stood and turned on planted feet and stepped twice as often.)
+  if (tr && !tr.done && tr.name === 'lb_read_step' && sp * YARD > READ_DRIFT) {
+    const off = Math.abs(Math.atan2(Math.sin(Math.atan2(a.vel.y, a.vel.x) - a.face), Math.cos(Math.atan2(a.vel.y, a.vel.x) - a.face)));
+    if (sp * YARD > READ_MOVING || off > READ_OFF) anim.release(false);
+  }
+  // (Round 16) A drive the sim paces: the bull rush and the run block's fire-out are keyed at their own speed along their
+  // travel; they play at the sim's along it (PACE_LO to PACE_HI), as the drop and the kick-slide do.
+  if (tr && !tr.done && (PACED.has(tr.name) || tr.name.startsWith('getoff_'))) {
+    const m = anim.lib.meta[tr.name];
+    const n = m?.travel?.length ?? 0;
+    const keyed = m && n > 1 ? m.travel![n - 1]! / m.duration : 0;
+    if (keyed > 0) anim.retime(tr.name, { rate: Math.max(PACE_LO, Math.min(PACE_HI, (Math.max(0, along) * YARD) / (keyed * b.player.shape.scale))) });
+  }
+  // (Round 16) A block's hands while the sim moves him (the anchor driven back, a mirror on the move, a shed on the run):
+  // the clip goes on over the upper body at the time it's at, and the legs are his gait's or the side layer's (the set,
+  // the slide, the shuffle), paced by the sim. Played whole, its feet are keyed in place or along its own travel, and
+  // they stepped off their plants whenever the sim's block moved him otherwise (docs/anim/FEET16.md: 110 of the line's
+  // 259 steps were in the anchor and the punch-and-mirror).
+  if (tr && !tr.done && HANDS_ON_THE_MOVE.has(tr.name) && sp * YARD > HANDS_MOVING) {
+    const t = tr.t;
+    anim.release();
+    anim.playOverlay(tr.name, { t0: t, mask: THROW_MASK });
   }
   // The throw: the release frame lands on the sim's release. The motion is
   // the man's (throwClip): a quick release's compact one, a long windup's

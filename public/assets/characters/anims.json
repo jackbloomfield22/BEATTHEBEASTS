@@ -17011,7 +17011,353 @@
       "events": {
         "release": 14
       }
+    },
+    "ol_engage": {
+      "kind": "stance",
+      "frames": 36,
+      "duration": 1.2,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            3
+          ],
+          [
+            6,
+            21
+          ],
+          [
+            24,
+            36
+          ]
+        ],
+        "r": [
+          [
+            0,
+            12
+          ],
+          [
+            15,
+            30
+          ],
+          [
+            33,
+            36
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 41.9,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "loco_backpedal_slow": {
+      "kind": "locomotion",
+      "frames": 14,
+      "duration": 0.4666666666666667,
+      "loop": true,
+      "speed": 1.5,
+      "dir": [
+        0.0,
+        -1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ]
+        ],
+        "r": [
+          [
+            7,
+            14
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 25.4,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "lb_shuffle_fast_l": {
+      "kind": "locomotion",
+      "frames": 10,
+      "duration": 0.3333333333333333,
+      "loop": true,
+      "speed": 3.4,
+      "dir": [
+        1.0,
+        -0.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            4
+          ]
+        ],
+        "r": [
+          [
+            5,
+            9
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 11.5,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "lb_shuffle_fast_r": {
+      "kind": "locomotion",
+      "frames": 10,
+      "duration": 0.3333333333333333,
+      "loop": true,
+      "speed": 3.4,
+      "dir": [
+        -1.0,
+        -0.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            5,
+            9
+          ]
+        ],
+        "r": [
+          [
+            0,
+            4
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 11.5,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "ol_slide_l": {
+      "kind": "locomotion",
+      "frames": 12,
+      "duration": 0.4,
+      "loop": true,
+      "speed": 1.8,
+      "dir": [
+        1.0,
+        -0.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ]
+        ],
+        "r": [
+          [
+            6,
+            1
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 21.1,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "ol_slide_r": {
+      "kind": "locomotion",
+      "frames": 12,
+      "duration": 0.4,
+      "loop": true,
+      "speed": 1.8,
+      "dir": [
+        -1.0,
+        -0.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            6,
+            1
+          ]
+        ],
+        "r": [
+          [
+            0,
+            7
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 21.1,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "ol_set_l": {
+      "kind": "locomotion",
+      "frames": 12,
+      "duration": 0.4,
+      "loop": true,
+      "speed": 1.6,
+      "dir": [
+        0.4694715627858908,
+        -0.882947592858927
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ]
+        ],
+        "r": [
+          [
+            6,
+            1
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 42.3,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "ol_set_r": {
+      "kind": "locomotion",
+      "frames": 12,
+      "duration": 0.4,
+      "loop": true,
+      "speed": 1.6,
+      "dir": [
+        -0.4694715627858908,
+        -0.882947592858927
+      ],
+      "contacts": {
+        "l": [
+          [
+            6,
+            1
+          ]
+        ],
+        "r": [
+          [
+            0,
+            7
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 42.3,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "ol_set_fast_l": {
+      "kind": "locomotion",
+      "frames": 9,
+      "duration": 0.3,
+      "loop": true,
+      "speed": 3.2,
+      "dir": [
+        0.4694715627858908,
+        -0.882947592858927
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            4
+          ]
+        ],
+        "r": [
+          [
+            5,
+            9
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 43.3,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "ol_set_fast_r": {
+      "kind": "locomotion",
+      "frames": 9,
+      "duration": 0.3,
+      "loop": true,
+      "speed": 3.2,
+      "dir": [
+        -0.4694715627858908,
+        -0.882947592858927
+      ],
+      "contacts": {
+        "l": [
+          [
+            5,
+            9
+          ]
+        ],
+        "r": [
+          [
+            0,
+            4
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 43.3,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
     }
   },
-  "bytes": 10017944
+  "bytes": 10363296
 }
