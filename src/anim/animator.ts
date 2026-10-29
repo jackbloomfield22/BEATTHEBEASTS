@@ -325,6 +325,14 @@ const SIDE_VOUT_OL = 5.6;
 const SIDE_WARP = (45 * Math.PI) / 180;
 const SET_OUT = (28 * Math.PI) / 180;
 const SIDE_FLIP = 0.3;
+/**
+ * (Round 16) A lineman coming into the layer kicks with his outside foot (AnimInput.sidePref) unless the sim takes him
+ * more than this far (sin, 45 deg) off straight back to the other side. A tackle's set goes back and out (SET_OUT), and
+ * his first steps off the snap wobble 20-40 deg either side of straight back at under 1 m/s (the go's left tackle: 154
+ * deg off his facing, then 172-180, in the first 0.3 s): chosen by the sign alone, he slid the wrong way for 0.4 s after
+ * the kick-slide's first kick, then flipped.
+ */
+const SIDE_PREF_OL = Math.SQRT1_2;
 /** (Round 16) The side loops by style and side: the slide (sideways) and the set (back and out), each slow to fast. */
 const SIDE_CLIPS = {
   lb: { l: { slide: ['lb_shuffle_l', 'lb_shuffle_fast_l'], set: [] as string[] }, r: { slide: ['lb_shuffle_r', 'lb_shuffle_fast_r'], set: [] as string[] } },
@@ -1421,7 +1429,7 @@ export class PlayerAnimator {
     if (!this.sideOn) return null;
     const sn = Math.sin(th);
     const fresh = this.sideL + this.sideR < 0.05;
-    if (fresh || sn * this.sideDir < -SIDE_FLIP) this.sideDir = fresh && Math.abs(sn) < SIDE_FLIP && input.sidePref ? Math.sign(input.sidePref) : sn >= 0 ? 1 : -1;
+    if (fresh || sn * this.sideDir < -SIDE_FLIP) this.sideDir = fresh && Math.abs(sn) < (ol ? SIDE_PREF_OL : SIDE_FLIP) && input.sidePref ? Math.sign(input.sidePref) : sn >= 0 ? 1 : -1;
     if (fresh && !on) {
       // Into the layer from the gait or a stance: the phase the feet are in (the left loops' phase; the left foot is the
       // lead going left). One foot planted: mid-way through its plant. Both: just before the lead foot lifts.
