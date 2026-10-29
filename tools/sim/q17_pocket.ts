@@ -26,7 +26,8 @@ if (scan) {
   const [play, def, seeds] = scan.split(':');
   const [a, b] = seeds!.split('-').map(Number);
   for (let seed = a!; seed <= b!; seed++) {
-    const s = make({ id: 'scan', title: '', seed, play: play!, def: def!, los: 30, user: false, script: () => NEUTRAL });
+    const sw = arg('swap');
+    const s = make({ id: 'scan', title: '', seed, play: play!, def: def!, los: 30, user: false, script: () => NEUTRAL, ...(sw ? { swap: { off: 'QB' as const, name: sw, pos: 'QB' } } : {}) });
     const kinds: Record<string, { t: number; run: number; best: number }> = { slideL: { t: 0, run: 0, best: 0 }, slideR: { t: 0, run: 0, best: 0 }, up: { t: 0, run: 0, best: 0 }, back: { t: 0, run: 0, best: 0 } };
     let maxSp = 0;
     let rel = -1;
@@ -56,7 +57,9 @@ if (scan) {
   }
 } else {
   const ids = arg('ids')?.split(',');
-  const list: Clip[] = [...CLIPS, ...PASSING9, ...PASSING17].filter((c) => !ids || ids.includes(c.id));
+  const ai = arg('ai')?.split(':');
+  const sw = arg('swap');
+  const list: Clip[] = ai ? [{ id: `ai ${ai.join(':')}`, title: '', seed: Number(ai[2]), play: ai[0]!, def: ai[1]!, los: 30, user: false, script: () => NEUTRAL, ...(sw ? { swap: { off: 'QB' as const, name: sw, pos: 'QB' } } : {}) }] : [...CLIPS, ...PASSING9, ...PASSING17].filter((c) => !ids || ids.includes(c.id));
   for (const c of list) {
     const s = make(c);
     const lines: string[] = [];
@@ -71,7 +74,18 @@ if (scan) {
       last = n;
       const sp = Math.hypot(q.vel.x, q.vel.y) * YARD;
       const th = sp > 0.3 ? `${deg(wrap(Math.atan2(q.vel.y, q.vel.x) - q.face))}` : '-';
-      lines.push(`${t.toFixed(2)} ${s.phase.padEnd(8)} sp ${sp.toFixed(2)} off ${th.padStart(4)} face ${deg(q.face)} pos ${q.pos.x.toFixed(1)},${q.pos.y.toFixed(1)}${s.windup ? ` W(${(s.windup.at - s.snapT).toFixed(2)})` : ''}${s.ball.mode === 'air' ? ' AIR' : ''}${s.scrambleT >= 0 ? ' SCR' : ''} anim ${q.anim}`);
+      // The nearest free (unblocked, standing) defender: where he is from the QB (yd, x downfield, y left).
+      let nd = '';
+      let best = 99;
+      for (const i of s.def) {
+        const d = s.agents[i]!;
+        const k = Math.hypot(d.pos.x - q.pos.x, d.pos.y - q.pos.y);
+        if (!d.down && d.anim !== 'engaged' && k < best && k < 6) {
+          best = k;
+          nd = ` free ${d.slot} ${(d.pos.x - q.pos.x).toFixed(1)},${(d.pos.y - q.pos.y).toFixed(1)}`;
+        }
+      }
+      lines.push(`${t.toFixed(2)} ${s.phase.padEnd(8)} sp ${sp.toFixed(2)} off ${th.padStart(4)} face ${deg(q.face)} pos ${q.pos.x.toFixed(1)},${q.pos.y.toFixed(1)}${s.windup ? ` W(${(s.windup.at - s.snapT).toFixed(2)})` : ''}${s.ball.mode === 'air' ? ' AIR' : ''}${s.scrambleT >= 0 ? ' SCR' : ''} anim ${q.anim}${nd}`);
       if (s.ball.mode === 'air' && t > s.ball.releaseT - s.snapT + 0.6) break;
     }
     const res = s.result as unknown as { kind?: string; yards?: number } | null;

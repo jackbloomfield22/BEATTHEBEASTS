@@ -548,4 +548,7 @@ export const PASSING17: Clip[] = [
   { id: 'p17-climb', title: 'The climb up the pocket and the throw out of it', seed: 3, play: 'trips-y-cross', def: 'cover3', los: 30, script: pocketMove({ legs: [{ at: 70, until: 104, dir: { x: 1, y: 0 } }], icon: 1, throw: 110 }) },
   { id: 'p17-roll-r', title: 'Out of the pocket to his right, the throw on the run', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: pocketMove({ legs: [{ at: 66, until: 130, dir: { x: 0.15, y: -1 }, scramble: true }], icon: 1, throw: 116 }) },
   { id: 'p17-roll-l', title: 'Out of the pocket to his left, the throw on the run', seed: 1, play: 'trips-y-cross', def: 'cover3', los: 30, script: pocketMove({ legs: [{ at: 66, until: 130, dir: { x: 0.15, y: 1 }, scramble: true }], icon: 1, throw: 116 }) },
+  // The AI's pocket against the blitz (tools/sim/q17_pocket.ts --ai=doubles-curls:cover1blitz:6): his reads side to side
+  // from the set, a slide right off the end at 2.6 s, a drift back, then away to his left and the throw on the run at 5 s.
+  { id: 'p17-ai-slide', title: 'The AI in the pocket: the slide, the drift and the throw on the run', seed: 6, play: 'doubles-curls', def: 'cover1blitz', los: 30, user: false, script: () => NEUTRAL },
 ];
