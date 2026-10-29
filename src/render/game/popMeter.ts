@@ -99,6 +99,9 @@ const LOCK_FULL = 0.98;
 const JUMP = 0.02;
 const JUMP5 = 0.05;
 const TRACE = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('trace') : null;
+/** (Round 16) ?posedump: every body's key joints every frame (world, 0.01 mm), to check a change to the animator's cost leaves the pose as it was. */
+const POSEDUMP = typeof location !== 'undefined' && new URLSearchParams(location.search).has('posedump');
+const DUMP_BONES = ['pelvis', 'spine_04', 'head', 'hand_l', 'hand_r', 'thigh_l', 'calf_l', 'foot_l', 'toe_l', 'thigh_r', 'calf_r', 'foot_r', 'toe_r'];
 /**
  * (Round 15) By unit: the QB, the offensive line, the defensive line, the linebackers, the defensive backs, the
  * receivers and tight ends, the backs (render/game/choreo.ts slots).
@@ -170,7 +173,7 @@ function closeSpan(b: Body, f: 'l' | 'r', cur: Span, clip: string, frame: number
 
 const last = new Map<Body, THREE.Quaternion[]>();
 const lastYaw = new Map<Body, number>();
-export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats>, worstSpans: [] as WorstSpan[], stepSpans: [] as WorstSpan[], trace: [] as (number | string)[][], cost: { n: 0, ms: 0 } };
+export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats>, worstSpans: [] as WorstSpan[], stepSpans: [] as WorstSpan[], trace: [] as (number | string)[][], cost: { n: 0, ms: 0 }, pose: [] as (number | string)[][], bySlot: {} as Record<string, Record<string, number>> };
 if (typeof window !== 'undefined') (window as unknown as { __btbPops: typeof pops }).__btbPops = pops;
 
 export function resetPops(): void {
@@ -184,6 +187,8 @@ export function resetPops(): void {
   pops.trace.length = 0;
   pops.cost.n = 0;
   pops.cost.ms = 0;
+  pops.pose.length = 0;
+  pops.bySlot = {};
   pops.frames = 0;
   pops.spikes.length = 0;
   pops.worst = 0;
@@ -193,6 +198,16 @@ export function resetPops(): void {
 /** One body after its update this frame. `lying`: a ragdoll or a lying clip drives him (falls are allowed to be fast). */
 export function measure(b: Body, dt: number, frame: number, anim: string, phase: string): void {
   if (dt <= 0) return;
+  if (POSEDUMP) {
+    const row: (number | string)[] = [frame, b.slot];
+    for (const n of DUMP_BONES) {
+      const bone = b.player.bones.get(n);
+      if (!bone) continue;
+      bone.getWorldPosition(_toe);
+      row.push(Math.round(_toe.x * 1e5) / 1e5, Math.round(_toe.y * 1e5) / 1e5, Math.round(_toe.z * 1e5) / 1e5);
+    }
+    pops.pose.push(row);
+  }
   const prev = last.get(b);
   const now = BONES.map((n) => b.player.bones.get(n)?.quaternion.clone() ?? new THREE.Quaternion());
   const tr = b.animator.transition;
@@ -231,6 +246,7 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
     const gd = b.animator.gaitDbg();
     const mode = ctx.clip ? 'trans' : gd.loco < 0.5 ? 'stand' : Math.abs(gd.side) > 0.5 ? 'side' : gd.back > 0.5 ? 'back' : 'fwd';
     bump((pops.slide[groupOf(b.slot)] ??= newSlide()).modes, mode);
+    bump((pops.bySlot[b.slot] ??= {}), `${mode}${mode === 'side' ? (gd.side > 0 ? 'L' : 'R') : ''}@${Math.floor(frame / 60)}`);
   }
   // (Round 15) ?trace=SLOT: that player's feet every frame (the lock, the clip's foot, the drawn foot, the step).
   if (TRACE && b.slot === TRACE) {

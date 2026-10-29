@@ -1197,6 +1197,9 @@ const KICK_RATE = 1.6;
 /** (Round 16) The kick-slide one-shot's first slide is down by this (s of the clip: tools/blender/lib/actions_m6_line.py kick_slide, the slide lands at 0.32). */
 const KICK_HANDOFF = 0.34;
 const LB = new Set(['WLB', 'MLB', 'SLB']);
+/** (Round 16) The block clips whose hands go on over the gait once the sim moves him faster than HANDS_MOVING (m/s: past a shuffle step's drift). */
+const HANDS_ON_THE_MOVE = new Set(['ol_anchor', 'ol_punch_mirror_l', 'ol_punch_mirror_r', 'dl_shed_l', 'dl_shed_r']);
+const HANDS_MOVING = 1.2;
 
 /** Pass-rush moves (sim/blocks.ts RushMove) to the M6 clips; the side is where the rusher goes around the blocker. */
 const RUSH_CLIP: Record<string, string | null> = { bull: 'dl_bull_rush', longArm: 'dl_bull_rush', swim: 'dl_swim', rip: 'dl_rip', club: 'dl_club', spin: 'dl_spin', speed: null };
@@ -1581,6 +1584,16 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     // kick-slide loop (the animator's side layer, paced by the sim) once the clip's first kick and slide are down: the hand
     // off the turf and the first kick are the one-shot's.
     if (keyed > 0 && tr.t >= KICK_HANDOFF && (sp * YARD) / (keyed * b.player.shape.scale) > KICK_RATE) anim.release();
+  }
+  // (Round 16) A block's hands while the sim moves him (the anchor driven back, a mirror on the move, a shed on the run):
+  // the clip goes on over the upper body at the time it's at, and the legs are his gait's or the side layer's (the set,
+  // the slide, the shuffle), paced by the sim. Played whole, its feet are keyed in place or along its own travel, and
+  // they stepped off their plants whenever the sim's block moved him otherwise (docs/anim/FEET16.md: 110 of the line's
+  // 259 steps were in the anchor and the punch-and-mirror).
+  if (tr && !tr.done && HANDS_ON_THE_MOVE.has(tr.name) && sp * YARD > HANDS_MOVING) {
+    const t = tr.t;
+    anim.release();
+    anim.playOverlay(tr.name, { t0: t, mask: THROW_MASK });
   }
   // The throw: the release frame lands on the sim's release. The motion is
   // the man's (throwClip): a quick release's compact one, a long windup's

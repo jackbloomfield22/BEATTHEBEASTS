@@ -312,7 +312,7 @@ async function record(page: Page, clip: Clip) {
   await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
   // (Round 15) BTB_FOLLOW15=slot,dx,dy,h,fov: a close camera on one man (the feet), for any of the round's plays.
   const follow = PASSING15 && process.env.BTB_FOLLOW15 ? `&follow=${process.env.BTB_FOLLOW15}` : PASSING10 && process.env.BTB_FOLLOW && FOLLOW10[clip.id] ? `&follow=${FOLLOW10[clip.id]}` : PASSING9 && process.env.BTB_FOLLOW && FOLLOW9[clip.id] ? `&follow=${FOLLOW9[clip.id]}` : PASSING8 && process.env.BTB_FOLLOW && FOLLOW8[clip.id] ? `&follow=${FOLLOW8[clip.id]}` : PASSING7 && process.env.BTB_FOLLOW && FOLLOW7[clip.id] ? `&follow=${FOLLOW7[clip.id]}` : PASSING6 && process.env.BTB_FOLLOW && FOLLOW6[clip.id] ? `&follow=${FOLLOW6[clip.id]}` : PASSING5 && process.env.BTB_FOLLOW && FOLLOW5[clip.id] ? `&follow=${FOLLOW5[clip.id]}` : PASSING2 && FOLLOW[clip.id] ? `&follow=${FOLLOW[clip.id]}` : (PASSING3 || PASSING4) && process.env.BTB_FOLLOW ? `&follow=${process.env.BTB_FOLLOW}` : '';
-  await page.goto(`/?screen=practice&nointro&quality=${QUALITY}&video=${FPS}&pops&seed=1${follow}${MEASURE ? '&noshadow&noao' : ''}${process.env.BTB_TRACE ? `&trace=${process.env.BTB_TRACE}` : ''}`);
+  await page.goto(`/?screen=practice&nointro&quality=${QUALITY}&video=${FPS}&pops&seed=1${follow}${MEASURE ? '&noshadow&noao' : ''}${process.env.BTB_TRACE ? `&trace=${process.env.BTB_TRACE}` : ''}${process.env.BTB_POSEDUMP ? '&posedump' : ''}`);
   // The page only draws when asked: keep it drawing while it loads.
   const pump = (pred: string) =>
     page.waitForFunction(
@@ -416,13 +416,15 @@ async function record(page: Page, clip: Clip) {
     // (Passing round 14) The planted feet's drift, by group (popMeter.ts).
     const slide = (p as unknown as { slide?: unknown }).slide;
     // (Round 15) The ten worst planted spans and the animator's cost (ms per body per frame, GameScene).
-    const ex = p as unknown as { worstSpans?: unknown[]; stepSpans?: unknown[]; trace?: unknown[]; cost?: { n: number; ms: number } };
+    const ex = p as unknown as { worstSpans?: unknown[]; stepSpans?: unknown[]; trace?: unknown[]; cost?: { n: number; ms: number }; bySlot?: unknown };
     const cost = ex.cost && ex.cost.n > 0 ? { bodies: ex.cost.n, msPerBody: Math.round((ex.cost.ms / ex.cost.n) * 10000) / 10000 } : undefined;
-    return { frames: p.rates.length, worst: Math.round(p.worst), p99: Math.round(sorted[Math.floor(sorted.length * 0.99)] ?? 0), ...(slide ? { slide } : {}), ...(ex.worstSpans ? { worstSpans: ex.worstSpans } : {}), ...(ex.stepSpans ? { stepSpans: ex.stepSpans } : {}), ...(ex.trace?.length ? { trace: ex.trace } : {}), ...(cost ? { cost } : {}), spikes: p.spikes };
+    return { frames: p.rates.length, worst: Math.round(p.worst), p99: Math.round(sorted[Math.floor(sorted.length * 0.99)] ?? 0), ...(slide ? { slide } : {}), ...(ex.worstSpans ? { worstSpans: ex.worstSpans } : {}), ...(ex.stepSpans ? { stepSpans: ex.stepSpans } : {}), ...(ex.trace?.length ? { trace: ex.trace } : {}), ...(cost ? { cost } : {}), ...(ex.bySlot ? { bySlot: ex.bySlot } : {}), spikes: p.spikes };
   });
   // (Round ten: the close camera's and the 60-fps window's recordings sit next to the broadcast one.)
   const sfx = PASSING10 ? `${process.env.BTB_FOLLOW || process.env.BTB_FOLLOW15 ? '-close' : ''}${WINDOW ? `-${FPS}` : ''}` : '';
   writeFileSync(`${OUT}/${clip.id}${sfx}.pops.json`, JSON.stringify(pops, null, 1) + '\n');
+  // (Round 16) ?posedump (BTB_POSEDUMP=1): every body's joints every frame, beside the log.
+  if (process.env.BTB_POSEDUMP) writeFileSync(`${OUT}/${clip.id}${sfx}.pose.json`, JSON.stringify(await page.evaluate(() => (window as unknown as { __btbPops: { pose: unknown } }).__btbPops.pose)));
   if (DIAG) writeFileSync(`${dir}/diag.json`, JSON.stringify(diag) + '\n');
   if (MEASURE) {
     console.log(`${clip.id}: measured ${n} frames, pops worst ${pops.worst} rad/s`);

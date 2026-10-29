@@ -7,7 +7,8 @@ import type { GaitClip } from './blend';
 // anims.json (frames, speed, foot contacts, gate results), both written by
 // tools/blender/build_anims.py.
 
-const BASE = `${import.meta.env.BASE_URL}assets/characters/`;
+/** (Round 16: read when the library loads, so the module also loads outside Vite: tools/sim/a16_animbench.ts.) */
+const base = (): string => `${import.meta.env.BASE_URL}assets/characters/`;
 
 export interface ClipMeta {
   /** 'signature': the locker-room hologram clips (M6), in place, looping; play them raw. */
@@ -75,8 +76,8 @@ let pending: Promise<AnimLibrary> | null = null;
 
 export function loadAnimLibrary(): Promise<AnimLibrary> {
   pending ??= Promise.all([
-    new GLTFLoader().loadAsync(`${BASE}anims.glb`),
-    fetch(`${BASE}anims.json`).then((r) => r.json() as Promise<{ fps: number; clips: Record<string, ClipMeta> }>),
+    new GLTFLoader().loadAsync(`${base()}anims.glb`),
+    fetch(`${base()}anims.json`).then((r) => r.json() as Promise<{ fps: number; clips: Record<string, ClipMeta> }>),
   ]).then(([gltf, json]) => {
     const clips = new Map<string, THREE.AnimationClip>();
     for (const c of gltf.animations) {

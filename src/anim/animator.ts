@@ -82,6 +82,18 @@ export interface AnimInput {
 }
 
 const FEET = ['l', 'r'] as const;
+const NO_SYNC = (): void => {};
+/**
+ * (Round 16) An eased share (the gait's, the pedal's, the side layer's, a stance's) toward 0 or 1, taken there once it's
+ * within SNAP. Eased by a fraction a frame they never got there, and a clip at a weight of 1e-5 is sampled whole by the
+ * mixer all the same: half the clips sampled each frame were under 1e-3 (tools/sim/a16_animbench.ts --count). A share
+ * this close moves no bone by more than a tenth of a millimetre.
+ */
+const SNAP = 1e-3;
+const ease = (v: number, target: number, k: number): number => {
+  const n = v + (target - v) * k;
+  return Math.abs(target - n) < SNAP ? target : n;
+};
 const G = 9.81;
 
 const _v = new THREE.Vector3();
@@ -234,6 +246,17 @@ const _cb = new THREE.Vector3();
  * solves' updateMatrixWorld), so they read it as it is (the animator's cost per body: docs/anim/FEET15.md).
  */
 const wpos = (b: THREE.Object3D, v: THREE.Vector3): THREE.Vector3 => v.setFromMatrixPosition(b.matrixWorld);
+/** (Round 16) Its world rotation, the same way (getWorldQuaternion's decompose, without recomputing the ancestors first). */
+const wquat = (b: THREE.Object3D, q: THREE.Quaternion): THREE.Quaternion => {
+  b.matrixWorld.decompose(_dpos, q, _dscale);
+  return q;
+};
+const _dpos = new THREE.Vector3();
+const _lw = new THREE.Quaternion();
+const _lq = new THREE.Quaternion();
+const _lp = new THREE.Quaternion();
+const _le = new THREE.Euler();
+const _dscale = new THREE.Vector3();
 const _tb = new THREE.Vector3();
 const _fq = new THREE.Quaternion();
 /**
@@ -354,6 +377,9 @@ const KNEE_BENT = 0.03;
 export class PlayerAnimator {
   readonly mixer: THREE.AnimationMixer;
   private actions = new Map<string, THREE.AnimationAction>();
+  /** (Round 16) The transitions' actions by name, and the one given weight last frame. */
+  private transActs = new Map<string, THREE.AnimationAction>();
+  private transAct: THREE.AnimationAction | null = null;
   private stance = 'stance_idle';
   private stanceWeights = new Map<string, number>();
   private stanceTime = 0;
@@ -480,10 +506,18 @@ export class PlayerAnimator {
     this.stanceWeights.set(this.stance, 1);
     this.rootB = this.bone('root');
     this.chestB = this.bone('spine_04');
+    this.headB = this.bone('head');
+    this.neckB = this.bone('neck_02');
     const both = (n: string) => ({ l: this.bone(`${n}_l`), r: this.bone(`${n}_r`) });
     this.legs = { toe: both('toe'), foot: both('foot'), thigh: both('thigh'), calf: both('calf'), pad: both('pad') };
     this.twistB = WARP_TWIST.map(([n]) => this.bone(n));
     for (const bone of player.bones.values()) this.animPose.push([bone, bone.quaternion.clone()]);
+    // (Round 16) A bone's Euler rotation is never read (its matrix is made from its quaternion, and nothing in the game
+    // reads a bone's .rotation), so its quaternion no longer keeps it in step: three converts the quaternion to Euler
+    // angles on every write (Object3D's onQuaternionChange), and the clips, the restore of the clip pose, the overlays
+    // and the solves write every bone several times a frame. It was a fifth of the animator's time (docs/anim/FEET16.md).
+    for (const bone of player.bones.values()) bone.quaternion._onChange(NO_SYNC);
+    for (const [name, a] of this.actions) if (lib.meta[name]?.kind === 'transition') this.transActs.set(name, a);
     this.animRootPos.copy(this.rootB.position);
     for (const f of lib.families) {
       for (const g of f) if (!this.locos.includes(g)) this.locos.push(g);
@@ -824,6 +858,8 @@ export class PlayerAnimator {
   /** (Round 16) The bones the animator reads every frame, looked up once (the animator's cost: docs/anim/FEET16.md). */
   private rootB!: THREE.Bone;
   private chestB!: THREE.Bone;
+  private headB!: THREE.Bone;
+  private neckB!: THREE.Bone;
   private legs!: Record<'toe' | 'foot' | 'thigh' | 'calf' | 'pad', Record<'l' | 'r', THREE.Bone>>;
   private twistB!: THREE.Bone[];
 
@@ -835,12 +871,10 @@ export class PlayerAnimator {
     // 1. Clips.
     const k = 1 - Math.exp(-dt * 8); // ~0.12 s fades
     // (Round 16) The side layer's shares, eased as the backpedal's.
-    this.sideL += ((this.sideOn && this.sideDir > 0 ? 1 : 0) - this.sideL) * k;
-    this.sideR += ((this.sideOn && this.sideDir < 0 ? 1 : 0) - this.sideR) * k;
-    if (this.sideL < 1e-4 && !(this.sideOn && this.sideDir > 0)) this.sideL = 0;
-    if (this.sideR < 1e-4 && !(this.sideOn && this.sideDir < 0)) this.sideR = 0;
+    this.sideL = ease(this.sideL, this.sideOn && this.sideDir > 0 ? 1 : 0, k);
+    this.sideR = ease(this.sideR, this.sideOn && this.sideDir < 0 ? 1 : 0, k);
     const side = this.sideL + this.sideR;
-    this.loco += (((side > 0.5 ? this.sideSpeed : speed) > MIN_LOCO_SPEED ? 1 : 0) - this.loco) * k;
+    this.loco = ease(this.loco, (side > 0.5 ? this.sideSpeed : speed) > MIN_LOCO_SPEED ? 1 : 0, k);
     // The gait families (M6.5 #11): every clip of each family with weight,
     // on one shared phase advanced by the blended stride, each warped so the
     // feet plant and lift together.
@@ -868,7 +902,7 @@ export class PlayerAnimator {
     // (Round 16) The side loops with weight, on the side layer's phase (sideLoops).
     const sd = this.sideLoops(side, scale, dt);
     const lastPhase = this.phase;
-    this.back += ((input.backpedal ? 1 : 0) - this.back) * k;
+    this.back = ease(this.back, input.backpedal ? 1 : 0, k);
     const bpMeta = this.lib.meta.loco_backpedal;
     if (bpMeta && this.back > 0.01) this.backPhase = advancePhase(this.backPhase, speed, dt, bpMeta.speed * bpMeta.duration * scale);
     if (!input.backpedal) this.phase = advancePhase(this.phase, speed, dt, stride);
@@ -911,10 +945,14 @@ export class PlayerAnimator {
     for (let j = 0; j < this.locos.length; j++) {
       const gait = this.locos[j]!;
       const a = this.actions.get(gait.name)!;
-      const p = warpPhase(this.phase, gait.duty, duty);
-      this.locoPhase[j] = p;
-      a.setEffectiveWeight(this.loco * lw[j]! * (1 - tw) * (1 - this.back) * (1 - side));
-      a.time = p * gait.duration;
+      const w = this.loco * lw[j]! * (1 - tw) * (1 - this.back) * (1 - side);
+      a.setEffectiveWeight(w);
+      // (Round 16) A clip with no weight leaves the pose alone: its phase isn't needed (warpPhase was a tenth of the cost).
+      if (w > 0 || lw[j]! > 0.02) {
+        const p = warpPhase(this.phase, gait.duty, duty);
+        this.locoPhase[j] = p;
+        a.time = p * gait.duration;
+      }
     }
     const bp = this.actions.get('loco_backpedal');
     if (bp && bpMeta) {
@@ -930,7 +968,13 @@ export class PlayerAnimator {
     this.stanceTime += dt;
     let total = 0;
     for (const [name, w0] of this.stanceWeights) {
-      const w = w0 + ((name === this.stance ? 1 : 0) - w0) * k;
+      const w = ease(w0, name === this.stance ? 1 : 0, k);
+      if (w === 0 && name !== this.stance) {
+        // (Round 16) Faded out: silent from now on, and no longer weighed every frame.
+        this.actions.get(name)!.setEffectiveWeight(0);
+        this.stanceWeights.delete(name);
+        continue;
+      }
       this.stanceWeights.set(name, w);
       total += w;
     }
@@ -939,19 +983,23 @@ export class PlayerAnimator {
       a.setEffectiveWeight((1 - this.loco) * (total > 0 ? w / total : 0) * (1 - tw));
       a.time = this.stanceTime % a.getClip().duration;
     }
-    for (const [name, a] of this.actions) {
-      if (this.lib.meta[name]?.kind !== 'transition') continue;
-      const on = this.trans?.name === name;
-      a.setEffectiveWeight(on ? tw : 0);
+    // (Round 16) Only the transition playing has weight: the one that played last is set back to 0 (every other one
+    // already is), rather than setting all of them every frame.
+    const ta = this.trans ? this.transActs.get(this.trans.name) : undefined;
+    if (this.transAct && this.transAct !== ta) this.transAct.setEffectiveWeight(0);
+    this.transAct = ta ?? null;
+    if (ta) {
+      ta.setEffectiveWeight(tw);
       // Just inside the end: at exactly the duration a repeating action wraps to frame 0.
-      if (on) a.time = Math.min(this.trans!.t, a.getClip().duration - 1e-4);
+      ta.time = Math.min(this.trans!.t, ta.getClip().duration - 1e-4);
     }
     // Everything else (the backpedal, future clips) stays silent unless driven.
     const rootBone = this.rootB;
-    for (const [bone, q] of this.animPose) bone.quaternion.copy(q);
+    const ap = this.animPose;
+    for (let i = 0; i < ap.length; i++) ap[i]![0].quaternion.copy(ap[i]![1]);
     rootBone.position.copy(this.animRootPos);
     this.mixer.update(0);
-    for (const [bone, q] of this.animPose) q.copy(bone.quaternion);
+    for (let i = 0; i < ap.length; i++) ap[i]![1].copy(ap[i]![0].quaternion);
     this.animRootPos.copy(rootBone.position);
     // Overlays over the clips (the snapshot above is what the next frame
     // restores, so they never compound).
@@ -980,7 +1028,9 @@ export class PlayerAnimator {
         this.applyOverlay(sl.o, sl.w * at.w);
       }
     }
-    this.player.root.updateMatrixWorld(true);
+    // (Round 16) The skeleton and what it hangs from, not the meshes beside it (the render brings those up to date).
+    rootBone.parent?.updateWorldMatrix(true, false);
+    rootBone.updateMatrixWorld(true);
 
     // (Round 15) The hips toward where he's going, the chest kept where he faces.
     this.warpHips(tw);
@@ -991,8 +1041,8 @@ export class PlayerAnimator {
     if (input.holdFeet) {
       for (const s of FEET) {
         const f = this.legs.foot[s];
-        f.getWorldQuaternion(this.footQ[s]);
-        f.getWorldPosition(this.footOff[s]).sub(this.legs.toe[s].getWorldPosition(_v));
+        wquat(f, this.footQ[s]);
+        wpos(f, this.footOff[s]).sub(wpos(this.legs.toe[s], _v));
         this.footBall[s] = _v.y;
       }
     }
@@ -1005,7 +1055,7 @@ export class PlayerAnimator {
     const leanW = input.holdFeet ? 1 - tw : 1;
     this.lean(speed, (input.yawRate ?? 0) * leanW, (input.accel ?? 0) * leanW, this.pressW * PRESS_PITCH);
     // Where the trunk is before any contact lean (contact.ts reads it: leaning must not feed back into the lean).
-    this.chestB.getWorldPosition(this.trunk);
+    wpos(this.chestB, this.trunk);
     const cl = input.contactLean;
     if (cl && (cl.x !== 0 || cl.z !== 0)) this.leanToward(cl.x, cl.z);
     // 2. Foot lock.
@@ -1310,12 +1360,12 @@ export class PlayerAnimator {
     // world rotations as they stand (its parent's and its own), and the skeleton is brought up to date once.
     for (let k = 0; k < WARP_TWIST.length; k++) {
       const bone = this.twistB[k]!;
-      bone.parent!.getWorldQuaternion(this.twistP[k]!);
-      bone.getWorldQuaternion(this.twistW[k]!);
+      wquat(bone.parent!, this.twistP[k]!);
+      wquat(bone, this.twistW[k]!);
     }
     _q.setFromAxisAngle(_up, a);
-    const wq = root.getWorldQuaternion(_oq2);
-    const pq = root.parent ? root.parent.getWorldQuaternion(_oq3) : _oq3.identity();
+    const wq = wquat(root, _oq2);
+    const pq = root.parent ? wquat(root.parent, _oq3) : _oq3.identity();
     root.quaternion.copy(pq.invert().multiply(_q).multiply(wq));
     for (let k = 0; k < WARP_TWIST.length; k++) {
       const share = WARP_TWIST[k]![1];
@@ -1338,12 +1388,12 @@ export class PlayerAnimator {
     this.leanDbg.pitch = pitch;
     if (Math.abs(bank) < 1e-4 && Math.abs(pitch) < 1e-4) return;
     const root = this.rootB;
-    const rootQ = this.player.root.getWorldQuaternion(_q2);
+    const rootQ = wquat(this.player.root, _q2);
     _fwd.set(0, 0, 1).applyQuaternion(rootQ);
     const right = _w.set(-1, 0, 0).applyQuaternion(rootQ);
-    _q.setFromAxisAngle(_fwd, -bank).multiply(new THREE.Quaternion().setFromAxisAngle(right, pitch));
-    const wq = root.getWorldQuaternion(new THREE.Quaternion());
-    const pq = root.parent ? root.parent.getWorldQuaternion(new THREE.Quaternion()) : new THREE.Quaternion();
+    _q.setFromAxisAngle(_fwd, -bank).multiply(_oq.setFromAxisAngle(right, pitch));
+    const wq = wquat(root, _oq2);
+    const pq = root.parent ? wquat(root.parent, _oq3) : _oq3.identity();
     root.quaternion.copy(pq.invert().multiply(_q).multiply(wq));
     // About the hips, not the feet (M6.5 #12): the sim's spot is where his
     // mass goes, so the body tilts about it and the feet swing out under a
@@ -1353,7 +1403,7 @@ export class PlayerAnimator {
     // five; tools/sim/catchcontact.ts).
     if (root.parent) {
       const h = LEAN_PIVOT * this.player.shape.scale;
-      root.getWorldPosition(_v);
+      wpos(root, _v);
       _pole.set(0, h, 0).applyQuaternion(_q);
       _v.y += h;
       _v.sub(_pole);
@@ -1370,8 +1420,8 @@ export class PlayerAnimator {
     const root = this.rootB;
     // Up turns toward (x, z): about the axis up × dir.
     _q.setFromAxisAngle(_w.set(z / ang, 0, -x / ang), ang);
-    const wq = root.getWorldQuaternion(_oq2);
-    const pq = root.parent ? root.parent.getWorldQuaternion(_oq3) : _oq3.identity();
+    const wq = wquat(root, _oq2);
+    const pq = root.parent ? wquat(root.parent, _oq3) : _oq3.identity();
     root.quaternion.copy(pq.invert().multiply(_q).multiply(wq));
     root.updateMatrixWorld(true);
   }
@@ -1394,9 +1444,9 @@ export class PlayerAnimator {
    * any IK). Fills _hip and _ank.
    */
   private keyedReach(s: 'l' | 'r'): number {
-    this.legs.thigh[s].getWorldPosition(_hip);
-    this.legs.calf[s].getWorldPosition(_knee);
-    this.legs.foot[s].getWorldPosition(_ank);
+    wpos(this.legs.thigh[s], _hip);
+    wpos(this.legs.calf[s], _knee);
+    wpos(this.legs.foot[s], _ank);
     const la = _hip.distanceTo(_knee);
     const lb = _knee.distanceTo(_ank);
     const d = _hip.distanceTo(_ank);
@@ -1423,8 +1473,8 @@ export class PlayerAnimator {
     _need.set(0, 0, 0);
     if (on) {
       // The sim's spot (where the game puts the player's root), against where it was when each foot planted.
-      const spot = this.player.root.getWorldPosition(_rp);
-      const fwd = _fwd.set(0, 0, 1).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
+      const spot = wpos(this.player.root, _rp);
+      const fwd = _fwd.set(0, 0, 1).applyQuaternion(wquat(this.player.root, _q2));
       for (const s of FEET) {
         const st = this.feet[s];
         const pl = this.plant[s];
@@ -1474,7 +1524,7 @@ export class PlayerAnimator {
   /** Move the root bone by a world offset (the whole body, the feet's IK still to come). */
   private shiftRoot(root: THREE.Bone, by: THREE.Vector3): void {
     if (by.lengthSq() === 0) return;
-    root.getWorldPosition(_v).add(by);
+    wpos(root, _v).add(by);
     if (root.parent) root.parent.worldToLocal(_v);
     root.position.copy(_v);
     root.updateMatrixWorld(true);
@@ -1553,7 +1603,7 @@ export class PlayerAnimator {
           // clip has far from it steps there (below).
           dbg.replant = `keep:${st.source}>${source}`;
           st.source = source;
-          this.player.root.getWorldPosition(st.anchor);
+          wpos(this.player.root, st.anchor);
           st.travel0 = this.transTravel();
           st.spent = 0;
         }
@@ -1612,9 +1662,9 @@ export class PlayerAnimator {
     // about the hips on the sim's acceleration, the planted foot with it: on the contested ball the QB's drift back
     // tipped him ~15 deg as he threw and his planted front foot rolled onto its heel, the ankle pulled 5 cm down to the
     // turf and the leg dead straight, 4 deg at the release against 34 keyed.)
-    const footWorld = this.holdFeet ? _fq.copy(this.footQ[s]) : foot.getWorldQuaternion(_fq);
+    const footWorld = this.holdFeet ? _fq.copy(this.footQ[s]) : wquat(foot, _fq);
     // Ankle target: the ball's target plus the clip's current ankle-to-ball offset.
-    const ankleTarget = this.holdFeet ? _w.copy(this.footOff[s]).add(tgt) : foot.getWorldPosition(_w).sub(cb).add(tgt);
+    const ankleTarget = this.holdFeet ? _w.copy(this.footOff[s]).add(tgt) : wpos(foot, _w).sub(cb).add(tgt);
     // (Round 16) The step's toe-off, heel strike and roll.
     if (st.step) this.stepRoll(st.step.u, tgt, ankleTarget, footWorld);
     if (this.holdFeet && st.locked && source === 'trans' && down) {
@@ -1632,7 +1682,7 @@ export class PlayerAnimator {
       const a = gx * gx + gz * gz;
       const r = Math.hypot(ax, az);
       if (c > 0 && a > 1e-10 && r > 1e-6) {
-        const spot = this.player.root.getWorldPosition(_rp);
+        const spot = wpos(this.player.root, _rp);
         const away = -((spot.x - st.anchor.x) * ax + (spot.z - st.anchor.z) * az) / r;
         const held = (this.give.x * ax + this.give.z * az) / r;
         // (Round 15: and no more than GIVE_MAX in all. Past that it's a slide: on the contested ball the point gave 12 cm
@@ -1691,8 +1741,8 @@ export class PlayerAnimator {
     // straight, over the toes. It was 0.5 m ahead of the knee along his facing, so a clip that turns the body off the
     // root (a hip flip, the hips turned toward his run, warpHips) had its knees bent sideways by the solve.
     this.kneePole(thigh, calf, foot, cb);
-    dbg.miss = solveTwoBone(thigh, calf, foot, ankleTarget, _pole, w);
-    const pq = foot.parent!.getWorldQuaternion(_q);
+    dbg.miss = solveTwoBone(thigh, calf, foot, ankleTarget, _pole, w, true);
+    const pq = wquat(foot.parent!, _q);
     foot.quaternion.copy(pq.invert().multiply(footWorld));
     foot.updateMatrixWorld(true);
     wpos(ball, st.drawn);
@@ -1760,7 +1810,7 @@ export class PlayerAnimator {
     if (_pole.lengthSq() < KNEE_BENT * KNEE_BENT) {
       // Near straight: over the toes (the ankle to the ball, along the ground).
       _pole.set(ball.x - _ank.x, 0, ball.z - _ank.z);
-      if (_pole.lengthSq() < 1e-8) _pole.set(0, 0, 1).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
+      if (_pole.lengthSq() < 1e-8) _pole.set(0, 0, 1).applyQuaternion(wquat(this.player.root, _q2));
     }
     _pole.normalize().multiplyScalar(0.5).add(_knee);
   }
@@ -1774,7 +1824,7 @@ export class PlayerAnimator {
     // there held a receiver's planted foot in the air through a curved route.
     st.pos.y = this.preBallY[s];
     st.leanOff.subVectors(_cb, this.preBall[s]).setY(0);
-    this.player.root.getWorldPosition(st.anchor);
+    wpos(this.player.root, st.anchor);
     st.travel0 = this.transTravel();
     st.spent = 0;
     st.locked = true;
@@ -1799,21 +1849,22 @@ export class PlayerAnimator {
   }
 
   private lookAt(target: THREE.Vector3 | null, dt: number, wide = false): void {
-    const head = this.bone('head');
-    const neck = this.bone('neck_02');
-    const rootQ = this.player.root.getWorldQuaternion(_q2);
+    const head = this.headB;
+    const neck = this.neckB;
+    // (Round 16: the world matrices as they stand, and no allocation.)
+    const rootQ = wquat(this.player.root, _q2);
     const facing = _fwd.set(0, 0, 1).applyQuaternion(rootQ);
-    let want = new THREE.Quaternion();
+    const want = _lw.identity();
     if (target) {
-      head.getWorldPosition(_v);
+      wpos(head, _v);
       const d = _w.subVectors(target, _v).normalize();
       // Clamp to what a neck can do: ±70° side to side, ±35° up and down
       // (wide: the chest turns too, and the eyes go down into the hands).
       const yawLim = wide ? LOOK_WIDE : 1.22;
       const yaw = THREE.MathUtils.clamp(Math.atan2(Math.sin(Math.atan2(d.x, d.z) - Math.atan2(facing.x, facing.z)), Math.cos(Math.atan2(d.x, d.z) - Math.atan2(facing.x, facing.z))), -yawLim, yawLim);
       const pitch = THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(d.y, -1, 1)), wide ? -LOOK_DOWN_WIDE : -0.6, 0.6);
-      want = new THREE.Quaternion().setFromEuler(new THREE.Euler(-pitch, yaw, 0, 'YXZ'));
-      want.premultiply(rootQ).multiply(rootQ.clone().invert());
+      want.setFromEuler(_le.set(-pitch, yaw, 0, 'YXZ'));
+      want.premultiply(rootQ).multiply(_lq.copy(rootQ).invert());
     }
     // Critically damped-ish follow (~0.15 s).
     this.look.slerp(want, 1 - Math.exp(-dt * 10));
@@ -1821,10 +1872,10 @@ export class PlayerAnimator {
     // 40% in the neck, 60% in the head; a wide look puts a third of it in the upper back first (the shoulders turn with the head).
     const parts = wide ? LOOK_PARTS_WIDE : LOOK_PARTS;
     for (const [name, share] of parts) {
-      const bone = name === 'head' ? head : name === 'neck_02' ? neck : this.bone(name);
-      const part = new THREE.Quaternion().slerp(this.look, share);
-      const wq = bone.getWorldQuaternion(new THREE.Quaternion());
-      const pq = bone.parent!.getWorldQuaternion(new THREE.Quaternion());
+      const bone = name === 'head' ? head : name === 'neck_02' ? neck : this.chestB;
+      const part = _lp.identity().slerp(this.look, share);
+      const wq = wquat(bone, _oq2);
+      const pq = wquat(bone.parent!, _oq3);
       bone.quaternion.copy(pq.invert().multiply(part).multiply(wq));
       bone.updateMatrixWorld(true);
     }
@@ -1833,7 +1884,7 @@ export class PlayerAnimator {
   private pads(dt: number): void {
     if (dt <= 0) return;
     const chest = this.chestB;
-    chest.getWorldPosition(_v);
+    wpos(chest, _v);
     this.chestY.push(_v.y);
     if (this.chestY.length > 3) this.chestY.shift();
     if (this.chestY.length < 3) return;
@@ -1845,11 +1896,10 @@ export class PlayerAnimator {
     sp.v += (-kS * sp.x - 12 * sp.v - accel * 0.02) * dt;
     sp.x += sp.v * dt;
     const angle = THREE.MathUtils.clamp(sp.x, -0.08, 0.08);
-    const right = _w.set(1, 0, 0).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
+    const right = _w.set(1, 0, 0).applyQuaternion(wquat(this.player.root, _q2));
     for (const s of FEET) {
       const pad = this.legs.pad[s];
-      pad.getWorldPosition(_v);
-      rotateBoneWorld(pad, _fwd.set(0, 0, 1), _pole.set(0, 0, 1).applyAxisAngle(right, angle));
+      rotateBoneWorld(pad, _fwd.set(0, 0, 1), _pole.set(0, 0, 1).applyAxisAngle(right, angle), 1, true);
     }
   }
 }
