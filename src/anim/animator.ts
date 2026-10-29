@@ -890,6 +890,11 @@ export class PlayerAnimator {
     }
   }
 
+  /** (Round 16) The stance he settles into (setStance). */
+  get stanceName(): string {
+    return this.stance;
+  }
+
   /** Settle into a stance (crossfades from whatever is playing). */
   setStance(name: string): void {
     if (!this.lib.clips.has(name)) return;
@@ -1122,6 +1127,10 @@ export class PlayerAnimator {
     // into its swing (lockFoot) instead of stepping.
     const phaseSoon = stride > 1e-6 ? this.phase + (speed * LIFT_SOON) / stride : this.phase;
     const bpSoon = bpMeta ? this.backPhase + (speed * LIFT_SOON) / Math.max(1e-6, bpStride) : 0;
+    // (Round 16) The stance playing, if its feet are keyed to lift (its contacts aren't the whole loop) and it has most of the weight.
+    const stMeta = this.lib.meta[this.stance];
+    const stFull = (c: [number, number][], n: number) => c.length === 1 && c[0]![0] === 0 && c[0]![1] === n;
+    const stPart = stMeta && (this.stanceWeights.get(this.stance) ?? 0) > 0.5 && !(stFull(stMeta.contacts.l, stMeta.frames) && stFull(stMeta.contacts.r, stMeta.frames)) ? stMeta : null;
     for (const s of FEET) {
       const pl = plant[s];
       if (this.trans && trMeta && tw > 0.5) {
@@ -1156,6 +1165,13 @@ export class PlayerAnimator {
             soon ||= !planted(m, s, warpPhase(phaseSoon % 1, this.locos[j]!.duty, duty));
           }
         }
+      } else if (this.loco < 0.5 && stPart) {
+        // (Round 16) A stance whose feet are keyed to move (the engaged hand fight's chopping feet: dl_engage, ol_engage)
+        // plants them by its own contacts, as the gait does: the feet re-set under the block where the clip puts them,
+        // rather than held while the sim drifts the pair and then stepped off (docs/anim/FEET16.md).
+        const ph = (this.stanceTime % stPart.duration) / stPart.duration;
+        down = planted(stPart, s, ph);
+        soon = !planted(stPart, s, ((this.stanceTime + LIFT_SOON) % stPart.duration) / stPart.duration);
       } else down = this.loco < 0.5;
       pl.down = down;
       pl.soon = soon;

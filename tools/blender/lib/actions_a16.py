@@ -25,8 +25,13 @@ from __future__ import annotations
 
 import math
 
-from .actions import Clip, mirrored
-from .actions_m6 import READY, STRIKE_WRISTS
+import copy
+from dataclasses import replace
+
+from .actions import STANCES, Clip, mirrored
+from .actions_m6 import LOCK, PUNCH, READY, STRIKE_WRISTS
+from .actions_m6_line import _spine, arm_track
+from .transitions import Plant, Steps
 from .gait import FPS, GAITS, Gait, contacts as gait_contacts, gait_pose
 from .poses import Arm
 
@@ -85,6 +90,45 @@ STAGGER = {"ol_set": 0.36, "ol_set_fast": 0.44}
 BACKPEDAL_SLOW = Gait(**{**GAITS["backpedal"].__dict__, "name": "backpedal_slow", "frames": 14, "speed": 1.5, "duty": 6.99 / 14, "lift": 0.05, "bob": 0.008, "arm_a": 10, "lean": 26})
 
 
+def ol_engage() -> Clip:
+    """The blocker engaged (pass protection, hands on the rusher): ol_pass's base and
+    chest, the hands inside on his chest plate (locked out, re-fitting one hand, then
+    the other), the hips sunk, and the feet active: each foot chops in place twice in
+    the 1.2 s loop, the left on the beat and the right half a beat on, low (3 cm). The
+    line's version of dl_engage (actions_m6_line.py engage_loop): "keep your feet
+    alive", short choppy steps under the block, never stopping them."""
+    T = 1.2
+    e = copy.deepcopy(STANCES["ol_pass"])
+    e.pelvis.update({"up": -0.21, "flex": 26})
+    lock = replace(LOCK, flex=100, elbow=22)
+    e.arms = {"l": lock, "r": lock}
+    fit = replace(PUNCH, flex=104, elbow=28)
+    strip = replace(PUNCH, flex=80, elbow=60, abd=20)
+    keys = [
+        (0.0, {}), (0.18, {"l": strip}), (0.32, {"l": fit}), (0.5, {"l": None}),
+        (0.78, {"r": strip}), (0.92, {"r": fit}), (1.1, {"r": None}), (T, {}),
+    ]
+    # Each foot up for 0.1 s twice a loop: the left at 0.1 and 0.7, the right at 0.4 and 1.0.
+    fl, fr = e.feet["l"], e.feet["r"]
+    steps = Steps([
+        Plant("l", -1, 0.1, fl), Plant("l", 0.2, 0.7, fl), Plant("l", 0.8, math.inf, fl),
+        Plant("r", -1, 0.4, fr), Plant("r", 0.5, 1.0, fr), Plant("r", 1.1, math.inf, fr),
+    ], height=0.03)
+
+    def pose(t):
+        p = copy.deepcopy(e)
+        p.arms = arm_track(keys, e.arms, t)
+        w = math.sin(2 * math.pi * t / T)
+        _spine(p, "spine_03", twist=4.0 * w)
+        p.pelvis["side"] = p.pelvis.get("side", 0.0) + 0.01 * math.sin(4 * math.pi * t / T)
+        p.pelvis["up"] = p.pelvis.get("up", 0.0) + 0.006 * math.sin(4 * math.pi * t / T)
+        p.gaze = (4.0, 0.0)
+        p.feet = {s: steps.foot(s, t) for s in "lr"}
+        return p
+
+    return Clip("ol_engage", "stance", T, pose, loop=True, com=False, contacts=steps.contacts(round(T * FPS)))
+
+
 def lineman(p, g: Gait, kick: str | None):
     """The lineman's upper body over the keyer's legs: ol_pass's trunk, hands up and
     in with the wrists cocked (READY, STRIKE_WRISTS), the eyes on the rusher; for the
@@ -128,6 +172,7 @@ def a16_clips() -> list[Clip]:
     st = loop("ol_set_l", OL_SET, kick="l", ol=True)
     stf = loop("ol_set_fast_l", OL_SET_FAST, kick="l", ol=True)
     return [
+        ol_engage(),
         loop("loco_backpedal_slow", BACKPEDAL_SLOW),
         sf, mirrored(sf, "lb_shuffle_fast_r"),
         sl, mirrored(sl, "ol_slide_r"),

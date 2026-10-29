@@ -1197,6 +1197,8 @@ const KICK_RATE = 1.6;
 /** (Round 16) The kick-slide one-shot's first slide is down by this (s of the clip: tools/blender/lib/actions_m6_line.py kick_slide, the slide lands at 0.32). */
 const KICK_HANDOFF = 0.34;
 const LB = new Set(['WLB', 'MLB', 'SLB']);
+/** (Round 16) The defensive line's slots (the hand fight's loop when engaged). */
+const DL_SLOTS = new Set(['LE', 'RE', 'LDT', 'RDT', 'NT', 'DT']);
 /** (Round 16) The block clips whose hands go on over the gait once the sim moves him faster than HANDS_MOVING (m/s: past a shuffle step's drift). */
 const HANDS_ON_THE_MOVE = new Set(['ol_anchor', 'ol_punch_mirror_l', 'ol_punch_mirror_r', 'dl_shed_l', 'dl_shed_r']);
 const HANDS_MOVING = 1.2;
@@ -1569,6 +1571,21 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     out.side = 'ol';
     const slot = a.slot as string;
     out.sidePref = slot === 'LT' || slot === 'LG' ? 1 : slot === 'RT' || slot === 'RG' ? -1 : 0;
+  }
+  // (Round 16) Engaged, the linemen's feet stay alive: the blocker in pass protection and the rusher on him stand in the
+  // hand fight's loops (ol_engage, dl_engage), whose feet chop in place and re-set where the clip puts them, rather than
+  // in a still stance with the feet held while the sim drifts the pair and then stepped off (docs/anim/FEET16.md: most of
+  // the line's slow steps). Out of it, back to the set (the line) or the ready stance (the rush).
+  if (s.phase !== 'presnap' && s.snapT >= 0) {
+    const slot = a.slot as string;
+    const cur = anim.stanceName;
+    if (line && !s.setup.play.run) {
+      const want = a.anim === 'block' && anim.lib.meta.ol_engage ? 'ol_engage' : 'stance_ol_pass';
+      if (cur !== want && (cur === 'ol_engage' || cur === 'stance_ol_pass')) anim.setStance(want);
+    } else if (a.side === 'def' && DL_SLOTS.has(slot)) {
+      if (a.anim === 'engaged' && cur !== 'dl_engage' && anim.lib.meta.dl_engage) anim.setStance('dl_engage');
+      else if (a.anim !== 'engaged' && cur === 'dl_engage') anim.setStance('stance_idle');
+    }
   }
   // Backward: a pedal up to a quick pace, else turn and run.
   if (along < -0.8 && !tr?.name.startsWith('qb_drop_') && !(line && sp * YARD < 5.2)) {

@@ -14962,6 +14962,55 @@
         "release": 14
       }
     },
+    "ol_engage": {
+      "kind": "stance",
+      "frames": 36,
+      "duration": 1.2,
+      "loop": true,
+      "speed": 0.0,
+      "dir": [
+        0,
+        0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            3
+          ],
+          [
+            6,
+            21
+          ],
+          [
+            24,
+            36
+          ]
+        ],
+        "r": [
+          [
+            0,
+            12
+          ],
+          [
+            15,
+            30
+          ],
+          [
+            33,
+            36
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 41.9,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
     "loco_backpedal_slow": {
       "kind": "locomotion",
       "frames": 14,
@@ -15260,5 +15309,5 @@
       }
     }
   },
-  "bytes": 9290476
+  "bytes": 9331664
 }
