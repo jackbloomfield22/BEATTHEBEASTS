@@ -71,16 +71,23 @@ export interface AnimInput {
    * (warpHips). Null or absent: the gait runs on `speed` alone, as before.
    */
   vel?: { x: number; z: number } | null;
-  /** (Round 15) The hips may turn toward `vel` (default true; the quarterback's pocket keeps his clips square). */
+  /** (Round 15) The hips may turn toward `vel` (default true; round 17: the quarterback's too, his slide square: side 'qb'). */
   warp?: boolean;
   /**
    * (Round 16) Which side loops a player moving at an angle to his facing plays (the side layer, sideDrive): the
    * shuffle (default), or the line's slide and kick-slide ('ol': an offensive lineman, who never backpedals). False
    * turns the layer off.
    */
-  side?: 'ol' | 'lb' | false;
+  side?: 'ol' | 'lb' | 'qb' | false;
   /** (Round 16) The side the layer takes when he goes straight back (+1 his left, -1 his right): a tackle's kick foot is his outside one. */
   sidePref?: number;
+  /**
+   * (Round 17) The quarterback in the pocket, 0..1 (eased like the carry): his forward gait is the pocket's climb
+   * (qb_climb_*: short steps up in his set, the ball high) instead of the receiver's or the carrier's.
+   */
+  pocket?: number;
+  /** (Round 17) Whose pedal he plays going backward: the defensive back's (default), or the passer's drift ('qb'). */
+  pedal?: 'qb';
 }
 
 const FEET = ['l', 'r'] as const;
@@ -322,6 +329,14 @@ const SIDE_VIN = 3.9;
 const SIDE_VOUT = 4.4;
 const SIDE_VIN_OL = 5.0;
 const SIDE_VOUT_OL = 5.6;
+/**
+ * (Round 17) The quarterback's slide (side 'qb': qb_shuffle_*, tools/blender/lib/actions_q17.py) holds to the line's
+ * speeds: the player's stick slides him at 0.55 of his top speed (sim/play.ts, ~4.3 m/s) and the AI's push away from a
+ * free rusher reaches 4-5 m/s; the quick slide is keyed at 3.6 m/s and reads as a slide to ~1.4x. His hips stay square
+ * in it (no SIDE_WARP): a passer slides with his shoulders and hips to the line, ready to throw off any step.
+ */
+const SIDE_VIN_QB = 5.0;
+const SIDE_VOUT_QB = 5.6;
 const SIDE_WARP = (45 * Math.PI) / 180;
 const SET_OUT = (28 * Math.PI) / 180;
 const SIDE_FLIP = 0.3;
@@ -333,11 +348,27 @@ const SIDE_FLIP = 0.3;
  * the kick-slide's first kick, then flipped. On his outside foot he also keeps it to the same line (not SIDE_FLIP's).
  */
 const SIDE_PREF_OL = Math.SQRT1_2;
+/**
+ * (Round 17) The break out of the shuffle into the run (breakOut): faster than BREAK_MIN (m/s, a jog's walk-in) and
+ * forward of square; the side loops hand over at BREAK_RATE (1/s: ~60 ms, against the layer's ~120) for BREAK_T (s),
+ * and the gait's phase starts BREAK_PHASE (of a cycle) into the planted foot's stance (a frame of a jog's 22). Ours.
+ */
+const BREAK_MIN = 2.0;
+const BREAK_RATE = 16;
+const BREAK_T = 0.2;
+const BREAK_PHASE = 0.04;
+/** (Round 17) Out of the pedal forward faster than this (m/s, along his facing) is a break on the ball (breakOut). Ours: a walk's pace. */
+const PEDAL_BREAK = 1.0;
 /** (Round 16) The side loops by style and side: the slide (sideways) and the set (back and out), each slow to fast. */
 const SIDE_CLIPS = {
   lb: { l: { slide: ['lb_shuffle_l', 'lb_shuffle_fast_l'], set: [] as string[] }, r: { slide: ['lb_shuffle_r', 'lb_shuffle_fast_r'], set: [] as string[] } },
   ol: { l: { slide: ['ol_slide_l'], set: ['ol_set_l', 'ol_set_fast_l'] }, r: { slide: ['ol_slide_r'], set: ['ol_set_r', 'ol_set_fast_r'] } },
+  // (Round 17) The passer's slide in the pocket, the ball high.
+  qb: { l: { slide: ['qb_shuffle_l', 'qb_shuffle_fast_l'], set: [] as string[] }, r: { slide: ['qb_shuffle_r', 'qb_shuffle_fast_r'], set: [] as string[] } },
 } as const;
+type SideStyle = 'lb' | 'ol' | 'qb';
+/** (Round 17) The pedals by whose they are: the defensive back's (gait.py, and its slow version) and the passer's drift (actions_q17.py). */
+const PEDALS = { db: ['loco_backpedal_slow', 'loco_backpedal'], qb: ['qb_pedal_slow', 'qb_pedal'] } as const;
 type SideFam = { slide: GaitClip[]; set: GaitClip[] };
 const STEP_FAR = 0.25;
 const REACH_MISS = 0.03;
@@ -460,13 +491,14 @@ export class PlayerAnimator {
   private sideU = 0;
   private sideDir = 1;
   private sideOn = false;
-  private sideStyle: 'lb' | 'ol' = 'lb';
+  private sideStyle: SideStyle = 'lb';
   /** Its loops (preallocated: no per-frame garbage), by style and side, and each one's weight and phase this frame. */
-  private sideFam: Record<'lb' | 'ol', Record<'l' | 'r', SideFam>> = { lb: { l: { slide: [], set: [] }, r: { slide: [], set: [] } }, ol: { l: { slide: [], set: [] }, r: { slide: [], set: [] } } };
+  private sideFam: Record<SideStyle, Record<'l' | 'r', SideFam>> = { lb: { l: { slide: [], set: [] }, r: { slide: [], set: [] } }, ol: { l: { slide: [], set: [] }, r: { slide: [], set: [] } }, qb: { l: { slide: [], set: [] }, r: { slide: [], set: [] } } };
   private sideClips: GaitClip[] = [];
   /** (Round 16) The pedal's family: its slow version and itself (slow to fast), and this frame's sample. */
-  private bpSlow: GaitClip | null = null;
-  private backFam: GaitClip[] = [];
+  /** (Round 17) The pedals by whose (PEDALS): each one's slow and full clips, and the one playing. */
+  private pedals: Partial<Record<'db' | 'qb', { slow: GaitClip | null; fast: GaitClip; meta: ClipMeta; fam: GaitClip[] }>> = {};
+  private pedalOf: 'db' | 'qb' = 'db';
   private backSmp: GaitSample = { a: null as unknown as GaitClip, b: null as unknown as GaitClip, w: 1, stride: 0 };
   private sideRight: boolean[] = [];
   private sideW: number[] = [];
@@ -518,7 +550,9 @@ export class PlayerAnimator {
   private locos: GaitClip[] = [];
   private locoW: number[] = [];
   private locoPhase: number[] = [];
-  private famW = [1, 0, 0, 0, 0, 0, 0];
+  private famW = [1, 0, 0, 0, 0, 0, 0, 0];
+  /** (Round 17) The pocket's share of the gait families (AnimInput.pocket), eased like the carry. */
+  private pocketW = 0;
   private samples: GaitSample[] = [];
   /** Root motion this update (m along the facing, body-scaled) and its rate (m/s). */
   rootMotion = 0;
@@ -585,7 +619,7 @@ export class PlayerAnimator {
     this.locoW = this.locos.map(() => 0);
     this.locoPhase = this.locos.map(() => 0);
     // (Round 16) The side loops, from the library (an older library without them: no side layer).
-    for (const st of ['lb', 'ol'] as const) {
+    for (const st of ['lb', 'ol', 'qb'] as const) {
       for (const sd of ['l', 'r'] as const) {
         for (const part of ['slide', 'set'] as const) {
           const out = this.sideFam[st][sd][part];
@@ -606,12 +640,16 @@ export class PlayerAnimator {
     }
     this.sideW = this.sideClips.map(() => 0);
     // (Round 16) The slow pedal, when the library has it.
-    const ms = lib.meta.loco_backpedal_slow;
-    const mb = lib.meta.loco_backpedal;
-    if (ms && mb && lib.clips.has('loco_backpedal_slow')) {
-      const gc = (n: string, m: ClipMeta): GaitClip => ({ name: n, speed: m.speed, duration: m.duration, duty: 0.5 });
-      this.bpSlow = gc('loco_backpedal_slow', ms);
-      this.backFam = [this.bpSlow, gc('loco_backpedal', mb)];
+    // (Round 17) And the passer's drift, when the library has it (each pedal's clips share its contacts: no warp).
+    const gc = (n: string, m: ClipMeta): GaitClip => ({ name: n, speed: m.speed, duration: m.duration, duty: 0.5 });
+    for (const who of ['db', 'qb'] as const) {
+      const [ns, nf] = PEDALS[who];
+      const mf = lib.meta[nf];
+      if (!mf || !lib.clips.has(nf)) continue;
+      const ms = lib.meta[ns];
+      const slow = ms && lib.clips.has(ns) ? gc(ns, ms) : null;
+      const fast = gc(nf, mf);
+      this.pedals[who] = { slow, fast, meta: mf, fam: slow ? [slow, fast] : [fast] };
     }
     this.sidePh = this.sideClips.map(() => 0);
   }
@@ -944,8 +982,12 @@ export class PlayerAnimator {
     // 1. Clips.
     const k = 1 - Math.exp(-dt * 8); // ~0.12 s fades
     // (Round 16) The side layer's shares, eased as the backpedal's.
-    this.sideL = ease(this.sideL, this.sideOn && this.sideDir > 0 ? 1 : 0, k);
-    this.sideR = ease(this.sideR, this.sideOn && this.sideDir < 0 ? 1 : 0, k);
+    // (Round 17) Breaking out of it into a run, the side loops hand over at twice the pace (BREAK_RATE): the plant, then
+    // the crossover (breakOut), not a long blended stride.
+    this.breakT = Math.max(0, this.breakT - dt);
+    const ks = this.breakT > 0 ? 1 - Math.exp(-dt * BREAK_RATE) : k;
+    this.sideL = ease(this.sideL, this.sideOn && this.sideDir > 0 ? 1 : 0, ks);
+    this.sideR = ease(this.sideR, this.sideOn && this.sideDir < 0 ? 1 : 0, ks);
     const side = this.sideL + this.sideR;
     this.loco = ease(this.loco, (side > 0.5 ? this.sideSpeed : speed) > MIN_LOCO_SPEED ? 1 : 0, k);
     // The gait families (M6.5 #11): every clip of each family with weight,
@@ -957,7 +999,8 @@ export class PlayerAnimator {
     this.driveW += ((input.drive ?? 0) - this.driveW) * kf;
     this.pressW += ((input.press ?? 0) - this.pressW) * kf;
     this.leftW += ((input.carryLeft ?? 0) - this.leftW) * kf;
-    const fam = familyWeights(this.carryW, this.trafficW, this.driveW, this.famW, this.leftW);
+    this.pocketW = ease(this.pocketW, input.pocket ?? 0, kf);
+    const fam = familyWeights(this.carryW, this.trafficW, this.driveW, this.famW, this.leftW, this.pocketW);
     const lw = this.locoW;
     lw.fill(0);
     let stride = 0;
@@ -975,14 +1018,23 @@ export class PlayerAnimator {
     // (Round 16) The side loops with weight, on the side layer's phase (sideLoops).
     const sd = this.sideLoops(side, scale, dt);
     const lastPhase = this.phase;
-    this.back = ease(this.back, input.backpedal ? 1 : 0, k);
-    const bpMeta = this.lib.meta.loco_backpedal;
+    // (Round 17) Out of the pedal forward at speed (a corner breaking on the ball, the sim driving him downhill): the
+    // pedal's planted foot is the plant and the gait comes in on it, at the break's pace (breakOut).
+    if (!input.backpedal && this.back > 0.5 && this.backWas && this.rawSpeed > PEDAL_BREAK) this.breakOut(this.backPhase < 0.5 ? 'l' : 'r');
+    this.backWas = !!input.backpedal;
+    this.back = ease(this.back, input.backpedal ? 1 : 0, this.breakT > 0 ? ks : k);
+    // (Round 17) Whose pedal: the passer's drift for the quarterback (the defensive back's had him low, chest over his
+    // toes, 26 cm under his set). It changes only out of the pedal, so a pedal playing never swaps clips.
+    const want = input.pedal === 'qb' && this.pedals.qb ? 'qb' : 'db';
+    if (want !== this.pedalOf && this.back < 0.05) this.pedalOf = want;
+    const ped = this.pedals[this.pedalOf];
+    const bpMeta = ped?.meta;
     // (Round 16) The phases advance by the ground he covers this frame (the sim's speed as it is), the clips' blend by the
     // eased speed: stride matching is the feet moving back at the ground speed, and paced by the eased speed (60 ms behind
     // the sim) a back accelerating at 10 m/s^2 ran his gait 0.6 m/s slow, his planted foot left behind the body.
     // (Round 16) The pedal's stride: its slow version's (loco_backpedal_slow, actions_a16.py) blended in under its speed.
-    const bpSlow = this.bpSlow;
-    const bpStride = bpMeta ? (bpSlow ? sampleSorted(this.backFam, speed, scale, this.backSmp).stride : bpMeta.speed * bpMeta.duration * scale) : 0;
+    const bpSlow = ped?.slow ?? null;
+    const bpStride = bpMeta ? (bpSlow ? sampleSorted(ped.fam, speed, scale, this.backSmp).stride : bpMeta.speed * bpMeta.duration * scale) : 0;
     if (bpMeta && this.back > 0.01) this.backPhase = advancePhase(this.backPhase, this.rawSpeed, dt, bpStride);
     if (!input.backpedal) this.phase = advancePhase(this.phase, this.rawSpeed, dt, stride);
     // A queued stop starts at the left touch-down (the phase wrapping).
@@ -1032,15 +1084,21 @@ export class PlayerAnimator {
         if (a) a.time = p * gait.duration;
       }
     }
-    if (bpMeta) {
+    if (bpMeta && ped) {
       const wb = this.loco * this.back * (1 - tw) * (1 - side);
       const ws = bpSlow ? wb * (1 - this.backSmp.w) : 0;
-      const bp = this.weigh('loco_backpedal', wb - ws);
+      const bp = this.weigh(ped.fast.name, wb - ws);
       if (bp) bp.time = this.backPhase * bpMeta.duration;
       if (bpSlow) {
         const sl = this.weigh(bpSlow.name, ws);
         // (The same contacts as the pedal's, the left foot down at 0 for half the cycle: no warp.)
         if (sl) sl.time = this.backPhase * bpSlow.duration;
+      }
+      // (Round 17) The other pedal (the one he isn't playing) is silent.
+      const other = this.pedals[this.pedalOf === 'qb' ? 'db' : 'qb'];
+      if (other) {
+        this.weigh(other.fast.name, 0);
+        if (other.slow) this.weigh(other.slow.name, 0);
       }
     }
     for (let j = 0; j < this.sideClips.length; j++) {
@@ -1373,7 +1431,8 @@ export class PlayerAnimator {
         if (input.warp !== false) {
           if (psi !== null) {
             // (Round 16) In the side layer the hips turn toward his velocity off the loop's own travel (sideAxis).
-            want = this.sideDir * THREE.MathUtils.clamp(psi - this.sideAxis(psi), -SIDE_WARP, SIDE_WARP);
+            // (Round 17: not the passer's: his hips stay square to the line in his slide.)
+            want = this.sideStyle === 'qb' ? 0 : this.sideDir * THREE.MathUtils.clamp(psi - this.sideAxis(psi), -SIDE_WARP, SIDE_WARP);
           } else {
             // (Going away from where he faces without a pedal, a step or two back: no turn, the hips square.)
             want = Math.abs(a) > WARP_OFF ? 0 : THREE.MathUtils.clamp(a, -WARP_MAX, WARP_MAX);
@@ -1420,13 +1479,19 @@ export class PlayerAnimator {
    */
   private sideMode(input: AnimInput, th: number, sp: number): number | null {
     const ol = input.side === 'ol';
-    this.sideStyle = ol ? 'ol' : 'lb';
+    const qb = input.side === 'qb' && this.sideFam.qb.l.slide.length > 0;
+    this.sideStyle = ol ? 'ol' : qb ? 'qb' : 'lb';
     const at = Math.abs(th);
     const on = this.sideOn;
     this.sideOn = on
-      ? sp < (ol ? SIDE_VOUT_OL : SIDE_VOUT) && at > SIDE_OUT && (ol || at < Math.PI - SIDE_OUT)
-      : sp < (ol ? SIDE_VIN_OL : SIDE_VIN) && at > SIDE_IN && (ol || at < Math.PI - SIDE_IN);
-    if (!this.sideOn) return null;
+      ? sp < (ol ? SIDE_VOUT_OL : qb ? SIDE_VOUT_QB : SIDE_VOUT) && at > SIDE_OUT && (ol || at < Math.PI - SIDE_OUT)
+      : sp < (ol ? SIDE_VIN_OL : qb ? SIDE_VIN_QB : SIDE_VIN) && at > SIDE_IN && (ol || at < Math.PI - SIDE_IN);
+    if (!this.sideOn) {
+      // (Round 17) Out of the shuffle forward and at speed (his velocity come round toward his chest, or too quick to
+      // shuffle): he breaks into the run (breakOut). Out the back (into the pedal) or slowing down, it fades as before.
+      if (on && sp > BREAK_MIN && at < Math.PI / 2) this.breakOut();
+      return null;
+    }
     const sn = Math.sin(th);
     const fresh = this.sideL + this.sideR < 0.05;
     // On his outside foot, a lineman keeps it until the sim takes him as far inside as would have chosen the inside foot.
@@ -1444,6 +1509,27 @@ export class PlayerAnimator {
     if (psi < -Math.PI / 2) psi += 2 * Math.PI;
     return psi;
   }
+
+  /**
+   * (Round 17) Out of the shuffle into the run: the gait comes in on the shuffle's own feet, the lead foot planted and
+   * the trail foot swinging through across it, the crossover (the coaching "plant and cross over", "open and run": a
+   * linebacker triggering downhill out of his scrape, a corner out of his shuffle on the ball). The forward gait's
+   * phase is set so the foot the shuffle has down is the one early in its stance (the left touches down at phase 0, the
+   * right at 0.5): planted in both, the lock keeps it where it is through the hand-over (the plant). The lead foot in
+   * the air instead, he lands it first (the open step) and the trail foot crosses over after. Round 16 blended the
+   * shuffle's loop into the run's on its own phase over 0.12 s, the feet of the two at odds: one long split stride as
+   * the hips opened (docs/anim/FEET16.md, critique).
+   */
+  private breakOut(plant?: 'l' | 'r'): void {
+    const lead = this.sideDir > 0 ? 'l' : 'r';
+    const leadAt = lead === 'l' ? 0 : 0.5;
+    // (Out of the pedal: `plant`, the foot it has down, early in its stance in the gait: the plant and drive.)
+    this.phase = plant ? (plant === 'l' ? 0 : 0.5) + BREAK_PHASE : ((this.feet[lead].locked ? leadAt : leadAt + 0.5) % 1) + BREAK_PHASE;
+    this.breakT = BREAK_T;
+  }
+  private breakT = 0;
+  /** (Round 17) Last frame's input was the pedal (the break out of it: breakOut). */
+  private backWas = false;
 
   /** (Round 16) The side loop's travel (rad, toward the side) nearest an angle: sideways, or for the line out to its set's. */
   private sideAxis(psi: number): number {

@@ -49,7 +49,8 @@ export interface AnimLibrary {
   /**
    * The gait families, each slow to fast (M6.5 #11): [receiver, carrier in
    * space, carrier in traffic, carrier's drive], then the three carrier ones
-   * with the ball in the left arm (passing round 6). A family whose clips are
+   * with the ball in the left arm (passing round 6), then the quarterback's
+   * pocket (round 17). A family whose clips are
    * missing (an older library) is the receiver's (a left one, its right twin).
    */
   families: GaitClip[][];
@@ -65,6 +66,8 @@ export const FAMILIES = [
   ['loco_walk', 'carry_jog_l', 'carry_run_l', 'carry_sprint_l'],
   ['loco_walk', 'carry_traffic_jog_l', 'carry_traffic_run_l'],
   ['loco_walk', 'carry_drive_jog_l', 'carry_drive_run_l', 'carry_drive_sprint_l'],
+  // (Round 17) The quarterback's pocket: the climb, short steps up in his set with the ball high (tools/blender/lib/actions_q17.py).
+  ['qb_climb_slow', 'qb_climb', 'qb_climb_fast'],
 ] as const;
 
 function gaitClip(n: string, m: ClipMeta): GaitClip {
@@ -105,7 +108,8 @@ export function loadAnimLibrary(): Promise<AnimLibrary> {
     FAMILIES.forEach((f, i) => {
       const g = family(f);
       // (A family missing from an older library: the receiver's; a left-arm family missing: its right-arm twin.)
-      families.push(i > 0 && g.length < f.length ? (i > 3 ? families[i - 3]! : gaits) : g);
+      // (Round 17: the pocket's, missing, is the receiver's.)
+      families.push(i > 0 && g.length < f.length ? (i > 3 && i < 7 ? families[i - 3]! : gaits) : g);
     });
     return { clips, meta: json.clips, fps: json.fps, gaits, families };
   });
