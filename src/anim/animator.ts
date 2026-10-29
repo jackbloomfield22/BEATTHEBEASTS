@@ -210,6 +210,8 @@ const LEAN_PIVOT = 0.95;
 const KNEE_GIVE = (5 * Math.PI) / 180;
 const ROOT_GIVE = 0.12;
 const ROOT_OUT = 0.25;
+/** (Round 15) A planted point gives at most this far (m) in all: the pop meter's 'planted' line is 2 cm (popMeter.ts). */
+const GIVE_MAX = 0.015;
 type LockSource = 'loco' | 'stand' | 'trans';
 const _hip = new THREE.Vector3();
 const _knee = new THREE.Vector3();
@@ -1372,7 +1374,9 @@ export class PlayerAnimator {
         const spot = this.player.root.getWorldPosition(_rp);
         const away = -((spot.x - st.anchor.x) * ax + (spot.z - st.anchor.z) * az) / r;
         const held = (this.give.x * ax + this.give.z * az) / r;
-        const room = Math.max(0, away - Math.max(0, held) - st.spent);
+        // (Round 15: and no more than GIVE_MAX in all. Past that it's a slide: on the contested ball the point gave 12 cm
+        // over the finish as the sim walked him off, and the foot steps instead, below.)
+        const room = Math.max(0, Math.min(away - Math.max(0, held), GIVE_MAX * this.player.shape.scale) - st.spent);
         // |(ankleTarget - hip) + u·(gx, 0, gz)| = dMax: the nearest u in (0, 1] (all the way to the clip's foot at most);
         // none when moving toward the clip's foot doesn't bring it in reach (the hips too high over it).
         const b = ax * gx + az * gz;
@@ -1400,10 +1404,11 @@ export class PlayerAnimator {
       // (Against the clip's foot before the leans, less what the leans moved it when it planted: a burst's pitch or a
       // turn's bank swings the feet about the hips, and the lock holds a planted one through it, as it should.)
       const pb = this.preBall[s];
-      // (The quarterback's planted one-shots keep his lock as round 14 holds it: the body held over the foot and the
-      // point given to keep the knee, holdOver. Off the clip's foot is how that hold works; only a leg that can't reach
-      // steps. A 'far' step lifted his front foot 8 cm in the middle of the contested ball's finish.)
-      const far = this.holdFeet && source === 'trans' ? 0 : Math.hypot(st.pos.x - pb.x - st.leanOff.x, st.pos.z - pb.z - st.leanOff.z);
+      // (For the quarterback, less the hold over his feet too, holdOver: the body drawn back over the foot moves the
+      // clip's foot with it, and that is the hold working.)
+      const gx = this.holdFeet ? this.give.x : 0;
+      const gz = this.holdFeet ? this.give.z : 0;
+      const far = Math.hypot(st.pos.x - pb.x - st.leanOff.x - gx, st.pos.z - pb.z - st.leanOff.z - gz);
       const over = _hip.distanceTo(ankleTarget) > reach + REACH_MISS * scale;
       const other = this.feet[s === 'l' ? 'r' : 'l'].step;
       if ((far > STEP_FAR * scale || over) && soon) {
