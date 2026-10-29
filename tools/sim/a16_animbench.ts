@@ -28,13 +28,17 @@ for (const c of gltf.animations) {
   });
   clips.set(c.name, c);
 }
-const gc = (n: string): GaitClip => {
+// (One object per clip, as library.ts makes them: the animator finds a family's clips by identity.)
+const made = new Map<string, GaitClip>();
+const gc = (n: string): GaitClip => made.get(n) ?? made.set(n, gc0(n)).get(n)!;
+const gc0 = (n: string): GaitClip => {
   const m = json.clips[n]!;
   const [a, b] = m.contacts.l[0]!;
   return { name: n, speed: m.speed, duration: m.duration, duty: ((b - a + m.frames) % m.frames) / m.frames };
 };
 const fam = (f: readonly string[]) => f.filter((n) => json.clips[n] && clips.has(n)).map(gc).sort((x, y) => x.speed - y.speed);
-const lib: AnimLibrary = { clips, meta: json.clips, fps: json.fps, gaits: fam(FAMILIES[0]), families: FAMILIES.map((f) => fam(f)) };
+const NOWALK = process.argv.includes('--nowalk');
+const lib: AnimLibrary = { clips, meta: json.clips, fps: json.fps, gaits: fam(FAMILIES[0]), families: FAMILIES.map((f) => fam(NOWALK ? f.filter((n) => n !== 'loco_walk') : f)) };
 
 function makePlayer(): Player {
   const root = new THREE.Group();
@@ -76,7 +80,12 @@ const SCRIPTS: Script[] = [
   { name: 'lb-read', vel: (t) => [-1.5 * smooth(0.6, 1.2, t), 2.4 * smooth(0.6, 1.4, t)], face: (t) => -0.36 + 0.1 * smooth(0.6, 1.2, t), start: 'stance_lb_ready', play: [[0.3, 'lb_read_step']] },
   // The quarterback: a three-step drop from the gun, the throw, sliding left in the pocket in between.
   { name: 'qb', vel: (t) => [t > 1.2 && t < 1.8 ? 1.2 : 0, t < 0.9 ? -2.5 * smooth(0, 0.2, t) * (1 - smooth(0.7, 0.9, t)) : 0], face: () => 0, start: 'stance_qb_gun', qb: true, play: [[0.05, 'qb_drop_gun3'], [2.2, 'qb_throw_quick']] },
-  // A defensive back's pedal at 3 m/s.
+  // Steady gaits straight ahead, for the stride matching (a step here is the gait's own mismatch).
+  { name: 'jog-2.0', vel: (t) => [0, 2.0 * smooth(0, 0.5, t)], face: () => 0 },
+  { name: 'jog-2.8', vel: (t) => [0, 2.8 * smooth(0, 0.5, t)], face: () => 0 },
+  { name: 'run-4.5', vel: (t) => [0, 4.5 * smooth(0, 0.6, t)], face: () => 0 },
+  { name: 'run-7', vel: (t) => [0, 7 * smooth(0, 0.8, t)], face: () => 0 },
+    // A defensive back's pedal at 3 m/s.
   { name: 'db-pedal', vel: (t) => [0, -3 * smooth(0.1, 0.4, t)], face: () => 0 },
 ];
 
@@ -102,6 +111,7 @@ const _look = new THREE.Vector3(0, 1.6, -6);
 const last = new Map<string, { face: number; speed: number }>();
 const _toe = new THREE.Vector3();
 let ms = 0;
+const perScript = new Map<string, number>();
 let steps = 0;
 for (let f = 0; f < FRAMES; f++) {
   const t = f * dt;
@@ -125,6 +135,12 @@ for (let f = 0; f < FRAMES; f++) {
     const t0 = performance.now();
     b.a.update(dt, input);
     ms += performance.now() - t0;
+    if (process.argv.includes('--weights') && f % 30 === 0 && b.sc.name === 'jog-2.0') {
+      const acts = (b.a as unknown as { actions: Map<string, THREE.AnimationAction> }).actions;
+      const an = b.a as unknown as { locoW: number[]; locos: { name: string }[]; famSplit: { walk: { name: string }[]; run: { name: string }[] }[]; runW: number; famW: number[] };
+      console.log('lw', an.locoW.map((w, j) => `${an.locos[j]!.name}:${w.toFixed(2)}`).join(' '), 'runW', an.runW, 'fam', an.famW.join(','), 'split0', an.famSplit[0]!.walk.map((g) => g.name), an.famSplit[0]!.run.map((g) => g.name));
+      console.log(f, [...acts].filter(([, a]) => a.getEffectiveWeight() > 0).map(([n, a]) => `${n}:${a.getEffectiveWeight().toFixed(2)}@${a.time.toFixed(2)}`).join(' '));
+    }
     if (COUNT) {
       const acts = (b.a as unknown as { actions: Map<string, THREE.AnimationAction> }).actions;
       let n = 0;
@@ -141,7 +157,14 @@ for (let f = 0; f < FRAMES; f++) {
       b.p.root.updateMatrixWorld(true);
       for (const bone of b.p.bones.values()) dump.push(...bone.matrixWorld.elements);
     }
-    for (const s of ['l', 'r'] as const) if (b.a.lockDbg[s].stepped && !b.a.lockDbg[s].why.endsWith(':lift')) steps++;
+    for (const s of ['l', 'r'] as const) {
+      const d = b.a.lockDbg[s];
+      if (d.stepped && !d.why.endsWith(':lift')) {
+        steps++;
+        perScript.set(b.sc.name, (perScript.get(b.sc.name) ?? 0) + 1);
+        if (process.argv.includes('--steps')) console.log(`step ${b.sc.name} f${f} ${s} ${d.why} far ${((d.far ?? 0) * 100).toFixed(1)} over ${((d.over ?? 0) * 100).toFixed(1)} age ${(d.age ?? 0).toFixed(2)}`);
+      }
+    }
     if (TRACE) {
       const g = b.a.gaitDbg();
       const row = [b.sc.name, f, g.speed.toFixed(2), g.loco.toFixed(2), g.side.toFixed(2), g.sideSpeed.toFixed(2), g.sidePhase.toFixed(2)];
@@ -157,4 +180,5 @@ for (let f = 0; f < FRAMES; f++) {
 }
 if (DUMP) writeFileSync(DUMP, Buffer.from(new Float64Array(dump).buffer));
 if (COUNT) console.log(`clips with weight per body per frame: ${(weighted / (bodies.length * FRAMES)).toFixed(2)}, of them under 1e-3: ${(tinyW / (bodies.length * FRAMES)).toFixed(2)}`);
+console.log([...perScript].map(([k, v]) => `${k} ${v}`).join(', '));
 console.log(`${bodies.length} bodies x ${FRAMES} frames: ${(ms / (bodies.length * FRAMES)).toFixed(4)} ms per body per frame; ${steps} steps`);

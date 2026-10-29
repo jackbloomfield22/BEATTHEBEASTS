@@ -1209,7 +1209,10 @@ const HANDS_MOVING = 1.2;
 const OFF_MOVING = 0.6;
 const OFF_ANGLE = (35 * Math.PI) / 180;
 const READ_MOVING = 1.2;
-/** (Round 16) The drives paced by the sim, and how far (ours: a third either way still reads as the keyed rhythm). */
+/**
+ * (Round 16) The drives paced by the sim (and the get-offs: their first steps are keyed at 1.4-2 m/s, the sim's
+ * first steps off the ball are 2.5-3 m/s), and how far (ours: a third either way still reads as the keyed rhythm).
+ */
 const PACED = new Set(['dl_bull_rush', 'ol_fire_drive']);
 const PACE_LO = 0.7;
 const PACE_HI = 1.4;
@@ -1614,13 +1617,16 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // (a corner bailing at the snap, a linebacker flowing to the play) goes on in his gait, the side layer or the pedal,
   // paced by the sim. Played to the end, their feet were planted where the clip has them and stepped off it: a fifth
   // of the back seven's and the line's steps (docs/anim/FEET16.md).
-  if (tr && !tr.done && (tr.name.startsWith('getoff_') || tr.name === 'lb_read_step') && sp * YARD > OFF_MOVING) {
+  // (The read step lets go on the sim's speed alone: it is keyed in place, and let go as the sim drifts him a step it
+  // left its feet where it had moved them, and they stepped back.)
+  if (tr && !tr.done && tr.name.startsWith('getoff_') && sp * YARD > OFF_MOVING) {
     const off = Math.abs(Math.atan2(Math.sin(Math.atan2(a.vel.y, a.vel.x) - a.face), Math.cos(Math.atan2(a.vel.y, a.vel.x) - a.face)));
-    if (off > OFF_ANGLE || (tr.name === 'lb_read_step' && sp * YARD > READ_MOVING)) anim.release(false);
+    if (off > OFF_ANGLE) anim.release(false);
   }
+  if (tr && !tr.done && tr.name === 'lb_read_step' && sp * YARD > READ_MOVING) anim.release(false);
   // (Round 16) A drive the sim paces: the bull rush and the run block's fire-out are keyed at their own speed along their
   // travel; they play at the sim's along it (PACE_LO to PACE_HI), as the drop and the kick-slide do.
-  if (tr && !tr.done && PACED.has(tr.name)) {
+  if (tr && !tr.done && (PACED.has(tr.name) || tr.name.startsWith('getoff_'))) {
     const m = anim.lib.meta[tr.name];
     const n = m?.travel?.length ?? 0;
     const keyed = m && n > 1 ? m.travel![n - 1]! / m.duration : 0;
