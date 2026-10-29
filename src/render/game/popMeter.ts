@@ -61,12 +61,53 @@ export interface SlideStats {
   maxStep: number;
   /** The worst span: who, which foot, its drift, frames planted, and what was playing at its start and end. */
   worst: { slot: string; foot: string; drift: number; frames: number; from: string; clip: string; frame: number } | null;
+  /**
+   * (Round 15) Why: each jump's cause (a re-plant, by the lock sources it changed between; 'reach', the leg's IK short
+   * of the ankle's target by over 1 cm, the body carried off the foot; 'other') and each span past 2 cm's (its frame
+   * of greatest IK miss over 1 cm: 'reach', with the clip at that frame; else 'other').
+   */
+  jumpWhy: Record<string, number>;
+  driftWhy: Record<string, number>;
+}
+/** (Round 15) The ten worst spans of the whole play, with their cause. */
+export interface WorstSpan {
+  slot: string;
+  foot: string;
+  drift: number;
+  frames: number;
+  from: string;
+  clip: string;
+  frame: number;
+  miss: number;
+  why: string;
+  /** Per frame: [frame, speed fed, loco, back, phase, IK miss (cm), root x, z, yaw (deg), lock x, z, toe x, z, anim]. */
+  trace?: (number | string)[][];
 }
 const LOCK_FULL = 0.98;
 const JUMP = 0.02;
-const OL = new Set(['LT', 'LG', 'C', 'RG', 'RT', 'DE1', 'DT1', 'DT2', 'DE2', 'NT', 'DE', 'DT']);
-const groupOf = (slot: string): string => (slot === 'QB' ? 'qb' : OL.has(slot) || /^(D[ET]|NT)/.test(slot) ? 'line' : /^(RB|FB|HB|WR|X|Y|Z|TE|SLOT|H)/.test(slot) ? 'skill' : 'def');
-const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, jumps: 0, maxStep: 0, worst: null });
+/**
+ * (Round 15) By unit: the QB, the offensive line, the defensive line, the linebackers, the defensive backs, the
+ * receivers and tight ends, the backs (render/game/choreo.ts slots).
+ */
+const groupOf = (slot: string): string =>
+  slot === 'QB'
+    ? 'qb'
+    : /^(LT|LG|C|RG|RT|OL)/.test(slot)
+      ? 'ol'
+      : /^(D[ET]|NT|DL)/.test(slot)
+        ? 'dl'
+        : /LB/.test(slot)
+          ? 'lb'
+          : /^(CB|S|FS|SS|DB|NB|NICKEL)/.test(slot)
+            ? 'db'
+            : /^(WR|X|Y|Z|TE|SLOT|H$)/.test(slot)
+              ? 'wr'
+              : /^(RB|FB|HB|TB)/.test(slot)
+                ? 'rb'
+                : `other:${slot}`;
+const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, jumps: 0, maxStep: 0, worst: null, jumpWhy: {}, driftWhy: {} });
+const REACH_MISS = 0.01;
+const bump = (r: Record<string, number>, k: string) => void (r[k] = (r[k] ?? 0) + 1);
 interface Span {
   x: number;
   z: number;
@@ -77,6 +118,12 @@ interface Span {
   drift: number;
   n: number;
   from: string;
+  /** The largest IK miss over the span (m) and what was playing then. */
+  miss: number;
+  missAt: string;
+  /** The lock's source (stand, loco, trans). */
+  src: string;
+  trace: (number | string)[][];
 }
 const span = new Map<Body, Record<'l' | 'r', Span | null>>();
 const _toe = new THREE.Vector3();
@@ -91,7 +138,15 @@ function closeSpan(b: Body, f: 'l' | 'r', cur: Span, clip: string, frame: number
   g.spans++;
   g.sum += cur.drift;
   if (cur.drift > 0.005) g.over5mm++;
-  if (cur.drift > 0.02) g.over2cm++;
+  if (cur.drift > 0.02) {
+    g.over2cm++;
+    const why = cur.miss > REACH_MISS ? `reach:${cur.src}:${cur.missAt}` : `other:${cur.src}:${cur.from}`;
+    bump(g.driftWhy, why);
+    const w: WorstSpan = { slot: b.slot, foot: f, drift: Math.round(cur.drift * 1000) / 1000, frames: cur.n, from: cur.from, clip, frame, miss: Math.round(cur.miss * 1000) / 1000, why, trace: cur.trace };
+    pops.worstSpans.push(w);
+    pops.worstSpans.sort((x, y) => y.drift - x.drift);
+    if (pops.worstSpans.length > 12) pops.worstSpans.length = 12;
+  }
   if (cur.drift > g.max) {
     g.max = cur.drift;
     g.worst = { slot: b.slot, foot: f, drift: Math.round(cur.drift * 1000) / 1000, frames: cur.n, from: cur.from, clip, frame };
@@ -100,7 +155,7 @@ function closeSpan(b: Body, f: 'l' | 'r', cur: Span, clip: string, frame: number
 
 const last = new Map<Body, THREE.Quaternion[]>();
 const lastYaw = new Map<Body, number>();
-export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats> };
+export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats>, worstSpans: [] as WorstSpan[], cost: { n: 0, ms: 0 } };
 if (typeof window !== 'undefined') (window as unknown as { __btbPops: typeof pops }).__btbPops = pops;
 
 export function resetPops(): void {
@@ -109,6 +164,9 @@ export function resetPops(): void {
   span.clear();
   lastRoot.clear();
   pops.slide = {};
+  pops.worstSpans.length = 0;
+  pops.cost.n = 0;
+  pops.cost.ms = 0;
   pops.frames = 0;
   pops.spikes.length = 0;
   pops.worst = 0;
@@ -160,10 +218,14 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
       continue;
     }
     toe!.getWorldPosition(_toe);
+    const dbg = b.animator.lockDbg[f];
     if (cur) {
       const step = Math.hypot(_toe.x - cur.lx, _toe.z - cur.lz);
       const g = (pops.slide[groupOf(b.slot)] ??= newSlide());
-      if (step > JUMP) g.jumps++;
+      if (step > JUMP) {
+        g.jumps++;
+        bump(g.jumpWhy, dbg.replant ? `replant:${dbg.replant}` : dbg.miss > REACH_MISS ? 'reach' : 'other');
+      }
       g.maxStep = Math.max(g.maxStep, step);
       if (Math.hypot(lk.pos.x - cur.px, lk.pos.z - cur.pz) > JUMP) {
         // Re-planted (the lock's point jumped): a new span. (A point that gives a little at a time, animator.ts
@@ -172,8 +234,15 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
         cur = null;
       }
     }
-    if (!cur) sp[f] = cur = { x: _toe.x, z: _toe.z, px: lk.pos.x, pz: lk.pos.z, lx: _toe.x, lz: _toe.z, drift: 0, n: 0, from: what };
+    if (!cur) sp[f] = cur = { x: _toe.x, z: _toe.z, px: lk.pos.x, pz: lk.pos.z, lx: _toe.x, lz: _toe.z, drift: 0, n: 0, from: what, miss: 0, missAt: '', src: lk.source ?? '', trace: [] };
+    if (dbg.miss > cur.miss) {
+      cur.miss = dbg.miss;
+      cur.missAt = what;
+    }
     cur.drift = Math.max(cur.drift, Math.hypot(_toe.x - cur.x, _toe.z - cur.z));
+    const gd = b.animator.gaitDbg();
+    const r3 = (v: number) => Math.round(v * 1000) / 1000;
+    cur.trace.push([frame, r3(gd.speed), r3(gd.loco), r3(gd.back), r3(gd.back > 0.5 ? gd.backPhase : gd.phase), Math.round(dbg.miss * 1000) / 10, r3(rp.x), r3(rp.z), Math.round((b.player.root.rotation.y * 180) / Math.PI), r3(lk.pos.x), r3(lk.pos.z), r3(_toe.x), r3(_toe.z), what]);
     cur.px = lk.pos.x;
     cur.pz = lk.pos.z;
     cur.lx = _toe.x;

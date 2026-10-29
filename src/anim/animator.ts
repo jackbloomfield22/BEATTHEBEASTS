@@ -278,9 +278,19 @@ export class PlayerAnimator {
   readonly keyedKnee = { l: 0, r: 0 };
 
   /** A foot's lock as it stands after this frame (passing round 14: the pop meter's slide on planted feet, render/game/popMeter.ts). */
-  footLockOf(s: 'l' | 'r'): { readonly locked: boolean; readonly weight: number; readonly pos: THREE.Vector3 } {
+  footLockOf(s: 'l' | 'r'): { readonly locked: boolean; readonly weight: number; readonly pos: THREE.Vector3; readonly source: LockSource | null } {
     return this.feet[s];
   }
+  /**
+   * (Round 15, the pop meter's causes) Each foot's lock this frame: how far the leg's IK fell short of the ankle's
+   * target (m: out of reach), and what re-planted it this frame ('' none; else the source it left and the one it took).
+   */
+  readonly lockDbg = { l: { miss: 0, replant: '' }, r: { miss: 0, replant: '' } };
+  /** (Round 15) The gait's state this frame, for the pop meter's traces: the speed fed, the loco and backpedal shares, the phases. */
+  gaitDbg(): { speed: number; loco: number; back: number; phase: number; backPhase: number } {
+    return { speed: this.lastSpeed, loco: this.loco, back: this.back, phase: this.phase, backPhase: this.backPhase };
+  }
+  private lastSpeed = 0;
 
   constructor(
     readonly player: Player,
@@ -607,6 +617,7 @@ export class PlayerAnimator {
 
   update(dt: number, input: AnimInput): void {
     const speed = Math.max(0, input.speed);
+    this.lastSpeed = speed;
     const scale = this.player.shape.scale;
     // 1. Clips.
     const k = 1 - Math.exp(-dt * 8); // ~0.12 s fades
@@ -1054,7 +1065,11 @@ export class PlayerAnimator {
     // Plant where the clip puts the foot now; a foot still planted from
     // standing when the gait takes over must re-plant, or it stays pinned to
     // the standing spot while the body runs away from it.
+    const dbg = this.lockDbg[s];
+    dbg.replant = '';
+    dbg.miss = 0;
     if (down && (!st.locked || st.source !== source)) {
+      if (st.locked) dbg.replant = `${st.source}>${source}`;
       ball.getWorldPosition(st.pos);
       this.player.root.getWorldPosition(st.anchor);
       st.travel0 = this.transTravel();
@@ -1124,7 +1139,7 @@ export class PlayerAnimator {
     calf.getWorldPosition(_pole);
     _fwd.set(0, 0, 1).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
     _pole.addScaledVector(_fwd, 0.5);
-    solveTwoBone(thigh, calf, foot, ankleTarget, _pole, st.weight);
+    dbg.miss = solveTwoBone(thigh, calf, foot, ankleTarget, _pole, st.weight);
     const pq = foot.parent!.getWorldQuaternion(new THREE.Quaternion());
     foot.quaternion.copy(pq.invert().multiply(footWorld));
     foot.updateMatrixWorld(true);

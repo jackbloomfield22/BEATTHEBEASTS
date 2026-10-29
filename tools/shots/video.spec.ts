@@ -112,7 +112,12 @@ const FOLLOW9: Record<string, string> = {
 // BTB_PASSING14=1: passing round 14 (docs/passing/PASSING14.md): round thirteen's recordings and log, into
 // docs/passing/round14/<BTB_PASSING_TAG>; the log also has the QB's feet at the mm (the balls of the feet, the root, each
 // foot's lock: locked, weight, the lock's point) and his sim velocity, and the pop meter's log the planted feet's drift.
-const PASSING14 = !!process.env.BTB_PASSING14;
+// BTB_PASSING15=1: animation round 15 (docs/anim/FEET15.md, the planted feet): round fourteen's recordings and log, into
+// docs/anim/feet15/<BTB_PASSING_TAG>, on the six plays of BTB_PASSING15_IDS. BTB_MEASURE=1 draws every frame and keeps
+// none (no screenshots, no video): the pop meter's log alone (the planted feet by unit, their causes, the animator's cost).
+const PASSING15 = !!process.env.BTB_PASSING15;
+const MEASURE = !!process.env.BTB_MEASURE;
+const PASSING14 = !!process.env.BTB_PASSING14 || PASSING15;
 const PASSING13 = !!process.env.BTB_PASSING13 || PASSING14;
 const PASSING12 = !!process.env.BTB_PASSING12 || PASSING13;
 const PASSING11 = !!process.env.BTB_PASSING11 || PASSING12;
@@ -158,7 +163,7 @@ const FOLLOW: Record<string, string> = {
   'p2-arm-a': 'QB,22,36,8,50,22',
   'p2-arm-b': 'QB,22,36,8,50,22',
 };
-const OUT = PASSING14 ? `docs/passing/round14/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING13 ? `docs/passing/round13/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING12 ? `docs/passing/round12/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING11 ? `docs/passing/round11/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
+const OUT = PASSING15 ? `docs/anim/feet15/${process.env.BTB_PASSING_TAG ?? 'after'}${MEASURE ? '-measure' : ''}` : PASSING14 ? `docs/passing/round14/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING13 ? `docs/passing/round13/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING12 ? `docs/passing/round12/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING11 ? `docs/passing/round11/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
 const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY || PASSING || PASSING2 || PHYSICS ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
@@ -302,7 +307,7 @@ async function record(page: Page, clip: Clip) {
   // No tutorial card in the videos.
   await page.addInitScript(() => localStorage.setItem('btb3d:practice.tutorialDone', 'true'));
   const follow = PASSING10 && process.env.BTB_FOLLOW && FOLLOW10[clip.id] ? `&follow=${FOLLOW10[clip.id]}` : PASSING9 && process.env.BTB_FOLLOW && FOLLOW9[clip.id] ? `&follow=${FOLLOW9[clip.id]}` : PASSING8 && process.env.BTB_FOLLOW && FOLLOW8[clip.id] ? `&follow=${FOLLOW8[clip.id]}` : PASSING7 && process.env.BTB_FOLLOW && FOLLOW7[clip.id] ? `&follow=${FOLLOW7[clip.id]}` : PASSING6 && process.env.BTB_FOLLOW && FOLLOW6[clip.id] ? `&follow=${FOLLOW6[clip.id]}` : PASSING5 && process.env.BTB_FOLLOW && FOLLOW5[clip.id] ? `&follow=${FOLLOW5[clip.id]}` : PASSING2 && FOLLOW[clip.id] ? `&follow=${FOLLOW[clip.id]}` : (PASSING3 || PASSING4) && process.env.BTB_FOLLOW ? `&follow=${process.env.BTB_FOLLOW}` : '';
-  await page.goto(`/?screen=practice&nointro&quality=${QUALITY}&video=${FPS}&pops&seed=1${follow}`);
+  await page.goto(`/?screen=practice&nointro&quality=${QUALITY}&video=${FPS}&pops&seed=1${follow}${MEASURE ? '&noshadow&noao' : ''}`);
   // The page only draws when asked: keep it drawing while it loads.
   const pump = (pred: string) =>
     page.waitForFunction(
@@ -332,6 +337,10 @@ async function record(page: Page, clip: Clip) {
     steps++;
     if (!inWindow) return;
     if (DIAG) diag.push(await page.evaluate(diagFrame, n));
+    if (MEASURE) {
+      n++;
+      return;
+    }
     await page.screenshot({ path: `${dir}/${String(n++).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 88 });
   };
   // Before the snap: the formation set, the camera settling. Drawn frames
@@ -389,12 +398,20 @@ async function record(page: Page, clip: Clip) {
     const sorted = [...p.rates].sort((a, b) => a - b);
     // (Passing round 14) The planted feet's drift, by group (popMeter.ts).
     const slide = (p as unknown as { slide?: unknown }).slide;
-    return { frames: p.rates.length, worst: Math.round(p.worst), p99: Math.round(sorted[Math.floor(sorted.length * 0.99)] ?? 0), ...(slide ? { slide } : {}), spikes: p.spikes };
+    // (Round 15) The ten worst planted spans and the animator's cost (ms per body per frame, GameScene).
+    const ex = p as unknown as { worstSpans?: unknown[]; cost?: { n: number; ms: number } };
+    const cost = ex.cost && ex.cost.n > 0 ? { bodies: ex.cost.n, msPerBody: Math.round((ex.cost.ms / ex.cost.n) * 10000) / 10000 } : undefined;
+    return { frames: p.rates.length, worst: Math.round(p.worst), p99: Math.round(sorted[Math.floor(sorted.length * 0.99)] ?? 0), ...(slide ? { slide } : {}), ...(ex.worstSpans ? { worstSpans: ex.worstSpans } : {}), ...(cost ? { cost } : {}), spikes: p.spikes };
   });
   // (Round ten: the close camera's and the 60-fps window's recordings sit next to the broadcast one.)
   const sfx = PASSING10 ? `${process.env.BTB_FOLLOW ? '-close' : ''}${WINDOW ? `-${FPS}` : ''}` : '';
   writeFileSync(`${OUT}/${clip.id}${sfx}.pops.json`, JSON.stringify(pops, null, 1) + '\n');
   if (DIAG) writeFileSync(`${dir}/diag.json`, JSON.stringify(diag) + '\n');
+  if (MEASURE) {
+    console.log(`${clip.id}: measured ${n} frames, pops worst ${pops.worst} rad/s`);
+    if (!DIAG) rmSync(dir, { recursive: true, force: true });
+    return;
+  }
   execFileSync(ffmpeg(), ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', `${dir}/%04d.jpg`, '-c:v', 'libx264', '-preset', 'slow', '-crf', PASSING6 || PASSING7 || PASSING8 || PASSING9 || PASSING10 ? '28' : '24', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${OUT}/${clip.id}${sfx}.mp4`]);
   console.log(`${clip.id}: ${n} frames, pops worst ${pops.worst} rad/s, ${pops.spikes.length} spikes`);
   // BTB_KEEP_FRAMES unset: the frames go once they're encoded (a 20-fps clip is ~20 MB of JPEGs; disk was tight in passing round 2).
@@ -414,7 +431,8 @@ const PASSING7_IDS = (process.env.BTB_PASSING7_IDS ?? Object.keys(FOLLOW7).join(
 const PASSING6_IDS = (process.env.BTB_PASSING6_IDS ?? Object.keys(FOLLOW6).join(',')).split(',');
 const PASSING5_IDS = (process.env.BTB_PASSING5_IDS ?? Object.keys(FOLLOW5).join(',')).split(',');
 const PASSING10_IDS = (process.env.BTB_PASSING10_IDS ?? Object.keys(FOLLOW10).join(',')).split(',');
-const IDS = (PASSING10 ? PASSING10_IDS : PASSING9 ? PASSING9_IDS : PASSING8 ? PASSING8_IDS : PASSING7 ? PASSING7_IDS : PASSING6 ? PASSING6_IDS : PASSING5 ? PASSING5_IDS : PASSING4 ? PASSING4_IDS : PASSING3 ? PASSING3_IDS : PASSING2 ? PASSING2_IDS : PHYSICS ? PHYSICS_IDS : PASSING ? PASSING_IDS : IDENTITY ? PAIRS.flatMap((p) => [`${p}-a`, `${p}-b`]) : CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || id.startsWith(process.env.BTB_CLIP));
+const PASSING15_IDS = (process.env.BTB_PASSING15_IDS ?? 'p9-slant,p9-go,cut-run,p9-screen,p9-contested,sack').split(',');
+const IDS = (PASSING15 ? PASSING15_IDS : PASSING10 ? PASSING10_IDS : PASSING9 ? PASSING9_IDS : PASSING8 ? PASSING8_IDS : PASSING7 ? PASSING7_IDS : PASSING6 ? PASSING6_IDS : PASSING5 ? PASSING5_IDS : PASSING4 ? PASSING4_IDS : PASSING3 ? PASSING3_IDS : PASSING2 ? PASSING2_IDS : PHYSICS ? PHYSICS_IDS : PASSING ? PASSING_IDS : IDENTITY ? PAIRS.flatMap((p) => [`${p}-a`, `${p}-b`]) : CONCEPTS ? CONCEPT_IDS : ['completion-rac', 'sack', 'broken-tackle']).filter((id) => !process.env.BTB_CLIP || id.startsWith(process.env.BTB_CLIP));
 test.use({ viewport: { width: W, height: H } });
 for (const id of IDS) {
   test(`feel video · ${id}`, async ({ page }) => {

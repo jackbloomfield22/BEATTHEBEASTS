@@ -10,7 +10,7 @@ import { urlFlags, videoTime } from '@/app/platform';
 import { practice, usePractice } from '@/game/practice';
 import { Input } from '@/input/InputManager';
 import { createRouteArt } from './routeArt';
-import { measure, resetPops } from './popMeter';
+import { measure, pops, resetPops } from './popMeter';
 import { lerpAngle, type AgentSnap } from '@/game/snapshot';
 import { latency } from '@/game/latency';
 import { view } from '@/game/view';
@@ -481,7 +481,13 @@ export function GameScene() {
       const accel = animDt > 0 ? (d.speed - b.lastSpeed) / Math.max(animDt, 1 / 120) : 0;
       b.lastYaw = yaw;
       b.lastSpeed = d.speed;
+      const t0 = urlFlags.pops ? performance.now() : 0;
       b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean, holdFeet: i === s.qb });
+      // (Round 15) The animator's cost per body, for the perf check (?pops: popMeter.ts pops.cost).
+      if (urlFlags.pops) {
+        pops.cost.n++;
+        pops.cost.ms += performance.now() - t0;
+      }
       // The hands to the ball on a catch (passing round 3), over the clip's own reach.
       catchReach(b, i, s, drawnBall);
       b.ragdoll.update(animDt);
