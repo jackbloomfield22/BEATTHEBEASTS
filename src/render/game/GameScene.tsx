@@ -10,7 +10,7 @@ import { urlFlags, videoTime } from '@/app/platform';
 import { practice, usePractice } from '@/game/practice';
 import { Input } from '@/input/InputManager';
 import { createRouteArt } from './routeArt';
-import { measure, resetPops } from './popMeter';
+import { measure, pops, resetPops } from './popMeter';
 import { lerpAngle, type AgentSnap } from '@/game/snapshot';
 import { latency } from '@/game/latency';
 import { view } from '@/game/view';
@@ -255,6 +255,8 @@ const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move
 const contactBodies: ContactBody[] = [];
 const contactPairs: [number, number][] = [];
 const _lean = { x: 0, z: 0 };
+/** (Round 15) Each body's sim velocity in the world (m/s), for the gait's pace and the hips' turn (animator.ts warpHips). */
+const _vel = new THREE.Vector3();
 
 /** The carrier's move options as the HUD says them (one word each). */
 const OPTION_WORD: Record<string, string> = { juke: 'Juke', stiffArm: 'Stiff arm', spin: 'Spin', truck: 'Truck', hurdle: 'Hurdle', dive: 'Dive', protect: 'Protect' };
@@ -446,7 +448,12 @@ export function GameScene() {
       const want = yawOf(heading);
       const dy = lerpAngle(0, want - b.yaw, 1);
       const turn = Math.max(-YAW_MAX * animDt, Math.min(YAW_MAX * animDt, dy * (1 - Math.exp(-animDt * 22))));
-      b.yaw = animDt > 0 ? b.yaw + turn : want;
+      // (Round 15) A clip turning him into his run holds the facing (choreo.ts turnClip), until it hands over or is cut off.
+      if (b.turnHold && (b.animator.transition?.name !== b.turnHold.clip || b.animator.transition.done)) {
+        b.turnHold = null;
+        b.animator.onTurn = null;
+      }
+      if (!b.turnHold) b.yaw = animDt > 0 ? b.yaw + turn : want;
       const yaw = b.yaw;
       // The gait's speed, eased over ~60 ms (a juke's sidestep changes the speed along his facing in a tick).
       b.gaitSpeed += (d.speed - b.gaitSpeed) * (1 - Math.exp(-animDt / 0.06));
@@ -481,7 +488,13 @@ export function GameScene() {
       const accel = animDt > 0 ? (d.speed - b.lastSpeed) / Math.max(animDt, 1 / 120) : 0;
       b.lastYaw = yaw;
       b.lastSpeed = d.speed;
-      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean, holdFeet: i === s.qb });
+      const t0 = urlFlags.pops ? performance.now() : 0;
+      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean, holdFeet: i === s.qb, vel: b.fallen || b.lie ? null : _vel.set(-tmp.vy * YARD, 0, -tmp.vx * YARD), warp: i !== s.qb });
+      // (Round 15) The animator's cost per body, for the perf check (?pops: popMeter.ts pops.cost).
+      if (urlFlags.pops) {
+        pops.cost.n++;
+        pops.cost.ms += performance.now() - t0;
+      }
       // The hands to the ball on a catch (passing round 3), over the clip's own reach.
       catchReach(b, i, s, drawnBall);
       b.ragdoll.update(animDt);

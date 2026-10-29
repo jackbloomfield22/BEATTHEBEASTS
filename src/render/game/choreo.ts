@@ -78,6 +78,12 @@ export interface Body {
   post?: { turn: number; shove: number };
   /** Passing round 13: the post-up's turn as drawn (rad, eased as the drawn yaw is), so the run's lean doesn't bank him into it (GameScene). */
   postYaw?: number;
+  /**
+   * (Round 15) A one-shot that turns him into his run (a hip flip out of the pedal, a pull down the line: meta.turn) is
+   * playing: the drawn facing holds where it started while the clip turns the body (turnClip), and takes the clip's turn
+   * at its hand-over.
+   */
+  turnHold?: { clip: string } | null;
   /** Passing round 9: the forward reach's depth (reachDepth: 0 the chest catch's arms, 1 all of catch_reach_out) and the sim time it was last eased. */
   reachK?: { k: number; t: number };
 }
@@ -158,6 +164,27 @@ export function resetBody(b: Body): void {
   b.animator.setSlot(null, null, 0);
   b.animator.setMix(null, null, 0);
   b.animator.onTurn = null;
+  b.turnHold = null;
+}
+
+/**
+ * (Round 15) Play a one-shot that turns him into the gait (meta.turn: the hip flip turns him 180 deg out of the pedal, a
+ * pull 90 deg down the line). The clip turns the body over its frames; the drawn facing also chased the sim's new
+ * heading as it played (GameScene: a hip flip's 180 deg in a quarter second), so the body turned twice, the planted feet
+ * left a metre behind as it spun and the knees bent sideways (docs/anim/FEET15.md), and at the hand-over the run snapped
+ * the turn back. Now the facing holds while the clip turns him, and takes the clip's turn when it hands over to the run.
+ */
+export function turnClip(b: Body, name: string): void {
+  b.animator.play(name, { now: true });
+  if (!b.animator.lib.meta[name]?.turn) return;
+  b.turnHold = { clip: name };
+  b.animator.onTurn = (deg) => {
+    b.yaw += (deg * Math.PI) / 180;
+    b.lastYaw = b.yaw;
+    b.player.root.rotation.y = b.yaw;
+    b.turnHold = null;
+    b.animator.onTurn = null;
+  };
 }
 
 // --- Contested catches (M6.5 #12) ---------------------------------------------------
@@ -1113,7 +1140,7 @@ export function onSnap(bodies: Body[], s: PlayState, stanceOf: (slot: string) =>
     if (a.side === 'off' && OL.has(slot)) {
       if (play.run) {
         const dirL = play.run.aim >= 0;
-        if ((slot === pull.kick || slot === pull.lead) && has(b, 'ol_pull_l')) b.animator.play(dirL ? 'ol_pull_l' : 'ol_pull_r', { now: true });
+        if ((slot === pull.kick || slot === pull.lead) && has(b, 'ol_pull_l')) turnClip(b, dirL ? 'ol_pull_l' : 'ol_pull_r');
         else if (has(b, 'ol_fire_drive')) b.animator.play('ol_fire_drive', { now: true });
       } else if ((slot === 'LT' || slot === 'RT') && has(b, 'ol_kick_slide_l')) b.animator.play(slot === 'LT' ? 'ol_kick_slide_l' : 'ol_kick_slide_r', { now: true });
       else if (has(b, 'stance_ol_pass')) b.animator.setStance('stance_ol_pass');
@@ -1165,6 +1192,8 @@ function startDrop(b: Body, s: PlayState, plan: DropPlan, t0: number): void {
 }
 
 const OL = new Set(['LT', 'LG', 'C', 'RG', 'RT']);
+/** (Round 15) The kick-slide plays up to this much faster than keyed (ours: 1.6x is a quick set's ~0.6 s for its four steps, still read as steps at 30 fps). */
+const KICK_RATE = 1.6;
 const LB = new Set(['WLB', 'MLB', 'SLB']);
 
 /** Pass-rush moves (sim/blocks.ts RushMove) to the M6 clips; the side is where the rusher goes around the blocker. */
@@ -1527,10 +1556,19 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
       if (a.side === 'def' && b.once.has('pedal') && !b.once.has('flip') && anim.lib.meta.db_hip_flip_l) {
         b.once.add('flip');
         const turnLeft = Math.sin(Math.atan2(a.vel.y, a.vel.x) - a.face) > 0;
-        anim.play(turnLeft ? 'db_hip_flip_l' : 'db_hip_flip_r', { now: true });
+        turnClip(b, turnLeft ? 'db_hip_flip_l' : 'db_hip_flip_r');
       }
     }
     if (out.backpedal) b.once.add('pedal');
+  }
+  // (Round 15) A tackle's kick-slide (a one-shot keyed at ~1.2 m/s: 1.05 m back and 0.55 m out over its second) quickens
+  // with the sim's set, up to KICK_RATE: on a vertical set the sim takes him back at 3-4 m/s and the clip's planted feet
+  // were left behind every step (docs/anim/FEET15.md: his feet stepped off their plants ten times in the set).
+  if (tr && !tr.done && tr.name.startsWith('ol_kick_slide_')) {
+    const m = anim.lib.meta[tr.name];
+    const n = m?.travel?.length ?? 0;
+    const keyed = m && n > 1 ? Math.hypot(m.travel![n - 1]!, m.side?.[n - 1] ?? 0) / m.duration : 0;
+    if (keyed > 0) anim.retime(tr.name, { rate: Math.max(1, Math.min(KICK_RATE, (sp * YARD) / (keyed * b.player.shape.scale))) });
   }
   // The throw: the release frame lands on the sim's release. The motion is
   // the man's (throwClip): a quick release's compact one, a long windup's
