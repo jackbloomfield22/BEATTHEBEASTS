@@ -75,6 +75,11 @@ export interface SlideStats {
   driftWhy: Record<string, number>;
   /** (Round 15) Each step's cause: the lock's source, 'far' (off the clip's foot) or 'reach', and what was playing. */
   stepWhy: Record<string, number>;
+  /**
+   * (Round 16) Frames of a player the sim moves faster than 0.5 m/s, by what his legs play: 'fwd' the forward gait,
+   * 'side' the side layer (the shuffle, the line's slide and set), 'back' the pedal, 'stand' a stance, 'trans' a one-shot.
+   */
+  modes: Record<string, number>;
 }
 /** (Round 15) The ten worst spans of the whole play, with their cause. */
 export interface WorstSpan {
@@ -114,7 +119,7 @@ const groupOf = (slot: string): string =>
               : /^(RB|FB|HB|TB)$/.test(slot)
                 ? 'rb'
                 : `other:${slot}`;
-const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, jumps: 0, jumps5: 0, steps: 0, lifts: 0, maxStep: 0, worst: null, jumpWhy: {}, driftWhy: {}, stepWhy: {} });
+const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, jumps: 0, jumps5: 0, steps: 0, lifts: 0, maxStep: 0, worst: null, jumpWhy: {}, driftWhy: {}, stepWhy: {}, modes: {} });
 const REACH_MISS = 0.01;
 const bump = (r: Record<string, number>, k: string) => void (r[k] = (r[k] ?? 0) + 1);
 interface Span {
@@ -136,6 +141,7 @@ interface Span {
 }
 const span = new Map<Body, Record<'l' | 'r', Span | null>>();
 const _toe = new THREE.Vector3();
+const _lr0 = new THREE.Vector3();
 /** Where each body's root was last frame: a root moving more than TELEPORT (m) in a frame was placed (a new play, a lineup), not moved. */
 const lastRoot = new Map<Body, THREE.Vector3>();
 const TELEPORT = 0.5;
@@ -215,10 +221,17 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
   if (!sp) span.set(b, (sp = { l: null, r: null }));
   const rp = b.player.root.position;
   const lr = lastRoot.get(b);
+  const lr0 = lr ? _lr0.copy(lr) : null;
   if (lr && Math.hypot(rp.x - lr.x, rp.z - lr.z) > TELEPORT) sp.l = sp.r = null;
   if (lr) lr.copy(rp);
   else lastRoot.set(b, rp.clone());
   const what = ctx.clip || ctx.overlay || ctx.anim;
+  // (Round 16) What his legs play while the sim moves him (the drawn root's speed this frame).
+  if (lr0 && !b.ragdoll.active && !b.lie && Math.hypot(rp.x - lr0.x, rp.z - lr0.z) / dt > 0.5 && Math.hypot(rp.x - lr0.x, rp.z - lr0.z) < TELEPORT) {
+    const gd = b.animator.gaitDbg();
+    const mode = ctx.clip ? 'trans' : gd.loco < 0.5 ? 'stand' : Math.abs(gd.side) > 0.5 ? 'side' : gd.back > 0.5 ? 'back' : 'fwd';
+    bump((pops.slide[groupOf(b.slot)] ??= newSlide()).modes, mode);
+  }
   // (Round 15) ?trace=SLOT: that player's feet every frame (the lock, the clip's foot, the drawn foot, the step).
   if (TRACE && b.slot === TRACE) {
     const r3 = (v: number) => Math.round(v * 1000) / 1000;

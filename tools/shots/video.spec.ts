@@ -115,6 +115,7 @@ const FOLLOW9: Record<string, string> = {
 // BTB_PASSING15=1: animation round 15 (docs/anim/FEET15.md, the planted feet): round fourteen's recordings and log, into
 // docs/anim/feet15/<BTB_PASSING_TAG>, on the six plays of BTB_PASSING15_IDS. BTB_MEASURE=1 draws every frame and keeps
 // none (no screenshots, no video): the pop meter's log alone (the planted feet by unit, their causes, the animator's cost).
+// (Round 16) BTB_FEET_DIR=docs/anim/feet16: round 15's recordings and measurements into round 16's folder (docs/anim/FEET16.md).
 const PASSING15 = !!process.env.BTB_PASSING15;
 const MEASURE = !!process.env.BTB_MEASURE;
 const PASSING14 = !!process.env.BTB_PASSING14 || PASSING15;
@@ -163,7 +164,7 @@ const FOLLOW: Record<string, string> = {
   'p2-arm-a': 'QB,22,36,8,50,22',
   'p2-arm-b': 'QB,22,36,8,50,22',
 };
-const OUT = PASSING15 ? `docs/anim/feet15/${process.env.BTB_PASSING_TAG ?? 'after'}${MEASURE ? '-measure' : ''}` : PASSING14 ? `docs/passing/round14/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING13 ? `docs/passing/round13/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING12 ? `docs/passing/round12/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING11 ? `docs/passing/round11/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
+const OUT = PASSING15 ? `${process.env.BTB_FEET_DIR ?? 'docs/anim/feet15'}/${process.env.BTB_PASSING_TAG ?? 'after'}${MEASURE ? '-measure' : ''}` : PASSING14 ? `docs/passing/round14/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING13 ? `docs/passing/round13/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING12 ? `docs/passing/round12/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING11 ? `docs/passing/round11/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING10 ? `docs/passing/round10/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING9 ? `docs/passing/round9/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING8 ? `docs/passing/round8/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING7 ? `docs/passing/round7/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING6 ? `docs/passing/round6/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING5 ? `docs/passing/round5/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING4 ? `docs/passing/round4/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING3 ? `docs/passing/round3/${process.env.BTB_PASSING_TAG ?? 'after'}` : PASSING2 ? `docs/passing/round2/${process.env.BTB_PASSING_TAG ?? 'after'}` : PHYSICS ? 'docs/physics' : PASSING ? `docs/passing/${process.env.BTB_PASSING_TAG ?? 'after'}` : IDENTITY ? 'docs/screenshots/m6.5/identity' : CONCEPTS ? 'docs/screenshots/m6.5' : 'docs/screenshots/m5.5';
 const FPS = Number(process.env.BTB_VIDEO_FPS ?? (CONCEPTS || IDENTITY || PASSING || PASSING2 || PHYSICS ? 20 : 30));
 const TICKS_PER_FRAME = 60 / FPS;
 /** Frames before the snap (the camera settles on the formation) and after the whistle (the dead ball, the get-up). */
@@ -351,6 +352,14 @@ async function record(page: Page, clip: Clip) {
   // only, no sim ticks: the play snaps on its first tick, as in Node (time
   // before the snap changes the play).
   for (let k = 0; k < LEAD_IN; k++) await shot();
+  // (Round 16) BTB_PROFILE=1: a CPU profile of the play (Chrome's sampling profiler), next to the pop meter's log, for the
+  // animator's hot paths (docs/anim/FEET16.md, perf).
+  const prof = process.env.BTB_PROFILE ? await page.context().newCDPSession(page) : null;
+  if (prof) {
+    await prof.send('Profiler.enable');
+    await prof.send('Profiler.setSamplingInterval', { interval: 100 });
+    await prof.send('Profiler.start');
+  }
   let tail = -1;
   let whistle = { frames: 0, ticks: 0 };
   let ballDone = -1;
@@ -388,6 +397,10 @@ async function record(page: Page, clip: Clip) {
       tail++;
     }
     await shot();
+  }
+  if (prof) {
+    const { profile } = await prof.send('Profiler.stop');
+    writeFileSync(`${OUT}/${clip.id}.cpuprofile`, JSON.stringify(profile));
   }
   // The recording's own check: one scene step per recorded frame, none in the screenshots'
   // redraws (platform.ts videoTime; a recording that ran fast: docs/m7/MONTAGE.md).

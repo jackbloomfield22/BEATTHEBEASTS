@@ -1194,6 +1194,8 @@ function startDrop(b: Body, s: PlayState, plan: DropPlan, t0: number): void {
 const OL = new Set(['LT', 'LG', 'C', 'RG', 'RT']);
 /** (Round 15) The kick-slide plays up to this much faster than keyed (ours: 1.6x is a quick set's ~0.6 s for its four steps, still read as steps at 30 fps). */
 const KICK_RATE = 1.6;
+/** (Round 16) The kick-slide one-shot's first slide is down by this (s of the clip: tools/blender/lib/actions_m6_line.py kick_slide, the slide lands at 0.32). */
+const KICK_HANDOFF = 0.34;
 const LB = new Set(['WLB', 'MLB', 'SLB']);
 
 /** Pass-rush moves (sim/blocks.ts RushMove) to the M6 clips; the side is where the rusher goes around the blocker. */
@@ -1529,6 +1531,8 @@ export interface Drive {
   carryLeft?: number;
   /** Passing round 10: turned off his heading by this much (rad, sim angle, + left): the post-up's back into the man. */
   turn?: number;
+  /** (Round 16) The side loops he plays moving at an angle to his facing (AnimInput.side): the line's slide and kick-slide. */
+  side?: 'ol';
 }
 
 const _look = new THREE.Vector3();
@@ -1544,8 +1548,12 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   const ball = s.ball;
   const tr = anim.transition;
   const out: Drive = { speed: Math.max(0, along) * YARD, backpedal: false, faceVelocity: false, look: null, carry: 0, traffic: 0, drive: 0, press: 0, dip: 0 };
+  // (Round 16) An offensive lineman moving back or sideways slides and kick-slides (the animator's side layer, AnimInput.side):
+  // he never backpedals. Round 15 left a lineman the sim still retreated after his kick-slide on the defensive back's pedal.
+  const line = a.side === 'off' && OL.has(a.slot as string);
+  if (line) out.side = 'ol';
   // Backward: a pedal up to a quick pace, else turn and run.
-  if (along < -0.8 && !tr?.name.startsWith('qb_drop_')) {
+  if (along < -0.8 && !tr?.name.startsWith('qb_drop_') && !(line && sp * YARD < 5.2)) {
     if (sp * YARD < 5.2) {
       out.backpedal = true;
       out.speed = sp * YARD;
@@ -1569,6 +1577,10 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     const n = m?.travel?.length ?? 0;
     const keyed = m && n > 1 ? Math.hypot(m.travel![n - 1]!, m.side?.[n - 1] ?? 0) / m.duration : 0;
     if (keyed > 0) anim.retime(tr.name, { rate: Math.max(1, Math.min(KICK_RATE, (sp * YARD) / (keyed * b.player.shape.scale))) });
+    // (Round 16) A set the clip can't keep up with (past KICK_RATE: the sim's vertical sets at 3-4 m/s) goes on into the
+    // kick-slide loop (the animator's side layer, paced by the sim) once the clip's first kick and slide are down: the hand
+    // off the turf and the first kick are the one-shot's.
+    if (keyed > 0 && tr.t >= KICK_HANDOFF && (sp * YARD) / (keyed * b.player.shape.scale) > KICK_RATE) anim.release();
   }
   // The throw: the release frame lands on the sim's release. The motion is
   // the man's (throwClip): a quick release's compact one, a long windup's
