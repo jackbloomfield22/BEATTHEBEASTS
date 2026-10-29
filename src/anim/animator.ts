@@ -933,8 +933,11 @@ export class PlayerAnimator {
     const lastPhase = this.phase;
     this.back = ease(this.back, input.backpedal ? 1 : 0, k);
     const bpMeta = this.lib.meta.loco_backpedal;
-    if (bpMeta && this.back > 0.01) this.backPhase = advancePhase(this.backPhase, speed, dt, bpMeta.speed * bpMeta.duration * scale);
-    if (!input.backpedal) this.phase = advancePhase(this.phase, speed, dt, stride);
+    // (Round 16) The phases advance by the ground he covers this frame (the sim's speed as it is), the clips' blend by the
+    // eased speed: stride matching is the feet moving back at the ground speed, and paced by the eased speed (60 ms behind
+    // the sim) a back accelerating at 10 m/s^2 ran his gait 0.6 m/s slow, his planted foot left behind the body.
+    if (bpMeta && this.back > 0.01) this.backPhase = advancePhase(this.backPhase, this.rawSpeed, dt, bpMeta.speed * bpMeta.duration * scale);
+    if (!input.backpedal) this.phase = advancePhase(this.phase, this.rawSpeed, dt, stride);
     // A queued stop starts at the left touch-down (the phase wrapping).
     if (this.queued && (this.phase < lastPhase || this.loco < 0.5)) {
       this.start(this.queued);
@@ -1266,7 +1269,7 @@ export class PlayerAnimator {
     add(fam.r.set, this.sideR * u);
     out.stride /= side;
     out.duty /= side;
-    this.sidePhase = advancePhase(this.sidePhase, this.sideSpeed, dt, out.stride);
+    this.sidePhase = advancePhase(this.sidePhase, this.sideOn ? this.rawSide : this.sideSpeed, dt, out.stride);
     for (let j = 0; j < this.sideClips.length; j++) {
       if (sw[j]! > 0) this.sidePh[j] = warpPhase((this.sidePhase + (this.sideRight[j] ? 0.5 : 0)) % 1, this.sideClips[j]!.duty, out.duty);
     }
@@ -1328,15 +1331,23 @@ export class PlayerAnimator {
         this.sideU = this.sideStyle === 'ol' ? THREE.MathUtils.clamp((ax - Math.PI / 2) / (Math.PI / 2 - SET_OUT), 0, 1) : 0;
         side = sp * Math.max(0, Math.cos(r - ax));
       }
+      this.rawSide = side;
       this.sideSpeed += (side - this.sideSpeed) * ke;
     } else this.sideSpeed += (0 - this.sideSpeed) * ke;
-    if (!v || input.warp === false) return base;
+    if (!v || input.warp === false) {
+      this.rawSpeed = base;
+      return base;
+    }
     const sp = Math.hypot(v.x, v.z);
     const along = sp > WARP_MIN ? sp * Math.max(0, Math.cos(this.warpRes - this.warp)) : base;
+    this.rawSpeed = along;
     this.groundSpeed += (along - this.groundSpeed) * ke;
     return Math.max(0, this.groundSpeed);
   }
   private warpRes = 0;
+  /** (Round 16) This frame's speed along the gait's travel and along the side loop's, before the easing (the phases' pace). */
+  private rawSpeed = 0;
+  private rawSide = 0;
 
   /**
    * (Round 16) Into the side layer or out of it (SIDE_IN, SIDE_OUT, SIDE_VIN, SIDE_VOUT), and which side, from his
