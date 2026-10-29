@@ -104,9 +104,13 @@ interface FootState {
   /** (Round 15) A step under way (stepFoot): its progress 0..1, its time (s) and its arc's height (m); from where. */
   step: { u: number; dur: number; h: number } | null;
   stepFrom: THREE.Vector3;
+  /** (Round 15) The ball's height before the leans where the lock took it (its settle, lockFoot). */
+  preY: number;
+  /** (Round 15) What the leans had moved the clip's foot by where the lock took it (horizontal; the step's 'far'). */
+  leanOff: THREE.Vector3;
 }
 
-const newFoot = (): FootState => ({ weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), travel0: 0, spent: 0, source: null, drawn: new THREE.Vector3(), relOff: new THREE.Vector3(), step: null, stepFrom: new THREE.Vector3() });
+const newFoot = (): FootState => ({ weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), travel0: 0, spent: 0, source: null, drawn: new THREE.Vector3(), relOff: new THREE.Vector3(), step: null, stepFrom: new THREE.Vector3(), preY: 0, leanOff: new THREE.Vector3() });
 
 interface TransitionState {
   name: string;
@@ -221,8 +225,9 @@ const _fq = new THREE.Quaternion();
  * STEP_FAR: a planted foot steps when the clip has its foot this far (m, base body) from where the lock holds it. Ours: a
  * set lineman's or a defensive back's feet are ~0.3-0.4 m apart, so 0.2 m off reads as a different stance; under it the
  * lock takes up the stride's own mismatches (the gait blends' 2-10 cm), which are gone at the next lift.
- * REACH_MAX: or when the leg can't reach it (the hip to the ankle's target over this share of thigh and shank: the
- * knee within ~11 deg of straight between the joints' centres).
+ * REACH_MISS: or when the leg can't reach it: the hip to the ankle's target longer than the straight leg by this much
+ * (m). Ours: 3 cm of a ball of the foot held short of the turf is under a pixel at broadcast distance, and a banked
+ * runner's outside leg (lean: the bank tips him about the hips) reaches for the turf at the edge of its length.
  * The step: STEP_T0 + d/STEP_V s for a step of d m, at most STEP_TMAX; its arc STEP_H0 + STEP_HK·d m high, at most
  * STEP_HMAX. Ours, from the gait keyer's quick steps (tools/blender/lib/gait.py: a shuffle step's 0.17 s swing and 6 cm
  * lift at 2 m/s, actions_m6_back7.py SHUFFLE; a run's 0.2 s swing): a 0.2 m step takes ~0.15 s and clears 5 cm.
@@ -248,7 +253,7 @@ const WARP_TWIST: readonly (readonly [string, number])[] = [
 ];
 const _up = new THREE.Vector3(0, 1, 0);
 const STEP_FAR = 0.2;
-const REACH_MAX = 0.995;
+const REACH_MISS = 0.03;
 const STEP_T0 = 0.1;
 const STEP_V = 4;
 const STEP_TMAX = 0.22;
@@ -256,6 +261,12 @@ const STEP_H0 = 0.03;
 const STEP_HK = 0.12;
 const STEP_HMAX = 0.09;
 const RELEASE = 0.08;
+/** (Round 15) A planted foot the clips lift within this long (s) lets go early rather than step: a quarter of a run's swing. */
+const LIFT_SOON = 0.06;
+/** (Round 15) The lock follows the clip's ball down while it's still landing: the ball this far (m) under where the lock took it. */
+const SETTLE = 0.002;
+/** (Round 15) A lock this far engaged (its weight) is planted: the pop meter's own line (popMeter.ts LOCK_FULL). */
+const LOCK_ON = 0.98;
 
 export class PlayerAnimator {
   readonly mixer: THREE.AnimationMixer;
@@ -341,7 +352,7 @@ export class PlayerAnimator {
    * (Round 15, the pop meter's causes) Each foot's lock this frame: how far the leg's IK fell short of the ankle's
    * target (m: out of reach), and what re-planted it this frame ('' none; else the source it left and the one it took).
    */
-  readonly lockDbg = { l: { miss: 0, replant: '', stepped: false }, r: { miss: 0, replant: '', stepped: false } };
+  readonly lockDbg = { l: { miss: 0, replant: '', stepped: false, why: '', cb: new THREE.Vector3() }, r: { miss: 0, replant: '', stepped: false, why: '', cb: new THREE.Vector3() } };
   /** (Round 15) The gait's state this frame, for the pop meter's traces: the speed fed, the loco and backpedal shares, the phases. */
   gaitDbg(): { speed: number; loco: number; back: number; phase: number; backPhase: number } {
     return { speed: this.lastSpeed, loco: this.loco, back: this.back, phase: this.phase, backPhase: this.backPhase };
@@ -814,6 +825,8 @@ export class PlayerAnimator {
     this.warpHips(tw);
     // (Passing round 14) The feet as the clips keyed them, before the leans tilt the whole body: a planted foot stays
     // flat on the ground under a lean (lockFoot, for AnimInput.holdFeet).
+    // (Round 15) And the balls' heights before the leans, for the lock's settle (lockFoot).
+    for (const s of FEET) this.preBallY[s] = this.bone(`toe_${s}`).getWorldPosition(this.preBall[s]).y;
     if (input.holdFeet) {
       for (const s of FEET) {
         const f = this.bone(`foot_${s}`);
@@ -832,28 +845,42 @@ export class PlayerAnimator {
     // A foot is planted when every clip with weight has it planted (when the
     // warp can't align them, e.g. walk against jog, the stricter of the two).
     const plant = this.plant;
+    // (Round 15) And whether the clips lift it within LIFT_SOON: a foot that can't hold that close to its lift lets go
+    // into its swing (lockFoot) instead of stepping.
+    const phaseSoon = stride > 1e-6 ? this.phase + (speed * LIFT_SOON) / stride : this.phase;
+    const bpSoon = bpMeta ? this.backPhase + (speed * LIFT_SOON) / Math.max(1e-6, bpMeta.speed * bpMeta.duration * scale) : 0;
     for (const s of FEET) {
-      let down: boolean;
+      const pl = plant[s];
       if (this.trans && trMeta && tw > 0.5) {
         // The transition's own contacts (its frames are absolute, not a cycle).
-        down = planted(trMeta, s, Math.min(this.trans.t, trMeta.duration - 1e-4) / trMeta.duration);
-        plant[s] = { down, source: 'trans' };
+        pl.down = planted(trMeta, s, Math.min(this.trans.t, trMeta.duration - 1e-4) / trMeta.duration);
+        pl.soon = !planted(trMeta, s, Math.min(this.trans.t + LIFT_SOON * this.trans.rate, trMeta.duration - 1e-4) / trMeta.duration);
+        pl.source = 'trans';
         continue;
       }
+      let down: boolean;
+      let soon = false;
       if (this.loco > 0.5 && this.back > 0.5 && bpMeta) {
         down = planted(bpMeta, s, this.backPhase);
+        soon = !planted(bpMeta, s, bpSoon % 1);
       } else if (this.loco > 0.5) {
         down = true;
         for (let j = 0; j < this.locos.length; j++) {
-          if (lw[j]! > 0.02) down &&= planted(this.lib.meta[this.locos[j]!.name]!, s, this.locoPhase[j]!);
+          if (lw[j]! > 0.02) {
+            const m = this.lib.meta[this.locos[j]!.name]!;
+            down &&= planted(m, s, this.locoPhase[j]!);
+            soon ||= !planted(m, s, warpPhase(phaseSoon % 1, this.locos[j]!.duty, duty));
+          }
         }
       } else down = this.loco < 0.5;
-      plant[s] = { down, source: this.loco > 0.5 ? 'loco' : 'stand' };
+      pl.down = down;
+      pl.soon = soon;
+      pl.source = this.loco > 0.5 ? 'loco' : 'stand';
     }
     // (Passing round 14) The body over its planted feet, then each foot's lock.
     this.holdFeet = !!input.holdFeet;
     this.holdOver(dt, input.groundVelocity);
-    for (const s of FEET) this.lockFoot(s, plant[s].source, plant[s].down, dt, input.groundVelocity);
+    for (const s of FEET) this.lockFoot(s, plant[s].source, plant[s].down, dt, input.groundVelocity, plant[s].soon);
     // 4 and 5.
     this.lookAt(input.lookAt ?? null, dt, !!input.lookWide);
     this.pads(dt);
@@ -1074,8 +1101,11 @@ export class PlayerAnimator {
   private footQ = { l: new THREE.Quaternion(), r: new THREE.Quaternion() };
   private footOff = { l: new THREE.Vector3(), r: new THREE.Vector3() };
   private footBall = { l: 0, r: 0 };
+  /** (Round 15) Each ball of the foot's height as the clips keyed it this frame, before the leans (the lock's settle). */
+  private preBallY = { l: 0, r: 0 };
+  private preBall = { l: new THREE.Vector3(), r: new THREE.Vector3() };
   /** This frame's plant per foot (down, and what plants it), from the clips' contacts. */
-  private plant: Record<'l' | 'r', { down: boolean; source: LockSource }> = { l: { down: false, source: 'stand' }, r: { down: false, source: 'stand' } };
+  private plant: Record<'l' | 'r', { down: boolean; soon: boolean; source: LockSource }> = { l: { down: false, soon: false, source: 'stand' }, r: { down: false, soon: false, source: 'stand' } };
 
   /**
    * The keyed leg's reach (passing round 14): the hip, the clip's own ankle and the farthest the hip may be from the
@@ -1175,6 +1205,7 @@ export class PlayerAnimator {
     isDown: boolean,
     dt: number,
     ground?: THREE.Vector3,
+    soon = false,
   ): void {
     const st = this.feet[s];
     const foot = this.bone(`foot_${s}`);
@@ -1191,6 +1222,7 @@ export class PlayerAnimator {
     const scale = this.player.shape.scale;
     // Where the clips (and the leans) put the ball of the foot this frame.
     const cb = ball.getWorldPosition(_cb);
+    dbg.cb.copy(cb);
     if (!this.footLock) {
       st.locked = false;
       st.source = null;
@@ -1215,7 +1247,7 @@ export class PlayerAnimator {
         st.step = null;
         if (down) {
           // Planted where it landed (the clip's foot): the lock at full weight, as it was through the step.
-          this.capture(st, source, cb);
+          this.capture(st, source, cb, s);
           st.weight = 1;
         } else {
           // In the air when it got there (the clip's swing): the IK fades off over RELEASE (cut off at once, the knee
@@ -1231,7 +1263,7 @@ export class PlayerAnimator {
       if (down) {
         if (!st.locked) {
           // Plant where the drawn foot is: the clip's, or (re-planting as a release still fades) where the fade has it.
-          this.capture(st, source, st.weight > 0.01 ? st.drawn : cb);
+          this.capture(st, source, st.weight > 0.01 ? st.drawn : cb, s);
         } else if (st.source !== source) {
           // (Round 15) A planted foot stays where it is when what plants it changes (a stance's foot into the get-off's,
           // the gait's into a cut's): the clips hand over on the same foot. Re-captured at the new clip's foot, it jumped
@@ -1264,6 +1296,17 @@ export class PlayerAnimator {
       tgt.y += st.step.h * Math.sin(Math.PI * st.step.u);
       w = 1;
     } else if (st.locked) {
+      // (Round 15) The lock settles with the ball of the foot: while the clip still has it coming down (a heel strike
+      // rolling onto the ball, a foot set down out of a step), the point goes with it, and holds from where it lands. At
+      // a run's touch-down the contact starts on the heel with the ball up to 12 cm off the turf, and a lock taken there
+      // held the ball in the air while the clip rolled it 10-20 cm on: the leg stretched for it, and it slid.
+      // (Read before the leans: a lean tips the feet about the hips, and is no landing.)
+      // (Only as it engages: past that it's planted, and a clip's ball that dips later is the clip's own roll.)
+      if (!this.holdFeet && st.weight < LOCK_ON && this.preBallY[s] < st.preY - SETTLE) {
+        st.pos.set(cb.x, this.preBallY[s], cb.z);
+        st.preY = this.preBallY[s];
+        st.leanOff.subVectors(cb, this.preBall[s]).setY(0);
+      }
       // (Passing round 14) For holdFeet the lock holds the ball of the foot where it planted along the ground; its height
       // is the clip's (a front foot keyed toes-up on the stride, heel=-6 deg, 2 cm off the turf: pinned at its landing
       // height the ankle went 2 cm under the keyed one and the leg straightened).
@@ -1331,10 +1374,22 @@ export class PlayerAnimator {
       // when the clip has its foot STEP_FAR from where it's held, or when the leg can't reach it.
       thigh.getWorldPosition(_hip);
       const reach = _hip.distanceTo(calf.getWorldPosition(_knee)) + _knee.distanceTo(foot.getWorldPosition(_ank));
-      const far = Math.hypot(st.pos.x - cb.x, st.pos.z - cb.z);
-      const over = _hip.distanceTo(ankleTarget) > REACH_MAX * reach;
+      // (Against the clip's foot before the leans, less what the leans moved it when it planted: a burst's pitch or a
+      // turn's bank swings the feet about the hips, and the lock holds a planted one through it, as it should.)
+      const pb = this.preBall[s];
+      const far = Math.hypot(st.pos.x - pb.x - st.leanOff.x, st.pos.z - pb.z - st.leanOff.z);
+      const over = _hip.distanceTo(ankleTarget) > reach + REACH_MISS * scale;
       const other = this.feet[s === 'l' ? 'r' : 'l'].step;
-      if ((far > STEP_FAR * scale || over) && (!other || other.u > 0.5 || over)) {
+      if ((far > STEP_FAR * scale || over) && soon) {
+        // About to lift anyway: let go into the clip's swing now (the release's blend), rather than step.
+        dbg.why = `${st.source}:lift`;
+        st.locked = false;
+        st.source = null;
+        st.relOff.subVectors(st.drawn, cb).setY(0);
+        st.weight = 1;
+        dbg.stepped = true;
+      } else if ((far > STEP_FAR * scale || over) && (!other || other.u > 0.5 || over)) {
+        dbg.why = `${st.source}:${over ? 'reach' : 'far'}`;
         this.stepFoot(st, cb, scale);
         dbg.stepped = true;
         tgt.copy(st.stepFrom);
@@ -1355,8 +1410,14 @@ export class PlayerAnimator {
   }
 
   /** (Passing round 14; round 15) A foot planted now at `at` (a world point): the lock and the hold's bookkeeping. */
-  private capture(st: FootState, source: LockSource, at: THREE.Vector3): void {
+  private capture(st: FootState, source: LockSource, at: THREE.Vector3, s: 'l' | 'r'): void {
     st.pos.copy(at);
+    st.preY = this.preBallY[s];
+    // (Round 15) On the turf: at the height the clip keys the ball (before the leans). The run's bank tips the body about
+    // the hips (lean, M6.5 #12), the outside foot up to ~12 cm off the ground and the inside one into it, and a lock taken
+    // there held a receiver's planted foot in the air through a curved route.
+    st.pos.y = this.preBallY[s];
+    st.leanOff.subVectors(_cb, this.preBall[s]).setY(0);
     this.player.root.getWorldPosition(st.anchor);
     st.travel0 = this.transTravel();
     st.spent = 0;

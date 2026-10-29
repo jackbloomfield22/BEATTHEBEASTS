@@ -61,6 +61,8 @@ export interface SlideStats {
   /** (Round 15) Of those, the ones past 5 cm; and the steps taken by feet that couldn't stay planted (animator.ts stepFoot). */
   jumps5: number;
   steps: number;
+  /** (Round 15) Feet let go a little early into the clip's own swing (animator.ts lockFoot LIFT_SOON). */
+  lifts: number;
   maxStep: number;
   /** The worst span: who, which foot, its drift, frames planted, and what was playing at its start and end. */
   worst: { slot: string; foot: string; drift: number; frames: number; from: string; clip: string; frame: number } | null;
@@ -71,6 +73,8 @@ export interface SlideStats {
    */
   jumpWhy: Record<string, number>;
   driftWhy: Record<string, number>;
+  /** (Round 15) Each step's cause: the lock's source, 'far' (off the clip's foot) or 'reach', and what was playing. */
+  stepWhy: Record<string, number>;
 }
 /** (Round 15) The ten worst spans of the whole play, with their cause. */
 export interface WorstSpan {
@@ -89,6 +93,7 @@ export interface WorstSpan {
 const LOCK_FULL = 0.98;
 const JUMP = 0.02;
 const JUMP5 = 0.05;
+const TRACE = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('trace') : null;
 /**
  * (Round 15) By unit: the QB, the offensive line, the defensive line, the linebackers, the defensive backs, the
  * receivers and tight ends, the backs (render/game/choreo.ts slots).
@@ -96,20 +101,20 @@ const JUMP5 = 0.05;
 const groupOf = (slot: string): string =>
   slot === 'QB'
     ? 'qb'
-    : /^(LT|LG|C|RG|RT|OL)/.test(slot)
+    : /^(LT|LG|C|RG|RT|OL)$/.test(slot)
       ? 'ol'
-      : /^(D[ET]|NT|DL)/.test(slot)
+      : /^(LE|RE|LDT|RDT|D[ET]\d?|NT|DL)$/.test(slot)
         ? 'dl'
         : /LB/.test(slot)
           ? 'lb'
-          : /^(CB|S|FS|SS|DB|NB|NICKEL)/.test(slot)
+          : /^(LCB|RCB|CB\d?|S|FS|SS|DB\d?|NB|NCB)$/.test(slot)
             ? 'db'
-            : /^(WR|X|Y|Z|TE|SLOT|H$)/.test(slot)
+            : /^(WR\d?|X|Y|Z|TE\d?|SLOT|H)$/.test(slot)
               ? 'wr'
-              : /^(RB|FB|HB|TB)/.test(slot)
+              : /^(RB|FB|HB|TB)$/.test(slot)
                 ? 'rb'
                 : `other:${slot}`;
-const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, jumps: 0, jumps5: 0, steps: 0, maxStep: 0, worst: null, jumpWhy: {}, driftWhy: {} });
+const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, jumps: 0, jumps5: 0, steps: 0, lifts: 0, maxStep: 0, worst: null, jumpWhy: {}, driftWhy: {}, stepWhy: {} });
 const REACH_MISS = 0.01;
 const bump = (r: Record<string, number>, k: string) => void (r[k] = (r[k] ?? 0) + 1);
 interface Span {
@@ -159,7 +164,7 @@ function closeSpan(b: Body, f: 'l' | 'r', cur: Span, clip: string, frame: number
 
 const last = new Map<Body, THREE.Quaternion[]>();
 const lastYaw = new Map<Body, number>();
-export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats>, worstSpans: [] as WorstSpan[], cost: { n: 0, ms: 0 } };
+export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats>, worstSpans: [] as WorstSpan[], stepSpans: [] as WorstSpan[], trace: [] as (number | string)[][], cost: { n: 0, ms: 0 } };
 if (typeof window !== 'undefined') (window as unknown as { __btbPops: typeof pops }).__btbPops = pops;
 
 export function resetPops(): void {
@@ -169,6 +174,8 @@ export function resetPops(): void {
   lastRoot.clear();
   pops.slide = {};
   pops.worstSpans.length = 0;
+  pops.stepSpans.length = 0;
+  pops.trace.length = 0;
   pops.cost.n = 0;
   pops.cost.ms = 0;
   pops.frames = 0;
@@ -211,13 +218,35 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
   if (lr) lr.copy(rp);
   else lastRoot.set(b, rp.clone());
   const what = ctx.clip || ctx.overlay || ctx.anim;
+  // (Round 15) ?trace=SLOT: that player's feet every frame (the lock, the clip's foot, the drawn foot, the step).
+  if (TRACE && b.slot === TRACE) {
+    const r3 = (v: number) => Math.round(v * 1000) / 1000;
+    const gd = b.animator.gaitDbg();
+    const row: (number | string)[] = [frame, r3(rp.x), r3(rp.z), Math.round((b.player.root.rotation.y * 180) / Math.PI), r3(gd.speed), r3(gd.loco), r3(gd.back), r3(gd.phase), what];
+    for (const f of ['l', 'r'] as const) {
+      const lk = b.animator.footLockOf(f);
+      const d = b.animator.lockDbg[f];
+      b.player.bones.get(`toe_${f}`)!.getWorldPosition(_toe);
+      row.push(lk.locked ? (lk.source ?? '?') : d.stepped ? 'STEP' : '-', r3(lk.weight), r3(lk.pos.x), r3(lk.pos.z), r3(d.cb.x), r3(d.cb.z), r3(_toe.x), r3(_toe.y), r3(_toe.z), d.why);
+    }
+    pops.trace.push(row);
+  }
   for (const f of ['l', 'r'] as const) {
     const lk = b.animator.footLockOf(f);
-    if (b.animator.lockDbg[f].stepped) (pops.slide[groupOf(b.slot)] ??= newSlide()).steps++;
+    if (b.animator.lockDbg[f].stepped) {
+      const g = (pops.slide[groupOf(b.slot)] ??= newSlide());
+      // (An early lift into the clip's own swing isn't a step.)
+      if (!b.animator.lockDbg[f].why.endsWith(':lift')) g.steps++;
+      else g.lifts++;
+      bump(g.stepWhy, `${b.animator.lockDbg[f].why}:${what}`);
+    }
     const toe = b.player.bones.get(`toe_${f}`);
     const down = !b.ragdoll.active && !b.lie && lk.locked && lk.weight >= LOCK_FULL && !!toe;
     let cur = sp[f];
     if (!down) {
+      // (Round 15) A span that ended in a step: its trace, for the step's cause (the first 24 of the play).
+      if (cur && b.animator.lockDbg[f].stepped && pops.stepSpans.length < 24 && cur.n >= 3 && /^(wr|db|lb|rb)$/.test(groupOf(b.slot)))
+        pops.stepSpans.push({ slot: b.slot, foot: f, drift: Math.round(cur.drift * 1000) / 1000, frames: cur.n, from: cur.from, clip: what, frame, miss: Math.round(cur.miss * 1000) / 1000, why: b.animator.lockDbg[f].why, trace: cur.trace });
       if (cur) closeSpan(b, f, cur, what, frame);
       sp[f] = null;
       continue;
