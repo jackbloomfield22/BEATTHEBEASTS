@@ -1202,11 +1202,12 @@ const HANDS_ON_THE_MOVE = new Set(['ol_anchor', 'ol_punch_mirror_l', 'ol_punch_m
 const HANDS_MOVING = 1.2;
 /**
  * (Round 16) A get-off or the read step lets go once the sim moves him faster than OFF_MOVING (m/s, a walk) more than
- * OFF_ANGLE (rad, 60 deg) off his facing, or (the read step) faster than READ_MOVING (m/s: the read step's 0.15 m in
+ * OFF_ANGLE (rad, 35 deg: past that the get-off's straight-ahead first steps are off his line by a stance's width within
+ * two of them; the gait turns its hips up to 55 deg) off his facing, or (the read step) faster than READ_MOVING (m/s: the read step's 0.15 m in
  * 0.5 s is a step in place; a linebacker moving at a jog is already flowing). Ours.
  */
 const OFF_MOVING = 0.6;
-const OFF_ANGLE = Math.PI / 3;
+const OFF_ANGLE = (35 * Math.PI) / 180;
 const READ_MOVING = 1.2;
 /** (Round 16) The drives paced by the sim, and how far (ours: a third either way still reads as the keyed rhythm). */
 const PACED = new Set(['dl_bull_rush', 'ol_fire_drive']);
