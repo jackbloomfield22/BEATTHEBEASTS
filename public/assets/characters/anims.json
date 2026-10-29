@@ -14962,6 +14962,39 @@
         "release": 14
       }
     },
+    "loco_backpedal_slow": {
+      "kind": "locomotion",
+      "frames": 14,
+      "duration": 0.4666666666666667,
+      "loop": true,
+      "speed": 1.5,
+      "dir": [
+        0.0,
+        -1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ]
+        ],
+        "r": [
+          [
+            7,
+            14
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 25.4,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
     "lb_shuffle_fast_l": {
       "kind": "locomotion",
       "frames": 10,
@@ -15227,5 +15260,5 @@
       }
     }
   },
-  "bytes": 9254888
+  "bytes": 9290476
 }

@@ -27,7 +27,7 @@ import math
 
 from .actions import Clip, mirrored
 from .actions_m6 import READY, STRIKE_WRISTS
-from .gait import FPS, Gait, contacts as gait_contacts, gait_pose
+from .gait import FPS, GAITS, Gait, contacts as gait_contacts, gait_pose
 from .poses import Arm
 
 # The quick shuffle (to the left): the linebacker's shuffle (actions_m6_back7.py
@@ -78,6 +78,13 @@ OL_SET_FAST = Gait(
 STAGGER = {"ol_set": 0.36, "ol_set_fast": 0.44}
 
 
+# The pedal at a walk's pace (a corner easing back off the line, a linebacker's first steps into his drop): the
+# backpedal (gait.py, technique: never cut) with its cadence kept up and its steps shortened, as a defensive back
+# pedals slowly ("short, quick steps"; a slow pedal is not a slow-motion fast one). The game blends it with the
+# backpedal by speed, on the pedal's phase (animator.ts backFam): the same contacts, the left foot down at 0.
+BACKPEDAL_SLOW = Gait(**{**GAITS["backpedal"].__dict__, "name": "backpedal_slow", "frames": 14, "speed": 1.5, "duty": 6.99 / 14, "lift": 0.05, "bob": 0.008, "arm_a": 10, "lean": 26})
+
+
 def lineman(p, g: Gait, kick: str | None):
     """The lineman's upper body over the keyer's legs: ol_pass's trunk, hands up and
     in with the wrists cocked (READY, STRIKE_WRISTS), the eyes on the rusher; for the
@@ -121,6 +128,7 @@ def a16_clips() -> list[Clip]:
     st = loop("ol_set_l", OL_SET, kick="l", ol=True)
     stf = loop("ol_set_fast_l", OL_SET_FAST, kick="l", ol=True)
     return [
+        loop("loco_backpedal_slow", BACKPEDAL_SLOW),
         sf, mirrored(sf, "lb_shuffle_fast_r"),
         sl, mirrored(sl, "ol_slide_r"),
         st, mirrored(st, "ol_set_r"),
@@ -128,4 +136,4 @@ def a16_clips() -> list[Clip]:
     ]
 
 
-__all__ = ["a16_clips", "SHUFFLE_FAST", "OL_SLIDE", "OL_SET", "OL_SET_FAST"]
+__all__ = ["a16_clips", "SHUFFLE_FAST", "OL_SLIDE", "OL_SET", "OL_SET_FAST", "BACKPEDAL_SLOW"]

@@ -173,7 +173,7 @@ function closeSpan(b: Body, f: 'l' | 'r', cur: Span, clip: string, frame: number
 
 const last = new Map<Body, THREE.Quaternion[]>();
 const lastYaw = new Map<Body, number>();
-export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats>, worstSpans: [] as WorstSpan[], stepSpans: [] as WorstSpan[], trace: [] as (number | string)[][], cost: { n: 0, ms: 0 }, pose: [] as (number | string)[][], bySlot: {} as Record<string, Record<string, number>> };
+export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats>, worstSpans: [] as WorstSpan[], stepSpans: [] as WorstSpan[], trace: [] as (number | string)[][], cost: { n: 0, ms: 0 }, pose: [] as (number | string)[][], bySlot: {} as Record<string, Record<string, number>>, steps: [] as (number | string)[][] };
 if (typeof window !== 'undefined') (window as unknown as { __btbPops: typeof pops }).__btbPops = pops;
 
 export function resetPops(): void {
@@ -189,6 +189,7 @@ export function resetPops(): void {
   pops.cost.ms = 0;
   pops.pose.length = 0;
   pops.bySlot = {};
+  pops.steps.length = 0;
   pops.frames = 0;
   pops.spikes.length = 0;
   pops.worst = 0;
@@ -225,6 +226,7 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
   }
   const yaw = b.player.root.rotation.y;
   const py = lastYaw.get(b);
+  const yawRate = py !== undefined ? Math.atan2(Math.sin(yaw - py), Math.cos(yaw - py)) / dt : 0;
   if (py !== undefined && !b.lie && !b.ragdoll.active && !b.animator.turned) {
     const d = Math.abs(Math.atan2(Math.sin(yaw - py), Math.cos(yaw - py))) / dt;
     if (d > YAW_RATE) pops.spikes.push({ frame, slot: b.slot, bone: 'root-yaw', rate: Math.round(d), ...ctx });
@@ -266,8 +268,15 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
     if (b.animator.lockDbg[f].stepped) {
       const g = (pops.slide[groupOf(b.slot)] ??= newSlide());
       // (An early lift into the clip's own swing isn't a step.)
-      if (!b.animator.lockDbg[f].why.endsWith(':lift')) g.steps++;
-      else g.lifts++;
+      if (!b.animator.lockDbg[f].why.endsWith(':lift')) {
+        g.steps++;
+        // (Round 16) Every step: [frame, slot, foot, why, what, how far off (cm), how far out of reach (cm), planted (s),
+        // the gait's speed, loco, pedal, side shares, the drawn turn rate (deg/s)].
+        const d = b.animator.lockDbg[f];
+        const gd = b.animator.gaitDbg();
+        const r1 = (v: number) => Math.round(v * 10) / 10;
+        pops.steps.push([frame, b.slot, f, d.why, what, r1(d.far * 100), r1(d.over * 100), Math.round(d.age * 100) / 100, r1(gd.speed), r1(gd.loco), r1(gd.back), r1(gd.side), Math.round((yawRate * 180) / Math.PI)]);
+      } else g.lifts++;
       bump(g.stepWhy, `${b.animator.lockDbg[f].why}:${what}`);
     }
     const toe = b.player.bones.get(`toe_${f}`);

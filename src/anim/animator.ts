@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Player } from '@/render/players/playerAsset';
 import { advancePhase, familyWeights, MIN_LOCO_SPEED, sampleSorted, warpPhase, type GaitClip, type GaitSample } from './blend';
 import { rotateBoneWorld, solveTwoBone } from './ik';
-import { planted, travelAt, type AnimLibrary } from './library';
+import { planted, travelAt, type AnimLibrary, type ClipMeta } from './library';
 
 // The per-player animation runtime (TECH_PLAN §9.2), layered:
 //   1. clips: a settled stance, or locomotion (the two gait clips that
@@ -130,9 +130,11 @@ interface FootState {
   leanOff: THREE.Vector3;
   /** (Round 15) This release's length (s, letGo). */
   relDur: number;
+  /** (Round 16) How long it has been planted (s): the pop meter's step records. */
+  age: number;
 }
 
-const newFoot = (): FootState => ({ weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), travel0: 0, spent: 0, source: null, drawn: new THREE.Vector3(), relOff: new THREE.Vector3(), step: null, stepFrom: new THREE.Vector3(), preY: 0, leanOff: new THREE.Vector3(), relDur: 0.08 });
+const newFoot = (): FootState => ({ weight: 0, locked: false, pos: new THREE.Vector3(), anchor: new THREE.Vector3(), travel0: 0, spent: 0, source: null, drawn: new THREE.Vector3(), relOff: new THREE.Vector3(), step: null, stepFrom: new THREE.Vector3(), preY: 0, leanOff: new THREE.Vector3(), relDur: 0.08, age: 0 });
 
 interface TransitionState {
   name: string;
@@ -441,6 +443,10 @@ export class PlayerAnimator {
   /** Its loops (preallocated: no per-frame garbage), by style and side, and each one's weight and phase this frame. */
   private sideFam: Record<'lb' | 'ol', Record<'l' | 'r', SideFam>> = { lb: { l: { slide: [], set: [] }, r: { slide: [], set: [] } }, ol: { l: { slide: [], set: [] }, r: { slide: [], set: [] } } };
   private sideClips: GaitClip[] = [];
+  /** (Round 16) The pedal's family: its slow version and itself (slow to fast), and this frame's sample. */
+  private bpSlow: GaitClip | null = null;
+  private backFam: GaitClip[] = [];
+  private backSmp: GaitSample = { a: null as unknown as GaitClip, b: null as unknown as GaitClip, w: 1, stride: 0 };
   private sideRight: boolean[] = [];
   private sideW: number[] = [];
   private sidePh: number[] = [];
@@ -518,7 +524,7 @@ export class PlayerAnimator {
    * (Round 15, the pop meter's causes) Each foot's lock this frame: how far the leg's IK fell short of the ankle's
    * target (m: out of reach), and what re-planted it this frame ('' none; else the source it left and the one it took).
    */
-  readonly lockDbg = { l: { miss: 0, replant: '', stepped: false, why: '', cb: new THREE.Vector3() }, r: { miss: 0, replant: '', stepped: false, why: '', cb: new THREE.Vector3() } };
+  readonly lockDbg = { l: { miss: 0, replant: '', stepped: false, why: '', cb: new THREE.Vector3(), far: 0, over: 0, age: 0 }, r: { miss: 0, replant: '', stepped: false, why: '', cb: new THREE.Vector3(), far: 0, over: 0, age: 0 } };
   /** (Round 15) The gait's state this frame, for the pop meter's traces: the speed fed, the loco and backpedal shares, the phases. */
   gaitDbg(): { speed: number; loco: number; back: number; phase: number; backPhase: number; side: number; sideSpeed: number; sidePhase: number; sideU: number; style: string } {
     return { speed: this.lastSpeed, loco: this.loco, back: this.back, phase: this.phase, backPhase: this.backPhase, side: this.sideL - this.sideR, sideSpeed: this.sideSpeed, sidePhase: this.sidePhase, sideU: this.sideU, style: this.sideStyle };
@@ -578,6 +584,14 @@ export class PlayerAnimator {
       }
     }
     this.sideW = this.sideClips.map(() => 0);
+    // (Round 16) The slow pedal, when the library has it.
+    const ms = lib.meta.loco_backpedal_slow;
+    const mb = lib.meta.loco_backpedal;
+    if (ms && mb && lib.clips.has('loco_backpedal_slow')) {
+      const gc = (n: string, m: ClipMeta): GaitClip => ({ name: n, speed: m.speed, duration: m.duration, duty: 0.5 });
+      this.bpSlow = gc('loco_backpedal_slow', ms);
+      this.backFam = [this.bpSlow, gc('loco_backpedal', mb)];
+    }
     this.sidePh = this.sideClips.map(() => 0);
   }
 
@@ -940,7 +954,10 @@ export class PlayerAnimator {
     // (Round 16) The phases advance by the ground he covers this frame (the sim's speed as it is), the clips' blend by the
     // eased speed: stride matching is the feet moving back at the ground speed, and paced by the eased speed (60 ms behind
     // the sim) a back accelerating at 10 m/s^2 ran his gait 0.6 m/s slow, his planted foot left behind the body.
-    if (bpMeta && this.back > 0.01) this.backPhase = advancePhase(this.backPhase, this.rawSpeed, dt, bpMeta.speed * bpMeta.duration * scale);
+    // (Round 16) The pedal's stride: its slow version's (loco_backpedal_slow, actions_a16.py) blended in under its speed.
+    const bpSlow = this.bpSlow;
+    const bpStride = bpMeta ? (bpSlow ? sampleSorted(this.backFam, speed, scale, this.backSmp).stride : bpMeta.speed * bpMeta.duration * scale) : 0;
+    if (bpMeta && this.back > 0.01) this.backPhase = advancePhase(this.backPhase, this.rawSpeed, dt, bpStride);
     if (!input.backpedal) this.phase = advancePhase(this.phase, this.rawSpeed, dt, stride);
     // A queued stop starts at the left touch-down (the phase wrapping).
     if (this.queued && (this.phase < lastPhase || this.loco < 0.5)) {
@@ -990,8 +1007,15 @@ export class PlayerAnimator {
       }
     }
     if (bpMeta) {
-      const bp = this.weigh('loco_backpedal', this.loco * this.back * (1 - tw) * (1 - side));
+      const wb = this.loco * this.back * (1 - tw) * (1 - side);
+      const ws = bpSlow ? wb * (1 - this.backSmp.w) : 0;
+      const bp = this.weigh('loco_backpedal', wb - ws);
       if (bp) bp.time = this.backPhase * bpMeta.duration;
+      if (bpSlow) {
+        const sl = this.weigh(bpSlow.name, ws);
+        // (The same contacts as the pedal's, the left foot down at 0 for half the cycle: no warp.)
+        if (sl) sl.time = this.backPhase * bpSlow.duration;
+      }
     }
     for (let j = 0; j < this.sideClips.length; j++) {
       const w = this.sideW[j]!;
@@ -1097,7 +1121,7 @@ export class PlayerAnimator {
     // (Round 15) And whether the clips lift it within LIFT_SOON: a foot that can't hold that close to its lift lets go
     // into its swing (lockFoot) instead of stepping.
     const phaseSoon = stride > 1e-6 ? this.phase + (speed * LIFT_SOON) / stride : this.phase;
-    const bpSoon = bpMeta ? this.backPhase + (speed * LIFT_SOON) / Math.max(1e-6, bpMeta.speed * bpMeta.duration * scale) : 0;
+    const bpSoon = bpMeta ? this.backPhase + (speed * LIFT_SOON) / Math.max(1e-6, bpStride) : 0;
     for (const s of FEET) {
       const pl = plant[s];
       if (this.trans && trMeta && tw > 0.5) {
@@ -1682,6 +1706,7 @@ export class PlayerAnimator {
         }
         // Engage in ~50 ms.
         st.weight += (1 - st.weight) * (1 - Math.exp(-dt * 40));
+        st.age += dt;
       } else if (st.locked) {
         // (Round 15) Lifted: the foot goes with the clip's swing from where the lock held it, the difference blended out
         // over RELEASE. Let go in ~15 ms (round 1's, so a lingering lock wouldn't drag the swinging foot back), the
@@ -1794,6 +1819,10 @@ export class PlayerAnimator {
       const gz = this.holdFeet ? this.give.z : 0;
       const far = Math.hypot(st.pos.x - pb.x - st.leanOff.x - gx, st.pos.z - pb.z - st.leanOff.z - gz);
       const over = _hip.distanceTo(ankleTarget) > reach + REACH_MISS * scale;
+      // (Round 16, the pop meter's step records) How far off and how far out of reach, and how long it had held.
+      dbg.far = far;
+      dbg.over = _hip.distanceTo(ankleTarget) - reach;
+      dbg.age = st.age;
       const other = this.feet[s === 'l' ? 'r' : 'l'].step;
       if ((far > STEP_FAR * scale || over) && soon) {
         // About to lift anyway: let go into the clip's swing now (the release's blend), rather than step.
@@ -1902,6 +1931,7 @@ export class PlayerAnimator {
     st.spent = 0;
     st.locked = true;
     st.source = source;
+    st.age = 0;
   }
 
   /**

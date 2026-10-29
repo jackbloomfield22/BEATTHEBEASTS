@@ -416,9 +416,9 @@ async function record(page: Page, clip: Clip) {
     // (Passing round 14) The planted feet's drift, by group (popMeter.ts).
     const slide = (p as unknown as { slide?: unknown }).slide;
     // (Round 15) The ten worst planted spans and the animator's cost (ms per body per frame, GameScene).
-    const ex = p as unknown as { worstSpans?: unknown[]; stepSpans?: unknown[]; trace?: unknown[]; cost?: { n: number; ms: number }; bySlot?: unknown };
+    const ex = p as unknown as { worstSpans?: unknown[]; stepSpans?: unknown[]; trace?: unknown[]; cost?: { n: number; ms: number }; bySlot?: unknown; steps?: unknown[] };
     const cost = ex.cost && ex.cost.n > 0 ? { bodies: ex.cost.n, msPerBody: Math.round((ex.cost.ms / ex.cost.n) * 10000) / 10000 } : undefined;
-    return { frames: p.rates.length, worst: Math.round(p.worst), p99: Math.round(sorted[Math.floor(sorted.length * 0.99)] ?? 0), ...(slide ? { slide } : {}), ...(ex.worstSpans ? { worstSpans: ex.worstSpans } : {}), ...(ex.stepSpans ? { stepSpans: ex.stepSpans } : {}), ...(ex.trace?.length ? { trace: ex.trace } : {}), ...(cost ? { cost } : {}), ...(ex.bySlot ? { bySlot: ex.bySlot } : {}), spikes: p.spikes };
+    return { frames: p.rates.length, worst: Math.round(p.worst), p99: Math.round(sorted[Math.floor(sorted.length * 0.99)] ?? 0), ...(slide ? { slide } : {}), ...(ex.worstSpans ? { worstSpans: ex.worstSpans } : {}), ...(ex.stepSpans ? { stepSpans: ex.stepSpans } : {}), ...(ex.trace?.length ? { trace: ex.trace } : {}), ...(cost ? { cost } : {}), ...(ex.bySlot ? { bySlot: ex.bySlot } : {}), ...(ex.steps ? { stepLog: ex.steps } : {}), spikes: p.spikes };
   });
   // (Round ten: the close camera's and the 60-fps window's recordings sit next to the broadcast one.)
   const sfx = PASSING10 ? `${process.env.BTB_FOLLOW || process.env.BTB_FOLLOW15 ? '-close' : ''}${WINDOW ? `-${FPS}` : ''}` : '';
