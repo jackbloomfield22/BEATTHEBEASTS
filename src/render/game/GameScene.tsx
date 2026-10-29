@@ -255,6 +255,8 @@ const tmp: AgentSnap = { x: 0, y: 0, vx: 0, vy: 0, face: 0, anim: 'stance', move
 const contactBodies: ContactBody[] = [];
 const contactPairs: [number, number][] = [];
 const _lean = { x: 0, z: 0 };
+/** (Round 15) Each body's sim velocity in the world (m/s), for the gait's pace and the hips' turn (animator.ts warpHips). */
+const _vel = new THREE.Vector3();
 
 /** The carrier's move options as the HUD says them (one word each). */
 const OPTION_WORD: Record<string, string> = { juke: 'Juke', stiffArm: 'Stiff arm', spin: 'Spin', truck: 'Truck', hurdle: 'Hurdle', dive: 'Dive', protect: 'Protect' };
@@ -482,7 +484,7 @@ export function GameScene() {
       b.lastYaw = yaw;
       b.lastSpeed = d.speed;
       const t0 = urlFlags.pops ? performance.now() : 0;
-      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean, holdFeet: i === s.qb });
+      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean, holdFeet: i === s.qb, vel: b.fallen || b.lie ? null : _vel.set(-tmp.vy * YARD, 0, -tmp.vx * YARD), warp: i !== s.qb });
       // (Round 15) The animator's cost per body, for the perf check (?pops: popMeter.ts pops.cost).
       if (urlFlags.pops) {
         pops.cost.n++;

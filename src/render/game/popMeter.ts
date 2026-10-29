@@ -58,6 +58,9 @@ export interface SlideStats {
   sum: number;
   /** Frames a planted foot moved more than JUMP in one frame, and the largest such move (m). */
   jumps: number;
+  /** (Round 15) Of those, the ones past 5 cm; and the steps taken by feet that couldn't stay planted (animator.ts stepFoot). */
+  jumps5: number;
+  steps: number;
   maxStep: number;
   /** The worst span: who, which foot, its drift, frames planted, and what was playing at its start and end. */
   worst: { slot: string; foot: string; drift: number; frames: number; from: string; clip: string; frame: number } | null;
@@ -85,6 +88,7 @@ export interface WorstSpan {
 }
 const LOCK_FULL = 0.98;
 const JUMP = 0.02;
+const JUMP5 = 0.05;
 /**
  * (Round 15) By unit: the QB, the offensive line, the defensive line, the linebackers, the defensive backs, the
  * receivers and tight ends, the backs (render/game/choreo.ts slots).
@@ -105,7 +109,7 @@ const groupOf = (slot: string): string =>
               : /^(RB|FB|HB|TB)/.test(slot)
                 ? 'rb'
                 : `other:${slot}`;
-const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, jumps: 0, maxStep: 0, worst: null, jumpWhy: {}, driftWhy: {} });
+const newSlide = (): SlideStats => ({ spans: 0, over5mm: 0, over2cm: 0, max: 0, sum: 0, jumps: 0, jumps5: 0, steps: 0, maxStep: 0, worst: null, jumpWhy: {}, driftWhy: {} });
 const REACH_MISS = 0.01;
 const bump = (r: Record<string, number>, k: string) => void (r[k] = (r[k] ?? 0) + 1);
 interface Span {
@@ -209,6 +213,7 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
   const what = ctx.clip || ctx.overlay || ctx.anim;
   for (const f of ['l', 'r'] as const) {
     const lk = b.animator.footLockOf(f);
+    if (b.animator.lockDbg[f].stepped) (pops.slide[groupOf(b.slot)] ??= newSlide()).steps++;
     const toe = b.player.bones.get(`toe_${f}`);
     const down = !b.ragdoll.active && !b.lie && lk.locked && lk.weight >= LOCK_FULL && !!toe;
     let cur = sp[f];
@@ -224,6 +229,7 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
       const g = (pops.slide[groupOf(b.slot)] ??= newSlide());
       if (step > JUMP) {
         g.jumps++;
+        if (step > JUMP5) g.jumps5++;
         bump(g.jumpWhy, dbg.replant ? `replant:${dbg.replant}` : dbg.miss > REACH_MISS ? 'reach' : 'other');
       }
       g.maxStep = Math.max(g.maxStep, step);
