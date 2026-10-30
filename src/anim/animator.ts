@@ -349,11 +349,10 @@ const SIDE_FLIP = 0.3;
  */
 const SIDE_PREF_OL = Math.SQRT1_2;
 /**
- * (Round 17) The break out of the shuffle into the run (breakOut): faster than BREAK_MIN (m/s, a jog's walk-in) and
- * forward of square; the side loops hand over at BREAK_RATE (1/s: ~60 ms, against the layer's ~120) for BREAK_T (s),
- * and the gait's phase starts BREAK_PHASE (of a cycle) into the planted foot's stance (a frame of a jog's 22). Ours.
+ * (Round 17) The break out of the pedal into the run (breakOut): the pedal hands over at BREAK_RATE (1/s: ~60 ms,
+ * against the layer's ~120) for BREAK_T (s), and the gait's phase starts BREAK_PHASE (of a cycle) into the planted
+ * foot's stance (a frame of a jog's 22). Ours.
  */
-const BREAK_MIN = 2.0;
 const BREAK_RATE = 16;
 const BREAK_T = 0.2;
 const BREAK_PHASE = 0.04;
@@ -982,8 +981,8 @@ export class PlayerAnimator {
     // 1. Clips.
     const k = 1 - Math.exp(-dt * 8); // ~0.12 s fades
     // (Round 16) The side layer's shares, eased as the backpedal's.
-    // (Round 17) Breaking out of it into a run, the side loops hand over at twice the pace (BREAK_RATE): the plant, then
-    // the crossover (breakOut), not a long blended stride.
+    // (Round 17) Breaking out of the pedal into the run (breakOut), the pedal (and any side share left) hands over at
+    // twice the pace (BREAK_RATE): the plant, then the drive, not a long blended stride.
     this.breakT = Math.max(0, this.breakT - dt);
     const ks = this.breakT > 0 ? 1 - Math.exp(-dt * BREAK_RATE) : k;
     this.sideL = ease(this.sideL, this.sideOn && this.sideDir > 0 ? 1 : 0, ks);
@@ -1020,7 +1019,9 @@ export class PlayerAnimator {
     const lastPhase = this.phase;
     // (Round 17) Out of the pedal forward at speed (a corner breaking on the ball, the sim driving him downhill): the
     // pedal's planted foot is the plant and the gait comes in on it, at the break's pace (breakOut).
-    if (!input.backpedal && this.back > 0.5 && this.backWas && this.rawSpeed > PEDAL_BREAK) this.breakOut(this.backPhase < 0.5 ? 'l' : 'r');
+    // (Not his turn and run out of it: the sim turning him to run the other way leaves his velocity behind his facing,
+    // and the hip flip turns him.)
+    if (!input.backpedal && this.back > 0.5 && this.backWas && this.rawSpeed > PEDAL_BREAK && Math.abs(this.velOff) < Math.PI / 2) this.breakOut(this.backPhase < 0.5 ? 'l' : 'r');
     this.backWas = !!input.backpedal;
     this.back = ease(this.back, input.backpedal ? 1 : 0, this.breakT > 0 ? ks : k);
     // (Round 17) Whose pedal: the passer's drift for the quarterback (the defensive back's had him low, chest over his
@@ -1423,6 +1424,7 @@ export class PlayerAnimator {
       const fwd = _fwd.set(0, 0, 1).applyQuaternion(this.player.root.getWorldQuaternion(_q2));
       if (sp > WARP_MIN) {
         const th0 = Math.atan2(v.x, v.z) - Math.atan2(fwd.x, fwd.z);
+        this.velOff = Math.atan2(Math.sin(th0), Math.cos(th0));
         let a = th0;
         if (input.backpedal) a -= Math.PI;
         a = Math.atan2(Math.sin(a), Math.cos(a));
@@ -1486,12 +1488,7 @@ export class PlayerAnimator {
     this.sideOn = on
       ? sp < (ol ? SIDE_VOUT_OL : qb ? SIDE_VOUT_QB : SIDE_VOUT) && at > SIDE_OUT && (ol || at < Math.PI - SIDE_OUT)
       : sp < (ol ? SIDE_VIN_OL : qb ? SIDE_VIN_QB : SIDE_VIN) && at > SIDE_IN && (ol || at < Math.PI - SIDE_IN);
-    if (!this.sideOn) {
-      // (Round 17) Out of the shuffle forward and at speed (his velocity come round toward his chest, or too quick to
-      // shuffle): he breaks into the run (breakOut). Out the back (into the pedal) or slowing down, it fades as before.
-      if (on && sp > BREAK_MIN && at < Math.PI / 2) this.breakOut();
-      return null;
-    }
+    if (!this.sideOn) return null;
     const sn = Math.sin(th);
     const fresh = this.sideL + this.sideR < 0.05;
     // On his outside foot, a lineman keeps it until the sim takes him as far inside as would have chosen the inside foot.
@@ -1511,25 +1508,22 @@ export class PlayerAnimator {
   }
 
   /**
-   * (Round 17) Out of the shuffle into the run: the gait comes in on the shuffle's own feet, the lead foot planted and
-   * the trail foot swinging through across it, the crossover (the coaching "plant and cross over", "open and run": a
-   * linebacker triggering downhill out of his scrape, a corner out of his shuffle on the ball). The forward gait's
-   * phase is set so the foot the shuffle has down is the one early in its stance (the left touches down at phase 0, the
-   * right at 0.5): planted in both, the lock keeps it where it is through the hand-over (the plant). The lead foot in
-   * the air instead, he lands it first (the open step) and the trail foot crosses over after. Round 16 blended the
-   * shuffle's loop into the run's on its own phase over 0.12 s, the feet of the two at odds: one long split stride as
-   * the hips opened (docs/anim/FEET16.md, critique).
+   * (Round 17) Out of the pedal into the run (a corner breaking on the ball, a safety driving downhill on a throw in
+   * front of him): the pedal's planted foot is the plant and the gait comes in on it. The forward gait's phase is set so
+   * that foot is early in its stance (the left touches down at phase 0, the right at 0.5): planted in both, the lock keeps
+   * it where it is through the hand-over, and the other foot drives through first. Round 16 eased the pedal out and the
+   * run in over ~0.12 s each on its own phase, the feet of the two at odds. (Tried for the shuffle into the run too, it
+   * added linebacker steps on three of the six measured plays, +4 over them: docs/passing/PASSING17.md.)
    */
-  private breakOut(plant?: 'l' | 'r'): void {
-    const lead = this.sideDir > 0 ? 'l' : 'r';
-    const leadAt = lead === 'l' ? 0 : 0.5;
-    // (Out of the pedal: `plant`, the foot it has down, early in its stance in the gait: the plant and drive.)
-    this.phase = plant ? (plant === 'l' ? 0 : 0.5) + BREAK_PHASE : ((this.feet[lead].locked ? leadAt : leadAt + 0.5) % 1) + BREAK_PHASE;
+  private breakOut(plant: 'l' | 'r'): void {
+    this.phase = (plant === 'l' ? 0 : 0.5) + BREAK_PHASE;
     this.breakT = BREAK_T;
   }
   private breakT = 0;
   /** (Round 17) Last frame's input was the pedal (the break out of it: breakOut). */
   private backWas = false;
+  /** (Round 17) His velocity's angle off his drawn facing this frame (rad, + left; gaitSpeed). */
+  private velOff = 0;
 
   /** (Round 16) The side loop's travel (rad, toward the side) nearest an angle: sideways, or for the line out to its set's. */
   private sideAxis(psi: number): number {
