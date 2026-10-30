@@ -15399,11 +15399,11 @@
         ]
       },
       "gates": {
-        "slide_cm": 0.48,
+        "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 8.5,
+        "clear_cm": 9.6,
         "com_cm": null,
-        "reach_cm": 0.64,
+        "reach_cm": 0.0,
         "pass": true
       }
     },
@@ -15432,11 +15432,11 @@
         ]
       },
       "gates": {
-        "slide_cm": 0.48,
+        "slide_cm": 0.0,
         "loop_deg": 0.0,
-        "clear_cm": 8.5,
+        "clear_cm": 9.6,
         "com_cm": null,
-        "reach_cm": 0.64,
+        "reach_cm": 0.0,
         "pass": true
       }
     },
@@ -15606,5 +15606,5 @@
       }
     }
   },
-  "bytes": 9642688
+  "bytes": 9643152
 }

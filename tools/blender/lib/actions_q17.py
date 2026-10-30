@@ -52,10 +52,13 @@ QB_SHUFFLE = Gait(
     strike=10, flat_by=0.1, heel_mid=8, rise_at=0.5, toe_off=20, dorsi=0, gaze=3, dir=(1.0, 0.0), ahead=0.5,
 )
 # The quick slide (away from a free rusher): 3.6 m/s, eight frames a cycle (7.5 steps a
-# second), the step ~0.48 m, a little lower and wider, the lift 6 cm. The game plays it to
-# ~1.4x (the player's stick slides him at 0.55 of his top speed, ~4.3 m/s).
+# second), the step ~0.48 m, a little lower, the lift 6 cm. The base: the feet 0.14 m apart
+# at their closest and 0.90 m at their widest (2 x width -/+ the 0.38 m each covers planted:
+# a shorter stance than the slow slide's share, so the stride opens no wider than a big
+# set; at 0.45 of the cycle it opened to a metre). The game plays it to ~1.4x (the player's
+# stick slides him at 0.55 of his top speed, ~4.3 m/s).
 QB_SHUFFLE_FAST = Gait(
-    "qb_shuffle_fast", frames=8, speed=3.6, duty=3.59 / 8, width=0.28, pelvis_up=-0.06, bob=0.012, sway=0.0, drop=2, turn=0, counter=0, lean=QB_TRUNK + 2,
+    "qb_shuffle_fast", frames=8, speed=3.6, duty=3.19 / 8, width=0.26, pelvis_up=-0.06, bob=0.012, sway=0.0, drop=2, turn=0, counter=0, lean=QB_TRUNK + 2,
     arm_c=0, arm_a=0, elbow=90, elbow_d=0, hand="grip",
     hip_max=28, hip_ext=-10, knee_max=56, retract=0, fk=0.0, lift=0.06,
     strike=12, flat_by=0.1, heel_mid=10, rise_at=0.5, toe_off=22, dorsi=0, gaze=3, dir=(1.0, 0.0), ahead=0.5,

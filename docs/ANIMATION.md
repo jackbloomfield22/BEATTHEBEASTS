@@ -233,8 +233,8 @@ Gates (TECH_PLAN §9.1): foot slide on planted frames ≤ 0.5 cm; loop continuit
 | `ol_set_fast_r` | locomotion | 9 | 3.2 | 0.00 | 0.00 | 43.3 | — | pass |
 | `qb_shuffle_l` | locomotion | 10 | 1.8 | 0.00 | 0.00 | 17.1 | — | pass |
 | `qb_shuffle_r` | locomotion | 10 | 1.8 | 0.00 | 0.00 | 17.1 | — | pass |
-| `qb_shuffle_fast_l` | locomotion | 8 | 3.6 | 0.48 | 0.00 | 8.5 | — | pass |
-| `qb_shuffle_fast_r` | locomotion | 8 | 3.6 | 0.48 | 0.00 | 8.5 | — | pass |
+| `qb_shuffle_fast_l` | locomotion | 8 | 3.6 | 0.00 | 0.00 | 9.6 | — | pass |
+| `qb_shuffle_fast_r` | locomotion | 8 | 3.6 | 0.00 | 0.00 | 9.6 | — | pass |
 | `qb_climb_slow` | locomotion | 16 | 1.3 | 0.01 | 0.00 | 22.1 | — | pass |
 | `qb_climb` | locomotion | 12 | 2.8 | 0.00 | 0.00 | 21.7 | — | pass |
 | `qb_climb_fast` | locomotion | 12 | 4.4 | 0.00 | 0.00 | 25.2 | — | pass |
