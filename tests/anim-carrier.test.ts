@@ -91,6 +91,12 @@ describe('the gait families', () => {
     familyWeights(0.7, 0.3, 0.2, w, 0.4);
     expect(w.reduce((a, b) => a + b, 0)).toBeCloseTo(1);
     expect(familyWeights(0, 1, 1, w)[0]).toBe(1); // not a carrier: the receiver's gaits
+    // (Round 17) The quarterback's pocket (family 7, the climb) takes its share off all the others.
+    const p = [0, 0, 0, 0, 0, 0, 0, 0];
+    expect(familyWeights(0, 0, 0, p, 0, 1)).toEqual([0, 0, 0, 0, 0, 0, 0, 1]);
+    familyWeights(0.6, 0.4, 0.1, p, 0.3, 0.5);
+    expect(p.reduce((a, b) => a + b, 0)).toBeCloseTo(1);
+    expect(p[7]).toBe(0.5);
   });
 
   it('samples without allocating the same as sampleGait', () => {

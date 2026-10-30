@@ -855,6 +855,7 @@ def action_clips() -> list[Clip]:
     from .actions_drop import drop_clips
     from .actions_p10 import p10_clips
     from .actions_a16 import a16_clips
+    from .actions_q17 import q17_clips
 
     jl = juke_left()
     return [
@@ -873,6 +874,8 @@ def action_clips() -> list[Clip]:
         *p10_clips([qb_throw(), qb_throw_quick(), qb_throw_long()]),
         # Animation round 16: the side layer's shuffles and the line's slide and kick-slide loops.
         *a16_clips(),
+        # Animation round 17: the quarterback's slide, climb and drift in the pocket, the ball held high.
+        *q17_clips(),
     ]
 
 

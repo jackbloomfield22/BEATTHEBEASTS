@@ -17357,7 +17357,304 @@
         "reach_cm": 0.01,
         "pass": true
       }
+    },
+    "qb_shuffle_l": {
+      "kind": "locomotion",
+      "frames": 10,
+      "duration": 0.3333333333333333,
+      "loop": true,
+      "speed": 1.8,
+      "dir": [
+        1.0,
+        -0.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            6
+          ]
+        ],
+        "r": [
+          [
+            5,
+            1
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 17.1,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "qb_shuffle_r": {
+      "kind": "locomotion",
+      "frames": 10,
+      "duration": 0.3333333333333333,
+      "loop": true,
+      "speed": 1.8,
+      "dir": [
+        -1.0,
+        -0.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            5,
+            1
+          ]
+        ],
+        "r": [
+          [
+            0,
+            6
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 17.1,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "qb_shuffle_fast_l": {
+      "kind": "locomotion",
+      "frames": 8,
+      "duration": 0.26666666666666666,
+      "loop": true,
+      "speed": 3.6,
+      "dir": [
+        1.0,
+        -0.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            4
+          ]
+        ],
+        "r": [
+          [
+            4,
+            8
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 9.6,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "qb_shuffle_fast_r": {
+      "kind": "locomotion",
+      "frames": 8,
+      "duration": 0.26666666666666666,
+      "loop": true,
+      "speed": 3.6,
+      "dir": [
+        -1.0,
+        -0.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            4,
+            8
+          ]
+        ],
+        "r": [
+          [
+            0,
+            4
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 9.6,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "qb_climb_slow": {
+      "kind": "locomotion",
+      "frames": 16,
+      "duration": 0.5333333333333333,
+      "loop": true,
+      "speed": 1.3,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            10
+          ]
+        ],
+        "r": [
+          [
+            8,
+            2
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.01,
+        "loop_deg": 0.0,
+        "clear_cm": 22.1,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "qb_climb": {
+      "kind": "locomotion",
+      "frames": 12,
+      "duration": 0.4,
+      "loop": true,
+      "speed": 2.8,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            6
+          ]
+        ],
+        "r": [
+          [
+            6,
+            12
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 21.7,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "qb_climb_fast": {
+      "kind": "locomotion",
+      "frames": 12,
+      "duration": 0.4,
+      "loop": true,
+      "speed": 4.4,
+      "dir": [
+        0.0,
+        1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            5
+          ]
+        ],
+        "r": [
+          [
+            6,
+            11
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 25.2,
+        "com_cm": null,
+        "reach_cm": 0.01,
+        "pass": true
+      }
+    },
+    "qb_pedal_slow": {
+      "kind": "locomotion",
+      "frames": 14,
+      "duration": 0.4666666666666667,
+      "loop": true,
+      "speed": 1.5,
+      "dir": [
+        0.0,
+        -1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ]
+        ],
+        "r": [
+          [
+            7,
+            14
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 27.6,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      }
+    },
+    "qb_pedal": {
+      "kind": "locomotion",
+      "frames": 14,
+      "duration": 0.4666666666666667,
+      "loop": true,
+      "speed": 3.2,
+      "dir": [
+        0.0,
+        -1.0
+      ],
+      "contacts": {
+        "l": [
+          [
+            0,
+            7
+          ]
+        ],
+        "r": [
+          [
+            7,
+            14
+          ]
+        ]
+      },
+      "gates": {
+        "slide_cm": 0.0,
+        "loop_deg": 0.0,
+        "clear_cm": 30.2,
+        "com_cm": null,
+        "reach_cm": 0.0,
+        "pass": true
+      }
     }
   },
-  "bytes": 10363296
+  "bytes": 10674784
 }

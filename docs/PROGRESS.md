@@ -31,6 +31,19 @@
   - Honest limits:
     - A long sprint costs 0.02–0.04 stamina a second, so a 40-yard breakaway loses ~10–15% of the bar and ~2% of top speed. That's visible on the bar but subtle in the legs. The drive-long model (stamina carried from play to play, Workhorse and the rest) is what gives it teeth.
     - Watched on the recorded broken-tackle clip (below, "Sprint watched").
+- **Passing round 17** (2026-10-30, `wip/qb17`; agent; `docs/passing/PASSING17.md`, videos in `docs/passing/round17/`). The quarterback in the pocket: the slide, the step up, the climb, the drift, his reads, and the escape to throw on the run, as the player and the AI play them.
+  - **Scope:** animator, render and nine new clips keyed in-house (`tools/blender/lib/actions_q17.py`). `src/sim` and `src/engine` are untouched; every harness is byte-identical (outcomes; identity 19/20, passidentity 9/9, traitaudit 127/127); 234/234 clip gates pass, and the 225 old clips are byte-identical.
+  - **The passer moves in his set:** his own slide, climb and drift (the ball high in both hands, eyes downfield) instead of the linebacker's shuffle, the carrier's traffic gait and the corner's pedal. Moving in the pocket his hips stay at 0.83–0.94 m (they fell to 0.71), and the throw out of a slide rises 5–7 cm (it rose 22–24).
+  - **The throw on the run** turns his chest to the receiver off the line he runs (chest off the target at the release: 36° → 21° rolling right, 87° → 31° rolling left). Out of the pocket behind the line he keeps the ball up in both hands. Across his facing faster than his slide, his hips go with his run and his shoulders stay toward his read.
+  - **His feet follow his eyes with a lag:** the AI's reads no longer spin his whole body (QB steps in the AI's blitz pocket 11 → 7, turns on a planted foot 350 → 180°/s).
+  - **A defender out of his pedal** breaks on his planted foot (the plant and drive). The same hand-over out of the shuffle added linebacker steps and was reverted.
+  - **Round 15/16's measures on the six plays:** steps 403 → 397 (QB 20 → 16, DB 80 → 78, no unit up); drift, jumps and the pop meter unchanged.
+  - **Animator cost** on the contested ball (headless, shared container, three runs each): 0.218 ms per body after against 0.195 before (0.18–0.22), at round 16's 0.21.
+  - **Honest limits:**
+    - The shuffle-to-run hand-over is still one long stride: it needs a keyed crossover.
+    - The player's stick slides him at ~4.3 m/s, a bail rather than a pocket slide, so the quick slide has a wide base.
+    - Resets between reads are the lag and the procedural step, not a keyed reset.
+    - The close cameras in traffic are often blocked by linemen.
 - **Animation round 16** (2026-10-29, `wip/anim16`; agent; `docs/anim/FEET16.md`, videos in `docs/anim/feet16/`). Footwork: lateral movement and pass sets.
   - **Scope:** animator, render and ten new clips keyed in-house (`tools/blender/lib/actions_a16.py`). `src/sim` and `src/engine` are untouched; every harness is byte-identical (identity 19/20, passidentity 9/9, traitaudit 127/127); 225/225 clip gates pass, and the 215 old clips are byte-identical.
   - **The side layer:** a player moving more than 58° off his facing shuffles (`lb_shuffle`, plus a new quick shuffle) instead of running a forward gait turned sideways. A lineman slides or kick-slides in loops paced by the sim (`ol_slide`, `ol_set`, `ol_set_fast`), on his outside foot, and never backpedals. The line's moving frames in the defensive back's pedal went from 23% to 0%.
