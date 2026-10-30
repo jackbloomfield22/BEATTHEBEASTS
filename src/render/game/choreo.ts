@@ -81,6 +81,11 @@ export interface Body {
   carry?: CarryArm | null;
   /** Passing round 10: the post-up drawn (0..1, boxPost): how far his back is turned into the man and how hard the bar has displaced him. */
   post?: { turn: number; shove: number };
+  /**
+   * (Round 17) A throw on the run: the chest turned toward the target off the line he runs (Drive.turn), its share (k,
+   * 0..1, eased in over the windup and out after the release) and the target's bearing (rad, sim angle).
+   */
+  throwTurn?: { k: number; ang: number; t: number };
   /** Passing round 13: the post-up's turn as drawn (rad, eased as the drawn yaw is), so the run's lean doesn't bank him into it (GameScene). */
   postYaw?: number;
   /**
@@ -1539,8 +1544,85 @@ function eyesFor(i: number, s: PlayState, simT: number, out: Drive): void {
     at(qb.pos.x, qb.pos.y, 1.6);
   }
 }
-/** A QB stepping up faster than this (yd/s along his facing) is climbing the pocket, not shuffling in it. Ours. */
-const CLIMB_ALONG = 0.8;
+/**
+ * (Round 17) The passer out of the pocket behind the line with the ball, looking to throw (the sim's scramble keeps his
+ * eyes downfield until he crosses the line: sim/play.ts): his ball up in both hands and his eyes downfield, not the
+ * runner's tuck and his look for the tackler. A defender within TUCK_NEAR (yd) and he puts it away (the runner's
+ * carry: ball security before the hit).
+ */
+const TUCK_NEAR = 1.6;
+/**
+ * (Round 17) The passer's feet follow his eyes with a lag in the pocket (1/s: a time constant of 0.25 s): the sim turns
+ * him to each read as his eyes go there (sim/pocket.ts qbFace), +-40 deg two or three times a second against the
+ * blitz (tools/sim/q17_pocket.ts --ai=doubles-curls:cover1blitz:6), and drawn at everyone's pace (22/s) his whole body
+ * swung read to read, the planted feet twisting under him and stepping at 300 deg/s. The head and chest take the read
+ * first (the look-at: 70 deg of neck), the hips and feet settle toward it, as a passer's do working a progression.
+ */
+const POCKET_YAW_EASE = 4;
+function onTheMove(s: PlayState, i: number): boolean {
+  if (i !== s.qb || s.scrambleT < 0 || s.phase !== 'pocket' || s.ball.mode !== 'held' || s.ball.holder !== i) return false;
+  const a = s.agents[i]!;
+  if (a.pos.x >= s.setup.los) return false;
+  for (const j of s.def) {
+    const d = s.agents[j]!;
+    if (!d.down && Math.hypot(d.pos.x - a.pos.x, d.pos.y - a.pos.y) < TUCK_NEAR) return false;
+  }
+  return true;
+}
+
+/**
+ * (Round 17) The passer with the ball moving across his facing faster than his slide (the AI away from a rusher at
+ * 5-6 m/s, eyes downfield: sim/play.ts): he runs, his hips on his run and his shoulders as far back toward his read as
+ * they turn off the hips (the animator's WARP_MAX, 55 deg), the head the rest. The sim faces him downfield, and drawn
+ * there with his hips at their most his legs ran 35 deg off where he went, a planted foot left behind each stride
+ * (tools/sim/q17_animbench.ts qb-away: the feet crossing 30% of the frames). The drawn heading turns toward his run by
+ * what the hips can't take, from his slide's top speed (RUN_TURN_FROM, the side layer's 'qb' SIDE_VIN, to RUN_TURN_FULL,
+ * its way out), across his facing only (PASSER_HIPS to pi - PASSER_HIPS: further back is his drift).
+ */
+const PASSER_HIPS = (55 * Math.PI) / 180;
+const RUN_TURN_FROM = 5.0;
+const RUN_TURN_FULL = 5.6;
+function passerRun(s: PlayState, a: Agent, sp: number, out: Drive): void {
+  if (s.ball.mode !== 'held' || s.ball.holder !== a.i || sp <= RUN_TURN_FROM || s.scrambleT >= 0) return;
+  const off = Math.atan2(Math.sin(Math.atan2(a.vel.y, a.vel.x) - a.face), Math.cos(Math.atan2(a.vel.y, a.vel.x) - a.face));
+  const m = Math.abs(off);
+  if (m <= PASSER_HIPS || m >= Math.PI - PASSER_HIPS) return;
+  out.turn = Math.sign(off) * (Math.min(m, Math.PI / 2) - PASSER_HIPS) * THREE.MathUtils.smoothstep(sp, RUN_TURN_FROM, RUN_TURN_FULL);
+}
+
+/**
+ * (Round 17) A throw on the run: the hips go where he runs and the chest to the target. The sim faces a scrambling
+ * passer along his run (sim/play.ts), and the throw was drawn down that line: rolling right, the ball left his hand
+ * toward the sideline and flew off 80 deg to his left. The drawn heading turns toward the target (Drive.turn) by up to
+ * the hips' own turn off the run (animator.ts WARP_MAX, 55 deg: the gait's hips stay on the run and the spine takes
+ * the turn back to the chest), eased in from the windup (THROW_TURN_IN) and out after the release (THROW_TURN_OUT); the
+ * throw's own keyed trunk rotation and the finish across the body take the rest. Only on the move (FINISH_RUN and up:
+ * a set throw's clip turns him as it's keyed).
+ */
+const THROW_TURN_MAX = (55 * Math.PI) / 180;
+const THROW_TURN_IN = 0.15;
+const THROW_TURN_OUT = 0.4;
+/** The throw on the move's line (m/s): from here the throw is the upper body's over his gait (drive: `running`). */
+const THROW_TURN_SPEED = 1.6;
+function throwTurn(b: Body, s: PlayState, a: Agent, simT: number, sp: number, out: Drive): void {
+  const w = s.windup;
+  const ball = s.ball;
+  const tt = (b.throwTurn ??= { k: 0, ang: 0, t: simT });
+  const dt = Math.max(0, simT - tt.t);
+  tt.t = simT;
+  let on = false;
+  if (w && sp >= THROW_TURN_SPEED) {
+    const tgt = s.agents[s.icons[w.icon]!];
+    if (tgt) {
+      tt.ang = Math.atan2(tgt.pos.y - a.pos.y, tgt.pos.x - a.pos.x);
+      on = true;
+    }
+  } else if (ball.mode === 'air' && ball.thrower === a.i && simT - ball.releaseT < 0.15 && tt.k > 0) on = true;
+  tt.k = on ? Math.min(1, tt.k + dt / THROW_TURN_IN) : Math.max(0, tt.k - dt / THROW_TURN_OUT);
+  if (tt.k <= 0) return;
+  const off = Math.atan2(Math.sin(tt.ang - a.face), Math.cos(tt.ang - a.face));
+  out.turn = Math.max(-THROW_TURN_MAX, Math.min(THROW_TURN_MAX, off)) * tt.k;
+}
 
 /** Routes that come back to the QB out of their break (the ball's on him as he turns): every break but the verticals. */
 const TIMING_ROUTES = new Set(['slant', 'out', 'qout', 'in', 'qin', 'dig', 'curl', 'hitch', 'stick', 'comeback', 'spot', 'sit', 'option', 'angle', 'drag', 'cross', 'flat', 'checkdown', 'swing', 'arrow', 'sail', 'leak', 'chip', 'slip', 'bubble']);
@@ -1566,9 +1648,15 @@ export interface Drive {
   /** Passing round 10: turned off his heading by this much (rad, sim angle, + left): the post-up's back into the man. */
   turn?: number;
   /** (Round 16) The side loops he plays moving at an angle to his facing (AnimInput.side): the line's slide and kick-slide. */
-  side?: 'ol';
+  side?: 'ol' | 'qb';
   /** (Round 16) The side a lineman's set kicks to going straight back (AnimInput.sidePref): his outside foot. */
   sidePref?: number;
+  /** (Round 17) The quarterback with the ball in the pocket: his climb (AnimInput.pocket), 0..1. */
+  pocket?: number;
+  /** (Round 17) Whose pedal he plays going back (AnimInput.pedal): the passer's drift. */
+  pedal?: 'qb';
+  /** (Round 17) How quickly (1/s) the drawn facing comes round to the sim's (GameScene: 22 for everyone else). */
+  yawEase?: number;
 }
 
 const _look = new THREE.Vector3();
@@ -1591,6 +1679,21 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     out.side = 'ol';
     const slot = a.slot as string;
     out.sidePref = slot === 'LT' || slot === 'LG' ? 1 : slot === 'RT' || slot === 'RG' ? -1 : 0;
+  }
+  // (Round 17) The passer with the ball in the pocket moves in his set (tools/blender/lib/actions_q17.py): he slides on
+  // his own slide (the side layer's 'qb' loops, square, the ball high), steps up and climbs on the pocket's gait family,
+  // and drifts back on his own pedal. Round 16 had him on the linebacker's shuffle (his hips 26 cm under his set, the
+  // trunk pitched 26 deg), the carrier's traffic gait climbing (12-17 cm under it) and the corner's pedal: out of any of
+  // them the throw came up out of a crouch (docs/passing/PASSING17.md).
+  if (i === s.qb && !s.setup.play.run) {
+    out.pedal = 'qb';
+    if (s.scrambleT < 0 && ball.mode === 'held' && ball.holder === i && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket')) {
+      out.side = 'qb';
+      out.pocket = 1;
+      // His eyes go read to read and his feet follow when he settles on one (POCKET_YAW_EASE); in his windup the body
+      // comes round to the throw at once.
+      if (!s.windup && s.phase === 'pocket') out.yawEase = POCKET_YAW_EASE;
+    }
   }
   // (Round 16) Engaged, the linemen's feet stay alive: the blocker in pass protection and the rusher on him stand in the
   // hand fight's loops (ol_engage, dl_engage), whose feet chop in place and re-set where the clip puts them, rather than
@@ -1823,7 +1926,9 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   let carrying = false;
   if (i === holder && !a.down) {
     // (A scrambling QB has it tucked; a play-action or handoff overlay owns the hands while it plays.)
-    const pocket = i === s.qb && s.scrambleT < 0 && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket');
+    // (Round 17) Out of the pocket behind the line looking to throw (the sim's scramble: eyes downfield until the line),
+    // the passer keeps the ball up in both hands, ready to throw on the run, rather than tucking it as a runner does.
+    const pocket = (i === s.qb && s.scrambleT < 0 && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket')) || onTheMove(s, i);
     // A catch clip owns the hands until it has tucked the ball; the reach for the line holds it out in the hand.
     const catching = catchHold(b) !== null;
     carrying = !pocket && !catching;
@@ -1897,12 +2002,12 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
       out.traffic = Math.max(out.traffic, k);
     }
   }
-  // Climbing the pocket (passing round 2): moving up in it after the set, the QB's steps are the short, choppy, hips-down
-  // ones of the carrier's traffic gaits (stride-matched to the sim's pace), the ball still in both hands at the numbers
-  // (his hold overlay owns the arms) and his eyes downfield.
-  if (i === s.qb && s.phase === 'pocket' && s.scrambleT < 0 && !w && along > CLIMB_ALONG && (!tr || tr.done)) {
-    out.carry = 1;
-    out.traffic = 1;
+  // (Round 17) Climbing the pocket is the pocket's own gait family (out.pocket, above): passing round 2 had the carrier's
+  // traffic gait here, short and choppy but 12-17 cm under his set, and the throw rose out of it.
+  // A throw on the run turns his chest to the target (throwTurn).
+  if (i === s.qb) {
+    passerRun(s, a, sp * YARD, out);
+    throwTurn(b, s, a, simT, sp * YARD, out);
   }
   // The ball carrier runs like one (M6.5 #11): the carry gaits, and his eyes up.
   if (carrying && !b.fallen) carrierDrive(b, i, s, simT, out, clipBusy(b, tr));
