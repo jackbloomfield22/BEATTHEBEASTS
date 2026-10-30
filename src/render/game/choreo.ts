@@ -1551,6 +1551,14 @@ function eyesFor(i: number, s: PlayState, simT: number, out: Drive): void {
  * carry: ball security before the hit).
  */
 const TUCK_NEAR = 1.6;
+/**
+ * (Round 17) The passer's feet follow his eyes with a lag in the pocket (1/s: a time constant of 0.25 s): the sim turns
+ * him to each read as his eyes go there (sim/pocket.ts qbFace), +-40 deg two or three times a second against the
+ * blitz (tools/sim/q17_pocket.ts --ai=doubles-curls:cover1blitz:6), and drawn at everyone's pace (22/s) his whole body
+ * swung read to read, the planted feet twisting under him and stepping at 300 deg/s. The head and chest take the read
+ * first (the look-at: 70 deg of neck), the hips and feet settle toward it, as a passer's do working a progression.
+ */
+const POCKET_YAW_EASE = 4;
 function onTheMove(s: PlayState, i: number): boolean {
   if (i !== s.qb || s.scrambleT < 0 || s.phase !== 'pocket' || s.ball.mode !== 'held' || s.ball.holder !== i) return false;
   const a = s.agents[i]!;
@@ -1647,6 +1655,8 @@ export interface Drive {
   pocket?: number;
   /** (Round 17) Whose pedal he plays going back (AnimInput.pedal): the passer's drift. */
   pedal?: 'qb';
+  /** (Round 17) How quickly (1/s) the drawn facing comes round to the sim's (GameScene: 22 for everyone else). */
+  yawEase?: number;
 }
 
 const _look = new THREE.Vector3();
@@ -1680,6 +1690,9 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
     if (s.scrambleT < 0 && ball.mode === 'held' && ball.holder === i && (s.phase === 'snap' || s.phase === 'dropback' || s.phase === 'pocket')) {
       out.side = 'qb';
       out.pocket = 1;
+      // His eyes go read to read and his feet follow when he settles on one (POCKET_YAW_EASE); in his windup the body
+      // comes round to the throw at once.
+      if (!s.windup && s.phase === 'pocket') out.yawEase = POCKET_YAW_EASE;
     }
   }
   // (Round 16) Engaged, the linemen's feet stay alive: the blocker in pass protection and the rusher on him stand in the

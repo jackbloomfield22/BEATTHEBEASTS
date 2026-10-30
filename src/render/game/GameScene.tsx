@@ -448,7 +448,8 @@ export function GameScene() {
       // this catches the switches between facing and running direction.
       const want = yawOf(heading);
       const dy = lerpAngle(0, want - b.yaw, 1);
-      const turn = Math.max(-YAW_MAX * animDt, Math.min(YAW_MAX * animDt, dy * (1 - Math.exp(-animDt * 22))));
+      // (Round 17: the passer in the pocket at his own pace, choreo.ts POCKET_YAW_EASE.)
+      const turn = Math.max(-YAW_MAX * animDt, Math.min(YAW_MAX * animDt, dy * (1 - Math.exp(-animDt * (d.yawEase ?? 22)))));
       // (Round 15) A clip turning him into his run holds the facing (choreo.ts turnClip), until it hands over or is cut off.
       if (b.turnHold && (b.animator.transition?.name !== b.turnHold.clip || b.animator.transition.done)) {
         b.turnHold = null;
