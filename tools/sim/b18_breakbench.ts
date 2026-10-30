@@ -133,7 +133,8 @@ for (const id of ids) {
       }
       if (bd.fired) {
         tot.breaks++;
-        b.log.push(`${ts} ${bd.fired} from ${bd.t0.toFixed(2)} s (sim ${(sp * YD).toFixed(1)} m/s, along ${(along * YD).toFixed(1)})`);
+        const an = b.a as unknown as { brkDsp: number; brkAcc: number; back: number };
+        b.log.push(`${ts} ${bd.fired} from ${bd.t0.toFixed(2)} s (sim ${(sp * YD).toFixed(1)} m/s, along ${(along * YD).toFixed(1)}, accel ${an.brkAcc.toFixed(1)}, dspeed ${an.brkDsp.toFixed(1)}, pedal ${an.back.toFixed(2)})`);
       }
       if (bd.ended) b.log.push(`${ts} end ${bd.ended} (${bd.why}) mean rate ${bd.rate.toFixed(2)}`);
       for (const f of ['l', 'r'] as const) {

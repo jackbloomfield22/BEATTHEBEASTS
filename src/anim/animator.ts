@@ -368,6 +368,7 @@ const PEDAL_BREAK = 1.0;
  * the plant and go out of the shuffle to either side (its lead foot the plant).
  */
 const BREAK_CLIPS = { pedal: { l: 'db_break_w_l', r: 'db_break_w_r' }, shuffle: { l: 'lb_break_l', r: 'lb_break_r' } } as const;
+const BREAK_NAMES: ReadonlySet<string> = new Set([...Object.values(BREAK_CLIPS.pedal), ...Object.values(BREAK_CLIPS.shuffle)]);
 /**
  * (Round 18) When a break plays (breakClip). The sim's breaks (tools/sim/b18_breaks.ts): out of a pedal it brakes him at
  * his cut deceleration (sim/movement.ts: 9-15 yd/s^2, 8-14 m/s^2) and drives him at his burst, or turns his run in a
@@ -2252,9 +2253,9 @@ export class PlayerAnimator {
       dbg.over = _hip.distanceTo(ankleTarget) - reach;
       dbg.age = st.age;
       const other = this.feet[s === 'l' ? 'r' : 'l'].step;
-      // (Round 18) In a break the plant holds where the sim's last pedal or shuffle step put it, as far off the keyed
+      // (Round 18) In a break (playing, or fading out once let go) the plant holds where the sim's last pedal or shuffle step put it, as far off the keyed
       // plant as a W's base (BRK_FAR): the leg reaches it, and steps only out of reach.
-      const stepFar = (this.brk && st.source === 'trans' ? BRK_FAR : STEP_FAR) * scale;
+      const stepFar = (st.source === 'trans' && this.trans && BREAK_NAMES.has(this.trans.name) ? BRK_FAR : STEP_FAR) * scale;
       if (far > stepFar && !over && hold && far < STEP_HOLD * scale) {
         // (Round 16) Only drifted off the clip's foot, and the clips lift it within HOLD_SOON: it holds on to its lift,
         // the leg a little further out than keyed, rather than stepping and then lifting again at once (a step just
