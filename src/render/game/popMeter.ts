@@ -173,7 +173,7 @@ function closeSpan(b: Body, f: 'l' | 'r', cur: Span, clip: string, frame: number
 
 const last = new Map<Body, THREE.Quaternion[]>();
 const lastYaw = new Map<Body, number>();
-export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats>, worstSpans: [] as WorstSpan[], stepSpans: [] as WorstSpan[], trace: [] as (number | string)[][], cost: { n: 0, ms: 0 }, pose: [] as (number | string)[][], bySlot: {} as Record<string, Record<string, number>>, steps: [] as (number | string)[][] };
+export const pops = { frames: 0, spikes: [] as PopSpike[], worst: 0, rates: [] as number[], slide: {} as Record<string, SlideStats>, worstSpans: [] as WorstSpan[], stepSpans: [] as WorstSpan[], trace: [] as (number | string)[][], cost: { n: 0, ms: 0 }, pose: [] as (number | string)[][], bySlot: {} as Record<string, Record<string, number>>, steps: [] as (number | string)[][], breaks: [] as (number | string)[][] };
 if (typeof window !== 'undefined') (window as unknown as { __btbPops: typeof pops }).__btbPops = pops;
 
 export function resetPops(): void {
@@ -190,6 +190,7 @@ export function resetPops(): void {
   pops.pose.length = 0;
   pops.bySlot = {};
   pops.steps.length = 0;
+  pops.breaks.length = 0;
   pops.frames = 0;
   pops.spikes.length = 0;
   pops.worst = 0;
@@ -243,6 +244,11 @@ export function measure(b: Body, dt: number, frame: number, anim: string, phase:
   if (lr) lr.copy(rp);
   else lastRoot.set(b, rp.clone());
   const what = ctx.clip || ctx.overlay || ctx.anim;
+  // (Round 18) The breaks (animator.ts breakClip): [frame, slot, 'start', clip, its start time (s), the sim's speed (m/s)]
+  // and [frame, slot, 'end', clip, its mean rate, why it ended].
+  const bd = b.animator.breakDbg;
+  if (bd.ended) pops.breaks.push([frame, b.slot, 'end', bd.ended, Math.round(bd.rate * 100) / 100, bd.why]);
+  if (bd.fired) pops.breaks.push([frame, b.slot, 'start', bd.fired, Math.round(bd.t0 * 1000) / 1000, Math.round(b.animator.gaitDbg().speed * 100) / 100]);
   // (Round 16) What his legs play while the sim moves him (the drawn root's speed this frame).
   if (lr0 && !b.ragdoll.active && !b.lie && Math.hypot(rp.x - lr0.x, rp.z - lr0.z) / dt > 0.5 && Math.hypot(rp.x - lr0.x, rp.z - lr0.z) < TELEPORT) {
     const gd = b.animator.gaitDbg();
