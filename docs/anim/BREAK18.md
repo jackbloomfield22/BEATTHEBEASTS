@@ -216,4 +216,50 @@ Nine breaks in the eight plays (the pop meter's `breaks`):
 
 ## Videos
 
-VIDEOS_GO_HERE
+In `docs/anim/break18/`. `before/` is `fb169fc` (recorded from a frozen copy of its tree) and `after/` this round's tip; `compare/` has them side by side, before on the left.
+
+- **Broadcast, 60 fps** (960 px, Medium, the default broadcast camera, whole plays):
+  - the curl (`p9-curl-60.mp4`): the right corner breaking on the curl;
+  - the iso (`tackle-hurdle-60.mp4`): the weak-side linebacker triggering downhill.
+- **Close cameras, 30 fps** (768 px):
+  - `p9-curl-rcb-close.mp4`: the right corner on the curl, from in front of him and to his inside;
+  - `tackle-hurdle-wlb-close.mp4`: the iso's weak-side linebacker, from beside and behind him;
+  - `p9-go-mlb-close.mp4`: the go's middle linebacker, the plant and go out of his drop's shuffle (both of his breaks), the same framing.
+- **Stills** (`stills/`): the two clips as keyed, in place, ten frames each from the side and the front (the geared player, `tools/blender`).
+
+## Critique
+
+Watched at speed and frame by frame, close up and from the broadcast camera, as a coach and as a fan would.
+
+**What reads now:**
+- **The W-step is a plant.** Close up, the corner's last pedal step reaches back and the other foot comes down wide, his hips drop and his chest comes over his knees, and the hands rip back. Then the short first step and the drive, the arms pumping. Before, the pedal faded into a jog over ~0.12 s with no stop in it at all.
+  - On the curl, the plant comes on the sim's cover plant, a tick before the ball arrives. The corner sinks beside the receiver and drives into him as the ball comes in. It looks like a corner who was in phase and closes on the catch.
+  - **The difference on the curl is modest.** Round 17's `breakOut` already fired on this one kind of break, so the before corner hands his pedal to the run on his planted foot too. Frame by frame (the close-up's frames 84–89), the before corner comes straight up into an upright jog, one leg nearly straight. The after corner drops into the W, knees bent and feet apart, and stays low for the two drive steps.
+- **The linebacker's plant and go reads as a crossover.** Out of the go's drop, the middle linebacker's lead foot plants, his hips open and the trail leg crosses in front before he runs. Before, the shuffle stretched into one long blended stride.
+- **Every player is himself, by construction.** The clip's time follows the ground the sim covers, so its rate is the sim's, and the sim's acceleration carries his Agility and his burst. The rates seen run 0.7–1.3.
+- **Nothing else moves:**
+  - the planted feet's drift and jumps don't change;
+  - the pop meter doesn't move;
+  - steps are down two over the eight plays (linebackers −2, defensive backs ±0);
+  - the cost is round 16's.
+
+**What doesn't (yet):**
+- **From the broadcast camera the break is a small thing.** A defender is ~40 px tall there, and the plant lasts 0.2 s. You see a dip and a burst, not the technique. On the iso the linebackers are behind the line and the trigger is all but invisible. The close cameras carry the judgement.
+- **It is rare.** Nine breaks in eight plays, because the sim turns most of its defenders toward their run rather than reversing them (round 17's finding, and still a sim matter). The pedal-to-run and run-to-pedal moments the sim does make mostly go by on the gait, as before.
+- **Two of the nine were wrong reads.** On the contested ball and the sack the strong-side linebacker's pedal brakes for two or three ticks and then the sim turns it into a run sideways. The W starts and is let go after six frames: a short dip in his stride.
+  - On the contested ball a step follows 0.37 s later (+1 linebacker step).
+  - A confirmation delay (the trigger held for 2–4 frames) didn't separate these from real breaks in the bench, and lost the iso's trigger, so it isn't in.
+- **The screen's free safety takes one more step** (+1 defensive back) when his plant and go fades out, the sim having taken him off its line. The fade carries the keyed crossover foot 47 cm from the gait's, past the break's 45 cm step line.
+- **The iso's trigger is half a break.** The W plays its plant and first drive step, then lets go as the sim swings him off its line, toward the hole on a diagonal. It reads as a sink and go, not a coached trigger step.
+- **The plant and go is keyed at one angle** (25° to the lead side). Breaks straight downhill or across play it and let the gait's hip turn take over at the hand-over.
+- **There is no T-step.** Angled breaks out of the pedal (30–90° off his facing) play the W, which drives straight on, and they let go to the gait when the sim takes him off its line.
+- **The close cameras on the linebackers** spend much of their frames in traffic; the corner's is clear.
+
+## Still open
+
+1. **A sim-side plant and drive** (round 17's item 5, unchanged): on a throw in front of him, reverse the pedal while still facing the passer instead of turning to the run. That would make the break the common case. It is a sim change, with its harness numbers.
+2. **A keyed T-step** (`db_break_t_l/r`): the plant foot turned across the break, the first step at 45°, for the breaks that come out at an angle.
+3. **The plant and go at more than one angle:** straight downhill (0°) and a wide 45°, blended by the sim's break angle.
+4. **The run defense's trigger:** the fits steer with no facing (`sim/runs.ts`), so a linebacker's downhill trigger out of his read step plays the read step and then the gait. A keyed trigger out of the read step (`lb_read_step` into the drive) would put the moment there.
+5. **The wrong reads:** a pedal the sim brakes and then turns sideways can't be told from a stop at the trigger. A short look at the sim's want (its steer target) would settle it, but the render reads the sim's state only.
+6. **Close cameras that frame a linebacker through traffic** (round 17's item 6).
