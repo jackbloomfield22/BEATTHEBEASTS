@@ -54,8 +54,8 @@ console.log('\n#### The back seven\'s steps by what was playing (all plays, befo
 const wb = new Map<string, number>();
 const wa = new Map<string, number>();
 for (let k = 0; k < plays.length; k++) {
-  for (const [kk, v] of why(B[k])) wb.set(kk, (wb.get(kk) ?? 0) + v);
-  for (const [kk, v] of why(A[k])) wa.set(kk, (wa.get(kk) ?? 0) + v);
+  for (const [kk, v] of why(B[k] ?? null)) wb.set(kk, (wb.get(kk) ?? 0) + v);
+  for (const [kk, v] of why(A[k] ?? null)) wa.set(kk, (wa.get(kk) ?? 0) + v);
 }
 for (const k of [...new Set([...wb.keys(), ...wa.keys()])].sort((x, y) => (wa.get(y) ?? 0) + (wb.get(y) ?? 0) - (wa.get(x) ?? 0) - (wb.get(x) ?? 0))) console.log(`- ${k}: ${wb.get(k) ?? 0} → ${wa.get(k) ?? 0}`);
 console.log('\n#### The breaks played (after)\n');

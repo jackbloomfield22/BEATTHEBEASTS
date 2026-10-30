@@ -395,7 +395,11 @@ const BRK_GAP = 0.6;
  * not a break: the hip flip's). Ours.
  */
 const BRK_SUST = 0.2;
-/** (Round 18) Out of the pedal the sim brakes him: his speed falling faster than this (m/s^2, eased as BRK_ACC). Ours: half the softest cut deceleration. */
+/**
+ * (Round 18) Out of the pedal his speed must not be climbing faster than this (m/s^2, eased as BRK_ACC): the sim braking him,
+ * or swinging him forward at the speed he had (the iso's weak-side backer flowing back and out, then downhill), not
+ * accelerating him off his facing. Ours: half the softest cut deceleration.
+ */
 const BRK_BRAKE = 4;
 /** (Round 18) Turning faster than this (rad/s, ~140 deg/s) he is spinning out of his pedal or shuffle (a turn, not a break; the cover man's plant is read whatever his turn): ours. */
 const BRK_TURN = 2.5;

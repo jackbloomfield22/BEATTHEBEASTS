@@ -91,7 +91,7 @@ for (const id of ids) {
   for (let k = 0; k < 1500 && !s.result && (ballT < 0 || s.t - ballT < 1.8); k++) {
     stepPlay(s, c.script(s));
     if (s.snapT < 0) continue;
-    if (ballT < 0 && s.phase !== 'presnap' && s.phase !== 'snap' && s.phase !== 'dropback' && s.phase !== 'pocket' && s.phase !== 'air' && s.phase !== 'handoff') ballT = s.t;
+    if (ballT < 0 && s.phase !== 'presnap' && s.phase !== 'snap' && s.phase !== 'dropback' && s.phase !== 'pocket' && s.phase !== 'air') ballT = s.t;
     for (const b of bodies) {
       const d = s.agents[b.i]!;
       const sp = Math.hypot(d.vel.x, d.vel.y);
