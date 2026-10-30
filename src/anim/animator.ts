@@ -88,6 +88,11 @@ export interface AnimInput {
   pocket?: number;
   /** (Round 17) Whose pedal he plays going backward: the defensive back's (default), or the passer's drift ('qb'). */
   pedal?: 'qb';
+  /**
+   * (Round 18) He breaks on the ball (the back seven): out of his pedal or his shuffle, when the sim drives him forward,
+   * the keyed break plays on his plant foot, paced by the sim (breakClip, breakPace).
+   */
+  brk?: boolean;
 }
 
 const FEET = ['l', 'r'] as const;
@@ -358,6 +363,77 @@ const BREAK_T = 0.2;
 const BREAK_PHASE = 0.04;
 /** (Round 17) Out of the pedal forward faster than this (m/s, along his facing) is a break on the ball (breakOut). Ours: a walk's pace. */
 const PEDAL_BREAK = 1.0;
+/**
+ * (Round 18) The keyed breaks (tools/blender/lib/actions_b18.py): the W-step out of the pedal on either plant foot, and
+ * the plant and go out of the shuffle to either side (its lead foot the plant).
+ */
+const BREAK_CLIPS = { pedal: { l: 'db_break_w_l', r: 'db_break_w_r' }, shuffle: { l: 'lb_break_l', r: 'lb_break_r' } } as const;
+/**
+ * (Round 18) When a break plays (breakClip). The sim's breaks (tools/sim/b18_breaks.ts): out of a pedal it brakes him at
+ * his cut deceleration (sim/movement.ts: 9-15 yd/s^2, 8-14 m/s^2) and drives him at his burst, or turns his run in a
+ * tick (sim/ai.ts coverPlant: the cover man's plant); out of a shuffle it swings his run forward at the same limits.
+ * BRK_ACC: his speed along his facing climbing faster than this (m/s^2, eased over BRK_ACC_T s) is the sim driving him
+ * forward: half the softest cut deceleration (a pedal easing up to settle in a zone brakes at it, too: a settle plays the
+ * plant and holds, BRK_HOLD). BRK_BACK: still going back faster than this (m/s) is too early (the W-step is keyed from a
+ * 2 m/s pedal: actions_b18.py W_V0, less a margin). Out of the shuffle he must be going forward faster than BRK_FWD
+ * (m/s), within BRK_OFF (rad, 55 deg: past the side layer's 48 deg exit) of his facing, toward the lead side or straight
+ * (BRK_CROSS, rad, 12 deg the other way: the plant and go crosses over toward the side he was going).
+ * BRK_GAP: one break in this long (s). All ours.
+ */
+const BRK_ACC = 5;
+const BRK_ACC_T = 0.03;
+const BRK_BACK = 1.6;
+const BRK_FWD = 0.5;
+const BRK_OFF = (55 * Math.PI) / 180;
+const BRK_CROSS = (12 * Math.PI) / 180;
+const BRK_GAP = 0.6;
+/**
+ * (Round 18) He has been in his pedal or his shuffle at least BRK_SUST (s: a pedal's step and a half) before it (the
+ * corners and safeties pass through the side layer opening at the snap), and out of the pedal the sim's velocity is along
+ * his facing, no faster than BRK_ACROSS (m/s) across it (a pedal the sim turns into a run sideways is the turn and run,
+ * not a break: the hip flip's). Ours.
+ */
+const BRK_SUST = 0.2;
+/** (Round 18) Out of the pedal the sim brakes him: his speed falling faster than this (m/s^2, eased as BRK_ACC). Ours: half the softest cut deceleration. */
+const BRK_BRAKE = 4;
+/** (Round 18) Turning faster than this (rad/s, ~140 deg/s) he is spinning out of his pedal or shuffle (a turn, not a break; the cover man's plant is read whatever his turn): ours. */
+const BRK_TURN = 2.5;
+const BRK_ACROSS = 2.0;
+/**
+ * (Round 18) The cover man's plant (sim/ai.ts coverPlant: his run sent down the new line in a tick) shows as his velocity
+ * along his facing climbing faster than this (m/s^2, eased; a cut deceleration is 8-14). Ours.
+ */
+const BRK_PLANT = 40;
+/** (Round 18) Past the plant, a break the sim paces at under BRK_SLOW of its keyed pace for BRK_SLOW_T (s) lets go into the gait: the sim isn't driving him down its line. Ours. */
+const BRK_SLOW = 0.5;
+/** (Round 18) Out of the shuffle, the lead foot down no longer than this (s: two frames) plants the break; ours. */
+const BRK_LEAD = 0.034;
+/** (Round 18) Forward of his plant by this much (m) and the sim takes him back again: not a break after all (it lets go). Ours. */
+const BRK_BACKUP = 0.05;
+/**
+ * (Round 18) A foot planted in a break steps only when the clip has its foot this far (m) off it: the keyed W's base (the
+ * feet 0.44 m apart, actions_b18.py). The sim's pedal sets the plant where its last step fell, up to a stride from the
+ * keyed one; a step there (STEP_FAR's 0.25 m) is a second plant. Ours.
+ */
+const BRK_FAR = 0.45;
+/** (Round 18) Off the break's line this long (s) at or past its plant, it lets go. Ours. */
+const BRK_OFF_T = 0.15;
+/**
+ * (Round 18) Still going back (more than 110 deg off the break's line: BRK_AWAY_COS) and faster than his slowest since
+ * the break started by BRK_AWAY (m/s): the sim isn't stopping him, it is turning his pedal into a run. Ours.
+ */
+const BRK_AWAY = 0.4;
+const BRK_AWAY_COS = 0.34;
+const BRK_SLOW_T = 0.25;
+/**
+ * (Round 18) The break's pace (breakPace): its time is where its keyed travel along its line matches the ground the sim
+ * has covered since the plant (before the plant, where its keyed speed matches the sim's), at most BRK_RATE times the
+ * keyed pace (a cover man's plant turns his run in a tick: the plant plays quick, never skipped). A man the sim holds
+ * (a settle) holds the plant; slower than BRK_STILL (m/s) for BRK_HOLD (s), the break lets go into his stance. Ours.
+ */
+const BRK_RATE = 2.5;
+const BRK_STILL = 0.3;
+const BRK_HOLD = 0.35;
 /** (Round 16) The side loops by style and side: the slide (sideways) and the set (back and out), each slow to fast. */
 const SIDE_CLIPS = {
   lb: { l: { slide: ['lb_shuffle_l', 'lb_shuffle_fast_l'], set: [] as string[] }, r: { slide: ['lb_shuffle_r', 'lb_shuffle_fast_r'], set: [] as string[] } },
@@ -686,6 +762,11 @@ export class PlayerAnimator {
     this.pressW = 0;
     this.rootMotion = 0;
     this.rootSpeed = 0;
+    this.brk = null;
+    this.brkVx = this.brkVz = 0;
+    this.brkAcc = this.brkDsp = 0;
+    this.brkPedalT = this.brkSideT = 0;
+    this.brkSince = 9;
   }
 
   /**
@@ -1021,7 +1102,11 @@ export class PlayerAnimator {
     // pedal's planted foot is the plant and the gait comes in on it, at the break's pace (breakOut).
     // (Not his turn and run out of it: the sim turning him to run the other way leaves his velocity behind his facing,
     // and the hip flip turns him.)
-    if (!input.backpedal && this.back > 0.5 && this.backWas && this.rawSpeed > PEDAL_BREAK && Math.abs(this.velOff) < Math.PI / 2) this.breakOut(this.backPhase < 0.5 ? 'l' : 'r');
+    // (Round 18) A keyed break (breakClip) supersedes it.
+    this.breakDbg.fired = null;
+    this.breakDbg.ended = null;
+    if (input.brk) this.breakClip(input, dt);
+    if (!this.brk && !input.backpedal && this.back > 0.5 && this.backWas && this.rawSpeed > PEDAL_BREAK && Math.abs(this.velOff) < Math.PI / 2) this.breakOut(this.backPhase < 0.5 ? 'l' : 'r');
     this.backWas = !!input.backpedal;
     this.back = ease(this.back, input.backpedal ? 1 : 0, this.breakT > 0 ? ks : k);
     // (Round 17) Whose pedal: the passer's drift for the quarterback (the defensive back's had him low, chest over his
@@ -1045,6 +1130,8 @@ export class PlayerAnimator {
     }
     this.rootMotion = 0;
     this.rootSpeed = 0;
+    // (Round 18) The break paced by the sim: its rate this frame.
+    if (this.brk) this.breakPace(input, dt);
     const tr = this.trans;
     let trMeta = tr ? this.lib.meta[tr.name] : undefined;
     if (tr && trMeta) {
@@ -1519,11 +1606,222 @@ export class PlayerAnimator {
     this.phase = (plant === 'l' ? 0 : 0.5) + BREAK_PHASE;
     this.breakT = BREAK_T;
   }
+
+  /**
+   * (Round 18) The defense breaking on the ball, keyed (tools/blender/lib/actions_b18.py). Round 17's breakOut (above)
+   * blended the pedal into the run on the planted foot, and fired only if the sim had him going forward faster than a
+   * walk on the very first frame out of the pedal: the sim brakes a pedal at the man's cut deceleration, so his speed along
+   * his facing goes through zero over a quarter of a second and the frame he leaves the pedal he is still standing (it
+   * fired on one man in six plays: docs/anim/BREAK18.md). Here the break is read off the sim's acceleration instead: in
+   * his pedal (the defensive back's) or the linebacker's shuffle, his speed along his facing climbing faster than BRK_ACC
+   * is the sim driving him forward, and the keyed break plays:
+   * - out of the pedal, the W-step on the foot whose touch-down is nearest behind him (the pedal's planted foot early in
+   *   its stance, else the one about to land: the plant reaches back), from where the sim's speed stands in its stop;
+   * - out of the shuffle, the plant and go on its lead foot, when the sim takes him forward toward the lead side or
+   *   straight (the crossover goes the way he was going).
+   */
+  private breakClip(input: AnimInput, dt: number): void {
+    const v = input.vel;
+    this.brkSince += dt;
+    if (!v) return;
+    // How long he has been in his pedal or his shuffle (a break comes out of one he was in, not a get-off that passed
+    // through the layer for a frame or two).
+    this.brkPedalT = this.back > 0.5 ? this.brkPedalT + dt : 0;
+    this.brkSideT = this.sideL + this.sideR > 0.5 ? this.brkSideT + dt : 0;
+    const rq = wquat(this.player.root, _q2);
+    const fwd = _fwd.set(0, 0, 1).applyQuaternion(rq);
+    const along = v.x * fwd.x + v.z * fwd.z;
+    // The sim's acceleration along his facing: of his velocity itself (the drawn facing turning under a run isn't one).
+    const a = dt > 0 ? ((v.x - this.brkVx) * fwd.x + (v.z - this.brkVz) * fwd.z) / dt : 0;
+    const was = this.brkVx * fwd.x + this.brkVz * fwd.z;
+    // And his speed's own rate of change (a pedal braking slows him; one the sim turns into a run sideways doesn't).
+    const sp = Math.hypot(v.x, v.z);
+    const ds = dt > 0 ? (sp - Math.hypot(this.brkVx, this.brkVz)) / dt : 0;
+    this.brkVx = v.x;
+    this.brkVz = v.z;
+    const ka = 1 - Math.exp(-dt / BRK_ACC_T);
+    this.brkAcc += (a - this.brkAcc) * ka;
+    this.brkDsp += (ds - this.brkDsp) * ka;
+    if (this.brk || (this.trans && !this.trans.done) || this.queued || this.brkSince < BRK_GAP || this.brkAcc < BRK_ACC || this.loco < 0.5) return;
+    const turning = Math.abs(input.yawRate ?? 0) > BRK_TURN;
+    const scale = this.player.shape.scale;
+    let name: string | null = null;
+    let lead: number | null = null;
+    const across = Math.abs(v.x * fwd.z - v.z * fwd.x);
+    // The cover man's plant (sim/ai.ts coverPlant): the sim turns his run in a tick, from going back (his pedal, or the
+    // first frames of it out of a deep run he is turning out of) to forward along his facing.
+    const plant = this.brkAcc > BRK_PLANT * scale && was < -BRK_FWD * scale && along > 0 && this.pedalOf === 'db';
+    if ((plant || (!turning && this.back > 0.5 && this.pedalOf === 'db' && this.brkPedalT >= BRK_SUST && along > -BRK_BACK * scale && this.brkDsp < BRK_BRAKE * scale)) && across < BRK_ACROSS * scale) {
+      // In his pedal, the foot whose touch-down is nearest behind: the left's at the pedal's phase 0, the right's at 0.5;
+      // the planted foot past the first 0.3 of the cycle (past under his hips) gives way to the one about to land. Out of
+      // a deep run, the foot last down.
+      let foot: 'l' | 'r';
+      if (this.back > 0.5) foot = (this.backPhase + 0.2) % 1 < 0.5 ? 'l' : 'r';
+      else foot = this.feet.l.locked && (!this.feet.r.locked || this.feet.l.age < this.feet.r.age) ? 'l' : 'r';
+      name = BREAK_CLIPS.pedal[foot];
+    } else if (!turning && this.brkSideT >= BRK_SUST && this.sideStyle === 'lb' && along > BRK_FWD * scale && Math.abs(this.velOff) < BRK_OFF && this.velOff * this.sideDir > -BRK_CROSS) {
+      // On the lead foot as it lands: in the air, it comes down as the plant (the clip's first frame has it down where the
+      // shuffle sets it); down longer than BRK_LEAD, the body has gone on over it, and the break waits for its next landing.
+      const lf = this.feet[this.sideDir > 0 ? 'l' : 'r'];
+      if (lf.locked && lf.age > BRK_LEAD) return;
+      lead = lf.locked ? lf.age : 0;
+      name = BREAK_CLIPS.shuffle[this.sideDir > 0 ? 'l' : 'r'];
+    }
+    if (!name) return;
+    const ln = this.breakLine(name);
+    if (!ln) return;
+    // The line in the world: his frame's (x left, z forward) turned with him.
+    const left = _w.set(1, 0, 0).applyQuaternion(rq);
+    let ax = ln.uz * fwd.x + ln.ux * left.x;
+    let az = ln.uz * fwd.z + ln.ux * left.z;
+    const n = Math.hypot(ax, az) || 1;
+    ax /= n;
+    az /= n;
+    const fps = this.lib.fps;
+    // Where he is in the stop: the first frame whose keyed speed along the line has come up to the sim's (the plant, when
+    // the sim has him going forward already).
+    const vs = (v.x * ax + v.z * az) / scale;
+    let f0 = ln.tp;
+    for (let f = 0; f < ln.tp; f++) {
+      if ((ln.tk[f + 1]! - ln.tk[f]!) * fps >= vs) {
+        f0 = f;
+        break;
+      }
+    }
+    // (The plant and go: its lead foot just down, as long as it has been, at most BRK_LEAD.)
+    if (lead !== null) f0 = Math.min(ln.tp, Math.round(lead * fps));
+    const t0 = f0 / fps;
+    this.start(name, 1, t0);
+    this.brk = { name, ax, az, tk: ln.tk, tp: ln.tp, tk0: ln.tk[f0]!, d: 0, dmin: 0, still: 0, off: 0, spMin: 99, slow: 0, rate: 0, n: 0, rs: 0 };
+    this.brkSince = 0;
+    this.breakT = 0;
+    this.breakDbg.fired = name;
+    this.breakDbg.t0 = t0;
+  }
+
+  /** (Round 18) A break clip's travel along its line (from its start to its end, in his frame) by frame, and its plant. */
+  private breakLine(name: string): { tk: Float32Array; tp: number; ux: number; uz: number } | null {
+    const have = this.brkLine.get(name);
+    if (have) return have;
+    const m = this.lib.meta[name];
+    if (!m || !m.travel || !this.lib.clips.has(name)) return null;
+    const N = m.travel.length - 1;
+    // His frame: x left, z forward; the travel is along `dir`, the sideways part in `side` (+x left).
+    const fx = (k: number) => m.travel![k]! * m.dir[0] + (m.side?.[k] ?? 0);
+    const fz = (k: number) => m.travel![k]! * m.dir[1];
+    const ex = fx(N) - fx(0);
+    const ez = fz(N) - fz(0);
+    const L = Math.hypot(ex, ez) || 1;
+    const ux = ex / L;
+    const uz = ez / L;
+    const tk = new Float32Array(N + 1);
+    let tp = 0;
+    for (let k = 0; k <= N; k++) {
+      tk[k] = fx(k) * ux + fz(k) * uz;
+      if (tk[k]! < tk[tp]!) tp = k;
+    }
+    const out = { tk, tp, ux, uz };
+    this.brkLine.set(name, out);
+    return out;
+  }
+
+  /**
+   * (Round 18) The break's rate this frame (BRK_RATE, BRK_STILL, BRK_HOLD): before its plant, the time at which the clip's
+   * keyed speed along its line is the sim's; from the plant on, the time at which its keyed travel is the ground the sim
+   * has covered along it. Its rate is then the sim's acceleration (and speed) over the keyed one: a quicker man's break
+   * plays quicker, a slower man's slower, his planted foot staying where the clip keyed it under the sim's body.
+   */
+  private breakPace(input: AnimInput, dt: number): void {
+    const b = this.brk!;
+    const tr = this.trans;
+    if (!tr || tr.done || tr.name !== b.name) {
+      this.breakDbg.why = tr && tr.name !== b.name ? `cut:${tr.name}` : 'done';
+      this.breakDbg.ended = b.name;
+      this.breakDbg.rate = b.n > 0 ? b.rs / b.n : 0;
+      this.brk = null;
+      return;
+    }
+    if (dt <= 0) return;
+    const v = input.vel;
+    const scale = this.player.shape.scale;
+    const fps = this.lib.fps;
+    const vs = v ? (v.x * b.ax + v.z * b.az) / scale : 0;
+    const sp = v ? Math.hypot(v.x, v.z) : 0;
+    const tk = b.tk;
+    const N = tk.length - 1;
+    const f = tr.t * fps;
+    let target: number;
+    // The ground the sim has covered along the line since the break started, and the furthest back it took him (his plant).
+    b.d += vs * dt;
+    b.dmin = Math.min(b.dmin, b.d);
+    if (f < b.tp) {
+      // The stop: the frame whose keyed travel back is the sim's; once the sim has him going forward, on to the plant.
+      target = b.tp;
+      if (vs < 0 && b.d <= b.dmin + 1e-6) {
+        const want = b.tk0 + b.d;
+        for (let k = Math.floor(f); k < b.tp; k++) {
+          if (tk[k + 1]! <= want) {
+            const span = tk[k]! - tk[k + 1]!;
+            target = k + (span > 1e-6 ? Math.max(0, Math.min(1, (tk[k]! - want) / span)) : 1);
+            break;
+          }
+        }
+      }
+    } else {
+      const want = tk[b.tp]! + Math.max(0, b.d - b.dmin);
+      target = N;
+      for (let k = Math.max(b.tp, Math.floor(f)); k < N; k++) {
+        if (tk[k + 1]! >= want) {
+          const span = tk[k + 1]! - tk[k]!;
+          target = k + (span > 1e-6 ? Math.max(0, Math.min(1, (want - tk[k]!) / span)) : 1);
+          break;
+        }
+      }
+    }
+    const rate = Math.max(0, Math.min(BRK_RATE, (target - f) / fps / dt));
+    tr.rate = rate;
+    b.n++;
+    b.rs += rate;
+    // Held (a settle, or a man the sim stops at the plant): the break lets go into his stance.
+    b.still = sp < BRK_STILL * scale ? b.still + dt : 0;
+    b.slow = f >= b.tp && b.d > b.dmin + BRK_BACKUP && rate < BRK_SLOW && b.still === 0 ? b.slow + dt : 0;
+    // At or past the plant with the sim taking him off the break's line (more than 60 deg off it): not this break.
+    b.off = f >= b.tp && sp > BRK_STILL * scale && vs < 0.5 * sp ? b.off + dt : 0;
+    // Before he's turned forward, the sim speeding him up again (a pedal it turns into a run sideways, not a stop).
+    b.spMin = Math.min(b.spMin, sp);
+    const away = vs < -BRK_AWAY_COS * sp && sp > b.spMin + BRK_AWAY * scale;
+    if (away || b.still > BRK_HOLD || b.slow > BRK_SLOW_T || b.off > BRK_OFF_T || (b.d > b.dmin + BRK_BACKUP && vs < -BRK_FWD * scale)) {
+      // (Not into the gait at once: release(false) fades the clip out over the gait or the stance, as his speed asks.)
+      this.breakDbg.ended = b.name;
+      this.breakDbg.rate = b.n > 0 ? b.rs / b.n : 0;
+      this.breakDbg.why = away ? 'away' : b.still > BRK_HOLD ? 'held' : b.slow > BRK_SLOW_T ? 'slow' : b.off > BRK_OFF_T ? 'off' : 'back';
+      this.release(false);
+      this.brk = null;
+    }
+  }
   private breakT = 0;
   /** (Round 17) Last frame's input was the pedal (the break out of it: breakOut). */
   private backWas = false;
   /** (Round 17) His velocity's angle off his drawn facing this frame (rad, + left; gaitSpeed). */
   private velOff = 0;
+  /**
+   * (Round 18) The break playing (breakClip): its clip, its line in the world (unit, x and z), its keyed travel along the
+   * line by frame (m, base body) and its plant frame (the least travel), the ground the sim has covered along the line
+   * since the plant (m), how long the sim has held him (s), and its rates (the pop meter's log).
+   */
+  private brk: { name: string; ax: number; az: number; tk: Float32Array; tp: number; tk0: number; d: number; dmin: number; still: number; off: number; spMin: number; slow: number; rate: number; n: number; rs: number } | null = null;
+  /** (Round 18) Each break clip's travel along its line and the line in his own frame (x left, z forward), made once. */
+  private brkLine = new Map<string, { tk: Float32Array; tp: number; ux: number; uz: number }>();
+  /** (Round 18) His speed along his facing last frame (m/s) and its rate of change, eased (m/s^2); the last break (s ago). */
+  private brkVx = 0;
+  private brkVz = 0;
+  private brkAcc = 0;
+  private brkDsp = 0;
+  private brkPedalT = 0;
+  private brkSideT = 0;
+  private brkSince = 9;
+  /** (Round 18) The break started this frame (its clip and start time), and the last one's mean rate when it ended: the pop meter's log. */
+  breakDbg: { fired: string | null; t0: number; ended: string | null; rate: number; why: string } = { fired: null, t0: 0, ended: null, rate: 0, why: '' };
 
   /** (Round 16) The side loop's travel (rad, toward the side) nearest an angle: sideways, or for the line out to its set's. */
   private sideAxis(psi: number): number {
@@ -1954,18 +2252,21 @@ export class PlayerAnimator {
       dbg.over = _hip.distanceTo(ankleTarget) - reach;
       dbg.age = st.age;
       const other = this.feet[s === 'l' ? 'r' : 'l'].step;
-      if (far > STEP_FAR * scale && !over && hold && far < STEP_HOLD * scale) {
+      // (Round 18) In a break the plant holds where the sim's last pedal or shuffle step put it, as far off the keyed
+      // plant as a W's base (BRK_FAR): the leg reaches it, and steps only out of reach.
+      const stepFar = (this.brk && st.source === 'trans' ? BRK_FAR : STEP_FAR) * scale;
+      if (far > stepFar && !over && hold && far < STEP_HOLD * scale) {
         // (Round 16) Only drifted off the clip's foot, and the clips lift it within HOLD_SOON: it holds on to its lift,
         // the leg a little further out than keyed, rather than stepping and then lifting again at once (a step just
         // before the lift was most of the gait's and the one-shots' steps: docs/anim/FEET16.md).
         dbg.why = '';
-      } else if ((far > STEP_FAR * scale || over) && soon) {
+      } else if ((far > stepFar || over) && soon) {
         // About to lift anyway: let go into the clip's swing now (the release's blend), rather than step.
         dbg.why = `${st.source}:lift`;
         this.letGo(st, cb);
         dbg.stepped = true;
 
-      } else if ((far > STEP_FAR * scale || over) && (!other || other.u > 0.5 || over)) {
+      } else if ((far > stepFar || over) && (!other || other.u > 0.5 || over)) {
         dbg.why = `${st.source}:${over ? 'reach' : 'far'}`;
         this.stepFoot(st, cb, scale);
         dbg.stepped = true;

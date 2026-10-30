@@ -1657,6 +1657,8 @@ export interface Drive {
   pedal?: 'qb';
   /** (Round 17) How quickly (1/s) the drawn facing comes round to the sim's (GameScene: 22 for everyone else). */
   yawEase?: number;
+  /** (Round 18) He breaks on the ball out of his pedal or shuffle (AnimInput.brk): the back seven. */
+  brk?: boolean;
 }
 
 const _look = new THREE.Vector3();
@@ -1675,6 +1677,9 @@ export function drive(b: Body, i: number, s: PlayState, simT: number, along: num
   // (Round 16) An offensive lineman moving back or sideways slides and kick-slides (the animator's side layer, AnimInput.side):
   // he never backpedals. Round 15 left a lineman the sim still retreated after his kick-slide on the defensive back's pedal.
   const line = a.side === 'off' && OL.has(a.slot as string);
+  // (Round 18) The back seven break on the ball with the keyed breaks (animator.ts breakClip): the linebackers and every
+  // defender who isn't on the line.
+  if (a.side === 'def' && !DL_SLOTS.has(a.slot as string)) out.brk = true;
   if (line) {
     out.side = 'ol';
     const slot = a.slot as string;

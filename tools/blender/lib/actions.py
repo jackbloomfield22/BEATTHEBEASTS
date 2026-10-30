@@ -855,6 +855,7 @@ def action_clips() -> list[Clip]:
     from .actions_p10 import p10_clips
     from .actions_a16 import a16_clips
     from .actions_q17 import q17_clips
+    from .actions_b18 import b18_clips
 
     jl = juke_left()
     return [
@@ -874,6 +875,8 @@ def action_clips() -> list[Clip]:
         *a16_clips(),
         # Animation round 17: the quarterback's slide, climb and drift in the pocket, the ball held high.
         *q17_clips(),
+        # Animation round 18: the defense breaking on the ball: the W-step out of the pedal, the plant and go out of the shuffle.
+        *b18_clips(),
     ]
 
 
