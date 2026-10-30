@@ -433,7 +433,7 @@ export function GameScene() {
       // and a passer moving off his facing faster than his slide (the AI's 6 m/s away from a rusher, a throw on the run)
       // played his gait at the speed along his facing, about none, his planted feet stepping every few frames. His slide
       // keeps them square (animator.ts, the side layer's 'qb' style).
-      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean, holdFeet: i === s.qb, vel: b.fallen || b.lie ? null : _vel.set(-tmp.vy * YARD, 0, -tmp.vx * YARD), side: d.side ?? 'lb', sidePref: d.sidePref, pocket: d.pocket, pedal: d.pedal });
+      b.animator.update(animDt, { speed: d.speed, backpedal: d.backpedal, yawRate: Math.max(-4, Math.min(4, yawRate)), accel: Math.max(-12, Math.min(12, accel)), lookAt: d.look, lookWide: d.lookWide, carry: d.carry, carryLeft: d.carryLeft, traffic: d.traffic, drive: d.drive, press: d.press, dip: d.dip, contactLean: _lean, holdFeet: i === s.qb, vel: b.fallen || b.lie ? null : _vel.set(-tmp.vy * YARD, 0, -tmp.vx * YARD), side: d.side ?? 'lb', sidePref: d.sidePref, pocket: d.pocket, pedal: d.pedal, brk: d.brk });
       // (Round 15) The animator's cost per body, for the perf check (?pops: popMeter.ts pops.cost).
       if (urlFlags.pops) {
         pops.cost.n++;
